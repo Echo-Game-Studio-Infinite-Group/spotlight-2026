@@ -31,9 +31,9 @@ dotnet run
 
 ### 打开 Unity 工程
 
-1. Unity Hub → 用 **2022.3.33f1** 打开 `demo/unity`（本机路径 `F:\Unity\2022.3.33f1`）
+1. Unity Hub → 用 **2022.3.33f1** 打开 `demo/unity`（本机路径 `F:\Unity\2022.3.33f1`，注意该编辑器为中国版 c1，团队正式开工前需对齐版本）
 2. 首次打开会生成 Library/（已被 .gitignore 忽略）
-3. 场景：`Assets/_Project/Scenes/Graybox`（灰盒验证场景）
+3. 菜单「超高速行者 → 生成灰盒场景」一键生成测试场景（地面/蹬墙走廊/斜坡/限高门 + 挂好 PlayerMotor 的玩家）
 
 ## 环境约定
 
