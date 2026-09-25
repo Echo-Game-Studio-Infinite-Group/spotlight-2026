@@ -227,6 +227,11 @@ public static class GrayboxSceneBuilder
         serializedFollow.FindProperty("_target").objectReferenceValue = player;
         serializedFollow.ApplyModifiedPropertiesWithoutUndo();
 
+        // 编辑态初始机位：贴近跟随相机 Play 时的起始姿态（yaw 0 / pitch 18 / 距离 6），避免预览歪斜
+        cameraGo.transform.SetPositionAndRotation(
+            player.position + new Vector3(0f, 1.2f, -6f) + Vector3.up * 1.2f,
+            Quaternion.Euler(18f, 0f, 0f));
+
         GameObject lightGo = new GameObject("Directional Light");
         Light light = lightGo.AddComponent<Light>();
         light.type = LightType.Directional;
