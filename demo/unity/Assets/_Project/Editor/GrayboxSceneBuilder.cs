@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 // 一键生成灰盒验证场景：网格地面、蹬墙测试走廊、斜坡、限高门（测滑铲）、可见玩家、跟随相机
 // 菜单入口：超高速行者/生成灰盒场景；保存为 Assets/_Project/Scenes/Graybox.unity
 // 场景内摆位数值是灰盒几何尺寸（关卡布局，不是手感参数），调手感一律改 MovementParams
-// 可读性约定（灰盒惯例）：中灰材质+受控对比度，玩家用自发光橙+青色朝向鼻，速度感靠地面网格读出
+// 可读性约定（灰盒惯例）：中灰材质+受控对比度，玩家用自发光橙，朝向由速度向量 gizmo 读出，速度感靠地面网格
 public static class GrayboxSceneBuilder
 {
     private const string ScenePath = "Assets/_Project/Scenes/Graybox.unity";
@@ -73,7 +73,6 @@ public static class GrayboxSceneBuilder
         public Material Wall;
         public Material Lintel;
         public Material Player;
-        public Material Nose;
     }
 
     // 材质作为资产落盘：场景渲染器引用资产而不是内联对象，保证跨打开/入库后不丢引用
@@ -94,12 +93,6 @@ public static class GrayboxSceneBuilder
                 m.color = new Color(1f, 0.5f, 0.1f);
                 m.EnableKeyword("_EMISSION");
                 m.SetColor("_EmissionColor", new Color(0.8f, 0.35f, 0.05f)); // 自发光保证任何光照下可见
-            }),
-            Nose = EnsureMaterial("GrayMat_Nose", m =>
-            {
-                m.color = new Color(0.1f, 0.95f, 1f);
-                m.EnableKeyword("_EMISSION");
-                m.SetColor("_EmissionColor", new Color(0f, 0.7f, 0.8f));
             }),
         };
     }
@@ -205,7 +198,7 @@ public static class GrayboxSceneBuilder
 
         player.AddComponent<DebugHUD>(); // cl_showspeed 惯例的调试 HUD（F3 开关）
 
-        // 可见玩家：自发光胶囊（随受击框变细同步）+ 青色朝向鼻（读转向）
+        // 可见玩家：自发光胶囊，尺寸随受击框变细同步（朝向读红色速度向量 gizmo）
         GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         visual.name = "Visual";
         Object.DestroyImmediate(visual.GetComponent<CapsuleCollider>()); // 碰撞一律归 CharacterController
@@ -216,14 +209,6 @@ public static class GrayboxSceneBuilder
         SerializedObject serializedSync = new SerializedObject(sync);
         serializedSync.FindProperty("_visual").objectReferenceValue = visual.transform;
         serializedSync.ApplyModifiedPropertiesWithoutUndo();
-
-        GameObject nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        nose.name = "Nose";
-        Object.DestroyImmediate(nose.GetComponent<BoxCollider>());
-        nose.GetComponent<MeshRenderer>().sharedMaterial = mats.Nose;
-        nose.transform.SetParent(player.transform, false);
-        nose.transform.localPosition = new Vector3(0f, 1.1f, 0.6f);
-        nose.transform.localScale = new Vector3(0.12f, 0.12f, 0.4f);
 
         return player.transform;
     }
