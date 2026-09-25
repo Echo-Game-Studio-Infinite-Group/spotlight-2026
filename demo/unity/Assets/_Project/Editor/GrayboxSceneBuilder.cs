@@ -3,16 +3,25 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 一键生成灰盒验证场景：网格地面、蹬墙测试走廊、斜坡、限高门（测滑铲）、可见玩家、跟随相机
+// 一键生成灰盒验证场景（高速游戏规格）：
+//   巨幅网格地面（142x117m，2m/4m 格线）+ 椭圆环形跑道（双护栏 + 每10m红色刻度条）
+//   中央测试区（蹬墙走廊/斜坡/限高门）+ 外围挡墙 + 可见玩家 + 跟随相机 + 掉落复活
 // 菜单入口：超高速行者/生成灰盒场景；保存为 Assets/_Project/Scenes/Graybox.unity
-// 场景内摆位数值是灰盒几何尺寸（关卡布局，不是手感参数），调手感一律改 MovementParams
-// 可读性约定（灰盒惯例）：中灰材质+受控对比度，玩家用自发光橙，朝向由速度向量 gizmo 读出，速度感靠地面网格
+// 场地尺寸由高速物理倒推：护栏 3m（跳跃上抛 1.6m 无法越出）、外围墙 6m（蹬墙链余量）；
+// 转弯半径 r=v²/a 决定环道半径：阈值 10m/s 需 r≈10m，环道中心线 58x45m 可容纳约 2-3 档速度
 public static class GrayboxSceneBuilder
 {
     private const string ScenePath = "Assets/_Project/Scenes/Graybox.unity";
     private const string ParamsAssetPath = "Assets/_Project/Settings/MovementParams.asset";
     private const string MaterialsFolder = "Assets/_Project/Materials";
     private const string GridTexturePath = MaterialsFolder + "/GrayGrid.asset";
+
+    // 环道几何（中心线椭圆 + 内外护栏）
+    private const float RingA = 58f;
+    private const float RingB = 45f;
+    private const float TrackHalfWidth = 3f;
+    private const int RailSegments = 48;
+    private const int MarkerCount = 32; // 中心线周长约 320m → 每条约 10m
 
     [MenuItem("超高速行者/生成灰盒场景")]
     public static void Build()
@@ -31,6 +40,8 @@ public static class GrayboxSceneBuilder
         CreateWallJumpCorridor(mats);
         CreateRamp(mats);
         CreateSlideGate(mats, movementParams);
+        CreateRingTrack(mats);
+        CreatePerimeter(mats);
         Transform player = CreatePlayer(mats, movementParams);
         CreateCameraAndLight(player);
 
@@ -84,7 +95,7 @@ public static class GrayboxSceneBuilder
             {
                 m.mainTexture = EnsureGridTexture();
                 m.color = new Color(0.42f, 0.43f, 0.45f);
-                m.mainTextureScale = new Vector2(10f, 20f); // 地面 40x80m，纹理覆盖 4m → 副格线 2m、主格线 4m
+                m.mainTextureScale = new Vector2(35.5f, 29.25f); // 地面 142x117m，纹理覆盖 4m → 副格线 2m、主格线 4m
             }),
             Wall = EnsureMaterial("GrayMat_Wall", m => m.color = new Color(0.58f, 0.52f, 0.46f)),
             Lintel = EnsureMaterial("GrayMat_Lintel", m => m.color = new Color(0.75f, 0.25f, 0.2f)),
@@ -111,7 +122,7 @@ public static class GrayboxSceneBuilder
         return mat;
     }
 
-    // 程序化 2m 网格纹理：小格线 + 每 4 格一条主格线，主格线是读速度与距离的标尺
+    // 程序化网格纹理：副格线每 2m、主格线每 4m——速度与距离的读数标尺
     private static Texture2D EnsureGridTexture()
     {
         Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(GridTexturePath);
@@ -142,12 +153,13 @@ public static class GrayboxSceneBuilder
         return tex;
     }
 
+    // 巨幅地面：142x117m 铺满到外围墙脚下——场地内没有任何虚空，掉不下去
     private static void CreateGround(Materials mats)
     {
         GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
         ground.transform.position = Vector3.zero;
-        ground.transform.localScale = new Vector3(4f, 1f, 8f); // 40m x 80m
+        ground.transform.localScale = new Vector3(14.2f, 1f, 11.7f); // Plane 原型 10x10m
         ground.GetComponent<MeshRenderer>().sharedMaterial = mats.Ground;
     }
 
@@ -168,7 +180,7 @@ public static class GrayboxSceneBuilder
         ramp.GetComponent<MeshRenderer>().sharedMaterial = mats.Wall;
     }
 
-    // 限高门：净空取“滑铲高度 + 余量”，站立高度无法通过
+    // 限高门：净空取"滑铲高度 + 余量"，站立高度无法通过
     private static void CreateSlideGate(Materials mats, MovementParams movementParams)
     {
         float clearance = movementParams.SlideCapsuleHeight + 0.3f;
@@ -181,10 +193,67 @@ public static class GrayboxSceneBuilder
             new Vector3(4f, lintelThickness, 0.5f), mats.Lintel);
     }
 
+    // 椭圆环道：内外双护栏（3m 高，跳跃上抛仅 1.6m 越不出去）+ 中心线红色刻度条（约每 10m）
+    private static void CreateRingTrack(Materials mats)
+    {
+        CreateEllipseRail(mats.Wall, RingA - TrackHalfWidth, RingB - TrackHalfWidth);
+        CreateEllipseRail(mats.Wall, RingA + TrackHalfWidth, RingB + TrackHalfWidth);
+
+        for (int i = 0; i < MarkerCount; i++)
+        {
+            float t = i / (float)MarkerCount * Mathf.PI * 2f;
+            float tNext = (i + 1) / (float)MarkerCount * Mathf.PI * 2f;
+            Vector3 p = Ellipse(RingA, RingB, t);
+            Vector3 pNext = Ellipse(RingA, RingB, tNext);
+            float yaw = Mathf.Atan2(pNext.x - p.x, pNext.z - p.z) * Mathf.Rad2Deg;
+
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            marker.name = "TrackMarker_" + i;
+            Object.DestroyImmediate(marker.GetComponent<BoxCollider>()); // 地面刻度不需要碰撞
+            marker.transform.SetPositionAndRotation(new Vector3(p.x, 0.011f, p.z), Quaternion.Euler(0f, yaw, 0f));
+            marker.transform.localScale = new Vector3(TrackHalfWidth * 2f * 0.8f, 0.02f, 0.25f);
+            marker.GetComponent<MeshRenderer>().sharedMaterial = mats.Lintel;
+        }
+    }
+
+    private static void CreateEllipseRail(Material material, float a, float b)
+    {
+        for (int i = 0; i < RailSegments; i++)
+        {
+            float t0 = i / (float)RailSegments * Mathf.PI * 2f;
+            float t1 = (i + 1) / (float)RailSegments * Mathf.PI * 2f;
+            Vector3 p0 = Ellipse(a, b, t0);
+            Vector3 p1 = Ellipse(a, b, t1);
+            Vector3 mid = (p0 + p1) * 0.5f;
+            float length = Vector3.Distance(p0, p1) + 0.4f; // 微重叠防缝隙
+            float yaw = Mathf.Atan2(p1.x - p0.x, p1.z - p0.z) * Mathf.Rad2Deg;
+
+            GameObject seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            seg.name = "Rail";
+            seg.transform.SetPositionAndRotation(new Vector3(mid.x, 1.5f, mid.z), Quaternion.Euler(0f, yaw, 0f));
+            seg.transform.localScale = new Vector3(0.4f, 3f, length);
+            seg.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
+    }
+
+    private static Vector3 Ellipse(float a, float b, float t)
+    {
+        return new Vector3(a * Mathf.Sin(t), 0f, b * Mathf.Cos(t));
+    }
+
+    // 外围挡墙 6m：兜住蹬墙链等超高过冲，与地面边缘相接——封闭场地
+    private static void CreatePerimeter(Materials mats)
+    {
+        CreateBox("Perimeter_N", new Vector3(0f, 3f, 57f), new Vector3(142f, 6f, 1f), mats.Wall);
+        CreateBox("Perimeter_S", new Vector3(0f, 3f, -57f), new Vector3(142f, 6f, 1f), mats.Wall);
+        CreateBox("Perimeter_E", new Vector3(70.5f, 3f, 0f), new Vector3(1f, 6f, 115f), mats.Wall);
+        CreateBox("Perimeter_W", new Vector3(-70.5f, 3f, 0f), new Vector3(1f, 6f, 115f), mats.Wall);
+    }
+
     private static Transform CreatePlayer(Materials mats, MovementParams movementParams)
     {
         GameObject player = new GameObject("Player");
-        player.transform.position = new Vector3(0f, 0.1f, 0f);
+        player.transform.position = new Vector3(0f, 0.1f, -RingB); // 出生在环道南侧直道，起步即沿环
 
         CharacterController controller = player.AddComponent<CharacterController>();
         controller.radius = movementParams.CapsuleBaseRadius;
@@ -196,7 +265,8 @@ public static class GrayboxSceneBuilder
         serializedMotor.FindProperty("_params").objectReferenceValue = movementParams;
         serializedMotor.ApplyModifiedPropertiesWithoutUndo();
 
-        player.AddComponent<DebugHUD>(); // cl_showspeed 惯例的调试 HUD（F3 开关）
+        player.AddComponent<DebugHUD>();       // cl_showspeed 惯例的调试 HUD（F3 开关）
+        player.AddComponent<PlayerRespawn>();  // 掉出世界秒回出生点
 
         // 可见玩家：自发光胶囊，尺寸随受击框变细同步（朝向读红色速度向量 gizmo）
         GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -227,10 +297,10 @@ public static class GrayboxSceneBuilder
         serializedFollow.FindProperty("_target").objectReferenceValue = player;
         serializedFollow.ApplyModifiedPropertiesWithoutUndo();
 
-        // 编辑态初始机位：贴近跟随相机 Play 时的起始姿态（yaw 0 / pitch 18 / 距离 6），避免预览歪斜
+        // 编辑态初始机位：出生点后方，面向环道切线方向（+x）
         cameraGo.transform.SetPositionAndRotation(
-            player.position + new Vector3(0f, 1.2f, -6f) + Vector3.up * 1.2f,
-            Quaternion.Euler(18f, 0f, 0f));
+            player.position + new Vector3(-6.5f, 2.5f, 0f),
+            Quaternion.Euler(18f, 90f, 0f));
 
         GameObject lightGo = new GameObject("Directional Light");
         Light light = lightGo.AddComponent<Light>();

@@ -25,6 +25,12 @@ public class MovementParams : ScriptableObject
     [Tooltip("跳跃预输入缓冲（秒）：滞空/落地前按跳仍在窗口内生效")]
     public float JumpBufferWindow = 0.12f;
 
+    [Header("速度转向（策划案第 1 节：按前进保留速度大小、转向摄像机方向）")]
+    [Tooltip("速度转向角速度上限（度/秒）。超过阈值后加速投影为负拐不了弯，高速转向全靠这条；限速率避免瞬移转向")]
+    public float SpeedSteerTurnRate = 540f;
+    [Tooltip("水平速度达到地速阈值该比例以上才启用速度转向；更低速度的转向交给加速投影")]
+    public float SteerMinSpeedRatio = 0.5f;
+
     [Header("滑铲（策划案第 3 节）")]
     [Tooltip("水平速度达到地速阈值该比例时，Shift 才触发滑铲")]
     public float SlideSpeedRatio = 0.8f;

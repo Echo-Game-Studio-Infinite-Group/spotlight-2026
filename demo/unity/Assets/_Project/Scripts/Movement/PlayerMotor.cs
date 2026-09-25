@@ -47,6 +47,19 @@ public class PlayerMotor : MonoBehaviour
     public void SetInput(IPlayerInput input) { if (input != null) _input = input; }
     public void SetParams(MovementParams parameters) { if (parameters != null) _params = parameters; }
 
+    // 状态复位（掉落重生等）：速度/能量/滑铲清零，着地状态由下一次碰撞检测重建
+    public void ResetState()
+    {
+        if (_sliding) SetCapsule(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius);
+        _velocity = Vector3.zero;
+        _energy = 0f;
+        _sliding = false;
+        _grounded = false;
+        _jumpPressedPending = false;
+        _jumpPressedTime = -999f;
+        _lastLandTime = -999f;
+    }
+
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
@@ -118,7 +131,9 @@ public class PlayerMotor : MonoBehaviour
             HandleWallJump();
         }
 
-        // 加速结算后对水平速度施加上限（软上限：仿真结论“增速线性且无上界”）
+        ApplySpeedSteering(dt);
+
+        // 加速结算后对水平速度施加上限（软上限：仿真结论”增速线性且无上界”）
         ClampHorizontalSpeed();
 
         ApplyGravity(dt);
@@ -193,6 +208,28 @@ public class PlayerMotor : MonoBehaviour
         if (addspeed <= 0f) return;
         float accel = Mathf.Min(_params.AirControl * _params.GroundSpeedThreshold * dt, addspeed);
         _velocity += wishDir * accel;
+    }
+
+    // 策划案第 1 节：按住前进时保留速度大小，以受限角速度把速度转向摄像机朝向（空中同样生效）
+    // 超过阈值后投影上限使加速无法改变方向，高速转向完全依赖本函数
+    private void ApplySpeedSteering(float dt)
+    {
+        if (_sliding || _input.Vertical <= 0.1f) return;
+        float speed = HorizontalSpeed;
+        if (speed < _params.GroundSpeedThreshold * _params.SteerMinSpeedRatio) return;
+
+        Vector3 forward = Vector3.forward;
+        if (_cameraTransform != null)
+        {
+            Vector3 camForward = _cameraTransform.forward;
+            camForward.y = 0f;
+            if (camForward.sqrMagnitude > 0.0001f) forward = camForward.normalized;
+        }
+
+        Vector3 dir = HorizontalVelocity().normalized;
+        Vector3 newDir = Vector3.RotateTowards(dir, forward, _params.SpeedSteerTurnRate * Mathf.Deg2Rad * dt, 0f);
+        _velocity.x = newDir.x * speed;
+        _velocity.z = newDir.z * speed;
     }
 
     // 水平速度软上限（仿真风险兜底）；只缩放水平分量，垂直不受影响
