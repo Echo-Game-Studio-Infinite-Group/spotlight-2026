@@ -66,4 +66,21 @@ public class MovementParams : ScriptableObject
     [Header("碰撞查询")]
     [Tooltip("起身头顶阻挡检测使用的层")]
     public LayerMask CollisionMask = ~0;
+
+    [Header("泵油模型与上限（数学仿真回传，见 demo/movement-sim/results/report.md）")]
+    [Tooltip("泵油模式。WindowPump=设计意图：免摩擦窗口内泵加速不受 Quake 投影上限约束，跑-跳循环线性加速（仿真 30 循环 5.833×阈值）；VerbatimQuake=任务公式字面模型，仅作对照——直线跑跳零增长，无法实现策划案『不断加速』")]
+    public PumpMode Pump = PumpMode.WindowPump;
+    [Tooltip("水平速度软上限（绝对速度）。仿真风险：泵油增速线性且无上界（每地面 tick +accel/60），必须软上限兜底；占位默认 = 12×地速阈值")]
+    public float MaxSpeed = 120f;
+    [Tooltip("矢量转换器能量上限（策划案第 4 节）")]
+    public float EnergyMax = 200f;
+    [Tooltip("每 tick 能量增量 = max(0, |v水平| - 地速阈值) × 本系数（策划案第 4 节）。仿真里速度用阈值倍数、增量乘 dt；本工程用绝对速度按 tick 直算，故占位 1")]
+    public float EnergyPerTickPerExcessSpeed = 1f;
+}
+
+// 泵油模式：仿真的核心模型结论（详见 report.md 第 1 节）
+public enum PumpMode
+{
+    VerbatimQuake, // 任务公式字面模型：加速始终受投影上限约束（仿真结论：只保速、零增长）
+    WindowPump,    // 修正模型：免摩擦窗口内泵加速不受投影上限约束（默认，设计意图）
 }

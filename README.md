@@ -34,6 +34,18 @@ dotnet run
 1. Unity Hub → 用 **2022.3.33f1** 打开 `demo/unity`（本机路径 `F:\Unity\2022.3.33f1`，注意该编辑器为中国版 c1，团队正式开工前需对齐版本）
 2. 首次打开会生成 Library/（已被 .gitignore 忽略）
 3. 菜单「超高速行者 → 生成灰盒场景」一键生成测试场景（地面/蹬墙走廊/斜坡/限高门 + 挂好 PlayerMotor 的玩家）
+4. **F3** 开关调试 HUD：速度（阈值倍数）/ 能量 / 模式（WindowPump / VerbatimQuake）/ 着地与免摩擦窗口状态
+5. MovementParams 里 `Pump` 字段可切换移动模型：**WindowPump（默认，修正模型）** vs VerbatimQuake（策划案字面公式，仿真与引擎测试均已证明零增长，仅作对照）
+
+### 跑引擎侧交叉验证测试（PlayMode）
+
+```bash
+"F:/Unity/2022.3.33f1/Editor/Unity.exe" -batchmode -runTests \
+  -projectPath "F:/VSCode/taptap-game-jem/demo/unity" \
+  -testPlatform PlayMode -testResults results.xml -logFile test.log
+```
+
+注意**不能带 `-quit`**（带会在 TestRunner 启动前退出）。或在编辑器里 Window → General → Test Runner。三个测试断言：WindowPump 30 循环速度 ≈6× 阈值、VerbatimQuake 恒为 1×（零增长）、软上限与能量饱和——与 `demo/movement-sim` 的数学结论逐条对应。
 
 ## 环境约定
 

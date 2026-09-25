@@ -3,6 +3,7 @@ using UnityEngine;
 // 运动学移动控制器：FixedUpdate 手动积分，CharacterController.Move 只做碰撞查询（禁止刚体力模拟手感）
 // 算法为 Quake accelerate / friction 公式照写（数学不受版权保护，未拷贝任何 GPL 代码）
 // 全部数值来自 MovementParams；碰撞胶囊 pivot 约定在脚底（center.y = height/2）
+// 泵油模型与 MovementMath.cs（demo/movement-sim）语义一致：窗口内泵加速不受投影上限，窗口外一切照字面公式
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMotor : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class PlayerMotor : MonoBehaviour
 
     private CharacterController _controller;
     private Transform _cameraTransform;
+    private IPlayerInput _input;      // 输入缝：默认 LegacyPlayerInput，测试可注入脚本桩
 
     private Vector3 _velocity;
     private bool _grounded;
@@ -21,6 +23,9 @@ public class PlayerMotor : MonoBehaviour
     private float _jumpPressedTime;   // 跳跃预输入时间戳（策划案第 2 节滞空预输入）
     private bool _jumpPressedPending; // Update 捕获的按下沿，避免 FixedUpdate 漏检
 
+    private float _energy;            // 矢量转换器能量（策划案第 4 节）
+    private int _jumpCount;           // 已执行跳跃次数（测试用只读统计）
+
     private Vector3 _wallNormal;
     private bool _wallTouch;
 
@@ -29,10 +34,23 @@ public class PlayerMotor : MonoBehaviour
     public Vector3 Velocity => _velocity;
     public bool IsGrounded => _grounded;
     public bool IsSliding => _sliding;
+    public MovementParams Params => _params;
+    public float HorizontalSpeed => HorizontalVelocity().magnitude;
+    public float Energy => _energy;
+    public int JumpCount => _jumpCount;
+    // 免摩擦窗口内（严格小于窗口时长，与仿真 InFrictionFreeWindow 的判定一致）
+    public bool InFrictionWindow => _grounded && (_playerTime - _lastLandTime) < _params.FrictionExemptWindow;
+    public float FrictionWindowRemaining =>
+        _params == null ? 0f : Mathf.Max(0f, _params.FrictionExemptWindow - (_playerTime - _lastLandTime));
+
+    // 测试注入：必须在组件激活（Awake）前调用，否则 Awake 的默认/初始化逻辑会覆盖
+    public void SetInput(IPlayerInput input) { if (input != null) _input = input; }
+    public void SetParams(MovementParams parameters) { if (parameters != null) _params = parameters; }
 
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
+        if (_input == null) _input = new LegacyPlayerInput();
         _lastLandTime = -999f;
         _lastWallJumpTime = -999f;
         _jumpPressedTime = -999f;
@@ -52,12 +70,10 @@ public class PlayerMotor : MonoBehaviour
         }
 
         // 按下沿在 Update 捕获：FixedUpdate 可能漏检无固定步进帧上的按键
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (_input.JumpPressed)
         {
             _jumpPressedPending = true;
         }
-
-        // TODO: speed/energy 的 HUD 显示（本次骨架不做 UI）
     }
 
     private void FixedUpdate()
@@ -71,16 +87,14 @@ public class PlayerMotor : MonoBehaviour
             _jumpPressedTime = _playerTime;
         }
 
-        bool shiftHeld = Input.GetKey(KeyCode.LeftShift);
-        bool shiftPressed = Input.GetKeyDown(KeyCode.LeftShift);
+        bool shiftHeld = _input.RunHeld;
         bool running = shiftHeld; // 策划案 Shift+W 奔跑；骨架不细分无 W 的 Shift
         Vector3 wishDir = ComputeWishDir();
 
         // 滑铲进入：速度达到约 0.8x 地速阈值时按下 Shift（策划案第 3 节）
-        // Shift 被奔跑共用，故“保持 Shift 但松开 W”也视为滑铲意图
-        bool slideTrigger = shiftPressed || (shiftHeld && !Input.GetKey(KeyCode.W));
+        bool slideTrigger = _input.SlideTrigger;
         if (!_sliding && _grounded && slideTrigger &&
-            HorizontalSpeed() >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio)
+            HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio)
         {
             EnterSlide();
         }
@@ -104,12 +118,17 @@ public class PlayerMotor : MonoBehaviour
             HandleWallJump();
         }
 
+        // 加速结算后对水平速度施加上限（软上限：仿真结论“增速线性且无上界”）
+        ClampHorizontalSpeed();
+
         ApplyGravity(dt);
         UpdateCapsuleBySpeed();
         _controller.Move(_velocity * dt);
         UpdateGroundState();
 
-        // TODO: 矢量转换器——能量每 tick 增加 max(0, 水平速度 - 地速阈值)（策划案第 4 节）
+        // 矢量转换器：每 tick 能量 += max(0, 水平速度 - 地速阈值)（策划案第 4 节），累加后立即钳制
+        _energy = Mathf.Min(_params.EnergyMax,
+            _energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold) * _params.EnergyPerTickPerExcessSpeed);
     }
 
     private void OnControllerColliderHit(ControllerColliderHit hit)
@@ -125,8 +144,8 @@ public class PlayerMotor : MonoBehaviour
     // 输入方向 → 世界方向：绕相机 yaw 旋转（“按前进保留速度大小、转向摄像机对应方向”的基础）
     private Vector3 ComputeWishDir()
     {
-        float x = Input.GetAxisRaw("Horizontal");
-        float z = Input.GetAxisRaw("Vertical");
+        float x = _input.Horizontal;
+        float z = _input.Vertical;
         if (x == 0f && z == 0f) return Vector3.zero;
         float yaw = _cameraTransform != null ? _cameraTransform.eulerAngles.y : transform.eulerAngles.y;
         Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * new Vector3(x, 0f, z);
@@ -136,11 +155,11 @@ public class PlayerMotor : MonoBehaviour
     // 摩擦只在超速时生效：平跑收敛于地速阈值；免摩擦窗口内跳过结算——兔子跳的全部实现
     private void ApplyGroundFriction(float dt, bool running)
     {
-        float speed = HorizontalSpeed();
+        float speed = HorizontalSpeed;
         // 行走时以行走目标速度为门槛，实现“行走快速减速至固定较小值”（策划案第 1 节）
         float threshold = running ? _params.GroundSpeedThreshold : _params.WalkSpeed;
         if (speed <= threshold) return;
-        if (_playerTime - _lastLandTime <= _params.FrictionExemptWindow) return;
+        if (InFrictionWindow) return;
 
         float newSpeed = Mathf.Max(0f, speed * (1f - _params.GroundFriction * dt));
         Vector3 horiz = HorizontalVelocity();
@@ -150,15 +169,20 @@ public class PlayerMotor : MonoBehaviour
 
     // Quake accelerate：addspeed = wishspeed - dot(v, wishdir)，为正则
     // v += wishdir * min(accel * wishspeed * dt, addspeed)
-    // 奔跑 wishspeed 取地速阈值：免摩擦窗口内小幅转向可产生增益，即兔子跳的加速来源
+    // WindowPump 下免摩擦窗口内去掉投影上限（模型唯一偏差）；窗口外与 VerbatimQuake 完全一致
     private void ApplyGroundAcceleration(float dt, Vector3 wishDir, bool running)
     {
         if (wishDir == Vector3.zero) return;
         float wishspeed = running ? _params.GroundSpeedThreshold : _params.WalkSpeed;
+        float step = _params.RunAccel * wishspeed * dt;
+        if (_params.Pump == PumpMode.WindowPump && InFrictionWindow)
+        {
+            _velocity += wishDir * step; // 泵加速：窗口内摩擦既不作用，也不再受投影上限
+            return;
+        }
         float addspeed = wishspeed - Vector3.Dot(HorizontalVelocity(), wishDir);
         if (addspeed <= 0f) return;
-        float accel = Mathf.Min(_params.RunAccel * wishspeed * dt, addspeed);
-        _velocity += wishDir * accel;
+        _velocity += wishDir * Mathf.Min(step, addspeed);
     }
 
     // 空中加速与地面同构；骨架 AirControl 为 0，仅保留接口
@@ -169,6 +193,17 @@ public class PlayerMotor : MonoBehaviour
         if (addspeed <= 0f) return;
         float accel = Mathf.Min(_params.AirControl * _params.GroundSpeedThreshold * dt, addspeed);
         _velocity += wishDir * accel;
+    }
+
+    // 水平速度软上限（仿真风险兜底）；只缩放水平分量，垂直不受影响
+    private void ClampHorizontalSpeed()
+    {
+        Vector3 horiz = HorizontalVelocity();
+        float speed = horiz.magnitude;
+        if (speed <= _params.MaxSpeed || speed <= 0f) return;
+        float scale = _params.MaxSpeed / speed;
+        _velocity.x *= scale;
+        _velocity.z *= scale;
     }
 
     private void HandleJump(Vector3 wishDir, bool running)
@@ -185,6 +220,7 @@ public class PlayerMotor : MonoBehaviour
             }
             _velocity.y = _params.JumpSpeed;
             _grounded = false;
+            _jumpCount++;
         }
     }
 
@@ -213,6 +249,7 @@ public class PlayerMotor : MonoBehaviour
         _lastWallJumpTime = _playerTime;
         _wallTouch = false;
         _grounded = false;
+        _jumpCount++;
     }
 
     private void UpdateSlide()
@@ -228,6 +265,7 @@ public class PlayerMotor : MonoBehaviour
             {
                 _velocity.y = _params.JumpSpeed;
                 _grounded = false;
+                _jumpCount++;
                 return;
             }
         }
@@ -240,7 +278,7 @@ public class PlayerMotor : MonoBehaviour
             _velocity.z = horiz.z / speed * newSpeed;
         }
 
-        bool shiftHeld = Input.GetKey(KeyCode.LeftShift);
+        bool shiftHeld = _input.RunHeld;
         if (speed < _params.SlideEndSpeed || !shiftHeld)
         {
             ExitSlideIfRoom(); // 头顶受阻（限高门内）时保持滑铲姿态
@@ -295,7 +333,7 @@ public class PlayerMotor : MonoBehaviour
     private void UpdateCapsuleBySpeed()
     {
         if (_sliding) return; // 滑铲高度由 Enter/Exit 管理
-        float t = Mathf.InverseLerp(_params.CapsuleShrinkStartSpeed, _params.CapsuleShrinkEndSpeed, HorizontalSpeed());
+        float t = Mathf.InverseLerp(_params.CapsuleShrinkStartSpeed, _params.CapsuleShrinkEndSpeed, HorizontalSpeed);
         SetCapsule(Mathf.Lerp(_params.CapsuleBaseHeight, _params.CapsuleFastHeight, t),
             Mathf.Lerp(_params.CapsuleBaseRadius, _params.CapsuleMinRadius, t));
     }
@@ -322,7 +360,6 @@ public class PlayerMotor : MonoBehaviour
     }
 
     private Vector3 HorizontalVelocity() => new Vector3(_velocity.x, 0f, _velocity.z);
-    private float HorizontalSpeed() => HorizontalVelocity().magnitude;
 
     // 调试：速度向量（红）；落地免摩擦窗口内（黄）；滑铲中（青）
     private void OnDrawGizmos()
@@ -331,7 +368,7 @@ public class PlayerMotor : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawLine(transform.position, transform.position + _velocity);
 
-        if (_grounded && _playerTime - _lastLandTime <= _params.FrictionExemptWindow)
+        if (InFrictionWindow)
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position + Vector3.up * (_controller.radius * 0.5f), _controller.radius);

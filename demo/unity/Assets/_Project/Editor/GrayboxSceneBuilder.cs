@@ -109,6 +109,8 @@ public static class GrayboxSceneBuilder
         SerializedObject serializedMotor = new SerializedObject(motor);
         serializedMotor.FindProperty("_params").objectReferenceValue = movementParams;
         serializedMotor.ApplyModifiedPropertiesWithoutUndo();
+
+        player.AddComponent<DebugHUD>(); // cl_showspeed 惯例的调试 HUD（F3 开关）
     }
 
     private static void CreateCameraAndLight()
