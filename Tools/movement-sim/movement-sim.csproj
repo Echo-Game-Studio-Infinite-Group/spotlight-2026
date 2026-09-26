@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>MovementSim</RootNamespace>
+    <AssemblyName>movement-sim</AssemblyName>
+    <!-- 源码里没有写 using System / System.IO，依赖隐式 using -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 源码用了 string? 注解，但没开可空警告：只启用注解上下文，避免 CS8632 -->
+    <Nullable>annotations</Nullable>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
