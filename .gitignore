@@ -48,6 +48,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+_doc/
 
 # OS
 Thumbs.db
@@ -56,4 +57,15 @@ Thumbs.db
 
 # 本地临时
 *.log
-demo/unity-create.log
+
+# 反排除：下面这两条是从通用模板抄来的规则，会误伤本仓库自己的源码文件，必须显式豁免
+# （父目录被排除时 Git 无法用 ! 重新包含其子文件，故必须反排除目录本身）
+
+# 1) dotnet 段的 [Dd]ebug/ 会吞掉 Unity 里任意名为 Debug 的源码目录
+#    本项目已因此丢过一次 DebugHUD.cs（被 git 忽略 → 没提交 → 换台机器就没了）
+!Assets/**/Debug/
+
+# 2) IDE 段的 *.csproj 会吞掉独立 dotnet 工具的项目文件
+#    Unity 自动生成的 .csproj 确实该忽略，但 Tools/ 下的项目文件是源码
+!Tools/**/*.csproj
+!Tools/**/*.sln
