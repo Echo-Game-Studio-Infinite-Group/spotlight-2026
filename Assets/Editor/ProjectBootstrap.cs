@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 // 项目装配：把 Built-in RP 工程切到 URP，并接线加速测试场景
 //   · 生成 URP 管线资产与渲染器，并把 RadialRedshiftFeature 注册进去
 //   · 把遗留的 Built-in Standard 材质转换成 URP/Lit（否则切管线后全部变洋红）
-//   · 清理已删除脚本留下的 Missing 组件，给 Player 挂 CharacterMovement、给相机挂 CameraController
+//   · 清理已删除脚本留下的 Missing 组件，给 Player 装配 Action Map 与唯一 Motor、给相机装配 Cinemachine
 //   · 补一个 Global Volume 承载 RunVolume（URP 色差 + 动态模糊）
 // 可重复执行：已有资产与组件会被复用而不是重复创建
 public static class ProjectBootstrap
@@ -18,9 +18,7 @@ public static class ProjectBootstrap
     private const string SettingsFolder = "Assets/Settings";
     private const string PipelineAssetPath = SettingsFolder + "/URP-Asset.asset";
     private const string RendererDataPath = SettingsFolder + "/URP-Renderer.asset";
-    private const string RunVolumePath = SettingsFolder + "/RunVolume.asset";
     private const string RedshiftMaterialPath = "Assets/Materials/RadialRedshift.mat";
-    private const string MovementParamsPath = SettingsFolder + "/MovementParams.asset";
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
     [MenuItem("超高速行者/装配 URP 与加速测试场景")]
@@ -203,161 +201,7 @@ public static class ProjectBootstrap
 
     private static void WireScene()
     {
-        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-
-        // 1) 代码已整体删除，旧组件全部变成 Missing Script — 先清干净再接线
-        int removed = 0;
-        foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
-            {
-                removed += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(child.gameObject);
-            }
-        }
-
-        GameObject player = FindInScene(scene, "Player");
-        GameObject cameraGo = FindInScene(scene, "Main Camera");
-        if (player == null || cameraGo == null)
-        {
-            Debug.LogError("[ProjectBootstrap] 场景缺少 Player 或 Main Camera，接线中止");
-            return;
-        }
-
-        // 2) Player：两套移动机制都挂上，靠 enabled 开关切换。
-        //    两者都要求同一个 CharacterController 且都直读输入，同时启用会互相抢控制权，所以必须二选一。
-        //    只在组件是新建的时候设默认值 —— 重复执行不覆盖主人手动选的开关状态。
-        PlayerMotor motor = player.GetComponent<PlayerMotor>();
-        if (motor == null)
-        {
-            motor = player.AddComponent<PlayerMotor>();
-            motor.enabled = true; // 默认启用原版 bhop 机制（DebugHUD 也依赖它）
-        }
-
-        SerializedObject motorSo = new SerializedObject(motor);
-        SerializedProperty paramsProperty = motorSo.FindProperty("_params");
-        if (paramsProperty != null && paramsProperty.objectReferenceValue == null)
-        {
-            paramsProperty.objectReferenceValue = AssetDatabase.LoadAssetAtPath<MovementParams>(MovementParamsPath);
-            motorSo.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        CharacterMovement characterMovement = player.GetComponent<CharacterMovement>();
-        if (characterMovement == null)
-        {
-            characterMovement = player.AddComponent<CharacterMovement>();
-            characterMovement.enabled = false; // 默认让位给 PlayerMotor
-        }
-
-        // CharacterMovement 的移动方向以相机为基准，所以必须指向相机（切到它时才有正确朝向）
-        SerializedObject movementSo = new SerializedObject(characterMovement);
-        SerializedProperty referenceProperty = movementSo.FindProperty("_movementReference");
-        if (referenceProperty != null)
-        {
-            referenceProperty.objectReferenceValue = cameraGo.transform;
-            movementSo.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        if (player.GetComponent<PlayerRespawn>() == null)
-        {
-            player.AddComponent<PlayerRespawn>();
-        }
-
-        if (player.GetComponent<DebugHUD>() == null)
-        {
-            player.AddComponent<DebugHUD>();
-        }
-
-        // 4) 可见胶囊跟随受击框（PlayerMotor 变速改胶囊尺寸；CharacterMovement 不改，视觉保持基准尺寸）
-        Transform visual = player.transform.Find("Visual");
-        CapsuleVisualSync visualSync = player.GetComponent<CapsuleVisualSync>();
-        if (visualSync == null)
-        {
-            visualSync = player.AddComponent<CapsuleVisualSync>();
-        }
-
-        if (visual != null)
-        {
-            SerializedObject syncSo = new SerializedObject(visualSync);
-            syncSo.FindProperty("_visual").objectReferenceValue = visual;
-            syncSo.ApplyModifiedPropertiesWithoutUndo();
-
-            // 图元 pivot 在几何中心，而 CharacterController 的 pivot 在脚底，必须抬高半个身高
-            CharacterController controller = player.GetComponent<CharacterController>();
-            float centerY = controller != null ? controller.center.y : 1f;
-            visual.localPosition = new Vector3(0f, centerY, 0f);
-            visual.localRotation = Quaternion.identity;
-            visual.localScale = Vector3.one;
-        }
-
-        // 4) 相机：挂 URP 附加数据 + 特效控制器，并指向 Global Volume
-        if (cameraGo.GetComponent<UniversalAdditionalCameraData>() == null)
-        {
-            cameraGo.AddComponent<UniversalAdditionalCameraData>();
-        }
-
-        UniversalAdditionalCameraData cameraData = cameraGo.GetComponent<UniversalAdditionalCameraData>();
-        cameraData.renderPostProcessing = true;
-
-        CameraController cameraController = cameraGo.GetComponent<CameraController>();
-        if (cameraController == null)
-        {
-            cameraController = cameraGo.AddComponent<CameraController>();
-        }
-
-        Volume volume = FindOrCreateGlobalVolume(scene);
-        cameraController.player = player;
-        cameraController.volume = volume;
-
-        EditorSceneManager.MarkSceneDirty(scene);
-        bool saved = EditorSceneManager.SaveScene(scene);
-        Debug.Log("[ProjectBootstrap] 场景接线完成：清除 Missing 组件 " + removed + " 个，保存=" + saved);
-    }
-
-    private static Volume FindOrCreateGlobalVolume(Scene scene)
-    {
-        foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            Volume existing = root.GetComponentInChildren<Volume>(true);
-            if (existing != null)
-            {
-                return existing;
-            }
-        }
-
-        GameObject go = new GameObject("Global Volume");
-        SceneManager.MoveGameObjectToScene(go, scene);
-
-        Volume volume = go.AddComponent<Volume>();
-        volume.isGlobal = true;
-        volume.priority = 0f;
-        volume.sharedProfile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(RunVolumePath);
-        if (volume.sharedProfile == null)
-        {
-            Debug.LogWarning("[ProjectBootstrap] 未找到 RunVolume.asset，色差与动态模糊不会生效");
-        }
-
-        return volume;
-    }
-
-    private static GameObject FindInScene(Scene scene, string name)
-    {
-        foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            if (root.name == name)
-            {
-                return root;
-            }
-
-            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
-            {
-                if (child.name == name)
-                {
-                    return child.gameObject;
-                }
-            }
-        }
-
-        return null;
+        MovementSceneSetup.Apply(EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single));
     }
 
     private static void EnsureFolder(string parent, string name)
@@ -419,29 +263,7 @@ public static class ProjectBootstrap
         lines.Add("RadialRedshift 材质 shader: " + (redshift != null && redshift.shader != null ? redshift.shader.name : "空"));
 
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        GameObject player = FindInScene(scene, "Player");
-        GameObject cameraGo = FindInScene(scene, "Main Camera");
-        lines.Add("Player.CharacterMovement: " + (player != null && player.GetComponent<CharacterMovement>() != null));
-        // 两套移动机制同时挂载，必须只有一个 enabled —— 两个都跑会互相抢 CharacterController
-        PlayerMotor motor = player != null ? player.GetComponent<PlayerMotor>() : null;
-        CharacterMovement characterMovement = player != null ? player.GetComponent<CharacterMovement>() : null;
-        bool motorOn = motor != null && motor.enabled;
-        bool movementOn = characterMovement != null && characterMovement.enabled;
-        lines.Add("Player.PlayerMotor enabled: " + motorOn + "（参数资产=" + (motor != null && motor.Params != null ? motor.Params.name : "空") + "）");
-        lines.Add("Player.CharacterMovement enabled: " + movementOn);
-        lines.Add("移动机制二选一成立: " + (motorOn ^ movementOn));
-        lines.Add("Player.DebugHUD: " + (player != null && player.GetComponent<DebugHUD>() != null));
-        lines.Add("Player.CapsuleVisualSync: " + (player != null && player.GetComponent<CapsuleVisualSync>() != null));
-        lines.Add("Player.PlayerRespawn: " + (player != null && player.GetComponent<PlayerRespawn>() != null));
-        lines.Add("Camera.CameraController: " + (cameraGo != null && cameraGo.GetComponent<CameraController>() != null));
-        lines.Add("Camera.UniversalAdditionalCameraData: " + (cameraGo != null && cameraGo.GetComponent<UniversalAdditionalCameraData>() != null));
-
-        CameraController controller = cameraGo != null ? cameraGo.GetComponent<CameraController>() : null;
-        lines.Add("CameraController.player 已连: " + (controller != null && controller.player != null));
-        lines.Add("CameraController.volume 已连: " + (controller != null && controller.volume != null));
-        lines.Add("RunVolume profile: " + (controller != null && controller.volume != null && controller.volume.sharedProfile != null
-            ? controller.volume.sharedProfile.name
-            : "空"));
+        MovementSceneSetup.Verify(scene);
 
         foreach (string line in lines)
         {
