@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 // 速度感后期：把玩家水平速度写进 URP Volume（色差 / 动态模糊）与自研 RadialRedshiftFeature（无上限运动模糊 / 径向拖影 / 色差）
-// 与机位彻底解耦——不碰 transform、不写 FOV，所以能与 CinemachineBrain 共存；这是它取代 CameraController 的原因
+// 与机位彻底解耦——不碰 transform、不写 FOV，所以能与 CinemachineBrain 共存
 // 特效分两条通路，互不替代：URP 自带项受 clamp(0.2) 硬限，自研项直接采样运动向量、强度无上限
 public class SpeedEffectsRig : MonoBehaviour
 {
