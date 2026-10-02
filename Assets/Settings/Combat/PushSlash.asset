@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 641ca553e629aaf4dbfe8b24116bda7f, type: 3}
+  m_Name: PushSlash
+  m_EditorClassIdentifier: 
+  DisplayName: "\u63A8\u65A9"
+  EnergyCost: 100
+  CooldownSec: 0
+  ClearSpeedOnStart: 0
+  MinSpeedRatio: 0
+  MaxSpeedRatio: Infinity
+  ClearMomentumOnLandIfUnderived: 0
+  DesignNote: "\u7B56\u5212\u6848 \xA76\uFF08P1 \u9879\uFF09\uFF1A\u6570\u9053\u51FB\u9000\u65A9\u51FB\u3001\u53EF
+    parry\u3001\u4E0E\u666E\u653B\u4E92\u53D6\u6D88\uFF1B\u8017\u80FD\u516C\u5F0F
+    max(0,150-20v) \u5F85\u63A5\u901F\u5EA6\u53D8\u91CF\uFF0C\u5148\u5360\u4F4D"
+  Phases:
+  - StartupSec: 0.1
+    ActiveSec: 0.08
+    RecoverySec: 0.1
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 7
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 8
+    HitStopSec: 0.04
+    HasParry: 1
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.55
+      CapsuleHeight: 1.6
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.6}
+    Motion: 0
+    MotionSpeed: 8
+    Sweep: 0
+  - StartupSec: 0.08
+    ActiveSec: 0.08
+    RecoverySec: 0.2
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 9
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 8
+    HitStopSec: 0.04
+    HasParry: 1
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.55
+      CapsuleHeight: 1.6
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.6}
+    Motion: 0
+    MotionSpeed: 8
+    Sweep: 0
