@@ -223,6 +223,15 @@ public static class ProjectBootstrap
             return;
         }
 
+        // 1b) 时间分层必须真实挂在场景里——否则全部逻辑跑 Time.deltaTime 退化路径，
+        //     "逻辑只读 TimeManager 缩放时间"（AGENTS.md 第 5 条）形同虚设
+        if (FindInScene(scene, "TimeManager") == null)
+        {
+            GameObject timeGo = new GameObject("TimeManager");
+            SceneManager.MoveGameObjectToScene(timeGo, scene);
+            timeGo.AddComponent<TimeManager>();
+        }
+
         // 2) Player：两套移动机制都挂上，靠 enabled 开关切换。
         //    两者都要求同一个 CharacterController 且都直读输入，同时启用会互相抢控制权，所以必须二选一。
         //    只在组件是新建的时候设默认值 —— 重复执行不覆盖主人手动选的开关状态。
@@ -268,7 +277,9 @@ public static class ProjectBootstrap
         }
 
         // 4) 可见胶囊跟随受击框（PlayerMotor 变速改胶囊尺寸；CharacterMovement 不改，视觉保持基准尺寸）
-        Transform visual = player.transform.Find("Visual");
+        //    场景里子物体叫 "Model"（早期装配曾用 "Visual"）——两个名字都兜底，避免重跑装配把已接好的引用清成 null
+        Transform visual = player.transform.Find("Model");
+        if (visual == null) visual = player.transform.Find("Visual");
         CapsuleVisualSync visualSync = player.GetComponent<CapsuleVisualSync>();
         if (visualSync == null)
         {
