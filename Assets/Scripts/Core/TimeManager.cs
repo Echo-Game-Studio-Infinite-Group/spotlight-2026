@@ -70,8 +70,9 @@ public class TimeManager : MonoBehaviour
     public static bool IsPaused => _instance != null && _instance._paused;
     public static TimeManager Instance => _instance;
 
-    // —— 兼容别名（3C 移动重写的调用面）：玩家固定步 dt 的显式命名，语义与 PlayerDeltaTime 相同 ——
+    // —— 兼容别名（3C/哈士奇调用面）：玩家固定步 dt 显式命名；PlayerRate = 玩家层总速率（含冻结与暂停） ——
     public static float PlayerFixedDeltaTime => PlayerDeltaTime;
+    public static float PlayerRate => PlayerLayerScaleNow;
 
     private static float WorldLayerScaleNow => _instance != null ? _instance.WorldLayerScale : 1f;
     private static float PlayerLayerScaleNow => _instance != null ? _instance.PlayerLayerScale : 1f;
@@ -102,9 +103,9 @@ public class TimeManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // 时间戳只在固定步累计（一帧多 tick 不丢账）；dt 读数实时计算，直调 Scale 后同帧立即生效
-        _worldTime += Time.fixedDeltaTime * WorldLayerScale * FreezeFactor;
-        _playerTime += Time.fixedDeltaTime * PlayerLayerScale * FreezeFactor;
+        // 时间戳只在固定步累计（一帧多 tick 不丢账）；FreezeFactor 已折进 LayerScale
+        _worldTime += Time.fixedDeltaTime * WorldLayerScale;
+        _playerTime += Time.fixedDeltaTime * PlayerLayerScale;
     }
 
     private float FreezeFactor => _hitStopTimer > 0f ? _hitStopScale : 1f;
@@ -119,7 +120,7 @@ public class TimeManager : MonoBehaviour
             {
                 if (_worldSources[i].Scale < scale) scale = _worldSources[i].Scale;
             }
-            return scale;
+            return scale * FreezeFactor;
         }
     }
 
@@ -133,7 +134,7 @@ public class TimeManager : MonoBehaviour
             {
                 if (_playerSources[i].Scale < scale) scale = _playerSources[i].Scale;
             }
-            return scale;
+            return scale * FreezeFactor;
         }
     }
 

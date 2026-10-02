@@ -111,10 +111,20 @@ public static class CombatAssetBootstrap
     public static void WireCombatToScene()
     {
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        GameObject player = FindInScene(scene, "Player");
+        // 角色实例按 PlayerMotor 组件定位：prefab 根名随版本变过（"Player" → 随文件名的 "character"），不依赖名字
+        GameObject player = null;
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            PlayerMotor motor = root.GetComponentInChildren<PlayerMotor>();
+            if (motor != null)
+            {
+                player = motor.gameObject;
+                break;
+            }
+        }
         if (player == null)
         {
-            Debug.LogError("[CombatAssetBootstrap] 场景缺少 Player，装配中止");
+            Debug.LogError("[CombatAssetBootstrap] 场景缺少角色（未找到 PlayerMotor），装配中止");
             return;
         }
 
