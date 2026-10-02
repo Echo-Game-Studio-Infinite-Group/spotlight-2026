@@ -1,27 +1,22 @@
 using UnityEngine;
 
-// 灰盒调试 HUD（cl_showspeed 惯例）：F3 开关，显示速度（阈值倍数）/ 能量 / 泵油模式 / 着地与免摩擦窗口状态
+// 灰盒调试 HUD（cl_showspeed 惯例）：开关走 PlayerInputReader.ToggleHUD（F3，新 Input System）
+// 移动面板读 PlayerMotor 重写后的状态（State/墙面窗口/入墙角）；
 // 战斗面板（设计 §五）：当前招式/段/相位/可取消目标列表/派生窗口/连击数——取消表是否「转得动」必须肉眼可验
-// 用 IMGUI 而非 UI 预制体：预研阶段不引入任何 UI 资产与包依赖（AGENTS.md 第 8 条）
-// 只读 PlayerMotor / PlayerCombat 的公开只读属性，不自己算一遍——调参口径必须与逻辑层同源
+// 只读组件公开只读属性，不自己算一遍——调参口径必须与逻辑层同源
 [RequireComponent(typeof(PlayerMotor))]
-public class DebugHUD : MonoBehaviour
+public sealed class DebugHUD : MonoBehaviour
 {
     [SerializeField] private bool _visible = true;
-    [SerializeField] private KeyCode _toggleKey = KeyCode.F3;
 
     [Header("连击统计（设计 §五）")]
     [Tooltip("连击窗口（秒）：窗口内连续命中累计连击数，超窗归零。占位数值待策划核")]
     [SerializeField] private float _comboWindowSec = 2f;
 
-    private const float PanelMargin = 8f;
-    private const float PanelWidth = 300f;
-    private const float PanelHeight = 200f;
-    private const int FontSize = 14;
-
     private PlayerMotor _motor;
+    private PlayerInputReader _input;
     private PlayerCombat _combat; // 可选：未装配战斗组件时战斗面板静默隐藏
-    private GUIStyle _style; // 懒建：GUIStyle 只在 OnGUI 的 GUI 上下文里创建才安全
+    private GUIStyle _style;
 
     private Hitbox _damageHitbox;
     private int _comboCount;
@@ -30,6 +25,7 @@ public class DebugHUD : MonoBehaviour
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
+        _input = GetComponent<PlayerInputReader>();
         _combat = GetComponent<PlayerCombat>();
 
         // 连击数挂攻击侧命中事件（设计 §五）；框不在本物体上则面板无连击行
@@ -42,13 +38,20 @@ public class DebugHUD : MonoBehaviour
         if (_damageHitbox != null) _damageHitbox.HitResolved += OnHitResolved;
     }
 
-    private void OnDestroy()
+    private void OnEnable()
     {
-        // 订阅随绑定解除（框架 4.4）：HUD 销毁不得让 Hitbox 持有失效委托
-        if (_damageHitbox != null) _damageHitbox.HitResolved -= OnHitResolved;
+        if (_input != null) _input.ToggleHUD += Toggle;
     }
 
-    // 连击窗走 unscaled 时间（框架 4.3：UI/表现不缩放）——hit-stop/时缓不得拉长连击窗口
+    private void OnDisable()
+    {
+        if (_input != null) _input.ToggleHUD -= Toggle;
+        if (_damageHitbox != null) _damageHitbox.HitResolved -= OnHitResolved; // 订阅随绑定解除
+    }
+
+    private void Toggle() => _visible = !_visible;
+
+    // 连击窗走 unscaled 时间（UI/表现不缩放）——hit-stop/时缓不得拉长连击窗口
     private void OnHitResolved(DamageInfo info)
     {
         float now = TimeManager.UnscaledTime;
@@ -57,53 +60,19 @@ public class DebugHUD : MonoBehaviour
         _lastHitUnscaledTime = now;
     }
 
-    private void Update()
-    {
-        // 旧版 Input Manager 直读（AGENTS.md 第 4 条）；走 unscaled 的 Update，暂停/慢动作下 HUD 仍可开关
-        if (Input.GetKeyDown(_toggleKey)) _visible = !_visible;
-    }
-
     private void OnGUI()
     {
-        if (!_visible) return;
-
-        if (_style == null)
-        {
-            _style = new GUIStyle(GUI.skin.label) { fontSize = FontSize };
-        }
-
-        GUI.Box(new Rect(PanelMargin, PanelMargin, PanelWidth, PanelHeight), GUIContent.none);
-
-        Rect inner = new Rect(PanelMargin * 2f, PanelMargin * 1.5f,
-                              PanelWidth - PanelMargin * 3f, PanelHeight - PanelMargin * 2f);
-        GUILayout.BeginArea(inner);
-
-        MovementParams parameters = _motor != null ? _motor.Params : null;
-        if (parameters == null)
-        {
-            GUILayout.Label("PlayerMotor / MovementParams 未就绪", _style);
-            GUILayout.EndArea();
-            return;
-        }
-
-        float speed = _motor.HorizontalSpeed;
-        // 地速阈值为 0 时倍数无意义（参数被误配），退化成只报绝对值
-        string speedLine = parameters.GroundSpeedThreshold > 0f
-            ? string.Format("速度 {0:F2} m/s  ({1:F2}x 阈值)", speed, speed / parameters.GroundSpeedThreshold)
-            : string.Format("速度 {0:F2} m/s", speed);
-
-        GUILayout.Label(speedLine, _style);
-        GUILayout.Label(string.Format("能量 {0:F1} / {1:F1}", _motor.Energy, parameters.EnergyMax), _style);
-        GUILayout.Label(string.Format("模式 {0}", parameters.Pump), _style);
-
-        string state = _motor.IsGrounded ? "着地" : "空中";
-        if (_motor.IsSliding) state += " · 滑铲";
-        if (_motor.InFrictionWindow)
-        {
-            // 免摩擦窗口是兔子跳唯一的加速来源，剩余时间必须可见——否则泵油失败无法定位
-            state += string.Format(" · 免摩擦窗口剩余 {0:F3}s", _motor.FrictionWindowRemaining);
-        }
-        GUILayout.Label(state, _style);
+        if (!_visible || _motor.Params == null) return;
+        if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
+        GUI.Box(new Rect(8f, 8f, 370f, 230f), GUIContent.none);
+        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 210f));
+        GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
+        GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
+        GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
+        GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
+        GUILayout.Label($"能量 {_motor.Energy:F1} / {_motor.Params.EnergyMax:F0}", _style);
+        GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
+        GUILayout.Label("Space 跳跃/蹬墙 · Esc 鼠标锁定 · F3 面板", _style);
 
         // —— 战斗面板（设计 §五：调手感标配）——
         if (_combat != null)

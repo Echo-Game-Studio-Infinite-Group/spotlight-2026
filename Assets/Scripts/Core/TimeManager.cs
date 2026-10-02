@@ -70,6 +70,9 @@ public class TimeManager : MonoBehaviour
     public static bool IsPaused => _instance != null && _instance._paused;
     public static TimeManager Instance => _instance;
 
+    // —— 兼容别名（3C 移动重写的调用面）：玩家固定步 dt 的显式命名，语义与 PlayerDeltaTime 相同 ——
+    public static float PlayerFixedDeltaTime => PlayerDeltaTime;
+
     private void Awake()
     {
         // 单场景单实例；跨场景常驻由后续 Bootstrap 负责
