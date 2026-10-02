@@ -6,7 +6,8 @@ public enum HitboxKind { Damage, Parry }
 // 攻击判定采集（设计 §4.4）：由 PlayerCombat / 敌人 AI 按段激活
 // 职责边界：只收集候选写入调用方缓冲，绝不结算（设计原则 4）——不要以为调脚本顺序能改变物理回调时机
 // 静态注册表：DamageResolver 每 tick 拉取全部活跃框；组件 OnEnable/OnDisable 自管登记
-[DisallowMultipleComponent]
+// 注意：同对象需要伤害框 + parry 框各一（设计 §4.1），故不加 DisallowMultipleComponent——
+// 重复 Kind 由 CombatAssetBootstrap.EnsureHitbox 的幂等检查拦截
 public class Hitbox : MonoBehaviour
 {
     [Tooltip("框种类：伤害框（打对方 Hurtbox）/ parry 框（碰对方的伤害框）——一个组件二选一")]
