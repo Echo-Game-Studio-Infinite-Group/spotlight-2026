@@ -14,6 +14,7 @@ public sealed class DebugHUD : MonoBehaviour
     [SerializeField] private float _comboWindowSec = 2f;
 
     private PlayerMotor _motor;
+    private VectorEnergy _energy; // 能量已外迁到 VectorEnergy；未装配时退回 PlayerMotor 的旧账户
     private PlayerInputReader _input;
     private PlayerCombat _combat; // 可选：未装配战斗组件时战斗面板静默隐藏
     private GUIStyle _style;
@@ -25,6 +26,7 @@ public sealed class DebugHUD : MonoBehaviour
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
+        _energy = GetComponent<VectorEnergy>();
         _input = GetComponent<PlayerInputReader>();
         _combat = GetComponent<PlayerCombat>();
 
@@ -70,7 +72,8 @@ public sealed class DebugHUD : MonoBehaviour
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
         GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
-        GUILayout.Label($"能量 {_motor.Energy:F1} / {_motor.Params.EnergyMax:F0}", _style);
+        // 能量统一读 VectorEnergy（PlayerMotor 的旧账户已废弃）
+        GUILayout.Label($"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}", _style);
         GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · Esc 鼠标锁定 · F3 面板", _style);
 

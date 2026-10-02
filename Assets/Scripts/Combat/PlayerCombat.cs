@@ -111,7 +111,8 @@ public class PlayerCombat : MonoBehaviour, IParryReceiver, IMotorLandingClient
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
-        _energy = _motor;
+        // 能量账户统一由 VectorEnergy 持有（实现 IEnergyAccount）；PlayerMotor 的旧账户已废弃，不再回退
+        _energy = GetComponent<VectorEnergy>();
         _sampler = GetComponent<InputSampler>();
         _health = GetComponent<HealthComponent>();
     }
