@@ -4,11 +4,11 @@ using UnityEngine.UI;
 
 public class MainMenuUI : MonoBehaviour
 {
-    public Button BtnStart;
+    public Button btnStart;
 
     private void Awake()
     {
-        BtnStart.onClick.AddListener(StartGame);
+        btnStart.onClick.AddListener(StartGame);
     }
 
     public void StartGame()

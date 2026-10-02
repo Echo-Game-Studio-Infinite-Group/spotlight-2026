@@ -315,11 +315,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c776493e9bddc548b13b332d59656ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _PauseMenuPanel: {fileID: 5873943745432102333}
-  _BtnResume: {fileID: 1260170644153736070}
-  _BtnRetry: {fileID: 6691939048856693740}
-  _BtnReturn: {fileID: 7312806986256652869}
-  _MouseScript: {fileID: 0}
+  pauseMenuPanel: {fileID: 5873943745432102333}
+  btnResume: {fileID: 1260170644153736070}
+  btnRetry: {fileID: 6691939048856693740}
+  btnReturn: {fileID: 7312806986256652869}
+  mouseScript: {fileID: 0}
 --- !u!1 &5873943745432102333
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,7 +337,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2494661949513028431
 RectTransform:
   m_ObjectHideFlags: 0

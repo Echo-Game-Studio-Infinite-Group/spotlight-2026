@@ -7,21 +7,21 @@ public class PauseUIManager : MonoBehaviour
     private bool _isPause;
 
     // ÔÝÍ£²Ëµ¥
-    public GameObject PauseMenuPanel;
-    public Button BtnResume;
-    public Button BtnRetry;
-    public Button BtnReturn;
+    public GameObject pauseMenuPanel;
+    public Button btnResume;
+    public Button btnRetry;
+    public Button btnReturn;
 
-    public CameraController MouseScript;
+    public CameraController mouseScript;
 
     private void Awake()
     {
         _isPause = false;
 
-        PauseMenuPanel.SetActive(false);
-        BtnResume.onClick.AddListener(ResumeGame);
-        BtnRetry.onClick.AddListener(RetryGame);
-        BtnReturn.onClick.AddListener(ReturnToTitle);
+        pauseMenuPanel.SetActive(false);
+        btnResume.onClick.AddListener(ResumeGame);
+        btnRetry.onClick.AddListener(RetryGame);
+        btnReturn.onClick.AddListener(ReturnToTitle);
 
     }
 
@@ -44,33 +44,33 @@ public class PauseUIManager : MonoBehaviour
     {
         _isPause = true;
         Time.timeScale = 0.0f; // *Warning*
-        MouseScript.enabled = false;
+        mouseScript.enabled = false;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         AudioListener.pause = true;
-        PauseMenuPanel.SetActive(true);
+        pauseMenuPanel.SetActive(true);
     }
 
     public void ResumeGame()
     {
         _isPause = false;
         Time.timeScale = 1.0f; // *Warning*
-        MouseScript.enabled = true;
+        mouseScript.enabled = true;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         AudioListener.pause = false;
-        PauseMenuPanel.SetActive(false);
+        pauseMenuPanel.SetActive(false);
     }
 
     public void RetryGame()
     {
         _isPause = false;
         Time.timeScale = 1.0f; // *Warning*
-        MouseScript.enabled = true;
+        mouseScript.enabled = true;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         AudioListener.pause = false;
-        PauseMenuPanel.SetActive(false);
+        pauseMenuPanel.SetActive(false);
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -78,9 +78,9 @@ public class PauseUIManager : MonoBehaviour
     {
         _isPause = false;
         Time.timeScale = 1.0f; // *Warning*
-        MouseScript.enabled = true;
+        mouseScript.enabled = true;
         AudioListener.pause = false;
-        PauseMenuPanel.SetActive(false);
+        pauseMenuPanel.SetActive(false);
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenuScene");
     }
 }
