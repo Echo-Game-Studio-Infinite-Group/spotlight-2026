@@ -201,13 +201,10 @@ public class TimeManager : MonoBehaviour
             Debug.LogWarning("[TimeManager] 场景中无 TimeManager，HitStop 未生效");
             return;
         }
-        if (seconds > _instance._hitStopTimer)
+        if (seconds > _instance._hitStopTimer) _instance._hitStopTimer = seconds;
+        if (_instance._hitStopTimer > 0f)
         {
-            _instance._hitStopTimer = seconds;
-            _instance._hitStopScale = Mathf.Clamp01(scale);
-        }
-        else if (_instance._hitStopTimer > 0f)
-        {
+            // 更小 scale 不放宽：更长但更宽松的后续调用（连击后段命中）不得减弱已在进行的冻结
             _instance._hitStopScale = Mathf.Min(_instance._hitStopScale, Mathf.Clamp01(scale));
         }
     }
