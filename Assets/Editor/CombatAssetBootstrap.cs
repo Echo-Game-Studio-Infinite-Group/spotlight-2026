@@ -6,9 +6,11 @@ using UnityEngine.SceneManagement;
 
 // 战斗系统装配工具：一键打通 D3–D5 首个战斗闭环的编辑器侧（设计 §七 写作顺序的配套）
 //   · 创建示例战斗资产：Settings/Combat/ 下生成首版招式 SO + 取消表（数值全占位，内容待哈士奇核）
-//   · 装配战斗组件到场景：给 TestScene 的 Player 挂全套战斗组件并接线，场景里补 DamageResolver
-//   · 提取 Player 为预制体：场景裸对象 → Assets/Prefabs/Player/Player.prefab（后续装配/刷怪复用）
-// 全部幂等：已有资产/组件复用不覆盖手动调过的开关，与 ProjectBootstrap 同一纪律
+//   · 装配战斗组件到场景：给 TestScene 的角色挂全套战斗组件并接线，场景里补 DamageResolver；
+//     角色还是裸对象时顺带提取为预制体（后续装配/刷怪复用，旧「提取 Player 为预制体」菜单已合并入此）
+// seed-only 纪律（头注释承诺的兑现）：资产与组件只在首次创建时写入工具模板值，已存在的一律不碰——
+//   手调数值不覆写；确要重置走「重置示例战斗资产（覆盖）」菜单（弹窗确认）。
+//   唯一例外是引用接线（combat.NormalAttack = ... 一类）：把引用指对是工具的装配职责，每次执行幂等确保，数值不是
 public static class CombatAssetBootstrap
 {
     private const string CombatFolder = "Assets/Settings/Combat";
@@ -17,7 +19,21 @@ public static class CombatAssetBootstrap
     private const string PlayerPrefabPath = PlayerPrefabFolder + "/Player.prefab";
 
     [MenuItem("超高速行者/战斗/创建示例战斗资产")]
-    public static void CreateCombatAssets()
+    public static void CreateCombatAssets() => BuildCombatAssets(force: false);
+
+    [MenuItem("超高速行者/战斗/重置示例战斗资产（覆盖）")]
+    public static void ResetCombatAssets()
+    {
+        // 覆盖会吃掉手调值，必须显式确认；取消则什么都不动
+        if (!EditorUtility.DisplayDialog("重置示例战斗资产",
+                "将把 Settings/Combat 下示例资产与取消表重置为工具模板值，手调数值会被覆盖。继续？", "重置", "取消"))
+        {
+            return;
+        }
+        BuildCombatAssets(force: true);
+    }
+
+    private static void BuildCombatAssets(bool force)
     {
         EnsureFolder("Assets/Settings", "Combat");
 
@@ -29,7 +45,7 @@ public static class CombatAssetBootstrap
                 p.StartupSec = 0.12f; p.ActiveSec = 0.08f; p.RecoverySec = 0.22f;
                 p.BaseDamage = 8f; p.Knockback = 2f; p.HitStopSec = 0.03f;
             });
-        });
+        }, force);
 
         AttackDefinition fast = CreateAttack("FastAttack", "高速普攻", def =>
         {
@@ -44,7 +60,7 @@ public static class CombatAssetBootstrap
                 p.Motion = MotionIntentKind.Advance;  // 挥砍前移
                 p.MotionSpeed = 7f;
             });
-        });
+        }, force);
 
         AttackDefinition flash = CreateAttack("FlashSlash", "闪斩", def =>
         {
@@ -54,7 +70,7 @@ public static class CombatAssetBootstrap
                 p.StartupSec = 0.08f; p.ActiveSec = 0.10f; p.RecoverySec = 0.30f;
                 p.BaseDamage = 24f; p.Knockback = 5f; p.HitStopSec = 0.08f;
             });
-        });
+        }, force);
 
         AttackDefinition rashomon = CreateAttack("Rashomon", "连斩", def =>
         {
@@ -68,7 +84,7 @@ public static class CombatAssetBootstrap
                 HoverPhase(0.06f, 0.06f, 0.06f, 6f),
                 FinishPhase(),   // 收尾大斩：长恢复、不可取消
             };
-        });
+        }, force);
 
         AttackDefinition push = CreateAttack("PushSlash", "推斩", def =>
         {
@@ -79,37 +95,45 @@ public static class CombatAssetBootstrap
                 PushPhase(0.10f, 0.08f, 0.10f, 7f),
                 PushPhase(0.08f, 0.08f, 0.20f, 9f),
             };
-        });
+        }, force);
 
         AttackDefinition dash1 = CreateAttack("DashStage1", "冲刺一段", def =>
         {
             def.EnergyCost = 30f;
             def.DesignNote = "林晓风稿：位移 3 米起、伤害 1.5×；霸体待接（Health.SuperArmor 由状态机驱动，后续）；数值占位";
             SetPhase(def, 0, p => ConfigureDash(p, 0.10f, 0.18f, 12f, 15f));
-        });
+        }, force);
         AttackDefinition dash2 = CreateAttack("DashStage2", "冲刺二段", def =>
         {
             def.EnergyCost = 50f;
             def.DesignNote = "林晓风稿：伤害 1.5×；数值占位";
             SetPhase(def, 0, p => ConfigureDash(p, 0.08f, 0.18f, 14f, 22f));
-        });
+        }, force);
         AttackDefinition dash3 = CreateAttack("DashStage3", "冲刺三段", def =>
         {
             def.EnergyCost = 70f;
             def.DesignNote = "林晓风稿：伤害 2.5×（AOE 4× 为 P2）；三段后强制收招 0.5s = 长恢复窗且无取消规则；数值占位";
             SetPhase(def, 0, p => ConfigureDash(p, 0.10f, 0.22f, 16f, 35f, recoverySec: 0.50f));
-        });
+        }, force);
 
-        AttackCancelTable table = CreateCancelTable(normal, fast, flash, rashomon, push, dash1, dash2, dash3);
+        AttackCancelTable table = CreateCancelTable(force, normal, fast, flash, rashomon, push, dash1, dash2, dash3);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[CombatAssetBootstrap] 战斗资产已就绪：8 个招式 + 取消表（{table.Rules.Length} 条规则）→ {CombatFolder}");
+        Debug.Log($"[CombatAssetBootstrap] 战斗资产已就绪（force={force}）：8 个招式 + 取消表（{table.Rules.Length} 条规则）→ {CombatFolder}");
     }
 
     [MenuItem("超高速行者/战斗/装配战斗组件到场景")]
     public static void WireCombatToScene()
     {
+        EditorGuard.RunWhenEditing(WireCombatToSceneInner, "CombatAssetBootstrap");
+    }
+
+    private static void WireCombatToSceneInner()
+    {
+        // OpenScene(Single) 会静默丢弃当前场景未保存改动——先征求处理意愿，取消即中止
+        if (!EditorGuard.ConfirmSaveModifiedScenes()) return;
+
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         // 角色实例按 PlayerMotor 组件定位：prefab 根名随版本变过（"Player" → 随文件名的 "character"），不依赖名字
         GameObject player = null;
@@ -145,25 +169,69 @@ public static class CombatAssetBootstrap
         // 1) 输入采样 + 血量 + 受击框（自备触发碰撞体，与移动胶囊分离）
         if (player.GetComponent<InputSampler>() == null) player.AddComponent<InputSampler>();
 
+        bool healthCreated = false;
         HealthComponent health = player.GetComponent<HealthComponent>();
-        if (health == null) health = player.AddComponent<HealthComponent>();
-        health.Layer = TimeLayer.Player;
-        health.MaxHealth = 100f;
+        if (health == null)
+        {
+            // seed-only：数值默认只随组件新建赋一次，已存在组件上的手调值不覆写
+            healthCreated = true;
+            health = player.AddComponent<HealthComponent>();
+            health.Layer = TimeLayer.Player;
+            health.MaxHealth = 100f;
+        }
 
-        Hurtbox hurtbox = player.GetComponent<Hurtbox>();
-        if (hurtbox == null) hurtbox = player.AddComponent<Hurtbox>();
-        BoxCollider hurtCollider = player.GetComponent<BoxCollider>();
-        if (hurtCollider == null) hurtCollider = player.AddComponent<BoxCollider>();
-        hurtCollider.center = new Vector3(0f, 0.95f, 0f);
-        hurtCollider.size = new Vector3(0.8f, 1.8f, 0.8f);
-        hurtCollider.isTrigger = true;
+        // 受击框按整个角色层级找：兼容根布局（旧场景现状）与子物体布局（下方迁移后）两种形态
+        Hurtbox hurtbox = player.GetComponentInChildren<Hurtbox>();
+        if (hurtbox == null)
+        {
+            // 先按旧布局挂根（与 CharacterController 同物体）；下方迁移段会把根布局搬去子物体
+            hurtbox = player.AddComponent<Hurtbox>();
+        }
+        // 受击形状默认值只在该物体的碰撞体新建时赋；已有形状（可能手调过）不碰
+        BoxCollider hurtCollider = hurtbox.GetComponent<BoxCollider>();
+        if (hurtCollider == null)
+        {
+            hurtCollider = hurtbox.gameObject.AddComponent<BoxCollider>();
+            hurtCollider.center = new Vector3(0f, 0.95f, 0f);
+            hurtCollider.size = new Vector3(0.8f, 1.8f, 0.8f);
+            hurtCollider.isTrigger = true;
+        }
         hurtbox.Health = health;
 
         // 2) 两个判定框（伤害/parry 各一，无碰撞体——形状由招式段数据驱动）
         Hitbox damageBox = EnsureHitbox(player, HitboxKind.Damage);
         Hitbox parryBox = EnsureHitbox(player, HitboxKind.Parry);
 
-        // 3) 状态机 + 资产接线
+        // 3) M-3 层迁移：根上的受击框 → 子物体"Hurtbox"（层隔离，伤害查询掩码才能只查受击层）；
+        //    根 GO 设层会连移动胶囊一起改层，所以受击形状要有自己的子物体。幂等——子物体已存在则跳过
+        Transform hurtChild = player.transform.Find("Hurtbox");
+        if (hurtChild == null && player.GetComponent<Hurtbox>() != null)
+        {
+            Hurtbox old = player.GetComponent<Hurtbox>();
+            BoxCollider oldCol = player.GetComponent<BoxCollider>();
+            GameObject child = new GameObject("Hurtbox");
+            child.transform.SetParent(player.transform, false);
+            BoxCollider col = child.AddComponent<BoxCollider>();
+            if (oldCol != null) { col.center = oldCol.center; col.size = oldCol.size; }
+            col.isTrigger = true;
+            Hurtbox hb = child.AddComponent<Hurtbox>();
+            hb.Health = old.Health; hb.ImmuneTypes = old.ImmuneTypes;
+            if (oldCol != null) UnityEngine.Object.DestroyImmediate(oldCol);
+            UnityEngine.Object.DestroyImmediate(old);
+            hurtChild = child.transform;
+            Debug.Log("[CombatAssetBootstrap] 受击框已迁移至子物体 Hurtbox（层隔离）");
+        }
+        int hurtLayer = EnsureUserLayer("Hurtbox");
+        if (hurtLayer >= 0 && hurtChild != null)
+        {
+            hurtChild.gameObject.layer = hurtLayer;
+            // 查询掩码 seed：只在仍为默认全部时收紧，不覆写手改
+            if (damageBox != null && damageBox.QueryMask.value == ~0) damageBox.QueryMask = 1 << hurtLayer;
+        }
+        // 迁移会销毁旧根组件，统一改取迁移后的实际受击框继续用
+        hurtbox = player.GetComponentInChildren<Hurtbox>();
+
+        // 4) 状态机 + 资产接线（引用接线每次幂等确保；数值字段不在这里碰）
         PlayerCombat combat = player.GetComponent<PlayerCombat>();
         if (combat == null) combat = player.AddComponent<PlayerCombat>();
         combat.NormalAttack = Load("NormalAttack");
@@ -178,7 +246,7 @@ public static class CombatAssetBootstrap
         combat.DamageHitbox = damageBox;
         combat.ParryHitbox = parryBox;
 
-        // 4) 场景级结算器（每 tick 命中结算）
+        // 5) 场景级结算器（每 tick 命中结算）
         DamageResolver resolver = FindInScene(scene, "DamageResolver")?.GetComponent<DamageResolver>();
         if (resolver == null)
         {
@@ -187,43 +255,35 @@ public static class CombatAssetBootstrap
             resolver = resolverGo.AddComponent<DamageResolver>();
         }
 
+        // SetDirty 只落在确实新建/改动的对象上：combat 与 hurtbox 有引用接线必动；health 仅新建时动
         EditorUtility.SetDirty(combat);
-        EditorUtility.SetDirty(health);
         EditorUtility.SetDirty(hurtbox);
+        if (healthCreated) EditorUtility.SetDirty(health);
+
+        // 角色是裸对象则提取为预制体（幂等：已是预制体实例则跳过）——合并自旧「提取 Player 为预制体」菜单（旧菜单按名字找 Player，根名已变必失效）
+        if (!PrefabUtility.IsPartOfPrefabInstance(player))
+        {
+            EnsureFolder("Assets/Prefabs", "Player");
+            PrefabUtility.SaveAsPrefabAssetAndConnect(player, PlayerPrefabPath, InteractionMode.AutomatedAction);
+        }
+
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("[CombatAssetBootstrap] 战斗组件装配完成：InputSampler/Health/Hurtbox/Hitbox×2/PlayerCombat/DamageResolver");
     }
 
-    [MenuItem("超高速行者/提取 Player 为预制体")]
-    public static void ExtractPlayerPrefab()
-    {
-        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        GameObject player = FindInScene(scene, "Player");
-        if (player == null)
-        {
-            Debug.LogError("[CombatAssetBootstrap] 场景缺少 Player");
-            return;
-        }
-        if (PrefabUtility.IsPartOfPrefabInstance(player))
-        {
-            Debug.Log("[CombatAssetBootstrap] Player 已是预制体实例，跳过");
-            return;
-        }
+    // —— 资产构造辅助（seed-only：只在新建或 force 时写入模板值）——
 
-        EnsureFolder("Assets/Prefabs", "Player");
-        PrefabUtility.SaveAsPrefabAssetAndConnect(player, PlayerPrefabPath, InteractionMode.AutomatedAction);
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        Debug.Log($"[CombatAssetBootstrap] Player 已提取为预制体 → {PlayerPrefabPath}");
-    }
-
-    // —— 资产构造辅助 ——
-
-    private static AttackDefinition CreateAttack(string fileName, string displayName, System.Action<AttackDefinition> configure)
+    private static AttackDefinition CreateAttack(string fileName, string displayName,
+        System.Action<AttackDefinition> configure, bool force = false)
     {
         string path = $"{CombatFolder}/{fileName}.asset";
         AttackDefinition def = AssetDatabase.LoadAssetAtPath<AttackDefinition>(path);
+        if (def != null && !force)
+        {
+            // seed-only：资产已存在直接返回、不执行 configure——手调数值不覆写，重置走「重置示例战斗资产」菜单
+            return def;
+        }
         if (def == null)
         {
             def = ScriptableObject.CreateInstance<AttackDefinition>();
@@ -287,7 +347,7 @@ public static class CombatAssetBootstrap
         p.MotionSpeed = motionSpeed;
     }
 
-    private static AttackCancelTable CreateCancelTable(params AttackDefinition[] defs)
+    private static AttackCancelTable CreateCancelTable(bool force, params AttackDefinition[] defs)
     {
         string path = $"{CombatFolder}/CancelTable.asset";
         AttackCancelTable table = AssetDatabase.LoadAssetAtPath<AttackCancelTable>(path);
@@ -295,6 +355,11 @@ public static class CombatAssetBootstrap
         {
             table = ScriptableObject.CreateInstance<AttackCancelTable>();
             AssetDatabase.CreateAsset(table, path);
+        }
+        else if (!force && table.Rules != null && table.Rules.Length > 0)
+        {
+            // seed-only：表已建且已有规则即视为播种完成，不重建——手调规则不覆写
+            return table;
         }
 
         AttackDefinition ByName(string name) => System.Array.Find(defs, d => d.name == name);
@@ -349,6 +414,36 @@ public static class CombatAssetBootstrap
         Hitbox hitbox = player.AddComponent<Hitbox>();
         hitbox.Kind = kind;
         return hitbox;
+    }
+
+    // M-3：确保 TagManager 注册了指定 User Layer 并返回层号（已有同名层直接返回）；层槽满返回 -1（调用方跳过设层，不致命）
+    private static int EnsureUserLayer(string layerName)
+    {
+        // SerializedObject 写 TagManager 的 User Layer 槽（第 8 槽起）；直接改文本易错，走序列化接口
+        Object[] tagManagerAssets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+        if (tagManagerAssets == null || tagManagerAssets.Length == 0)
+        {
+            Debug.LogError("[CombatAssetBootstrap] 未能加载 ProjectSettings/TagManager.asset，无法注册层");
+            return -1;
+        }
+        var tagManager = new SerializedObject(tagManagerAssets[0]);
+        SerializedProperty layers = tagManager.FindProperty("layers");
+        int firstFree = -1;
+        for (int i = 8; i < layers.arraySize; i++)
+        {
+            SerializedProperty slot = layers.GetArrayElementAtIndex(i);
+            if (slot.stringValue == layerName) return i;
+            if (string.IsNullOrEmpty(slot.stringValue) && firstFree < 0) firstFree = i;
+        }
+        if (firstFree < 0)
+        {
+            Debug.LogError($"[CombatAssetBootstrap] TagManager User Layer 已满（8–31），无法注册层 {layerName}");
+            return -1;
+        }
+        layers.GetArrayElementAtIndex(firstFree).stringValue = layerName;
+        tagManager.ApplyModifiedProperties();
+        AssetDatabase.SaveAssets();
+        return firstFree;
     }
 
     private static GameObject FindInScene(Scene scene, string name)

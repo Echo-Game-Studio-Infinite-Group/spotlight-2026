@@ -5,7 +5,6 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.SceneManagement;
 
 // 项目装配：把 Built-in RP 工程切到 URP，并接线测试场景
 //   · 生成 URP 管线资产与渲染器，并把 RadialRedshiftFeature 注册进去
@@ -24,29 +23,7 @@ public static class ProjectBootstrap
     [MenuItem("超高速行者/装配 URP 与测试场景")]
     public static void Build()
     {
-        // 播放模式下 EditorSceneManager.OpenScene 会被 Unity 直接拒绝（InvalidOperationException），
-        // 装配会中途夭折并留下半成品工程。这里自动退出播放模式后重试，不再让主人踩这个坑。
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
-        {
-            Debug.LogWarning("[ProjectBootstrap] 检测到 Play 模式：场景装配只能在编辑模式做，正在退出播放模式后重试…");
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            EditorApplication.isPlaying = false;
-            return;
-        }
-
-        RunBuild();
-    }
-
-    private static void OnPlayModeStateChanged(PlayModeStateChange state)
-    {
-        if (state != PlayModeStateChange.EnteredEditMode)
-        {
-            return;
-        }
-
-        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-        // 退出播放模式后场景会重新加载，等一帧再动，否则拿到的还是播放态的场景对象
-        EditorApplication.delayCall += RunBuild;
+        EditorGuard.RunWhenEditing(RunBuild, "ProjectBootstrap");
     }
 
     private static void RunBuild()
@@ -201,6 +178,12 @@ public static class ProjectBootstrap
 
     private static void WireScene()
     {
+        // OpenScene(Single) 会静默丢弃当前场景未保存改动——先征求处理意愿，取消即中止
+        if (!EditorGuard.ConfirmSaveModifiedScenes())
+        {
+            Debug.LogWarning("[ProjectBootstrap] 用户取消处理未保存场景，装配中止");
+            return;
+        }
         MovementSceneSetup.Apply(EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single));
     }
 
@@ -262,8 +245,7 @@ public static class ProjectBootstrap
         Material redshift = AssetDatabase.LoadAssetAtPath<Material>(RedshiftMaterialPath);
         lines.Add("RadialRedshift 材质 shader: " + (redshift != null && redshift.shader != null ? redshift.shader.name : "空"));
 
-        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        MovementSceneSetup.Verify(scene);
+        Debug.Log("[Verify] 场景接线校验已迁 PlayMode 测试 SceneBootstrapTests（Test Runner 运行）——本菜单只自检管线资产");
 
         foreach (string line in lines)
         {

@@ -16,21 +16,11 @@ public static class MovementSceneSetup
     [MenuItem("超高速行者/装配 character 与 Cinemachine")]
     public static void Rebuild()
     {
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        EditorGuard.RunWhenEditing(() =>
         {
-            EditorApplication.playModeStateChanged -= AfterPlay;
-            EditorApplication.playModeStateChanged += AfterPlay;
-            EditorApplication.isPlaying = false;
-            return;
-        }
-        Apply(EditorSceneManager.OpenScene(ScenePath));
-    }
-
-    private static void AfterPlay(PlayModeStateChange state)
-    {
-        if (state != PlayModeStateChange.EnteredEditMode) return;
-        EditorApplication.playModeStateChanged -= AfterPlay;
-        EditorApplication.delayCall += Rebuild;
+            if (!EditorGuard.ConfirmSaveModifiedScenes()) return;
+            Apply(EditorSceneManager.OpenScene(ScenePath));
+        }, "MovementSceneSetup");
     }
 
     public static void Apply(Scene scene)
@@ -80,14 +70,8 @@ public static class MovementSceneSetup
             SceneManager.MoveGameObjectToScene(time, scene);
             time.AddComponent<TimeManager>();
         }
-        foreach (GameObject root in scene.GetRootGameObjects())
-            foreach (Component component in root.GetComponentsInChildren<Component>(true))
-                if (component != null)
-                {
-                    EditorUtility.SetDirty(component);
-                    if (PrefabUtility.IsPartOfPrefabInstance(component))
-                        PrefabUtility.RecordPrefabInstancePropertyModifications(component);
-                }
+        // 不做全场景全组件无差别 SetDirty + 覆盖记录：落盘由下方 MarkSceneDirty+SaveScene 负责，
+        // 全量标脏只会把整份 .unity 打成 VCS 噪声；必要的覆盖记录保留在 ConfigureCharacter 的 Animator 处
         AssetDatabase.SaveAssets();
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -99,16 +83,8 @@ public static class MovementSceneSetup
         GameObject contents = PrefabUtility.LoadPrefabContents(CharacterPath);
         try
         {
-            CapsuleCollider oldCollider = contents.GetComponent<CapsuleCollider>();
-            if (oldCollider != null)
-            {
-                // 沿用美术角色已调好的胶囊尺寸；Motor 的 pivot 约定仍为脚底。
-                parameters.CapsuleBaseHeight = oldCollider.height;
-                parameters.CapsuleBaseRadius = oldCollider.radius;
-                parameters.CapsuleFastHeight = Mathf.Min(parameters.CapsuleFastHeight, oldCollider.height);
-                parameters.CapsuleMinRadius = Mathf.Min(parameters.CapsuleMinRadius, oldCollider.radius);
-                EditorUtility.SetDirty(parameters);
-            }
+            // 参数资产是唯一真值，工具不得反向写参数：旧装配曾把预制体胶囊尺寸覆写进共享调参资产
+            // MovementParams，吃掉策划手调值（数据流倒置）。胶囊由 ConfigureCharacter 按参数设置，行为不缺失。
             ConfigureCharacter(contents, parameters, actions, null, null);
             PrefabUtility.SaveAsPrefabAsset(contents, CharacterPath);
         }
