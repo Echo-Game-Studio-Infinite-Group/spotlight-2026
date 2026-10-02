@@ -5,7 +5,8 @@ using UnityEngine.Rendering.Universal;
 
 // 速度感特效的动态强度参数（URP Volume 通道）：SpeedCameraFeedback 写入，渲染 Pass 每帧读取
 // 走 Volume 而非静态单例：多相机各自走自己的 Volume 栈，域重载也不留悬挂引用
-public sealed class SpeedFxVolume : UnityEngine.Rendering.VolumeComponent, UnityEngine.Rendering.IPostProcessComponent
+// IPostProcessComponent 定义在 URP 包（UnityEngine.Rendering.Universal），core 包没有——限定名别写错层
+public sealed class SpeedFxVolume : UnityEngine.Rendering.VolumeComponent, UnityEngine.Rendering.Universal.IPostProcessComponent
 {
     [Tooltip("运动模糊强度，1 = 物理正确长度，越大越夸张")]
     public ClampedFloatParameter motionBlur = new ClampedFloatParameter(0f, 0f, 4f);
