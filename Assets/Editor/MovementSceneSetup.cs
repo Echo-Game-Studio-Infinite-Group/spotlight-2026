@@ -126,6 +126,7 @@ public static class MovementSceneSetup
         controller.minMoveDistance = 0f;
         foreach (Animator animator in character.GetComponentsInChildren<Animator>(true))
         {
+            animator.runtimeAnimatorController = PlayerAnimationSetup.EnsureController();
             animator.applyRootMotion = false;
             EditorUtility.SetDirty(animator);
             // character 是模型的变体，必须记录覆盖才能在重新导入后保留关闭状态。
@@ -140,6 +141,7 @@ public static class MovementSceneSetup
         motor.SetParams(parameters);
         motor.SetMovementReference(cameraReference);
         motor.enabled = true;
+        GetOrAdd<PlayerAnimation>(character).Configure(character.GetComponentInChildren<Animator>(true));
         GetOrAdd<PlayerRespawn>(character);
         GetOrAdd<DebugHUD>(character);
 
