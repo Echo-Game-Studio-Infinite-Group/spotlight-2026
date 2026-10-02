@@ -26,7 +26,7 @@
 
 ## 环境
 
-- **Unity：2022.3.33f1c1（版本冻结，禁止升级）**，编辑器位于 `F:\Unity\2022.3.33f1\Editor\Unity.exe`
+- **Unity：2022.3.33f1c1（版本冻结，禁止升级）**，编辑器位于 `D:\Program Files\Unity\Hub\Editor\2022.3.33f1\Editor\Unity.exe`
 - **渲染管线：URP 14.0.11**（`Assets/Settings/URP-Asset.asset` + `URP-Renderer.asset`）
 - dotnet SDK（`Tools/movement-sim` 控制台仿真用，目标框架 net8.0）
 - Git；提交信息用中文，一句话说清改动
@@ -37,19 +37,21 @@
 Assets/                    # Unity 资产（仓库根 = 工程根）
   Scripts/                 # 运行时代码（GameJam.Runtime 程序集）
     Movement/              # 两套移动机制 + 参数
-    Camera/                # 跟随相机 + 速度感后处理
-    Core/                  # 时间分层、输入缓冲与采样
-    Combat/                # 战斗系统：帧数据/取消表/判定/结算/状态机
+    Camera/                # Cinemachine 机位与速度感后处理
+    Core/                  # 全局单例与整局流程、时间分层、输入缓冲
+    Character/             # 玩家实体、能量与时间效果
     Debug/                 # 调试 HUD
-  Editor/                  # 编辑器工具（不进玩家包，含战斗装配工具）
-  Tests/PlayMode/          # PlayMode 测试（GameJam.Tests.PlayMode 程序集，含战斗测试）
-  Scenes/TestScene.unity   # 主测试场景
+  Editor/                  # 编辑器工具（不进玩家包）
+  Tests/PlayMode/          # PlayMode 测试（GameJam.Tests.PlayMode 程序集）
+  Scenes/                  # BootScene（启动）+ TestScene（移动 / 战斗联调）
   Prefabs/Maps/            # 地图预制体（MapTestField）
   Settings/                # ScriptableObject 参数 + URP 管线资产
-  Shaders/  Materials/     # 速度感特效的自研 shader 与材质
+  Shaders/                 # 速度感特效的自研 shader
+  Art/                     # 美术资产（Models / Materials / Images）
 Docs/                      # 项目文档（**不要修改**，除非任务明确要求）
   aigc/                    # 调研与分析稿
 Tools/movement-sim/        # 纯 C# 移动数学仿真（dotnet run 可跑，产出 results/）
+Tools/model-export/        # 模型导出与贴图检查脚本（Blender 侧，非 Unity）
 AGENTS.md                  # 本文件
 README.md                  # 仓库总览（面向接收开发者，说人话）
 ```
@@ -63,22 +65,8 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 5. **时间分层**：游戏逻辑读 `TimeManager` 提供的缩放时间；UI/相机走 unscaled——新代码不得直接 `Time.timeScale` 散写
 6. 命名：公开成员 PascalCase、私有字段 `_camelCase`；一个类一个文件
 7. 注释用中文，只写"为什么/约束"，不写"这行在干什么"
-8. **第三方包白名单制**：清单外默认禁用；增删/升级包走 PR，`manifest.json` 与 `packages-lock.json` 一并提交（细则见下节「第三方包白名单」）
+8. **禁止引入任何第三方包/插件**，除非任务明确要求
 9. **许可证红线**：Quake/Source 源码是 GPL/受限许可——公式可以照写（数学不受版权保护），代码不能拷贝。一切参考实现按"读懂后重写"处理
-
-## 第三方包白名单
-
-引入策略：官方注册表包写进 `Packages/manifest.json`，版本由 `packages-lock.json` 锁定（lock 记录精确版本与哈希，提交进 git 后全员解析结果一致）；社区包（UniTask 等）以**源码 embedded** 方式放进 `Packages/<包名>/`（随仓库走、克隆即编译、出 bug 可直接热修），**禁止裸 git URL 引用**（上游漂移风险），并保留其 LICENSE/NOTICE。全团队统一 Unity 2022.3.33f1c1 中国版——国际版与中国版 registry 不同，混装会导致 lock 文件 url 字段反复冲突。
-
-| 包 | 版本线 | 用途 | 来源 |
-| --- | --- | --- | --- |
-| `com.unity.cinemachine` | 2.10.x | 相机迁移 + Impulse 镜头震动（打击感链一环） | 官方注册表 |
-| `com.unity.ai.navigation` | 1.1.x | 敌人寻路（NavMesh） | 官方注册表 |
-| `com.unity.probuilder` | 5.2.x | 灰盒关卡建模 | 官方注册表 |
-
-缓议（用到再进，进时同步更新本表）：UniTask（hit-stop 时序，现方案 unscaled 轮询已够用）、DOTween、NaughtyAttributes、ParrelSync（多开联调）、Ingame Debug Console（打包看日志）、Graphy（性能监控）。
-
-若 Package Manager 报版本解析错误，改用编辑器推荐的同一版本线内版本即可（2.10.x / 1.1.x / 5.2.x 内换，lock 会钉死）。
 
 ## 两套移动机制（重要）
 
@@ -95,24 +83,19 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 
 | 菜单项 | 作用 |
 | --- | --- |
-| 装配 URP 与加速测试场景 | 幂等重建管线资产/材质转换/场景组件接线；**会自动退出 Play 模式**后执行 |
-| 地图布局工具（围墙 + 环道） | 按 Ground 实际尺寸重排 Boundary 与 CircleRail，参数可调 |
-| 探针/相机跟随实测 | 进 Play 模式实测相机跟随，排障用 |
-| 战斗/创建示例战斗资产 | Settings/Combat/ 下生成 8 个招式 SO + 取消表，数值占位待哈士奇核 |
-| 战斗/装配战斗组件到场景 | Player 挂 InputSampler/Health/Hurtbox/Hitbox×2/PlayerCombat 并接线，场景补 DamageResolver |
-| 战斗/切换判定框可视化 | 伤害红/parry 蓝/受击绿/扫掠黄 |
-| 提取 Player 为预制体 | 场景 Player 裸对象 → Prefabs/Player/Player.prefab（后续装配/刷怪复用） |
+| 装配 URP 与测试场景 | 幂等重建管线资产/材质转换/场景组件接线；**会自动退出 Play 模式**后执行 |
+| 地图布局工具 | 按 Ground 实际尺寸重排 Boundary 与 CircleRail，参数可调 |
+| 检查装配结果 | 打印管线资产/落盘状态/场景接线的自检日志，排障用 |
 
 ## 验收标准（预研 Demo）
 
 - `Tools/movement-sim`：`dotnet run` 直接可跑，输出速度增长曲线与参数扫描结果，结论写入 `results/`
 - Unity 工程：用 2022.3.33f1 打开无编译错误；`Assets/Scenes/TestScene.unity` 按播放能跑走/跳/冲刺/滑铲（灰盒验证，不需要动画）
 - PlayMode 三个测试全过（Window → General → Test Runner → PlayMode）
-- PlayMode 战斗测试（TimeLayer/InputAndCancel/DamageResolver）全过
 
 ## 已知坑
 
-- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`CameraController` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
+- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`SpeedEffectsRig` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
   - **注意：`Internal build system error` 是表象不是病根**——它只是 Bee 后端在编译失败后卡住。先看它上面的 `CS` 错误。
   - 修复：把 `com.unity.render-pipelines.universal` 与 `com.unity.test-framework` 补回 `Packages/manifest.json`，关掉 Unity，必要时删 `Library/Bee`（纯缓存）后重开。
   - 排查入口：`Library/ScriptAssemblies` 若为空说明编译从未成功；`Library/PackageCache` 里没有 `com.unity.render-pipelines.*` 说明包没装上。

@@ -7,10 +7,10 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
-// 项目装配：把 Built-in RP 工程切到 URP，并接线加速测试场景
+// 项目装配：把 Built-in RP 工程切到 URP，并接线测试场景
 //   · 生成 URP 管线资产与渲染器，并把 RadialRedshiftFeature 注册进去
 //   · 把遗留的 Built-in Standard 材质转换成 URP/Lit（否则切管线后全部变洋红）
-//   · 清理已删除脚本留下的 Missing 组件，给 Player 挂 CharacterMovement、给相机挂 CameraController
+//   · 清理已删除脚本留下的 Missing 组件，给 Player 挂 CharacterMovement、给相机挂 SpeedEffectsRig
 //   · 补一个 Global Volume 承载 RunVolume（URP 色差 + 动态模糊）
 // 可重复执行：已有资产与组件会被复用而不是重复创建
 public static class ProjectBootstrap
@@ -19,11 +19,11 @@ public static class ProjectBootstrap
     private const string PipelineAssetPath = SettingsFolder + "/URP-Asset.asset";
     private const string RendererDataPath = SettingsFolder + "/URP-Renderer.asset";
     private const string RunVolumePath = SettingsFolder + "/RunVolume.asset";
-    private const string RedshiftMaterialPath = "Assets/Materials/RadialRedshift.mat";
+    private const string RedshiftMaterialPath = "Assets/Art/Materials/RadialRedshift.mat";
     private const string MovementParamsPath = SettingsFolder + "/MovementParams.asset";
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
-    [MenuItem("超高速行者/装配 URP 与加速测试场景")]
+    [MenuItem("超高速行者/装配 URP 与测试场景")]
     public static void Build()
     {
         // 播放模式下 EditorSceneManager.OpenScene 会被 Unity 直接拒绝（InvalidOperationException），
@@ -271,6 +271,12 @@ public static class ProjectBootstrap
             player.AddComponent<PlayerRespawn>();
         }
 
+        // 推东西用：CharacterController 撞不动刚体，这个组件负责把 Miku 之类的物体推开
+        if (player.GetComponent<RigidbodyPusher>() == null)
+        {
+            player.AddComponent<RigidbodyPusher>();
+        }
+
         if (player.GetComponent<DebugHUD>() == null)
         {
             player.AddComponent<DebugHUD>();
@@ -300,7 +306,8 @@ public static class ProjectBootstrap
             visual.localScale = Vector3.one;
         }
 
-        // 4) 相机：挂 URP 附加数据 + 特效控制器，并指向 Global Volume
+        // 4) 相机：挂 URP 附加数据 + 速度感特效控制器，并指向 Global Volume
+        //    机位由场景里的 Cinemachine Virtual Camera 承担，本工具只保证观感链路接好
         if (cameraGo.GetComponent<UniversalAdditionalCameraData>() == null)
         {
             cameraGo.AddComponent<UniversalAdditionalCameraData>();
@@ -309,15 +316,19 @@ public static class ProjectBootstrap
         UniversalAdditionalCameraData cameraData = cameraGo.GetComponent<UniversalAdditionalCameraData>();
         cameraData.renderPostProcessing = true;
 
-        CameraController cameraController = cameraGo.GetComponent<CameraController>();
-        if (cameraController == null)
+        SpeedEffectsRig speedEffects = cameraGo.GetComponent<SpeedEffectsRig>();
+        if (speedEffects == null)
         {
-            cameraController = cameraGo.AddComponent<CameraController>();
+            speedEffects = cameraGo.AddComponent<SpeedEffectsRig>();
         }
 
         Volume volume = FindOrCreateGlobalVolume(scene);
-        cameraController.player = player;
-        cameraController.volume = volume;
+
+        // _player / _volume 是 [SerializeField] private，走 SerializedObject 而非直接赋值
+        SerializedObject speedEffectsSo = new SerializedObject(speedEffects);
+        speedEffectsSo.FindProperty("_player").objectReferenceValue = player.GetComponent<Player>();
+        speedEffectsSo.FindProperty("_volume").objectReferenceValue = volume;
+        speedEffectsSo.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.MarkSceneDirty(scene);
         bool saved = EditorSceneManager.SaveScene(scene);
@@ -380,7 +391,7 @@ public static class ProjectBootstrap
     }
 
     // 自检：把关键绑定打成一条日志，批次模式下可直接从 stdout 判定成功与否
-    [MenuItem("超高速行者/自检装配结果")]
+    [MenuItem("超高速行者/检查装配结果")]
     public static void Verify()
     {
         List<string> lines = new List<string>();
@@ -444,14 +455,17 @@ public static class ProjectBootstrap
         lines.Add("Player.DebugHUD: " + (player != null && player.GetComponent<DebugHUD>() != null));
         lines.Add("Player.CapsuleVisualSync: " + (player != null && player.GetComponent<CapsuleVisualSync>() != null));
         lines.Add("Player.PlayerRespawn: " + (player != null && player.GetComponent<PlayerRespawn>() != null));
-        lines.Add("Camera.CameraController: " + (cameraGo != null && cameraGo.GetComponent<CameraController>() != null));
+        SpeedEffectsRig speedEffects = cameraGo != null ? cameraGo.GetComponent<SpeedEffectsRig>() : null;
+        lines.Add("Camera.SpeedEffectsRig: " + (speedEffects != null));
         lines.Add("Camera.UniversalAdditionalCameraData: " + (cameraGo != null && cameraGo.GetComponent<UniversalAdditionalCameraData>() != null));
 
-        CameraController controller = cameraGo != null ? cameraGo.GetComponent<CameraController>() : null;
-        lines.Add("CameraController.player 已连: " + (controller != null && controller.player != null));
-        lines.Add("CameraController.volume 已连: " + (controller != null && controller.volume != null));
-        lines.Add("RunVolume profile: " + (controller != null && controller.volume != null && controller.volume.sharedProfile != null
-            ? controller.volume.sharedProfile.name
+        SerializedObject speedEffectsSo = speedEffects != null ? new SerializedObject(speedEffects) : null;
+        Object wiredPlayer = speedEffectsSo != null ? speedEffectsSo.FindProperty("_player").objectReferenceValue : null;
+        Volume cameraVolume = speedEffectsSo != null ? speedEffectsSo.FindProperty("_volume").objectReferenceValue as Volume : null;
+        lines.Add("SpeedEffectsRig._player 已连: " + (wiredPlayer != null));
+        lines.Add("SpeedEffectsRig._volume 已连: " + (cameraVolume != null));
+        lines.Add("RunVolume profile: " + (cameraVolume != null && cameraVolume.sharedProfile != null
+            ? cameraVolume.sharedProfile.name
             : "空"));
 
         foreach (string line in lines)
