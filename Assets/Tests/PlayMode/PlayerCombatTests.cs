@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 // 激活失败零副作用（能量不足/冷却/速度门槛 → 不扣费、不吞输入、不打断原动作——失败路径任一步都不留痕迹）、
 // 统一提交链（扣费→消费输入→切动作→事件）、常态/高速变体选择、parry 派生窗口优先闪斩、
 // 冲刺三段链窗口、parry 反馈链（无敌/时缓/事件）、重开复位
-// 装配：真实 PlayerMotor + 注入 MovementParams + 禁用自动采样的 InputSampler（快照与缓冲手动喂），
+// 装配：真实 PlayerMotor + 注入 MovementParams + 无设备采样的 InputSampler（快照与缓冲手动喂），
 // 判定框留空——本文件只锁状态机语义，采集/结算在 DamageResolverTests 覆盖
 public class PlayerCombatTests
 {
@@ -40,8 +40,7 @@ public class PlayerCombatTests
         _player.AddComponent<HealthComponent>(); // OnParrySuccess 授无敌的目标
         _player.SetActive(true);
 
-        // 停自动采样：测试无法发真实按键，快照由 InjectSnapshot 注入（Update 直读引擎输入会覆盖注入值）
-        _sampler.enabled = false;
+        // InputSampler 无设备采样：按下沿与按住态快照全部由测试手动喂（Buffer.Push / InjectSnapshot）
 
         _started = _ended = _cancelled = _parried = 0;
         _combat.AttackStarted += _ => _started++;
@@ -88,14 +87,14 @@ public class PlayerCombatTests
 
     private void PressAttack()
     {
-        _sampler.InjectSnapshot(new InputSnapshot { Mouse0Held = true });
-        _sampler.Buffer.Push(KeyCode.Mouse0);
+        _sampler.InjectSnapshot(new InputSnapshot { AttackHeld = true });
+        _sampler.Buffer.Push(LogicalButton.Attack);
     }
 
     private void PressDash()
     {
-        _sampler.InjectSnapshot(new InputSnapshot { QHeld = true, Mouse0Held = true });
-        _sampler.Buffer.Push(KeyCode.Mouse0);
+        _sampler.InjectSnapshot(new InputSnapshot { DashHeld = true, AttackHeld = true });
+        _sampler.Buffer.Push(LogicalButton.Attack);
     }
 
     private static IEnumerator RunFor(float seconds) =>
@@ -114,7 +113,7 @@ public class PlayerCombatTests
 
         Assert.That(_combat.IsAttacking, Is.False, "能量不足不得出招");
         Assert.That(_motor.CurrentEnergy, Is.EqualTo(10f).Within(1e-3f), "失败路径不得扣费");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.True,
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.True,
             "失败路径不得吞输入——按下沿保留在缓冲（框架 4.1：暂不可执行时保留到过期）");
 
         // 同一条目在能量补足后立即可用：验证「保留」而非「作废」
@@ -142,7 +141,7 @@ public class PlayerCombatTests
         PressAttack();
         yield return RunFor(0.03f);
         Assert.That(_combat.IsAttacking, Is.False, "冷却未到不得再次出招");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.True, "冷却拦截不得吞输入");
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.True, "冷却拦截不得吞输入");
         Object.Destroy(def);
     }
 
@@ -157,7 +156,7 @@ public class PlayerCombatTests
         PressAttack();
         yield return RunFor(0.03f);
         Assert.That(_combat.IsAttacking, Is.False, "速度比 1.0 落在 [2, 1.5] 之外不得出招");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.True, "门槛拦截不得吞输入");
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.True, "门槛拦截不得吞输入");
 
         _motor.SetHorizontalSpeed(new Vector3(25f, 0f, 0f)); // ratio 2.5 超上限
         yield return RunFor(0.03f);
@@ -179,7 +178,7 @@ public class PlayerCombatTests
         Assert.That(_combat.IsAttacking, Is.True, "应进入攻击状态");
         Assert.That(_combat.CurrentDefinition, Is.EqualTo(def), "当前招式应为被映射的定义");
         Assert.That(_motor.CurrentEnergy, Is.EqualTo(80f).Within(1e-3f), "提交时应一次性扣费");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.False, "提交时应消费触发键");
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.False, "提交时应消费触发键");
         Assert.That(_started, Is.EqualTo(1), "起手应恰好触发一次事件");
 
         yield return RunFor(0.5f); // 收招
@@ -393,7 +392,7 @@ public class PlayerCombatTests
         PressAttack();
         yield return RunFor(0.03f);
         Assert.That(_combat.IsAttacking, Is.False, "暂停中不得出招（框架 4.3：暂停不积能、不耗能、不出招）");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.True,
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.True,
             "暂停中不得吞输入——缓冲清空是流程层职责，动作层只挡不消费");
 
         TimeManager.SetPaused(false);
@@ -491,7 +490,7 @@ public class PlayerCombatTests
         yield return RunFor(0.3f); // 收尾段走完（且残留条目已过期）→ 自然收招
         Assert.That(_combat.IsAttacking, Is.False, "全部段走完应自然收尾");
         Assert.That(_ended, Is.EqualTo(1), "收尾应触发一次 AttackEnded");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.False, "残留按下沿应已自然过期");
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.False, "残留按下沿应已自然过期");
         Object.Destroy(def);
         Object.Destroy(cancelTarget);
         Object.Destroy(table);
@@ -516,7 +515,7 @@ public class PlayerCombatTests
         PressAttack(); // 攻击中按键（取消表空 → 零副作用保留）；条目 0.12s 后过期，远早于冷却到期
         yield return RunFor(0.15f); // 收招（0.2s）+ 条目过期
         Assert.That(_combat.IsAttacking, Is.False, "冷却中且条目已过期——不得出招");
-        Assert.That(_sampler.Buffer.HasBuffered(KeyCode.Mouse0), Is.False, "前置：冷却中的按键已被窗口自然清理");
+        Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.False, "前置：冷却中的按键已被窗口自然清理");
         Assert.That(Time.time - commitAt, Is.LessThan(0.4f), "前置：冷却尚未到期");
 
         yield return RunFor(0.2f); // 冷却到期（全程待机——无动作在跑，恢复只靠时间戳）

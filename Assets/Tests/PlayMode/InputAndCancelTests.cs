@@ -23,8 +23,8 @@ public class InputAndCancelTests
     {
         return new InputSnapshot
         {
-            WHeld = w, SHeld = s, AHeld = a, DHeld = d,
-            ShiftHeld = shift, QHeld = q, Mouse0Held = mouse0, Mouse1Held = mouse1,
+            ForwardHeld = w, BackHeld = s, LeftHeld = a, RightHeld = d,
+            SprintHeld = shift, DashHeld = q, AttackHeld = mouse0, SkillHeld = mouse1,
         };
     }
 
@@ -33,7 +33,7 @@ public class InputAndCancelTests
     [Test]
     public void Arbitrate_RmbWithoutW_DoesNotSwallowForLaterAccelerate()
     {
-        _buffer.Push(KeyCode.Mouse1);
+        _buffer.Push(LogicalButton.Skill);
 
         // 第一拍：右键按住、W 未按——组合不成立，落入时停（持续型，不消费）
         InputIntent first = _buffer.PeekIntent(Snap(mouse1: true));
@@ -44,14 +44,14 @@ public class InputAndCancelTests
         Assert.That(second, Is.EqualTo(InputIntent.Accelerate), "右键按下沿不得被先前失败组合吞掉");
 
         _buffer.ConsumeFor(InputIntent.Accelerate, Snap(w: true, mouse1: true));
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.False, "提交后触发键应被消费");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Skill), Is.False, "提交后触发键应被消费");
     }
 
     // b. 优先级：连斩（右键+W+左键）压过推斩（右键+左键）压过普攻（左键）
     [Test]
     public void Arbitrate_Priority_RashomonOverPushSlashOverAttack()
     {
-        _buffer.Push(KeyCode.Mouse0);
+        _buffer.Push(LogicalButton.Attack);
         Assert.That(_buffer.PeekIntent(Snap(w: true, mouse1: true)), Is.EqualTo(InputIntent.Rashomon));
         Assert.That(_buffer.PeekIntent(Snap(mouse1: true)), Is.EqualTo(InputIntent.PushSlash));
         Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.Attack));
@@ -61,7 +61,7 @@ public class InputAndCancelTests
     [Test]
     public void Peek_DoesNotConsume_UntilCommit()
     {
-        _buffer.Push(KeyCode.Mouse0);
+        _buffer.Push(LogicalButton.Attack);
         Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.Attack));
         Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.Attack), "Peek 不应消费缓冲");
 
@@ -73,7 +73,7 @@ public class InputAndCancelTests
     [Test]
     public void Arbitrate_QPlusMouse0_IsDash()
     {
-        _buffer.Push(KeyCode.Mouse0);
+        _buffer.Push(LogicalButton.Attack);
         Assert.That(_buffer.PeekIntent(Snap(q: true)), Is.EqualTo(InputIntent.Dash));
     }
 
@@ -81,7 +81,7 @@ public class InputAndCancelTests
     [Test]
     public void Arbitrate_DirPlusShift_IsDodge()
     {
-        _buffer.Push(KeyCode.LeftShift);
+        _buffer.Push(LogicalButton.DodgeShift);
         Assert.That(_buffer.PeekIntent(Snap(a: true, shift: true)), Is.EqualTo(InputIntent.Dodge));
     }
 
@@ -89,7 +89,7 @@ public class InputAndCancelTests
     [UnityTest]
     public IEnumerator Buffer_ExpiredOutsideWindow()
     {
-        _buffer.Push(KeyCode.Mouse0);
+        _buffer.Push(LogicalButton.Attack);
         yield return new WaitForSecondsRealtime(Window + 0.15f);
         Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.None), "超窗按下沿应作废");
     }
@@ -224,11 +224,11 @@ public class InputAndCancelTests
     [Test]
     public void Buffer_Clear_RemovesAllEntries()
     {
-        _buffer.Push(KeyCode.Mouse0);
-        _buffer.Push(KeyCode.Mouse1);
+        _buffer.Push(LogicalButton.Attack);
+        _buffer.Push(LogicalButton.Skill);
         _buffer.Clear();
 
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse0), Is.False, "清空后不得残留按下沿");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Attack), Is.False, "清空后不得残留按下沿");
         Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.None), "清空后仲裁应无意图");
     }
 
@@ -236,28 +236,28 @@ public class InputAndCancelTests
     [Test]
     public void Buffer_CapacityFull_OverwritesOldest()
     {
-        _buffer.Push(KeyCode.Mouse0); // 最旧
-        _buffer.Push(KeyCode.Q);
-        _buffer.Push(KeyCode.Space);
-        _buffer.Push(KeyCode.LeftShift); // 倒数第 16 条
-        for (int i = 0; i < 14; i++) _buffer.Push(KeyCode.Alpha1 + i); // 累计 18 条 > 容量 16：最旧 3 条被覆盖
-        _buffer.Push(KeyCode.Mouse1);  // 第 19 条，再次覆盖一轮最旧
+        _buffer.Push(LogicalButton.Attack); // 最旧
+        _buffer.Push(LogicalButton.Q);
+        _buffer.Push(LogicalButton.Jump);
+        _buffer.Push(LogicalButton.DodgeShift); // 倒数第 16 条
+        for (int i = 0; i < 14; i++) _buffer.Push(LogicalButton.Q); // 占位填容（容量按条目计、不按键去重）；累计 18 条 > 容量 16：最旧 3 条被覆盖
+        _buffer.Push(LogicalButton.Skill);  // 第 19 条，再次覆盖一轮最旧
 
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse0), Is.False, "最旧条目应被覆盖（不无限增长）");
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.True, "最新条目应保留");
-        Assert.That(_buffer.HasBuffered(KeyCode.LeftShift), Is.True, "覆盖轮次未到的条目应保留");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Attack), Is.False, "最旧条目应被覆盖（不无限增长）");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Skill), Is.True, "最新条目应保留");
+        Assert.That(_buffer.HasBuffered(LogicalButton.DodgeShift), Is.True, "覆盖轮次未到的条目应保留");
     }
 
     // n. 时停持续型不消费：ConsumeFor(TimeStop) 不得吞掉任何按下沿（长按右键语义不占缓冲条目）
     [Test]
     public void TimeStop_ConsumeNeverSwallowsEntries()
     {
-        _buffer.Push(KeyCode.Mouse1);
+        _buffer.Push(LogicalButton.Skill);
 
         Assert.That(_buffer.PeekIntent(Snap(mouse1: true)), Is.EqualTo(InputIntent.TimeStop));
         _buffer.ConsumeFor(InputIntent.TimeStop, Snap(mouse1: true));
 
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.True,
+        Assert.That(_buffer.HasBuffered(LogicalButton.Skill), Is.True,
             "时停提交不得消费右键按下沿（持续型无触发键）");
     }
 
@@ -265,16 +265,16 @@ public class InputAndCancelTests
     [Test]
     public void Arbitrate_TurnaroundAndHighJump_IntentMapping()
     {
-        _buffer.Push(KeyCode.Mouse1);
+        _buffer.Push(LogicalButton.Skill);
         Assert.That(_buffer.PeekIntent(Snap(s: true)), Is.EqualTo(InputIntent.Turnaround),
             "S+右键按下沿应为折返");
         _buffer.ConsumeFor(InputIntent.Turnaround, Snap(s: true));
-        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.False, "折返提交应消费右键按下沿");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Skill), Is.False, "折返提交应消费右键按下沿");
 
-        _buffer.Push(KeyCode.Space);
+        _buffer.Push(LogicalButton.Jump);
         Assert.That(_buffer.PeekIntent(Snap(mouse1: true)), Is.EqualTo(InputIntent.HighJump),
             "右键按住+空格按下沿应为高跳");
         _buffer.ConsumeFor(InputIntent.HighJump, Snap(mouse1: true));
-        Assert.That(_buffer.HasBuffered(KeyCode.Space), Is.False, "高跳提交应消费空格按下沿");
+        Assert.That(_buffer.HasBuffered(LogicalButton.Jump), Is.False, "高跳提交应消费空格按下沿");
     }
 }

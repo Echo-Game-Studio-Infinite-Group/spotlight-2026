@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-// 战斗输入意图：组合键仲裁表的输出。
+// 战斗输入意图：组合键仲裁的输出。
 // 触发型意图各有触发键（提交时消费缓冲条目）；TimeStop 为持续型（长按右键，不消费任何条目）
 public enum InputIntent
 {
@@ -33,45 +33,39 @@ public struct InputBufferConfig
 // 环形输入缓冲 + 组合键仲裁（框架 4.1）
 // 修复旧版吞键病灶：仲裁"先匹配全部条件，再消费触发键"——旧版先 Consume 触发键再判修饰键，
 // 规则顺序一短路（右键被折返检查吃掉）后续规则（加速）永远取不到该键，组合被静默吞掉
+// 规则为纯数据（ArbitrationRule）：默认表内置代码，可用 InputArbitrationTable SO 覆盖（优先级调整不改代码）
 // 时间戳走 unscaled：hitstop/时缓不应拉长输入窗口（输入缓冲属"不缩放"层，框架 4.3）
 public class InputBuffer
 {
     private struct Entry
     {
-        public KeyCode Key;
+        public LogicalButton Button;
         public float Time;
     }
 
     private readonly float _bufferWindow;
     private readonly Entry[] _ring;
+    private readonly ArbitrationRule[] _rules;
     private int _write; // 下一个写入位
     private int _count;
 
-    // 组合键规则表：次序即优先级（特定组合在前，泛用触发在后）。
-    // 优先级基线（待哈士奇确认）：连斩 > 推斩 > 折返 > 加速/高跳 > 时停；冲刺/普攻/闪避为本版补充占位
-    private static readonly (InputIntent Intent, KeyCode Trigger, Func<InputSnapshot, bool> Modifiers)[] Rules =
-    {
-        (InputIntent.Rashomon, KeyCode.Mouse0, s => s.Mouse1Held && s.WHeld),
-        (InputIntent.Dash, KeyCode.Mouse0, s => s.QHeld),
-        (InputIntent.PushSlash, KeyCode.Mouse0, s => s.Mouse1Held),
-        (InputIntent.Attack, KeyCode.Mouse0, s => true),
-        (InputIntent.Dodge, KeyCode.LeftShift, s => s.AHeld || s.DHeld),
-        (InputIntent.Turnaround, KeyCode.Mouse1, s => s.SHeld),
-        (InputIntent.Accelerate, KeyCode.Mouse1, s => s.WHeld),
-        (InputIntent.HighJump, KeyCode.Space, s => s.Mouse1Held),
-    };
-
-    public InputBuffer(float bufferWindow, int capacity)
+    public InputBuffer(float bufferWindow, int capacity, InputArbitrationTable table = null)
     {
         _bufferWindow = Mathf.Max(0.01f, bufferWindow);
         _ring = new Entry[Mathf.Max(4, capacity)];
+        // SO 留空或空表退回内置默认表——零配置可用，配了表用表
+        _rules = table != null && table.Rules != null && table.Rules.Length > 0
+            ? table.Rules
+            : InputArbitration.DefaultRules;
     }
 
-    public InputBuffer(InputBufferConfig config) : this(config.BufferWindow, config.Capacity) { }
+    public InputBuffer(InputBufferConfig config, InputArbitrationTable table = null)
+        : this(config.BufferWindow, config.Capacity, table) { }
 
-    public void Push(KeyCode key)
+    public void Push(LogicalButton button)
     {
-        _ring[_write].Key = key;
+        if (button == LogicalButton.None) return;
+        _ring[_write].Button = button;
         _ring[_write].Time = TimeManager.UnscaledTime;
         _write = (_write + 1) % _ring.Length;
         _count = Mathf.Min(_count + 1, _ring.Length); // 满时覆盖最旧条目
@@ -84,15 +78,16 @@ public class InputBuffer
     public InputIntent PeekIntent(in InputSnapshot snapshot)
     {
         Prune();
-        for (int i = 0; i < Rules.Length; i++)
+        InputModifier held = InputArbitration.ReadModifiers(in snapshot);
+        for (int i = 0; i < _rules.Length; i++)
         {
-            if (HasBuffered(Rules[i].Item2) && Rules[i].Item3(snapshot))
+            if (HasBuffered(_rules[i].Trigger) && (held & _rules[i].Modifiers) == _rules[i].Modifiers)
             {
-                return Rules[i].Item1;
+                return _rules[i].Intent;
             }
         }
         // 时停为长按持续型：无触发键、不消费；右键按下沿残留条目由窗口过期自然清理
-        if (snapshot.Mouse1Held) return InputIntent.TimeStop;
+        if (snapshot.SkillHeld) return InputIntent.TimeStop;
         return InputIntent.None;
     }
 
@@ -100,35 +95,35 @@ public class InputBuffer
     public void ConsumeFor(InputIntent intent, in InputSnapshot snapshot)
     {
         if (intent == InputIntent.None || intent == InputIntent.TimeStop) return;
-        for (int i = 0; i < Rules.Length; i++)
+        for (int i = 0; i < _rules.Length; i++)
         {
-            if (Rules[i].Item1 == intent)
+            if (_rules[i].Intent == intent)
             {
-                Consume(Rules[i].Item2);
+                Consume(_rules[i].Trigger);
                 return;
             }
         }
     }
 
     /// <summary>缓冲里是否还有该键的未消费按下沿（不删除）</summary>
-    public bool HasBuffered(KeyCode key)
+    public bool HasBuffered(LogicalButton button)
     {
         Prune();
         for (int i = 0; i < _count; i++)
         {
-            if (_ring[IndexFromNewest(i)].Key == key) return true;
+            if (_ring[IndexFromNewest(i)].Button == button) return true;
         }
         return false;
     }
 
     /// <summary>消费该键最近一次按下沿；无则返回 false</summary>
-    public bool Consume(KeyCode key)
+    public bool Consume(LogicalButton button)
     {
         Prune();
         for (int i = 0; i < _count; i++)
         {
             int idx = IndexFromNewest(i);
-            if (_ring[idx].Key == key)
+            if (_ring[idx].Button == button)
             {
                 RemoveAt(idx);
                 return true;

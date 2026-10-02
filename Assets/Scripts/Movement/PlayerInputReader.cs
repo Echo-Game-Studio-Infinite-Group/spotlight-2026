@@ -2,6 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+// 输入统一后端（Input System）：移动帧（IPlayerInput）与战斗输入的唯一设备侧——
+// 按下沿推入 InputSampler.Buffer（InputBuffer 仲裁），按住态快照每 Update 写入 InputSampler；
+// 物理键 → 逻辑语义的绑定集中在 PlayerControls.inputactions，代码不出现 KeyCode
 [DefaultExecutionOrder(-50)]
 [DisallowMultipleComponent]
 public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
@@ -9,7 +12,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     [SerializeField] private InputActionAsset _actions;
     private InputActionAsset _runtime;
     private InputActionMap _gameplay;
-    private InputAction _move, _look, _sprint, _slide, _skill;
+    private InputAction _move, _look, _sprint, _slide, _skill, _attack, _jump, _dash;
+    private InputSampler _combatInput; // 战斗输入持有器；战斗组件未装配时为 null（推送静默跳过）
     private bool _jumpPressed, _slidePressed;
     private float _jumpTime;
     private Vector2 _moveValue;
@@ -19,7 +23,6 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public event Action ToggleHUD;
     public event Action Cleared;
     public event Action<bool> GameplayChanged;
-    public ActionBuffer Battle { get; private set; } = new ActionBuffer();
 
     public bool GameplayEnabled => _gameplayEnabled && _focused;
     public Vector2 LookDelta => _look != null && GameplayEnabled ? _look.ReadValue<Vector2>() : Vector2.zero;
@@ -33,6 +36,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
             enabled = false;
             return;
         }
+        _combatInput = GetComponent<InputSampler>();
         // 每个角色持有独立实例，测试或暂停不能停掉另一个角色的 Map。
         _runtime = Instantiate(_actions);
         _gameplay = _runtime.FindActionMap("Gameplay", true);
@@ -41,14 +45,18 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _sprint = _gameplay.FindAction("Sprint", true);
         _slide = _gameplay.FindAction("Slide", true);
         _skill = _gameplay.FindAction("Skill", true);
+        _attack = _gameplay.FindAction("Attack", true);
+        _jump = _gameplay.FindAction("Jump", true);
+        _dash = _gameplay.FindAction("Dash", false); // Q 修饰键：资产未配则视为未按住，不硬失败
         _move.performed += OnMove;
         _move.canceled += OnMove;
         _sprint.performed += OnSprint;
         _sprint.canceled += OnSprint;
-        _gameplay.FindAction("Jump", true).performed += OnJump;
+        _sprint.performed += OnSprintPressed;
+        _jump.performed += OnJump;
         _slide.performed += OnSlide;
         _slide.canceled += OnSlideCanceled;
-        _gameplay.FindAction("Attack", true).performed += OnAttack;
+        _attack.performed += OnAttack;
         _skill.performed += OnSkill;
         _runtime.FindAction("Debug/ToggleHUD", true).performed += OnToggleHUD;
         _runtime.FindAction("Debug/ToggleCursor", true).performed += OnToggleCursor;
@@ -65,25 +73,48 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private void OnApplicationFocus(bool focus) { _focused = focus; ApplyGameplay(); }
     private void OnMove(InputAction.CallbackContext context) => _moveValue = context.ReadValue<Vector2>();
     private void OnSprint(InputAction.CallbackContext context) => _sprintHeld = context.ReadValueAsButton();
+    private void OnSprintPressed(InputAction.CallbackContext context) => _combatInput?.Buffer.Push(LogicalButton.DodgeShift);
     private void OnJump(InputAction.CallbackContext context)
     {
         _jumpPressed = true;
         _jumpTime = TimeManager.UnscaledTime;
-        Battle.Push(ActionBuffer.Action.Jump, _jumpTime);
+        _combatInput?.Buffer.Push(LogicalButton.Jump);
     }
     private void OnSlide(InputAction.CallbackContext context) { _slidePressed = true; _slideHeld = true; }
     private void OnSlideCanceled(InputAction.CallbackContext context) => _slideHeld = false;
+    private void OnAttack(InputAction.CallbackContext context) => _combatInput?.Buffer.Push(LogicalButton.Attack);
+    private void OnSkill(InputAction.CallbackContext context) => _combatInput?.Buffer.Push(LogicalButton.Skill);
+    private void OnToggleHUD(InputAction.CallbackContext context) => ToggleHUD?.Invoke();
+    private void OnToggleCursor(InputAction.CallbackContext context) => SetGameplayEnabled(!_gameplayEnabled);
+
     private void Update()
     {
-        if (_runtime == null || !GameplayEnabled) return;
+        if (_runtime == null) return;
+        if (!GameplayEnabled)
+        {
+            // 禁用期间按住态清零：恢复时不得残留旧修饰（按下沿由缓冲窗口自然过期）
+            _combatInput?.InjectSnapshot(InputSnapshot.Empty);
+            return;
+        }
         _moveValue = _move.ReadValue<Vector2>();
         _sprintHeld = _sprint.IsPressed();
         _slideHeld = _slide.IsPressed();
+        _combatInput?.InjectSnapshot(new InputSnapshot
+        {
+            Horizontal = _moveValue.x,
+            Vertical = _moveValue.y,
+            ForwardHeld = _moveValue.y > 0f,
+            BackHeld = _moveValue.y < 0f,
+            LeftHeld = _moveValue.x < 0f,
+            RightHeld = _moveValue.x > 0f,
+            SprintHeld = _sprintHeld,
+            SlideHeld = _slideHeld,
+            DashHeld = _dash != null && _dash.IsPressed(),
+            AttackHeld = _attack.IsPressed(),
+            SkillHeld = _skill.IsPressed(),
+            JumpHeld = _jump.IsPressed(),
+        });
     }
-    private void OnAttack(InputAction.CallbackContext context) => Battle.Push(ActionBuffer.Action.Attack, TimeManager.UnscaledTime);
-    private void OnSkill(InputAction.CallbackContext context) => Battle.Push(ActionBuffer.Action.Skill, TimeManager.UnscaledTime);
-    private void OnToggleHUD(InputAction.CallbackContext context) => ToggleHUD?.Invoke();
-    private void OnToggleCursor(InputAction.CallbackContext context) => SetGameplayEnabled(!_gameplayEnabled);
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
     private void ApplyGameplay()
@@ -106,16 +137,10 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         return frame;
     }
 
-    public ActionBuffer.Intent ConsumeBattleIntent()
-    {
-        return Battle.ConsumeCombo(TimeManager.UnscaledTime, _skill != null && _skill.IsPressed(),
-            _move != null ? _move.ReadValue<Vector2>() : Vector2.zero);
-    }
     public void Clear()
     {
         _jumpPressed = _slidePressed = _sprintHeld = _slideHeld = false;
         _moveValue = Vector2.zero;
-        Battle.Clear();
         Cleared?.Invoke();
     }
 }

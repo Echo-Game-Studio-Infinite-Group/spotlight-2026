@@ -48,7 +48,6 @@ public class CombatIntegrationTests
         _sampler = _player.AddComponent<InputSampler>();
         _player.transform.position = new Vector3(0f, 0.1f, 0f);
         _player.SetActive(true);
-        _sampler.enabled = false; // 停自动采样，快照由 InjectSnapshot 注入（PlayerCombatTests 同款）
 
         _healthBeforeWall = MakeTarget("TargetBeforeWall", 3f);
         _healthBehindWall = MakeTarget("TargetBehindWall", 7f); // 墙后 0.75m 起（Collider z∈[6.6,7.4]）
@@ -145,8 +144,8 @@ public class CombatIntegrationTests
         phase.MotionSpeed = 10f;
         _combat.NormalAttack = def;
 
-        _sampler.InjectSnapshot(new InputSnapshot { Mouse0Held = true });
-        _sampler.Buffer.Push(KeyCode.Mouse0);
+        _sampler.InjectSnapshot(new InputSnapshot { AttackHeld = true });
+        _sampler.Buffer.Push(LogicalButton.Attack);
         yield return new WaitForSecondsRealtime(0.25f); // Startup+Active 0.2s 前移约 2m，再留 Recovery 余量
 
         Assert.That(_player.transform.position.z, Is.GreaterThan(1.5f),
