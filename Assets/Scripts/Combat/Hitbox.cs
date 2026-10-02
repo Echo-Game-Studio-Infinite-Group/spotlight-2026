@@ -13,9 +13,15 @@ public class Hitbox : MonoBehaviour
     [Tooltip("框种类：伤害框（打对方 Hurtbox）/ parry 框（碰对方的伤害框）——一个组件二选一")]
     public HitboxKind Kind = HitboxKind.Damage;
 
+    [Tooltip("物理查询层掩码：默认全部；收紧到受击框所在层（装配工具 seed）可避免密集场景候选超容被静默截断")]
+    public LayerMask QueryMask = ~0;
+
     private static readonly List<Hitbox> _registry = new List<Hitbox>();
     private static readonly Collider[] _overlapBuffer = new Collider[32];
     private static readonly RaycastHit[] _castBuffer = new RaycastHit[32];
+
+    // 超容告警节流：静默截断比崩溃更危险（命中悄悄丢失无从排查），但不节流会每帧刷屏——2 秒一条
+    private static float _nextOverflowLogSec;
 
     public static IReadOnlyList<Hitbox> Registry => _registry;
 
@@ -104,8 +110,16 @@ public class Hitbox : MonoBehaviour
             out Vector3 center, out Vector3 halfExtents, out Quaternion rotation);
 
         int count = Current.Profile.Shape == HitboxShape.Box
-            ? Physics.OverlapBoxNonAlloc(center, halfExtents, _overlapBuffer, rotation, ~0, QueryTriggerInteraction.Collide)
-            : Physics.OverlapCapsuleNonAlloc(p0, p1, radius, _overlapBuffer, ~0, QueryTriggerInteraction.Collide);
+            ? Physics.OverlapBoxNonAlloc(center, halfExtents, _overlapBuffer, rotation, QueryMask, QueryTriggerInteraction.Collide)
+            : Physics.OverlapCapsuleNonAlloc(p0, p1, radius, _overlapBuffer, QueryMask, QueryTriggerInteraction.Collide);
+
+        // NonAlloc 缓冲满即静默丢掉溢出候选——命中悄悄丢失比崩溃更难排查，超容时必须告警
+        if (count == _overlapBuffer.Length && TimeManager.UnscaledTime >= _nextOverflowLogSec)
+        {
+            Debug.LogWarning($"[Hitbox] 查询候选超容（{count}）被截断——收紧 QueryMask 或增大缓冲", this);
+            _nextOverflowLogSec = TimeManager.UnscaledTime + 2f;
+        }
+
         AppendCandidates(results, _overlapBuffer, count, center);
 
         // 扫掠：上一 tick 刀根 → 当前的整段路径都算命中区——高速位移一 tick 跨过整个敌人时不漏
@@ -117,8 +131,16 @@ public class Hitbox : MonoBehaviour
             {
                 Vector3 dirNormalized = dir / dist; // Cast 系 API 要求方向单位向量，非归一化会触发引擎断言
                 int hits = Current.Profile.Shape == HitboxShape.Box
-                    ? Physics.BoxCastNonAlloc(_prevCenter, halfExtents, dirNormalized, _castBuffer, _prevRot, dist, ~0, QueryTriggerInteraction.Collide)
-                    : Physics.CapsuleCastNonAlloc(_prevP0, _prevP1, radius, dirNormalized, _castBuffer, dist, ~0, QueryTriggerInteraction.Collide);
+                    ? Physics.BoxCastNonAlloc(_prevCenter, halfExtents, dirNormalized, _castBuffer, _prevRot, dist, QueryMask, QueryTriggerInteraction.Collide)
+                    : Physics.CapsuleCastNonAlloc(_prevP0, _prevP1, radius, dirNormalized, _castBuffer, dist, QueryMask, QueryTriggerInteraction.Collide);
+
+                // 扫掠路径同样会被缓冲截断，与瞬时框共用同一条节流告警
+                if (hits == _castBuffer.Length && TimeManager.UnscaledTime >= _nextOverflowLogSec)
+                {
+                    Debug.LogWarning($"[Hitbox] 查询候选超容（{hits}）被截断——收紧 QueryMask 或增大缓冲", this);
+                    _nextOverflowLogSec = TimeManager.UnscaledTime + 2f;
+                }
+
                 for (int i = 0; i < hits; i++)
                 {
                     Hurtbox hb = Hurtbox.FromCollider(_castBuffer[i].collider);
