@@ -17,8 +17,8 @@ public interface IEnergyAccount
 }
 
 /// <summary>
-/// 机动技能命令缝（能力层 → Motor）：加速/高跳/折返类技能不直接改 Motor 状态，
-/// 经这三根指挥杆请求。签名由移动侧在本文件维护，能力侧（MobilityAbilities 等）只引用、不另行定义
+/// 机动技能命令缝（能力层 → Motor）：加速/高跳/折返类技能不直接改 Motor 状态，经本接口请求。
+/// 签名由移动侧维护；能力侧只引用，不得在别处定义本接口
 /// </summary>
 public interface IMotorCommand
 {

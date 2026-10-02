@@ -78,15 +78,10 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
     /// <summary>重力悬挂开关：悬挂期间竖直速度不被重力积分（Simulate 内生效）</summary>
     public void SetGravitySuspended(bool suspended) => _gravitySuspended = suspended;
 
-    // —— IMotorCommand（机动技能命令缝，定义见 CombatSeams.cs）——
-
-    /// <summary>沿当前朝向设定水平速度模长（加速技能）</summary>
+    // —— IMotorCommand 实现（契约见 CombatSeams.cs）——
     public void SetHorizontalSpeed(float speed) => SetHorizontal(transform.forward * Mathf.Max(0f, speed));
-
-    /// <summary>竖直起跳（高跳技能）：复用起跳簿记，保持状态机与跳跃计数一致</summary>
     public void LaunchVertical(float upSpeed) => Jump(Mathf.Max(0f, upSpeed));
 
-    /// <summary>水平折返（折返技能）：速度与朝向同时翻转，保水平模长</summary>
     public void ReverseHorizontal()
     {
         SetHorizontal(-MovementMath.Horizontal(_velocity));
