@@ -3,6 +3,20 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+// 速度感特效的动态强度参数（URP Volume 通道）：SpeedCameraFeedback 写入，渲染 Pass 每帧读取
+// 走 Volume 而非静态单例：多相机各自走自己的 Volume 栈，域重载也不留悬挂引用
+public sealed class SpeedFxVolume : UnityEngine.Rendering.VolumeComponent, UnityEngine.Rendering.IPostProcessComponent
+{
+    [Tooltip("运动模糊强度，1 = 物理正确长度，越大越夸张")]
+    public ClampedFloatParameter motionBlur = new ClampedFloatParameter(0f, 0f, 4f);
+    [Tooltip("径向拖影强度")]
+    public ClampedFloatParameter radial = new ClampedFloatParameter(0f, 0f, 0.1f);
+    [Tooltip("色差分离量（UV 空间）")]
+    public ClampedFloatParameter chromatic = new ClampedFloatParameter(0f, 0f, 0.05f);
+    public bool IsActive() => motionBlur.value > 0f || radial.value > 0f || chromatic.value > 0f;
+    public bool IsTileCompatible() => false;
+}
+
 /// <summary>
 /// 速度感后处理（在后处理之后注入一次全屏 Blit）：
 ///   • 运动模糊 —— 直接采样 URP 的运动向量贴图，强度不经过 URP 的 clamp(0.2) 限制
@@ -10,7 +24,7 @@ using UnityEngine.Rendering.Universal;
 ///   • 色差     —— 可选的 RGB 分离
 ///
 /// 静态配置（材质、采样数、注入时机）在 Renderer Feature 资产上；
-/// 动态强度由 SpeedCameraFeedback 每帧通过静态方法写入。
+/// 动态强度走 SpeedFxVolume（Volume 通道）：SpeedCameraFeedback 每帧写入，渲染 Pass 每帧读取。
 /// </summary>
 public class RadialRedshiftFeature : ScriptableRendererFeature
 {
@@ -20,8 +34,6 @@ public class RadialRedshiftFeature : ScriptableRendererFeature
     internal static readonly int FalloffPowerId = Shader.PropertyToID("_FalloffPower");
     internal static readonly int SamplesId = Shader.PropertyToID("_Samples");
     internal static readonly int CenterId = Shader.PropertyToID("_Center");
-
-    private static RadialRedshiftFeature activeInstance;
 
     [Serializable]
     public class Settings
@@ -47,15 +59,18 @@ public class RadialRedshiftFeature : ScriptableRendererFeature
 
     public override void Create()
     {
+        // URP 在渲染器数据重建 / Inspector 改动时会重复调 Create：
+        // 必须先释放旧 Pass，否则其 runtimeMaterial（new 出来的 Native 对象）与 RTHandle 泄漏
+        pass?.Dispose();
         pass = new RadialRedshiftPass(settings);
         pass.renderPassEvent = settings.renderPassEvent;
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        // 仅对 Game / Scene 相机生效，避免 UI 相机等重复叠加
-        var cameraType = renderingData.cameraData.cameraType;
-        if (cameraType != CameraType.Game && cameraType != CameraType.SceneView)
+        // 仅对 Game 相机生效：编辑器 SceneView 相机不做速度感预览（有意取舍），
+        // 也不为它请求运动向量贴图，省掉编辑器相机渲染运动向量的开销
+        if (renderingData.cameraData.cameraType != CameraType.Game)
         {
             return;
         }
@@ -70,45 +85,15 @@ public class RadialRedshiftFeature : ScriptableRendererFeature
         // 所以在这里调用是有效的 —— URP 会因此渲染出 _MotionVectorTexture。
         pass.ConfigureInput(ScriptableRenderPassInput.Motion);
 
-        activeInstance = this;
         pass.renderPassEvent = settings.renderPassEvent;
         renderer.EnqueuePass(pass);
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (activeInstance == this)
-        {
-            activeInstance = null;
-        }
-
         pass?.Dispose();
         pass = null;
     }
-
-    internal Material RuntimeMaterial => pass != null ? pass.RuntimeMaterial : null;
-
-    /// <summary>
-    /// 由 SpeedCameraFeedback 每帧调用，写入当前速度对应的各项强度。
-    /// </summary>
-    /// <param name="motionBlur">运动模糊强度，1 = 物理正确长度，越大越夸张（无上限）</param>
-    /// <param name="radial">径向拖影强度，对应 _Strength</param>
-    /// <param name="chromatic">色差分离量（UV 空间），0.005 左右已很明显</param>
-    public static void SetSpeed(float motionBlur, float radial, float chromatic)
-    {
-        var material = activeInstance?.RuntimeMaterial;
-        if (material == null)
-        {
-            return;
-        }
-
-        material.SetFloat(MotionBlurStrengthId, Mathf.Max(0f, motionBlur));
-        material.SetFloat(StrengthId, Mathf.Clamp(radial, 0f, 0.1f));
-        material.SetFloat(ChromaticSpreadId, Mathf.Clamp(chromatic, 0f, 0.05f));
-    }
-
-    /// <summary>诊断用：暴露运行时材质，便于检查参数是否真的写入。</summary>
-    public static Material DebugMaterial => activeInstance?.RuntimeMaterial;
 
     private class RadialRedshiftPass : ScriptableRenderPass
     {
@@ -180,9 +165,19 @@ public class RadialRedshiftFeature : ScriptableRendererFeature
                 return;
             }
 
+            // 动态强度从 Volume 栈读取：效果关闭时直接跳过整个 Pass，省掉两次全屏 Blit
+            var speedFx = UnityEngine.Rendering.VolumeManager.instance.stack.GetComponent<SpeedFxVolume>();
+            if (speedFx == null || !speedFx.IsActive())
+            {
+                return;
+            }
+
             material.SetFloat(FalloffPowerId, settings.falloffPower);
             material.SetFloat(SamplesId, settings.samples);
             material.SetVector(CenterId, new Vector4(0.5f, 0.5f, 0f, 0f));
+            material.SetFloat(MotionBlurStrengthId, speedFx.motionBlur.value);
+            material.SetFloat(StrengthId, speedFx.radial.value);
+            material.SetFloat(ChromaticSpreadId, speedFx.chromatic.value);
 
             CommandBuffer cmd = CommandBufferPool.Get();
 

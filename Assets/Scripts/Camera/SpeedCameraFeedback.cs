@@ -20,6 +20,7 @@ public sealed class SpeedCameraFeedback : MonoBehaviour
     [SerializeField] private float _customRadial;
     private ChromaticAberration _chromatic;
     private MotionBlur _motionBlur;
+    private SpeedFxVolume _speedFx;
     private float _intensity, _roll;
     public void Configure(PlayerMotor motor, CinemachineVirtualCamera camera, Volume volume)
     { _motor = motor; _virtualCamera = camera; _volume = volume; }
@@ -36,6 +37,8 @@ public sealed class SpeedCameraFeedback : MonoBehaviour
         if (_chromatic != null) _chromatic.intensity.overrideState = true;
         if (_motionBlur != null)
         { _motionBlur.intensity.overrideState = true; _motionBlur.mode.Override(MotionBlurMode.CameraOnly); }
+        // 速度感特效的动态参数走 Volume 通道；_volume.profile 是运行时实例化副本，Add 不会写回共享资产
+        if (!_volume.profile.TryGet(out _speedFx)) _speedFx = _volume.profile.Add<SpeedFxVolume>(true);
     }
     private void Update()
     {
@@ -51,11 +54,17 @@ public sealed class SpeedCameraFeedback : MonoBehaviour
         _virtualCamera.m_Lens = lens;
         if (_chromatic != null) _chromatic.intensity.value = _intensity * _chromaticIntensity;
         if (_motionBlur != null) _motionBlur.intensity.value = _intensity * _motionBlurIntensity;
-        RadialRedshiftFeature.SetSpeed(_intensity * _customMotionBlur, _intensity * _customRadial, 0f);
+        if (_speedFx != null)
+        {
+            _speedFx.motionBlur.value = _intensity * _customMotionBlur;
+            _speedFx.radial.value = _intensity * _customRadial;
+            _speedFx.chromatic.value = 0f;
+        }
     }
     private void OnDisable()
     {
-        RadialRedshiftFeature.SetSpeed(0f, 0f, 0f);
+        if (_speedFx != null)
+        { _speedFx.motionBlur.value = 0f; _speedFx.radial.value = 0f; _speedFx.chromatic.value = 0f; }
         if (_chromatic != null) _chromatic.intensity.value = 0f;
         if (_motionBlur != null) _motionBlur.intensity.value = 0f;
     }
