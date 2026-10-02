@@ -14,11 +14,11 @@ public static class PlayerAnimationSetup
         if (controller == null) throw new InvalidOperationException("找不到 player.controller");
         if (controller.layers.Length > 0) return controller;
 
-        AnimationClip idleClip = Clip("Assets/Animations/fbx/Idle (1).fbx");
-        AnimationClip walkClip = Clip("Assets/Animations/fbx/Walking.fbx");
-        AnimationClip runClip = Clip("Assets/Animations/fbx/Running.fbx");
+        AnimationClip idleClip = Clip("Assets/Models/Character.fbx");
+        AnimationClip walkClip = Clip("Assets/Animations/fbx/Walk.fbx");
+        AnimationClip runClip = Clip("Assets/Animations/fbx/Run.fbx");
         AnimationClip jumpClip = Clip("Assets/Animations/fbx/Jump.fbx");
-        AnimationClip slideClip = Clip("Assets/Animations/fbx/Soccer Tackle.fbx");
+        AnimationClip slideClip = Clip("Assets/Animations/fbx/Tackle.fbx");
 
         controller.AddParameter("MotionState", AnimatorControllerParameterType.Int);
         controller.AddParameter("RunBlend", AnimatorControllerParameterType.Float);
@@ -46,7 +46,7 @@ public static class PlayerAnimationSetup
         AnimatorState idle = State(machine, "Idle", idleClip, new Vector3(240f, 0f));
         State(machine, "Move", locomotion, new Vector3(500f, 0f));
         State(machine, "Jump", jumpClip, new Vector3(500f, 100f));
-        State(machine, "Trackle", slideClip, new Vector3(240f, 100f));
+        State(machine, "Tackle", slideClip, new Vector3(240f, 100f));
         machine.defaultState = idle;
 
         for (int motionState = 0; motionState < 4; motionState++)

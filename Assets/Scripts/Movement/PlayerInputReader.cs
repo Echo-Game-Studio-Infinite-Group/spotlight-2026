@@ -19,7 +19,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public event Action ToggleHUD;
     public event Action Cleared;
     public event Action<bool> GameplayChanged;
-    public InputBuffer Battle { get; private set; } = new InputBuffer();
+    public ActionBuffer Battle { get; private set; } = new ActionBuffer();
 
     public bool GameplayEnabled => _gameplayEnabled && _focused;
     public Vector2 LookDelta => _look != null && GameplayEnabled ? _look.ReadValue<Vector2>() : Vector2.zero;
@@ -69,7 +69,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     {
         _jumpPressed = true;
         _jumpTime = TimeManager.UnscaledTime;
-        Battle.Push(InputBuffer.Action.Jump, _jumpTime);
+        Battle.Push(ActionBuffer.Action.Jump, _jumpTime);
     }
     private void OnSlide(InputAction.CallbackContext context) { _slidePressed = true; _slideHeld = true; }
     private void OnSlideCanceled(InputAction.CallbackContext context) => _slideHeld = false;
@@ -80,8 +80,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _sprintHeld = _sprint.IsPressed();
         _slideHeld = _slide.IsPressed();
     }
-    private void OnAttack(InputAction.CallbackContext context) => Battle.Push(InputBuffer.Action.Attack, TimeManager.UnscaledTime);
-    private void OnSkill(InputAction.CallbackContext context) => Battle.Push(InputBuffer.Action.Skill, TimeManager.UnscaledTime);
+    private void OnAttack(InputAction.CallbackContext context) => Battle.Push(ActionBuffer.Action.Attack, TimeManager.UnscaledTime);
+    private void OnSkill(InputAction.CallbackContext context) => Battle.Push(ActionBuffer.Action.Skill, TimeManager.UnscaledTime);
     private void OnToggleHUD(InputAction.CallbackContext context) => ToggleHUD?.Invoke();
     private void OnToggleCursor(InputAction.CallbackContext context) => SetGameplayEnabled(!_gameplayEnabled);
 
@@ -106,7 +106,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         return frame;
     }
 
-    public InputBuffer.Intent ConsumeBattleIntent()
+    public ActionBuffer.Intent ConsumeBattleIntent()
     {
         return Battle.ConsumeCombo(TimeManager.UnscaledTime, _skill != null && _skill.IsPressed(),
             _move != null ? _move.ReadValue<Vector2>() : Vector2.zero);

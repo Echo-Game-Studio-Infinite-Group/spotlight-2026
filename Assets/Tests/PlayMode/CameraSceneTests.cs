@@ -146,6 +146,8 @@ public sealed class CameraSceneTests
         }
         finally
         {
+            // 失败路径也要复位：卸载是异步的，完成前后续测试若读到单例的 PlayerScale=0 会被冻结
+            if (time != null) time.PlayerScale = 1f;
             SceneManager.SetActiveScene(original);
             SceneManager.UnloadSceneAsync(scene);
         }
