@@ -46,7 +46,7 @@ public class MapLayoutTool : EditorWindow
     private Vector2 _groundSize;
     private bool _groundSizeValid;
 
-    [MenuItem("超高速行者/地图布局工具（围墙 + 环道）")]
+    [MenuItem("超高速行者/地图布局工具")]
     public static void Open()
     {
         MapLayoutTool window = GetWindow<MapLayoutTool>("地图布局工具");

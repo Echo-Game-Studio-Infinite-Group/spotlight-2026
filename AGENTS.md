@@ -37,18 +37,21 @@
 Assets/                    # Unity 资产（仓库根 = 工程根）
   Scripts/                 # 运行时代码（GameJam.Runtime 程序集）
     Movement/              # 两套移动机制 + 参数
-    Camera/                # 跟随相机 + 速度感后处理
-    Core/                  # 时间分层、输入缓冲
+    Camera/                # Cinemachine 机位与速度感后处理
+    Core/                  # 全局单例与整局流程、时间分层、输入缓冲
+    Character/             # 玩家实体、能量与时间效果
     Debug/                 # 调试 HUD
   Editor/                  # 编辑器工具（不进玩家包）
   Tests/PlayMode/          # PlayMode 测试（GameJam.Tests.PlayMode 程序集）
-  Scenes/TestScene.unity   # 主测试场景
+  Scenes/                  # BootScene（启动）+ TestScene（移动 / 战斗联调）
   Prefabs/Maps/            # 地图预制体（MapTestField）
   Settings/                # ScriptableObject 参数 + URP 管线资产
-  Shaders/  Materials/     # 速度感特效的自研 shader 与材质
+  Shaders/                 # 速度感特效的自研 shader
+  Art/                     # 美术资产（Models / Materials / Images）
 Docs/                      # 项目文档（**不要修改**，除非任务明确要求）
   aigc/                    # 调研与分析稿
 Tools/movement-sim/        # 纯 C# 移动数学仿真（dotnet run 可跑，产出 results/）
+Tools/model-export/        # 模型导出与贴图检查脚本（Blender 侧，非 Unity）
 AGENTS.md                  # 本文件
 README.md                  # 仓库总览（面向接收开发者，说人话）
 ```
@@ -80,9 +83,9 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 
 | 菜单项 | 作用 |
 | --- | --- |
-| 装配 URP 与加速测试场景 | 幂等重建管线资产/材质转换/场景组件接线；**会自动退出 Play 模式**后执行 |
-| 地图布局工具（围墙 + 环道） | 按 Ground 实际尺寸重排 Boundary 与 CircleRail，参数可调 |
-| 探针/相机跟随实测 | 进 Play 模式实测相机跟随，排障用 |
+| 装配 URP 与测试场景 | 幂等重建管线资产/材质转换/场景组件接线；**会自动退出 Play 模式**后执行 |
+| 地图布局工具 | 按 Ground 实际尺寸重排 Boundary 与 CircleRail，参数可调 |
+| 检查装配结果 | 打印管线资产/落盘状态/场景接线的自检日志，排障用 |
 
 ## 验收标准（预研 Demo）
 
@@ -92,7 +95,7 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 
 ## 已知坑
 
-- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`CameraController` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
+- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`SpeedEffectsRig` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
   - **注意：`Internal build system error` 是表象不是病根**——它只是 Bee 后端在编译失败后卡住。先看它上面的 `CS` 错误。
   - 修复：把 `com.unity.render-pipelines.universal` 与 `com.unity.test-framework` 补回 `Packages/manifest.json`，关掉 Unity，必要时删 `Library/Bee`（纯缓存）后重开。
   - 排查入口：`Library/ScriptAssemblies` 若为空说明编译从未成功；`Library/PackageCache` 里没有 `com.unity.render-pipelines.*` 说明包没装上。
