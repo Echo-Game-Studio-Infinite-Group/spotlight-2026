@@ -18,7 +18,6 @@ public sealed class WallMovementTests
         _params.Gravity = 0f;
         _params.CapsuleShrinkStartSpeed = 200f;
         _params.CapsuleShrinkEndSpeed = 300f;
-        _params.SpeedSteerTurnRate = 0f;
         GameObject player = new GameObject("TestPlayer");
         _objects.Add(player);
         player.SetActive(false);
@@ -126,7 +125,6 @@ public sealed class WallMovementTests
     [Test]
     public void WallJump_WithForwardInputStillSeparatesFromWall()
     {
-        _params.SpeedSteerTurnRate = 540f;
         Enter(45f);
         Step(jump: true, move: Vector2.up);
         Assert.Less(_motor.Velocity.z, 0f);

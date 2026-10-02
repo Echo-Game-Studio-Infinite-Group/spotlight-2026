@@ -12,7 +12,7 @@ using UnityEditor.SceneManagement;
 public sealed class CameraSceneTests
 {
     [UnityTest]
-    public IEnumerator CharacterFacesRenderedCamera_WithoutRotatingCameraAgain()
+    public IEnumerator CameraOrbitsIndependently_AndWasdTurnsCharacterWithoutCameraFeedback()
     {
 #if UNITY_EDITOR
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/character.prefab");
@@ -34,28 +34,35 @@ public sealed class CameraSceneTests
             motor.SetMovementReference(cameraObject.transform);
 
             float[] yaws = { 90f, 179f, -179f, -90f, 0f };
-            Vector2[] moves = { Vector2.zero, Vector2.left, Vector2.down, Vector2.right, Vector2.up };
+            Vector2[] moves = { Vector2.up, Vector2.left, Vector2.down, Vector2.right, Vector2.one.normalized };
             for (int direction = 0; direction < yaws.Length; direction++)
             {
                 rig.enabled = false;
                 Quaternion view = Quaternion.Euler(direction % 2 == 0 ? 70f : -25f, yaws[direction], 0f);
                 camera.Follow.rotation = view;
                 rig.enabled = true;
-                for (int frame = 0; frame < 5; frame++)
+                Quaternion before = character.transform.rotation;
+                yield return null;
+                brain.ManualUpdate();
+                Assert.Less(Quaternion.Angle(before, character.transform.rotation), 0.1f,
+                    "单独转动相机不能改变人物朝向");
+                Vector3 expected = Quaternion.Euler(0f, yaws[direction], 0f) *
+                    new Vector3(moves[direction].x, 0f, moves[direction].y);
+                for (int frame = 0; frame < 40; frame++)
                 {
-                    yield return null;
                     motor.Simulate(new PlayerInputFrame { Move = moves[direction] }, 1f / 60f, 0f);
+                    yield return null;
                     brain.ManualUpdate();
                     Assert.IsTrue(brain.IsLive(camera));
-                    Vector3 expected = Vector3.ProjectOnPlane(cameraObject.transform.forward, Vector3.up).normalized;
-                    Assert.Less(Vector3.Angle(expected, character.transform.forward), 0.1f,
-                        "静止、横移和后退都应朝向本帧实际相机");
                     Assert.Less(Vector3.Angle(Vector3.up, character.transform.up), 0.1f,
                         "角色不能继承相机俯仰或 Dutch");
                     Assert.Less(Quaternion.Angle(view, camera.Follow.rotation), 0.1f,
                         "角色转身不能累加到相机目标朝向");
-                    Assert.Less(Mathf.Abs(Mathf.DeltaAngle(yaws[direction], character.transform.eulerAngles.y)), 0.1f);
+                    Vector3 cameraForward = Vector3.ProjectOnPlane(cameraObject.transform.forward, Vector3.up);
+                    Assert.Less(Vector3.Angle(cameraForward, Quaternion.Euler(0f, yaws[direction], 0f) * Vector3.forward), 0.1f);
                 }
+                Assert.Less(Vector3.Angle(expected, character.transform.forward), 0.2f,
+                    "人物应转向相机相对的 WASD 方向，包括斜向输入");
             }
         }
         finally

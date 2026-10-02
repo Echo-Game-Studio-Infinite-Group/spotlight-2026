@@ -1,7 +1,7 @@
 using Cinemachine;
 using UnityEngine;
 
-// 控制视角目标与角色朝向，真实相机的位置、阻尼和避障交给 Cinemachine。
+// 独立控制视角目标，真实相机的位置、阻尼和避障交给 Cinemachine。
 [DefaultExecutionOrder(-20)]
 public sealed class PlayerCameraRig : MonoBehaviour
 {
@@ -21,7 +21,6 @@ public sealed class PlayerCameraRig : MonoBehaviour
     { _motor = motor; _input = input; _target = target; _virtualCamera = camera; }
     private void OnEnable()
     {
-        CinemachineCore.CameraUpdatedEvent.AddListener(OnCameraUpdated);
         if (_input != null) _input.GameplayChanged += SetCursor;
         if (_motor != null) _motor.Teleported += OnTeleport;
         if (_target != null) { _yaw = _target.eulerAngles.y; _pitch = Mathf.DeltaAngle(0f, _target.eulerAngles.x); }
@@ -29,7 +28,6 @@ public sealed class PlayerCameraRig : MonoBehaviour
     }
     private void OnDisable()
     {
-        CinemachineCore.CameraUpdatedEvent.RemoveListener(OnCameraUpdated);
         if (_input != null) _input.GameplayChanged -= SetCursor;
         if (_motor != null) _motor.Teleported -= OnTeleport;
         if (_lockCursor) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
@@ -51,24 +49,10 @@ public sealed class PlayerCameraRig : MonoBehaviour
         Cursor.lockState = gameplay ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !gameplay;
     }
-    private void OnCameraUpdated(CinemachineBrain brain)
+    private void LateUpdate()
     {
-        if (_motor == null || _target == null || _virtualCamera == null ||
-            brain.OutputCamera == null || !brain.IsLive(_virtualCamera)) return;
-
-        Vector3 forward = Vector3.ProjectOnPlane(brain.OutputCamera.transform.forward, Vector3.up);
-        if (forward.sqrMagnitude < 0.0001f) return;
-
-        // 使用本帧最终视角；俯仰和划墙倾斜不传给角色，速度仍由运动模块独立结算。
-        // 两个相机节点都在 character 下，必须保留世界姿态，避免转身再次带动相机。
-        Vector3 targetPosition = _target.position;
-        Quaternion targetRotation = _target.rotation;
-        Transform cameraTransform = _virtualCamera.transform;
-        Vector3 cameraPosition = cameraTransform.position;
-        Quaternion cameraRotation = cameraTransform.rotation;
-        _motor.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
-        _target.SetPositionAndRotation(targetPosition, targetRotation);
-        cameraTransform.SetPositionAndRotation(cameraPosition, cameraRotation);
+        // 目标是角色的子节点，在 Brain 更新前恢复世界朝向，避免角色转身带动视角。
+        if (_target != null) _target.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
     private void OnTeleport(Vector3 delta)
     { if (_virtualCamera != null && _target != null) _virtualCamera.OnTargetObjectWarped(_target, delta); }

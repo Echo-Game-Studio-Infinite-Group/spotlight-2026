@@ -8,6 +8,7 @@ public sealed class MovementParams : ScriptableObject
     [Min(0f)] public float WalkSpeed = 3f;
     [Min(0f)] public float RunAccel = 10f;
     [Min(0f)] public float GroundFriction = 6f;
+    [Min(0f)] public float GroundStopSpeed = 0.05f;
     [Min(0f)] public float FrictionExemptWindow = 0.2f;
     public PumpMode Pump = PumpMode.WindowPump;
     [Min(0.01f)] public float MaxSpeed = 120f;
@@ -17,8 +18,7 @@ public sealed class MovementParams : ScriptableObject
     [Min(0f)] public float JumpSpeed = 8f;
     [Min(0f)] public float AirControl;
     [Min(0f)] public float JumpBufferWindow = 0.12f;
-    [Min(0f)] public float SpeedSteerTurnRate = 540f;
-    [Min(0f)] public float SteerMinSpeedRatio = 0.5f;
+    [Min(0.01f)] public float FacingSmoothTime = 0.12f;
 
     [Header("滑铲")]
     [Min(0f)] public float SlideSpeedRatio = 0.8f;

@@ -11,6 +11,8 @@ public sealed class PlayerMotor : MonoBehaviour
     private MovementContacts _contacts;
     private IPlayerInput _input;
     private Vector3 _velocity;
+    private float _facingAngularVelocity;
+    private Quaternion _initialMovementRotation;
     private float _groundStepOffset;
     private float _clock;
     private float _landTime = float.NegativeInfinity;
@@ -53,6 +55,7 @@ public sealed class PlayerMotor : MonoBehaviour
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
+        _initialMovementRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
         _groundStepOffset = _controller.stepOffset;
         _controller.minMoveDistance = 0f;
         if (_params == null)
@@ -95,6 +98,12 @@ public sealed class PlayerMotor : MonoBehaviour
         if (IsWallSliding && (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _) ||
             Vector3.Dot(wish, _wallNormal) > 0.1f)) ExitWall();
 
+        UpdateFacing(wish, dt);
+        Vector3 drive = transform.forward * wish.magnitude;
+        // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
+        if (wish != Vector3.zero && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown)
+            SetHorizontal(transform.forward * HorizontalSpeed);
+
         if (input.SlidePressed && IsGrounded && !IsSliding &&
             HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio)
         {
@@ -118,21 +127,14 @@ public sealed class PlayerMotor : MonoBehaviour
         }
         else
         {
-            UpdateFreeMovement(dt, wish, input);
+            UpdateFreeMovement(dt, drive);
             if (jump && IsGrounded)
             {
-                if (!IsSprinting && wish != Vector3.zero) SetHorizontal(wish * _params.WalkSpeed);
+                if (!IsSprinting && wish != Vector3.zero) SetHorizontal(drive * _params.WalkSpeed);
                 Jump(_params.JumpSpeed);
             }
         }
 
-        if (!IsSliding && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown && input.Move.y > 0.1f &&
-            HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SteerMinSpeedRatio)
-        {
-            Vector3 forward = MovementMath.Horizontal(_movementReference != null ? _movementReference.forward : transform.forward).normalized;
-            SetHorizontal(Vector3.RotateTowards(MovementMath.Horizontal(_velocity), forward * HorizontalSpeed,
-                _params.SpeedSteerTurnRate * Mathf.Deg2Rad * dt, 0f));
-        }
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
         _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * dt;
@@ -157,14 +159,18 @@ public sealed class PlayerMotor : MonoBehaviour
             * _params.EnergyPerSecondPerExcessSpeed * dt);
     }
 
-    private void UpdateFreeMovement(float dt, Vector3 wish, PlayerInputFrame input)
+    private void UpdateFreeMovement(float dt, Vector3 wish)
     {
         Vector3 horizontal = MovementMath.Horizontal(_velocity);
         if (IsGrounded)
         {
             float target = IsSprinting ? _params.GroundSpeedThreshold : _params.WalkSpeed;
-            if (!InFrictionWindow && horizontal.magnitude > target)
+            if (!InFrictionWindow && _params.GroundFriction > 0f)
+            {
                 horizontal *= Mathf.Max(0f, 1f - _params.GroundFriction * dt);
+                if (horizontal.sqrMagnitude < _params.GroundStopSpeed * _params.GroundStopSpeed)
+                    horizontal = Vector3.zero;
+            }
             horizontal = MovementMath.Accelerate(horizontal, wish, target, _params.RunAccel, dt,
                 _params.Pump == PumpMode.WindowPump && InFrictionWindow);
         }
@@ -234,8 +240,21 @@ public sealed class PlayerMotor : MonoBehaviour
     private Vector3 WishDirection(Vector2 move)
     {
         move = Vector2.ClampMagnitude(move, 1f);
-        float yaw = _movementReference != null ? _movementReference.eulerAngles.y : transform.eulerAngles.y;
-        return Quaternion.Euler(0f, yaw, 0f) * new Vector3(move.x, 0f, move.y);
+        Vector3 forward = _movementReference != null
+            ? MovementMath.Horizontal(_movementReference.forward)
+            : _initialMovementRotation * Vector3.forward;
+        if (forward.sqrMagnitude < 0.0001f) forward = _initialMovementRotation * Vector3.forward;
+        forward.Normalize();
+        return Vector3.Cross(Vector3.up, forward) * move.x + forward * move.y;
+    }
+
+    private void UpdateFacing(Vector3 wish, float dt)
+    {
+        if (wish == Vector3.zero) { _facingAngularVelocity = 0f; return; }
+        float targetYaw = Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg;
+        float yaw = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetYaw, ref _facingAngularVelocity,
+            _params.FacingSmoothTime, Mathf.Infinity, dt);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 
     private bool TryStand()
@@ -267,6 +286,7 @@ public sealed class PlayerMotor : MonoBehaviour
     public void ResetState()
     {
         _velocity = Vector3.zero;
+        _facingAngularVelocity = 0f;
         Energy = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;

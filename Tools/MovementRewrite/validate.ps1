@@ -1,4 +1,4 @@
-param([ValidateSet('Setup', 'Tests')][string]$Stage = 'Tests')
+param([ValidateSet('Setup', 'Tests')][string]$Stage = 'Tests', [string]$TestFilter = '')
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $validationRoot = Join-Path $repoRoot 'Temp/MovementRewriteValidation'
@@ -15,6 +15,7 @@ if ($LASTEXITCODE -ge 8) { throw '复制 PackageCache 失败' }
 $arguments = @('-batchmode', '-nographics', '-projectPath', ('"' + $validationRoot + '"'), '-logFile', ('"' + (Join-Path $validationRoot "$Stage.log") + '"'))
 if ($Stage -eq 'Setup') { $arguments += @('-executeMethod', 'MovementSceneSetup.Rebuild', '-quit') }
 else { $arguments += @('-runTests', '-testPlatform', 'PlayMode', '-testResults', ('"' + (Join-Path $validationRoot 'PlayMode.xml') + '"')) }
+if ($Stage -eq 'Tests' -and $TestFilter) { $arguments += @('-testFilter', ('"' + $TestFilter + '"')) }
 $process = Start-Process -FilePath $editorPath -ArgumentList $arguments -WindowStyle Hidden -PassThru
 Write-Output "Unity $Stage PID=$($process.Id)；日志：$validationRoot/$Stage.log"
 $process.WaitForExit()

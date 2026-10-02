@@ -16,6 +16,7 @@ MonoBehaviour:
   WalkSpeed: 3
   RunAccel: 10
   GroundFriction: 6
+  GroundStopSpeed: 0.05
   FrictionExemptWindow: 0.2
   Pump: 1
   MaxSpeed: 120
@@ -23,8 +24,7 @@ MonoBehaviour:
   JumpSpeed: 8
   AirControl: 0
   JumpBufferWindow: 0.12
-  SpeedSteerTurnRate: 540
-  SteerMinSpeedRatio: 0.5
+  FacingSmoothTime: 0.12
   SlideSpeedRatio: 0.8
   SlideDecel: 15
   SlideEndSpeed: 2
