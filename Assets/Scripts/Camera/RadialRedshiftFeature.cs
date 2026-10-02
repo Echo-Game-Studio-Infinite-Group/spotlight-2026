@@ -10,11 +10,7 @@ using UnityEngine.Rendering.Universal;
 ///   • 色差     —— 可选的 RGB 分离
 ///
 /// 静态配置（材质、采样数、注入时机）在 Renderer Feature 资产上；
-<<<<<<< HEAD
-/// 动态强度由 SpeedEffectsRig 每帧通过静态方法写入。
-=======
 /// 动态强度由 SpeedCameraFeedback 每帧通过静态方法写入。
->>>>>>> origin/haski
 /// </summary>
 public class RadialRedshiftFeature : ScriptableRendererFeature
 {
@@ -93,11 +89,7 @@ public class RadialRedshiftFeature : ScriptableRendererFeature
     internal Material RuntimeMaterial => pass != null ? pass.RuntimeMaterial : null;
 
     /// <summary>
-<<<<<<< HEAD
-    /// 由 SpeedEffectsRig 每帧调用，写入当前速度对应的各项强度。
-=======
     /// 由 SpeedCameraFeedback 每帧调用，写入当前速度对应的各项强度。
->>>>>>> origin/haski
     /// </summary>
     /// <param name="motionBlur">运动模糊强度，1 = 物理正确长度，越大越夸张（无上限）</param>
     /// <param name="radial">径向拖影强度，对应 _Strength</param>
