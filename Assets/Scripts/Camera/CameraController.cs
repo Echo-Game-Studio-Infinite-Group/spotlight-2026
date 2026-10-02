@@ -7,7 +7,7 @@ using UnityEngine.Rendering.Universal;
 // 两个来源合并而成：
 //   · 跟随部分 —— 取自本项目原 GrayboxFollowCamera：鼠标 yaw/pitch 轨道 + 指数平滑跟随 + 冲刺后拉
 //   · 特效部分 —— 移植自 Rollaball/Assets/Scripts/CameraController.cs：
-//     奔跑事件源由 Rollaball 的 PlayerController.OnRunChanged 改为本仓库 CharacterMovement.SprintChanged
+//     速度源改为每帧轮询移动组件（PlayerMotor 优先按速度判定，CharacterMovement 备选），不再依赖事件订阅
 //
 // 跟随必须始终在玩家身后朝向（轨道相机），固定世界偏移会让玩家一转身相机就"看起来没跟随"
 //
@@ -76,7 +76,8 @@ public class CameraController : MonoBehaviour
     public float effectSpeed = 5f;
 
     private Camera _camera;
-    private CharacterMovement _movement;
+    private PlayerMotor _playerMotor;              // 默认移动机制：速度感特效的速度源
+    private CharacterMovement _characterMovement;  // 备选机制：切换启用时自动接手
     private ChromaticAberration _chromatic;
     private MotionBlur _motionBlur;
 
@@ -124,17 +125,13 @@ public class CameraController : MonoBehaviour
             Debug.Log("[CameraController] 已自动开启相机的 Post Processing", this);
         }
 
-        // 先订阅再校验 Volume：避免后续 return 把回调丢掉
-        _movement = player.GetComponent<CharacterMovement>();
-        if (_movement != null)
+        // 速度源解析：默认机制 PlayerMotor 优先（水平速度达地速阈值 = 高速状态），
+        // 备选 CharacterMovement 启用时自动接手——修复"默认配置下特效永不触发"的融合缝隙
+        _playerMotor = player.GetComponent<PlayerMotor>();
+        _characterMovement = player.GetComponent<CharacterMovement>();
+        if (_playerMotor == null && _characterMovement == null)
         {
-            _movement.SprintChanged += OnSprintChanged;
-            // 订阅瞬间可能已经处于疾跑中，补一次当前状态，防止状态不同步
-            OnSprintChanged(_movement.IsSprinting);
-        }
-        else
-        {
-            Debug.LogError("[CameraController] player 上没有 CharacterMovement 组件", this);
+            Debug.LogError("[CameraController] player 上没有任何移动组件，速度感特效无法驱动", this);
         }
 
         if (volume == null || volume.profile == null)
@@ -181,19 +178,21 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
+    // 高速状态判定（每帧轮询，无事件订阅，玩家销毁无泄漏风险）：
+    // PlayerMotor 路径用"水平速度 ≥ 地速阈值"（策划案"高速"定义，bhop 攒速即触发）；
+    // CharacterMovement 路径沿用其疾跑判定
+    private bool ComputeSprintState()
     {
-        // 退订：玩家销毁后事件仍持有本对象引用会泄漏
-        if (_movement != null)
+        if (_playerMotor != null && _playerMotor.enabled)
         {
-            _movement.SprintChanged -= OnSprintChanged;
+            return _playerMotor.Params != null
+                && _playerMotor.HorizontalSpeed >= _playerMotor.Params.GroundSpeedThreshold;
         }
-    }
-
-    // 只记录目标状态，强度统一在 LateUpdate 里平滑过渡——避免状态切换时效果闪烁
-    private void OnSprintChanged(bool sprinting)
-    {
-        _targetSprint = sprinting ? 1f : 0f;
+        if (_characterMovement != null && _characterMovement.enabled)
+        {
+            return _characterMovement.IsSprinting;
+        }
+        return false;
     }
 
     private void LateUpdate()
@@ -208,6 +207,7 @@ public class CameraController : MonoBehaviour
 
         // 冲刺系数渐入渐出。这里刻意直接给满，不按速度比例缩放：
         // 按比例缩放会把强度压得很低，导致特效几乎看不见
+        _targetSprint = ComputeSprintState() ? 1f : 0f;
         _currentSprint = Mathf.Lerp(_currentSprint, _targetSprint, Time.deltaTime * effectSpeed);
 
         ApplySpeedEffects();
