@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 641ca553e629aaf4dbfe8b24116bda7f, type: 3}
+  m_Name: DashStage3
+  m_EditorClassIdentifier: 
+  DisplayName: "\u51B2\u523A\u4E09\u6BB5"
+  EnergyCost: 70
+  CooldownSec: 0
+  ClearSpeedOnStart: 0
+  MinSpeedRatio: 0
+  MaxSpeedRatio: Infinity
+  ClearMomentumOnLandIfUnderived: 0
+  DesignNote: "\u6797\u6653\u98CE\u7A3F\uFF1A\u4F24\u5BB3 2.5\xD7\uFF08AOE 4\xD7
+    \u4E3A P2\uFF09\uFF1B\u4E09\u6BB5\u540E\u5F3A\u5236\u6536\u62DB 0.5s = \u957F\u6062\u590D\u7A97\u4E14\u65E0\u53D6\u6D88\u89C4\u5219\uFF1B\u6570\u503C\u5360\u4F4D"
+  Phases:
+  - StartupSec: 0.1
+    ActiveSec: 0.22
+    RecoverySec: 0.5
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 35
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 3
+    HitStopSec: 0.05
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 3
+    MotionSpeed: 16
+    Sweep: 1

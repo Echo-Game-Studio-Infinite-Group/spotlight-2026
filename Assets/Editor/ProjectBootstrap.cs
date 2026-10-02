@@ -18,7 +18,7 @@ public static class ProjectBootstrap
     private const string SettingsFolder = "Assets/Settings";
     private const string PipelineAssetPath = SettingsFolder + "/URP-Asset.asset";
     private const string RendererDataPath = SettingsFolder + "/URP-Renderer.asset";
-    private const string RedshiftMaterialPath = "Assets/Materials/RadialRedshift.mat";
+    private const string RedshiftMaterialPath = "Assets/Art/Materials/RadialRedshift.mat";
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
     [MenuItem("超高速行者/装配 URP 与测试场景")]
