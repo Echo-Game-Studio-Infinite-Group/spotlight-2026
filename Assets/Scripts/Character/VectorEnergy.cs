@@ -3,7 +3,7 @@ using UnityEngine;
 // 矢量转换器能量账户
 // 全 tick 结算走 TimeManager.PlayerDeltaTime：玩家冻结时它退化为 0，积能与耗能自然停止
 // 由外部在 FixedUpdate 的"移动之后"调用 Accrue，保证技能读到的是本 tick 开始时的能量
-public class VectorEnergy : MonoBehaviour
+public class VectorEnergy : MonoBehaviour, IEnergyAccount
 {
     private static VectorEnergy _instance;
 
@@ -15,6 +15,9 @@ public class VectorEnergy : MonoBehaviour
     private float _energy;
 
     public float Current => _energy;
+
+    // IEnergyAccount（CombatSeams.cs）：战斗侧经接口消费，账户由本组件接管后战斗侧无感切换
+    public float CurrentEnergy => _energy;
 
     /// <summary>表现层（HUD、音效）监听这个，不反向依赖本组件</summary>
     public event System.Action<float> Changed;

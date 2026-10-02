@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount
+public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -77,6 +77,21 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount
 
     /// <summary>重力悬挂开关：悬挂期间竖直速度不被重力积分（Simulate 内生效）</summary>
     public void SetGravitySuspended(bool suspended) => _gravitySuspended = suspended;
+
+    // —— IMotorCommand（机动技能命令缝，定义见 CombatSeams.cs）——
+
+    /// <summary>沿当前朝向设定水平速度模长（加速技能）</summary>
+    public void SetHorizontalSpeed(float speed) => SetHorizontal(transform.forward * Mathf.Max(0f, speed));
+
+    /// <summary>竖直起跳（高跳技能）：复用起跳簿记，保持状态机与跳跃计数一致</summary>
+    public void LaunchVertical(float upSpeed) => Jump(Mathf.Max(0f, upSpeed));
+
+    /// <summary>水平折返（折返技能）：速度与朝向同时翻转，保水平模长</summary>
+    public void ReverseHorizontal()
+    {
+        SetHorizontal(-MovementMath.Horizontal(_velocity));
+        transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + 180f, 0f);
+    }
 
     // IEnergyAccount：能量账户暂由移动层代管（外迁 VectorEnergy 后战斗侧经接口无感切换，框架 4.3）
     public float CurrentEnergy => Energy;

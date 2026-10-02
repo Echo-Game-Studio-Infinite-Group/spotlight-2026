@@ -16,6 +16,22 @@ public interface IEnergyAccount
     bool TrySpend(float amount);
 }
 
+/// <summary>
+/// 机动技能命令缝（能力层 → Motor）：加速/高跳/折返类技能不直接改 Motor 状态，
+/// 经这三根指挥杆请求。签名由移动侧在本文件维护，能力侧（MobilityAbilities 等）只引用、不另行定义
+/// </summary>
+public interface IMotorCommand
+{
+    /// <summary>沿当前朝向把水平速度设为指定模长（加速技能）</summary>
+    void SetHorizontalSpeed(float speed);
+
+    /// <summary>竖直起跳（高跳技能）：走 Motor 内部起跳簿记（状态机切换与跳跃计数）</summary>
+    void LaunchVertical(float upSpeed);
+
+    /// <summary>水平折返（折返技能）：水平速度与朝向同时 180° 翻转，保速度模长</summary>
+    void ReverseHorizontal();
+}
+
 /// <summary>击退命令接收方（结算③：向目标 Motor/投射物发冲量命令）。实现方自行折算抗击退力</summary>
 public interface IKnockbackReceiver
 {
