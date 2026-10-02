@@ -92,7 +92,7 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 
 ## 已知坑
 
-- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`SpeedEffectsRig` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
+- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`SpeedCameraFeedback` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
   - **注意：`Internal build system error` 是表象不是病根**——它只是 Bee 后端在编译失败后卡住。先看它上面的 `CS` 错误。
   - 修复：把 `com.unity.render-pipelines.universal` 与 `com.unity.test-framework` 补回 `Packages/manifest.json`，关掉 Unity，必要时删 `Library/Bee`（纯缓存）后重开。
   - 排查入口：`Library/ScriptAssemblies` 若为空说明编译从未成功；`Library/PackageCache` 里没有 `com.unity.render-pipelines.*` 说明包没装上。

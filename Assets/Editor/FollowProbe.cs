@@ -44,11 +44,16 @@ public static class FollowProbe
             if (player != null)
             {
                 PlayerMotor motor = player.GetComponent<PlayerMotor>();
-                SpeedEffectsRig effects = mainCamera != null ? mainCamera.GetComponent<SpeedEffectsRig>() : null;
+                PlayerInputReader input = player.GetComponent<PlayerInputReader>();
+                PlayerCameraRig rig = player.GetComponent<PlayerCameraRig>();
+                SpeedCameraFeedback feedback = player.GetComponent<SpeedCameraFeedback>();
                 CharacterController controller = player.GetComponent<CharacterController>();
+                // PlayerMotor 从同物体取 IPlayerInput；缺 PlayerInputReader 会静默吃空输入帧（角色不动）
                 Debug.Log("[Probe] PlayerMotor=" + (motor != null) + " enabled=" + (motor != null && motor.enabled)
                     + " cc.enabled=" + (controller != null && controller.enabled)
-                    + " SpeedEffectsRig=" + (effects != null));
+                    + " input=" + (input != null)
+                    + " cameraRig=" + (rig != null)
+                    + " speedFeedback=" + (feedback != null));
             }
 
             return;
