@@ -20,7 +20,7 @@ public sealed class DebugHUD : MonoBehaviour
         GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
-        GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
+        GUILayout.Label($"墙切角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
         GUILayout.Label($"能量 {_motor.Energy:F1} / {_motor.Params.EnergyMax:F0}", _style);
         GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · Esc 鼠标锁定 · F3 面板", _style);
