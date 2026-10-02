@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,35 +9,9 @@ public enum GameState
     End
 }
 
-[Serializable]
-public class PlayerData
-{
-    public Player Target;
-
-    public float MaxHealth = 100f;
-    public float Health;
-
-    public float Speed
-    {
-        get { return Target != null ? Target.Speed : 0f; }
-    }
-
-    public void Reset()
-    {
-        Health = MaxHealth;
-    }
-
-    public void TakeDamage(float amount)
-    {
-        Health = Mathf.Max(0f, Health - amount);
-    }
-
-    public void Heal(float amount)
-    {
-        Health = Mathf.Min(MaxHealth, Health + amount);
-    }
-}
-
+// 整局流程壳（框架 4.5 关卡与复位）：状态机 + 暂停聚合
+// 边界：血量真值在 HealthComponent、速度真值在 PlayerMotor、时间真值在 TimeManager——本类只聚合不复制
+// 暂停三线合一：状态 + 时间层冻结 + 输入禁用，调用方只需 PauseGame/ResumeGame 一个入口
 public class GameManager : MonoBehaviour
 {
     private static GameManager _instance = null;
@@ -59,7 +32,8 @@ public class GameManager : MonoBehaviour
     public GameState State { get; private set; } = GameState.Start;
     public bool InputAllowed = true;
 
-    public PlayerData Player = new PlayerData();
+    // 玩家角色引用：只持引用不复制状态，血量/速度真值留在各自系统里
+    public Player TargetPlayer;
 
     private void Awake()
     {
@@ -71,17 +45,15 @@ public class GameManager : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        Player.Reset();
     }
 
     public void RegisterPlayer(Player player)
     {
-        Player.Target = player;
+        TargetPlayer = player;
     }
 
     public void StartGame()
     {
-        Player.Reset();
         InputAllowed = true;
         State = GameState.Playing;
     }
@@ -92,6 +64,12 @@ public class GameManager : MonoBehaviour
 
         InputAllowed = false;
         State = GameState.Pause;
+
+        // 暂停必须三线联动：只改状态的话 TimeManager 仍在推进逻辑、输入仍在采样，
+        // InputBuffer 会在暂停期间积累旧按下沿，恢复瞬间全部放出导致误触发
+        TimeManager.SetPaused(true);
+        PlayerInputReader input = FindFirstObjectByType<PlayerInputReader>();
+        if (input != null) input.SetGameplayEnabled(false);
     }
 
     public void ResumeGame()
@@ -100,6 +78,11 @@ public class GameManager : MonoBehaviour
 
         InputAllowed = true;
         State = GameState.Playing;
+
+        // 与 PauseGame 对称恢复：时间解冻、输入恢复采样
+        TimeManager.SetPaused(false);
+        PlayerInputReader input = FindFirstObjectByType<PlayerInputReader>();
+        if (input != null) input.SetGameplayEnabled(true);
     }
 
     public void EndGame()
@@ -110,8 +93,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartLevel()
     {
-        Player.Reset();
-
+        // 血量/能量随场景重建自然复位，不手动清状态（TimeManager 是场景级组件，随场景销毁自清）
         Scene active = SceneManager.GetActiveScene();
 
         if (active.buildIndex < 0)

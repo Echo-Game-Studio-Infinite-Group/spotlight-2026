@@ -1,8 +1,7 @@
 using UnityEngine;
 
 // 玩家身份组件：挂在玩家 GameObject 上，作为 GameManager 与具体移动实现之间的连接点
-// 约束：速度的唯一真值是 PlayerMotor（本工程默认启用的移动实现）；
-// 若改用备选的 CharacterMovement，此处的速度来源需同步替换（详见 AGENTS.md「两套移动机制」）
+// 约束：速度唯一真值是 PlayerMotor
 public class Player : MonoBehaviour
 {
     private PlayerMotor _motor;
