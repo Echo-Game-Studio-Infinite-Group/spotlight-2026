@@ -172,4 +172,109 @@ public class InputAndCancelTests
         Assert.That(table.Query(other, 0, AttackPhaseKind.Recovery, 0f, InputIntent.Attack, 1f), Is.EqualTo(c),
             "无特例命中时落通配（泛取消）");
     }
+
+    // j. 附加条件：目标激活所需最低速度（速度形态门槛——「取消到高速变体」的守门）
+    [Test]
+    public void CancelTable_MinSpeedRatioGate()
+    {
+        AttackDefinition a = NewDef("A");
+        AttackDefinition b = NewDef("B");
+        AttackCancelTable table = NewTable(new CancelRule
+        {
+            SourceAttack = a,
+            SourcePhase = AttackPhaseKind.Recovery,
+            TargetAttack = b,
+            RequiredIntent = InputIntent.Attack,
+            MinSpeedRatio = 1.5f,
+        });
+
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0f, InputIntent.Attack, 1.4f), Is.Null,
+            "速度比不足最低门槛不可取消");
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0f, InputIntent.Attack, 1.5f), Is.EqualTo(b),
+            "速度比达门槛（含等于）可取消");
+    }
+
+    // k. 窗口边界含端点：起止时刻本身都在窗口内（RuleMatches 的开闭区间语义）
+    [Test]
+    public void CancelTable_WindowBoundariesInclusive()
+    {
+        AttackDefinition a = NewDef("A");
+        AttackDefinition b = NewDef("B");
+        AttackCancelTable table = NewTable(new CancelRule
+        {
+            SourceAttack = a,
+            SourcePhase = AttackPhaseKind.Recovery,
+            WindowStart = 0.05f,
+            WindowEnd = 0.1f,
+            TargetAttack = b,
+            RequiredIntent = InputIntent.Attack,
+        });
+
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0.05f, InputIntent.Attack, 1f), Is.EqualTo(b),
+            "窗口起点时刻应可取消（含端点）");
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0.1f, InputIntent.Attack, 1f), Is.EqualTo(b),
+            "窗口终点时刻应可取消（含端点）");
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0.049f, InputIntent.Attack, 1f), Is.Null,
+            "窗口起点前不可取消");
+        Assert.That(table.Query(a, 0, AttackPhaseKind.Recovery, 0.101f, InputIntent.Attack, 1f), Is.Null,
+            "窗口终点后不可取消");
+    }
+
+    // l. 清空缓冲：暂停进入/重开复位清旧输入（框架 4.1：不在恢复时补发）
+    [Test]
+    public void Buffer_Clear_RemovesAllEntries()
+    {
+        _buffer.Push(KeyCode.Mouse0);
+        _buffer.Push(KeyCode.Mouse1);
+        _buffer.Clear();
+
+        Assert.That(_buffer.HasBuffered(KeyCode.Mouse0), Is.False, "清空后不得残留按下沿");
+        Assert.That(_buffer.PeekIntent(Snap()), Is.EqualTo(InputIntent.None), "清空后仲裁应无意图");
+    }
+
+    // m. 容量满覆盖最旧：环形缓冲不丢新条目（快速连按不吞最后输入）
+    [Test]
+    public void Buffer_CapacityFull_OverwritesOldest()
+    {
+        _buffer.Push(KeyCode.Mouse0); // 最旧
+        _buffer.Push(KeyCode.Q);
+        _buffer.Push(KeyCode.Space);
+        _buffer.Push(KeyCode.LeftShift); // 倒数第 16 条
+        for (int i = 0; i < 14; i++) _buffer.Push(KeyCode.Alpha1 + i); // 累计 18 条 > 容量 16：最旧 3 条被覆盖
+        _buffer.Push(KeyCode.Mouse1);  // 第 19 条，再次覆盖一轮最旧
+
+        Assert.That(_buffer.HasBuffered(KeyCode.Mouse0), Is.False, "最旧条目应被覆盖（不无限增长）");
+        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.True, "最新条目应保留");
+        Assert.That(_buffer.HasBuffered(KeyCode.LeftShift), Is.True, "覆盖轮次未到的条目应保留");
+    }
+
+    // n. 时停持续型不消费：ConsumeFor(TimeStop) 不得吞掉任何按下沿（长按右键语义不占缓冲条目）
+    [Test]
+    public void TimeStop_ConsumeNeverSwallowsEntries()
+    {
+        _buffer.Push(KeyCode.Mouse1);
+
+        Assert.That(_buffer.PeekIntent(Snap(mouse1: true)), Is.EqualTo(InputIntent.TimeStop));
+        _buffer.ConsumeFor(InputIntent.TimeStop, Snap(mouse1: true));
+
+        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.True,
+            "时停提交不得消费右键按下沿（持续型无触发键）");
+    }
+
+    // o. 折返与高跳：规则表其余右键组合行（优先级基线待哈士奇核——本测锁现状顺序，改序只改断言参数）
+    [Test]
+    public void Arbitrate_TurnaroundAndHighJump_IntentMapping()
+    {
+        _buffer.Push(KeyCode.Mouse1);
+        Assert.That(_buffer.PeekIntent(Snap(s: true)), Is.EqualTo(InputIntent.Turnaround),
+            "S+右键按下沿应为折返");
+        _buffer.ConsumeFor(InputIntent.Turnaround, Snap(s: true));
+        Assert.That(_buffer.HasBuffered(KeyCode.Mouse1), Is.False, "折返提交应消费右键按下沿");
+
+        _buffer.Push(KeyCode.Space);
+        Assert.That(_buffer.PeekIntent(Snap(mouse1: true)), Is.EqualTo(InputIntent.HighJump),
+            "右键按住+空格按下沿应为高跳");
+        _buffer.ConsumeFor(InputIntent.HighJump, Snap(mouse1: true));
+        Assert.That(_buffer.HasBuffered(KeyCode.Space), Is.False, "高跳提交应消费空格按下沿");
+    }
 }
