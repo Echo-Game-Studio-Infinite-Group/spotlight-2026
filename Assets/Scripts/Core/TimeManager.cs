@@ -46,22 +46,22 @@ public class TimeManager : MonoBehaviour
     private readonly List<ScaleSource> _playerSources = new List<ScaleSource>();
     private bool _paused;
 
+    [Header("直调兼容面（3C 测试/Inspector 用）：作为各层隐式来源参与取最小，与登记来源互不覆盖")]
+    [Range(0f, 1f)] public float WorldScale = 1f;
+    [Range(0f, 1f)] public float PlayerScale = 1f;
+
     private float _hitStopTimer;
     private float _hitStopScale = 1f;
 
-    private float _worldFixedDelta;
-    private float _playerFixedDelta;
-    private float _worldRenderDelta;
-    private float _playerRenderDelta;
     private float _worldTime;
     private float _playerTime;
 
-    // —— 读数（无实例时退化为引擎时间：骨架脚本与测试可脱离 TimeManager 运行。
-    //    Time.deltaTime 在 FixedUpdate 内等于 fixedDeltaTime，两个上下文都语义正确）——
-    public static float WorldDeltaTime => _instance != null ? _instance._worldFixedDelta : Time.deltaTime;
-    public static float PlayerDeltaTime => _instance != null ? _instance._playerFixedDelta : Time.deltaTime;
-    public static float WorldRenderDeltaTime => _instance != null ? _instance._worldRenderDelta : Time.deltaTime;
-    public static float PlayerRenderDeltaTime => _instance != null ? _instance._playerRenderDelta : Time.deltaTime;
+    // —— 读数（实时计算：直调 Scale 字段后同帧立即生效；无实例时退化为引擎时间）——
+    //    Time.deltaTime 在 FixedUpdate 内等于 fixedDeltaTime，两个上下文都语义正确
+    public static float WorldDeltaTime => Time.fixedDeltaTime * WorldLayerScaleNow;
+    public static float PlayerDeltaTime => Time.fixedDeltaTime * PlayerLayerScaleNow;
+    public static float WorldRenderDeltaTime => Time.deltaTime * WorldLayerScaleNow;
+    public static float PlayerRenderDeltaTime => Time.deltaTime * PlayerLayerScaleNow;
     public static float WorldTime => _instance != null ? _instance._worldTime : Time.time;
     public static float PlayerTime => _instance != null ? _instance._playerTime : Time.time;
     public static float UnscaledDeltaTime => Time.deltaTime;
@@ -72,6 +72,9 @@ public class TimeManager : MonoBehaviour
 
     // —— 兼容别名（3C 移动重写的调用面）：玩家固定步 dt 的显式命名，语义与 PlayerDeltaTime 相同 ——
     public static float PlayerFixedDeltaTime => PlayerDeltaTime;
+
+    private static float WorldLayerScaleNow => _instance != null ? _instance.WorldLayerScale : 1f;
+    private static float PlayerLayerScaleNow => _instance != null ? _instance.PlayerLayerScale : 1f;
 
     private void Awake()
     {
@@ -93,22 +96,15 @@ public class TimeManager : MonoBehaviour
     private void Update()
     {
         float unscaled = Time.deltaTime;
-
         TickHitStop(unscaled);
         TickTimedSources(unscaled);
-
-        float freeze = FreezeFactor;
-        _worldRenderDelta = unscaled * WorldLayerScale * freeze;
-        _playerRenderDelta = unscaled * PlayerLayerScale * freeze;
     }
 
     private void FixedUpdate()
     {
-        float freeze = FreezeFactor;
-        _worldFixedDelta = Time.fixedDeltaTime * WorldLayerScale * freeze;
-        _playerFixedDelta = Time.fixedDeltaTime * PlayerLayerScale * freeze;
-        _worldTime += _worldFixedDelta;
-        _playerTime += _playerFixedDelta;
+        // 时间戳只在固定步累计（一帧多 tick 不丢账）；dt 读数实时计算，直调 Scale 后同帧立即生效
+        _worldTime += Time.fixedDeltaTime * WorldLayerScale * FreezeFactor;
+        _playerTime += Time.fixedDeltaTime * PlayerLayerScale * FreezeFactor;
     }
 
     private float FreezeFactor => _hitStopTimer > 0f ? _hitStopScale : 1f;
@@ -118,7 +114,7 @@ public class TimeManager : MonoBehaviour
         get
         {
             if (_paused) return 0f;
-            float scale = 1f;
+            float scale = WorldScale;
             for (int i = 0; i < _worldSources.Count; i++)
             {
                 if (_worldSources[i].Scale < scale) scale = _worldSources[i].Scale;
@@ -132,7 +128,7 @@ public class TimeManager : MonoBehaviour
         get
         {
             if (_paused) return 0f;
-            float scale = 1f;
+            float scale = PlayerScale;
             for (int i = 0; i < _playerSources.Count; i++)
             {
                 if (_playerSources[i].Scale < scale) scale = _playerSources[i].Scale;
