@@ -123,7 +123,8 @@ public class PlayerCombat : MonoBehaviour, IParryReceiver, IMotorLandingClient
 
     private void OnDisable()
     {
-        if (_motor != null && _motor.LandingClient == this) _motor.LandingClient = null;
+        // ReferenceEquals：身份核对要引用同一性，避开接口比较落到裸引用绑定的 CS0252
+        if (_motor != null && ReferenceEquals(_motor.LandingClient, this)) _motor.LandingClient = null;
         ForceStopHitboxes(); // 对象失效时释放 Motor 悬挂与活跃判定框，不留残留
     }
 
