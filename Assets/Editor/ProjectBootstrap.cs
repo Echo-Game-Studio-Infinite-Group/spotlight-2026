@@ -7,11 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
-<<<<<<< HEAD
 // 项目装配：把 Built-in RP 工程切到 URP，并接线测试场景
-=======
-// 项目装配：把 Built-in RP 工程切到 URP，并接线加速测试场景
->>>>>>> 2ed39e1246f8ab447ed849ace5923eb4bb348f2b
 //   · 生成 URP 管线资产与渲染器，并把 RadialRedshiftFeature 注册进去
 //   · 把遗留的 Built-in Standard 材质转换成 URP/Lit（否则切管线后全部变洋红）
 //   · 清理已删除脚本留下的 Missing 组件，给 Player 挂 CharacterMovement、给相机挂 CameraController
@@ -27,11 +23,7 @@ public static class ProjectBootstrap
     private const string MovementParamsPath = SettingsFolder + "/MovementParams.asset";
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
-<<<<<<< HEAD
     [MenuItem("超高速行者/装配 URP 与测试场景")]
-=======
-    [MenuItem("超高速行者/装配 URP 与加速测试场景")]
->>>>>>> 2ed39e1246f8ab447ed849ace5923eb4bb348f2b
     public static void Build()
     {
         // 播放模式下 EditorSceneManager.OpenScene 会被 Unity 直接拒绝（InvalidOperationException），
@@ -270,15 +262,12 @@ public static class ProjectBootstrap
             player.AddComponent<PlayerRespawn>();
         }
 
-<<<<<<< HEAD
         // 推东西用：CharacterController 撞不动刚体，这个组件负责把 Miku 之类的物体推开
         if (player.GetComponent<RigidbodyPusher>() == null)
         {
             player.AddComponent<RigidbodyPusher>();
         }
 
-=======
->>>>>>> 2ed39e1246f8ab447ed849ace5923eb4bb348f2b
         if (player.GetComponent<DebugHUD>() == null)
         {
             player.AddComponent<DebugHUD>();
@@ -386,11 +375,7 @@ public static class ProjectBootstrap
     }
 
     // 自检：把关键绑定打成一条日志，批次模式下可直接从 stdout 判定成功与否
-<<<<<<< HEAD
     [MenuItem("超高速行者/检查装配结果")]
-=======
-    [MenuItem("超高速行者/自检装配结果")]
->>>>>>> 2ed39e1246f8ab447ed849ace5923eb4bb348f2b
     public static void Verify()
     {
         List<string> lines = new List<string>();
