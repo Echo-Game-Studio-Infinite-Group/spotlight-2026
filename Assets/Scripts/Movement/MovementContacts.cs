@@ -30,7 +30,7 @@ public sealed class MovementContacts
         if (!IsWall(hit.normal) || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         Vector3 normal = MovementMath.Horizontal(hit.normal).normalized;
         float angle = MovementMath.ApproachAngle(_incoming, normal);
-        if (HasWall && angle <= WallAngle) return;
+        if (angle < 0f || (HasWall && angle >= WallAngle)) return;
         HasWall = true;
         WallAngle = angle;
         WallNormal = normal;
@@ -76,13 +76,38 @@ public sealed class MovementContacts
         for (int i = 0; i < count; i++)
         {
             RaycastHit hit = _hits[i];
-            if (hit.transform.IsChildOf(_controller.transform) || !IsWall(hit.normal)) continue;
-            if (Vector3.Dot(MovementMath.Horizontal(hit.normal).normalized, normal) < alignment) continue;
+            if (!MatchesWall(hit, normal, alignment)) continue;
             if (hit.distance >= nearest) continue;
             nearest = hit.distance;
             contact = hit;
         }
+        if (nearest < float.PositiveInfinity) return true;
+
+        // 胶囊已贴住墙时 CapsuleCast 的起始体积会与墙重叠，投射可能没有命中。
+        // 沿胶囊轴线补射线，只接受朝向与当前墙一致的近距离实体墙。
+        float reach = _controller.radius + distance + _controller.skinWidth * 2f;
+        Vector3 middle = (bottom + top) * 0.5f;
+        for (int j = 0; j < 3; j++)
+        {
+            Vector3 origin = j == 0 ? middle : j == 1 ? bottom : top;
+            count = Physics.RaycastNonAlloc(origin, -normal, _hits, reach,
+                _params.CollisionMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = _hits[i];
+                if (!MatchesWall(hit, normal, alignment)) continue;
+                if (hit.distance >= nearest) continue;
+                nearest = hit.distance;
+                contact = hit;
+            }
+        }
         return nearest < float.PositiveInfinity;
+    }
+
+    private bool MatchesWall(RaycastHit hit, Vector3 normal, float alignment)
+    {
+        if (hit.collider == null || hit.transform.IsChildOf(_controller.transform) || !IsWall(hit.normal)) return false;
+        return Vector3.Dot(MovementMath.Horizontal(hit.normal).normalized, normal) >= alignment;
     }
 
     public bool CanResize(float height, float radius)
