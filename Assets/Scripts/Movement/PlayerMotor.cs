@@ -1,421 +1,319 @@
+using System;
 using UnityEngine;
 
-// 运动学移动控制器：FixedUpdate 手动积分，CharacterController.Move 只做碰撞查询（禁止刚体力模拟手感）
-// 算法为 Quake accelerate / friction 公式照写（数学不受版权保护，未拷贝任何 GPL 代码）
-// 全部数值来自 MovementParams；碰撞胶囊 pivot 约定在脚底（center.y = height/2）
-// 泵油模型与 MovementMath.cs（demo/movement-sim）语义一致：窗口内泵加速不受投影上限，窗口外一切照字面公式
+[DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public class PlayerMotor : MonoBehaviour
+public sealed class PlayerMotor : MonoBehaviour
 {
     [SerializeField] private MovementParams _params;
-
+    [SerializeField] private Transform _movementReference;
     private CharacterController _controller;
-    private Transform _cameraTransform;
-    private IPlayerInput _input;      // 输入缝：默认 LegacyPlayerInput，测试可注入脚本桩
-
+    private MovementContacts _contacts;
+    private IPlayerInput _input;
     private Vector3 _velocity;
-    private bool _grounded;
-    private bool _sliding;
-
-    private float _playerTime;        // 玩家时间轴时钟，窗口/冷却/缓冲统一基于它
-    private float _lastLandTime;      // 落地时间戳，免摩擦窗口起点
-    private float _lastWallJumpTime;
-    private float _jumpPressedTime;   // 跳跃预输入时间戳（策划案第 2 节滞空预输入）
-    private bool _jumpPressedPending; // Update 捕获的按下沿，避免 FixedUpdate 漏检
-
-    private float _energy;            // 矢量转换器能量（策划案第 4 节）
-    private int _jumpCount;           // 已执行跳跃次数（测试用只读统计）
-
+    private float _facingAngularVelocity;
+    private Quaternion _initialMovementRotation;
+    private float _groundStepOffset;
+    private float _clock;
+    private float _landTime = float.NegativeInfinity;
+    private float _jumpUntil = float.NegativeInfinity;
+    private float _wallTime;
+    private float _wallSpeed;
     private Vector3 _wallNormal;
-    private bool _wallTouch;
+    private Vector3 _wallTangent;
+    private bool _wallLocked;
+    private Vector3 _lockedNormal;
+    private Vector3 _lockedPoint;
+    private float _lastWallJump = float.NegativeInfinity;
 
-    private static readonly Collider[] StandUpOverlapBuffer = new Collider[8];
-
-    public Vector3 Velocity => _velocity;
-    public bool IsGrounded => _grounded;
-    public bool IsSliding => _sliding;
     public MovementParams Params => _params;
-    public float HorizontalSpeed => HorizontalVelocity().magnitude;
-    public float Energy => _energy;
-    public int JumpCount => _jumpCount;
-    // 免摩擦窗口内（严格小于窗口时长，与仿真 InFrictionFreeWindow 的判定一致）
-    public bool InFrictionWindow => _grounded && (_playerTime - _lastLandTime) < _params.FrictionExemptWindow;
-    public float FrictionWindowRemaining =>
-        _params == null ? 0f : Mathf.Max(0f, _params.FrictionExemptWindow - (_playerTime - _lastLandTime));
+    public MovementState State { get; private set; } = MovementState.Airborne;
+    public Vector3 Velocity => _velocity;
+    public float HorizontalSpeed => MovementMath.Horizontal(_velocity).magnitude;
+    public bool IsGrounded => State == MovementState.Grounded;
+    public bool IsWallSliding => State == MovementState.WallSlide;
+    public bool IsSliding { get; private set; }
+    public bool IsSprinting { get; private set; }
+    public float Energy { get; private set; }
+    public int JumpCount { get; private set; }
+    public int WallJumpCount { get; private set; }
+    public float WallApproachAngle { get; private set; }
+    public Vector3 WallNormal => IsWallSliding ? _wallNormal : Vector3.zero;
+    public bool InFrictionWindow => IsGrounded && FrictionWindowRemaining > 0f;
+    public float FrictionWindowRemaining => IsGrounded ? Mathf.Max(0f, _params.FrictionExemptWindow - (_clock - _landTime)) : 0f;
+    public float WallWindowRemaining => IsWallSliding ? Mathf.Max(0f, _params.WallGraceTime - (_clock - _wallTime)) : 0f;
+    public event Action<Vector3> Teleported;
 
-    // 测试注入：必须在组件激活（Awake）前调用，否则 Awake 的默认/初始化逻辑会覆盖
-    public void SetInput(IPlayerInput input) { if (input != null) _input = input; }
-    public void SetParams(MovementParams parameters) { if (parameters != null) _params = parameters; }
-
-    // 状态复位（掉落重生等）：速度/能量/滑铲清零，着地状态由下一次碰撞检测重建
-    public void ResetState()
+    public void SetParams(MovementParams parameters)
     {
-        if (_sliding) SetCapsule(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius);
-        _velocity = Vector3.zero;
-        _energy = 0f;
-        _sliding = false;
-        _grounded = false;
-        _jumpPressedPending = false;
-        _jumpPressedTime = -999f;
-        _lastLandTime = -999f;
+        _params = parameters;
+        if (_controller != null) _contacts = new MovementContacts(_controller, _params);
     }
+    public void SetInput(IPlayerInput input) => _input = input;
+    public void SetMovementReference(Transform reference) => _movementReference = reference;
 
     private void Awake()
     {
         _controller = GetComponent<CharacterController>();
-        if (_input == null) _input = new LegacyPlayerInput();
-        _lastLandTime = -999f;
-        _lastWallJumpTime = -999f;
-        _jumpPressedTime = -999f;
+        _initialMovementRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        _groundStepOffset = _controller.stepOffset;
+        _controller.minMoveDistance = 0f;
         if (_params == null)
         {
-            Debug.LogError("[PlayerMotor] MovementParams 未赋值", this);
+            Debug.LogError("[PlayerMotor] 缺少 MovementParams", this);
             enabled = false;
+            return;
         }
+        _contacts = new MovementContacts(_controller, _params);
+        if (_input == null) _input = GetComponent<IPlayerInput>();
+        ResetState();
     }
 
-    private void Update()
+    private void Start()
     {
-        // 相机只取 yaw 作“摄像机对应方向”参与转向；接 Cinemachine 时仅需替换此来源
-        if (_cameraTransform == null && Camera.main != null)
-        {
-            _cameraTransform = Camera.main.transform;
-        }
-
-        // 按下沿在 Update 捕获：FixedUpdate 可能漏检无固定步进帧上的按键
-        if (_input.JumpPressed)
-        {
-            _jumpPressedPending = true;
-        }
+        if (_movementReference == null && Camera.main != null) _movementReference = Camera.main.transform;
     }
+
+    private void OnEnable()
+    {
+        if (_input is PlayerInputReader reader) reader.Cleared += ClearPendingInput;
+    }
+    private void ClearPendingInput() => _jumpUntil = float.NegativeInfinity;
 
     private void FixedUpdate()
     {
-        float dt = TimeManager.PlayerDeltaTime;
-        _playerTime += dt;
+        PlayerInputFrame frame = _input != null ? _input.ReadFrame() : default;
+        Simulate(frame, TimeManager.PlayerFixedDeltaTime, TimeManager.UnscaledTime);
+    }
 
-        if (_jumpPressedPending)
-        {
-            _jumpPressedPending = false;
-            _jumpPressedTime = _playerTime;
-        }
+    public void Simulate(PlayerInputFrame input, float dt, float inputTime)
+    {
+        if (_contacts == null || !_controller.enabled || dt < 0f) return;
+        if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
+        if (dt == 0f) return;
+        _clock += dt;
+        Vector3 wish = WishDirection(input.Move);
+        IsSprinting = input.SprintHeld && input.Move.y > 0f;
+        RearmWall();
+        if (IsWallSliding && (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _) ||
+            Vector3.Dot(wish, _wallNormal) > 0.1f)) ExitWall();
 
-        bool shiftHeld = _input.RunHeld;
-        bool running = shiftHeld; // 策划案 Shift+W 奔跑；骨架不细分无 W 的 Shift
-        Vector3 wishDir = ComputeWishDir();
+        UpdateFacing(wish, dt);
+        Vector3 drive = transform.forward * wish.magnitude;
+        // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
+        if (wish != Vector3.zero && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown)
+            SetHorizontal(transform.forward * HorizontalSpeed);
 
-        // 滑铲进入：速度达到约 0.8x 地速阈值时按下 Shift（策划案第 3 节）
-        bool slideTrigger = _input.SlideTrigger;
-        if (!_sliding && _grounded && slideTrigger &&
+        if (input.SlidePressed && IsGrounded && !IsSliding &&
             HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio)
         {
-            EnterSlide();
+            IsSliding = true;
+            SetCapsule(_params.SlideCapsuleHeight, _controller.radius);
         }
 
-        if (_sliding)
+        bool jump = inputTime <= _jumpUntil;
+        if (IsSliding)
         {
-            UpdateSlide();
+            SetHorizontal(Vector3.MoveTowards(MovementMath.Horizontal(_velocity), Vector3.zero, _params.SlideDecel * dt));
+            if ((jump || !input.SlideHeld || HorizontalSpeed < _params.SlideEndSpeed) && TryStand())
+            {
+                if (jump && IsGrounded) Jump(_params.JumpSpeed);
+            }
+        }
+        else if (IsWallSliding)
+        {
+            UpdateWall(dt, wish);
+            if (jump) JumpFromWall();
         }
         else
         {
-            if (_grounded)
+            UpdateFreeMovement(dt, drive);
+            if (jump && IsGrounded)
             {
-                ApplyGroundFriction(dt, running);
-                ApplyGroundAcceleration(dt, wishDir, running);
-            }
-            else if (_params.AirControl > 0f)
-            {
-                ApplyAirAcceleration(dt, wishDir); // 本次骨架 AirControl 恒 0，空中不加速
-            }
-            HandleJump(wishDir, running);
-            HandleWallJump();
-        }
-
-        ApplySpeedSteering(dt);
-
-        // 加速结算后对水平速度施加上限（软上限：仿真结论”增速线性且无上界”）
-        ClampHorizontalSpeed();
-
-        ApplyGravity(dt);
-        UpdateCapsuleBySpeed();
-        _controller.Move(_velocity * dt);
-        UpdateGroundState();
-
-        // 矢量转换器：每 tick 能量 += max(0, 水平速度 - 地速阈值)（策划案第 4 节），累加后立即钳制
-        _energy = Mathf.Min(_params.EnergyMax,
-            _energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold) * _params.EnergyPerTickPerExcessSpeed);
-    }
-
-    private void OnControllerColliderHit(ControllerColliderHit hit)
-    {
-        // 空中接触近竖直面时记录法线，供下一 tick 蹬墙判定
-        if (!_grounded && Vector3.Dot(hit.normal, Vector3.up) < _params.WallNormalMaxUpDot)
-        {
-            _wallNormal = hit.normal;
-            _wallTouch = true;
-        }
-    }
-
-    // 输入方向 → 世界方向：绕相机 yaw 旋转（“按前进保留速度大小、转向摄像机对应方向”的基础）
-    private Vector3 ComputeWishDir()
-    {
-        float x = _input.Horizontal;
-        float z = _input.Vertical;
-        if (x == 0f && z == 0f) return Vector3.zero;
-        float yaw = _cameraTransform != null ? _cameraTransform.eulerAngles.y : transform.eulerAngles.y;
-        Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * new Vector3(x, 0f, z);
-        return dir.sqrMagnitude > 1f ? dir.normalized : dir;
-    }
-
-    // 摩擦只在超速时生效：平跑收敛于地速阈值；免摩擦窗口内跳过结算——兔子跳的全部实现
-    private void ApplyGroundFriction(float dt, bool running)
-    {
-        float speed = HorizontalSpeed;
-        // 行走时以行走目标速度为门槛，实现“行走快速减速至固定较小值”（策划案第 1 节）
-        float threshold = running ? _params.GroundSpeedThreshold : _params.WalkSpeed;
-        if (speed <= threshold) return;
-        if (InFrictionWindow) return;
-
-        float newSpeed = Mathf.Max(0f, speed * (1f - _params.GroundFriction * dt));
-        Vector3 horiz = HorizontalVelocity();
-        _velocity.x = horiz.x / speed * newSpeed;
-        _velocity.z = horiz.z / speed * newSpeed;
-    }
-
-    // Quake accelerate：addspeed = wishspeed - dot(v, wishdir)，为正则
-    // v += wishdir * min(accel * wishspeed * dt, addspeed)
-    // WindowPump 下免摩擦窗口内去掉投影上限（模型唯一偏差）；窗口外与 VerbatimQuake 完全一致
-    private void ApplyGroundAcceleration(float dt, Vector3 wishDir, bool running)
-    {
-        if (wishDir == Vector3.zero) return;
-        float wishspeed = running ? _params.GroundSpeedThreshold : _params.WalkSpeed;
-        float step = _params.RunAccel * wishspeed * dt;
-        if (_params.Pump == PumpMode.WindowPump && InFrictionWindow)
-        {
-            _velocity += wishDir * step; // 泵加速：窗口内摩擦既不作用，也不再受投影上限
-            return;
-        }
-        float addspeed = wishspeed - Vector3.Dot(HorizontalVelocity(), wishDir);
-        if (addspeed <= 0f) return;
-        _velocity += wishDir * Mathf.Min(step, addspeed);
-    }
-
-    // 空中加速与地面同构；骨架 AirControl 为 0，仅保留接口
-    private void ApplyAirAcceleration(float dt, Vector3 wishDir)
-    {
-        if (wishDir == Vector3.zero || _params.AirControl <= 0f) return;
-        float addspeed = _params.GroundSpeedThreshold - Vector3.Dot(HorizontalVelocity(), wishDir);
-        if (addspeed <= 0f) return;
-        float accel = Mathf.Min(_params.AirControl * _params.GroundSpeedThreshold * dt, addspeed);
-        _velocity += wishDir * accel;
-    }
-
-    // 策划案第 1 节：按住前进时保留速度大小，以受限角速度把速度转向摄像机朝向（空中同样生效）
-    // 超过阈值后投影上限使加速无法改变方向，高速转向完全依赖本函数
-    private void ApplySpeedSteering(float dt)
-    {
-        if (_sliding || _input.Vertical <= 0.1f) return;
-        float speed = HorizontalSpeed;
-        if (speed < _params.GroundSpeedThreshold * _params.SteerMinSpeedRatio) return;
-
-        Vector3 forward = Vector3.forward;
-        if (_cameraTransform != null)
-        {
-            Vector3 camForward = _cameraTransform.forward;
-            camForward.y = 0f;
-            if (camForward.sqrMagnitude > 0.0001f) forward = camForward.normalized;
-        }
-
-        Vector3 dir = HorizontalVelocity().normalized;
-        Vector3 newDir = Vector3.RotateTowards(dir, forward, _params.SpeedSteerTurnRate * Mathf.Deg2Rad * dt, 0f);
-        _velocity.x = newDir.x * speed;
-        _velocity.z = newDir.z * speed;
-    }
-
-    // 水平速度软上限（仿真风险兜底）；只缩放水平分量，垂直不受影响
-    private void ClampHorizontalSpeed()
-    {
-        Vector3 horiz = HorizontalVelocity();
-        float speed = horiz.magnitude;
-        if (speed <= _params.MaxSpeed || speed <= 0f) return;
-        float scale = _params.MaxSpeed / speed;
-        _velocity.x *= scale;
-        _velocity.z *= scale;
-    }
-
-    private void HandleJump(Vector3 wishDir, bool running)
-    {
-        if (_grounded && _playerTime - _jumpPressedTime <= _params.JumpBufferWindow)
-        {
-            _jumpPressedTime = -999f;
-            Vector3 horiz = HorizontalVelocity();
-            if (!running && wishDir != Vector3.zero)
-            {
-                // 非奔跑的前跳/斜向跳取行走速度；奔跑中方向锁定为面朝方向，保留全部水平动量
-                _velocity.x = wishDir.x * _params.WalkSpeed;
-                _velocity.z = wishDir.z * _params.WalkSpeed;
-            }
-            _velocity.y = _params.JumpSpeed;
-            _grounded = false;
-            _jumpCount++;
-        }
-    }
-
-    // 蹬墙：空中贴墙 + 速度与墙面夹角大于阈值（小于 30 度不可蹬，策划案第 1 节）
-    // 蹬出速度 = 反射分量 * 系数 + 法线冲量，垂直分量取上抛冲量
-    private void HandleWallJump()
-    {
-        if (_grounded || !_wallTouch) return;
-        if (_playerTime - _jumpPressedTime > _params.JumpBufferWindow) return;
-        if (_playerTime - _lastWallJumpTime < _params.WallJumpCooldown) return;
-
-        Vector3 horiz = HorizontalVelocity();
-        float speed = horiz.magnitude;
-        if (speed < 0.01f) return;
-
-        // 与墙面的夹角 = 与“指向墙内的法线”夹角的余角；与墙平行（冲浪角）时不可蹬
-        float angleToWall = 90f - Vector3.Angle(horiz, -_wallNormal);
-        if (angleToWall <= _params.WallJumpMinAngle) return;
-
-        _jumpPressedTime = -999f;
-        Vector3 outHoriz = Vector3.Reflect(horiz, _wallNormal) * _params.WallJumpReflectRatio
-                           + _wallNormal * _params.WallJumpNormalImpulse;
-        _velocity.x = outHoriz.x;
-        _velocity.z = outHoriz.z;
-        _velocity.y = _params.WallJumpUpImpulse;
-        _lastWallJumpTime = _playerTime;
-        _wallTouch = false;
-        _grounded = false;
-        _jumpCount++;
-    }
-
-    private void UpdateSlide()
-    {
-        Vector3 horiz = HorizontalVelocity();
-        float speed = horiz.magnitude;
-
-        // 滑铲可被前跳取消（策划案第 3 节）：缓冲窗内按跳立即终结滑铲并保留水平动量起跳
-        if (_playerTime - _jumpPressedTime <= _params.JumpBufferWindow)
-        {
-            _jumpPressedTime = -999f;
-            if (ExitSlideIfRoom())
-            {
-                _velocity.y = _params.JumpSpeed;
-                _grounded = false;
-                _jumpCount++;
-                return;
+                if (!IsSprinting && wish != Vector3.zero) SetHorizontal(drive * _params.WalkSpeed);
+                Jump(_params.JumpSpeed);
             }
         }
 
-        // 滑铲期间速度快速线性衰减
-        if (speed > 0f)
+        SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
+        float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
+        _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * dt;
+        if (IsWallSliding) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
+        UpdateCapsule();
+        _controller.stepOffset = IsGrounded ? _groundStepOffset : 0f;
+
+        bool wasGrounded = IsGrounded;
+        _contacts.Move(ref _velocity, dt);
+        if (_contacts.Grounded)
         {
-            float newSpeed = Mathf.Max(0f, speed - _params.SlideDecel * TimeManager.PlayerDeltaTime);
-            _velocity.x = horiz.x / speed * newSpeed;
-            _velocity.z = horiz.z / speed * newSpeed;
-        }
-
-        bool shiftHeld = _input.RunHeld;
-        if (speed < _params.SlideEndSpeed || !shiftHeld)
-        {
-            ExitSlideIfRoom(); // 头顶受阻（限高门内）时保持滑铲姿态
-        }
-    }
-
-    private void EnterSlide()
-    {
-        _sliding = true;
-        SetCapsule(_params.SlideCapsuleHeight, _controller.radius);
-    }
-
-    private bool ExitSlideIfRoom()
-    {
-        if (!CanStandUp(_params.CapsuleBaseHeight)) return false;
-        _sliding = false;
-        SetCapsule(_params.CapsuleBaseHeight, _controller.radius);
-        return true;
-    }
-
-    // 起身头顶阻挡检测：OverlapCapsule 排除自身碰撞体
-    private bool CanStandUp(float standHeight)
-    {
-        float skin = _controller.skinWidth;
-        float radius = Mathf.Max(_controller.radius - skin, 0.05f);
-        Vector3 bottom = transform.position + Vector3.up * (skin * 2f);
-        Vector3 top = transform.position + Vector3.up * Mathf.Max(standHeight - skin * 2f, bottom.y - transform.position.y + 0.05f);
-        int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius, StandUpOverlapBuffer,
-            _params.CollisionMask, QueryTriggerInteraction.Ignore);
-        for (int i = 0; i < count; i++)
-        {
-            if (StandUpOverlapBuffer[i].transform.IsChildOf(transform)) continue;
-            return false;
-        }
-        return true;
-    }
-
-    private void ApplyGravity(float dt)
-    {
-        if (_grounded)
-        {
-            // 贴地下压取“一帧重力”：量级由 Gravity 推导，保证 isGrounded 稳定
-            _velocity.y = -_params.Gravity * dt;
+            if (!wasGrounded) _landTime = _clock;
+            State = MovementState.Grounded;
+            _wallSpeed = 0f;
         }
         else
         {
-            _velocity.y -= _params.Gravity * dt;
+            if (wasGrounded) State = MovementState.Airborne;
+            if (!IsSliding && !IsWallSliding) TryEnterWall(wish);
         }
+        Energy = Mathf.Min(_params.EnergyMax, Energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold)
+            * _params.EnergyPerSecondPerExcessSpeed * dt);
     }
 
-    // 受击框随速度变细：胶囊高度/半径按 |v| 插值，半径有“不细于肩宽”的下限
-    private void UpdateCapsuleBySpeed()
+    private void UpdateFreeMovement(float dt, Vector3 wish)
     {
-        if (_sliding) return; // 滑铲高度由 Enter/Exit 管理
+        Vector3 horizontal = MovementMath.Horizontal(_velocity);
+        if (IsGrounded)
+        {
+            float target = IsSprinting ? _params.GroundSpeedThreshold : _params.WalkSpeed;
+            if (!InFrictionWindow && _params.GroundFriction > 0f)
+            {
+                horizontal *= Mathf.Max(0f, 1f - _params.GroundFriction * dt);
+                if (horizontal.sqrMagnitude < _params.GroundStopSpeed * _params.GroundStopSpeed)
+                    horizontal = Vector3.zero;
+            }
+            horizontal = MovementMath.Accelerate(horizontal, wish, target, _params.RunAccel, dt,
+                _params.Pump == PumpMode.WindowPump && InFrictionWindow);
+        }
+        else horizontal = MovementMath.Accelerate(horizontal, wish, _params.GroundSpeedThreshold, _params.AirControl, dt, false);
+        SetHorizontal(horizontal);
+    }
+
+    private void TryEnterWall(Vector3 wish)
+    {
+        // CharacterController 返回的接触法线有浮点误差，边界角允许百分之一度容差。
+        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f < _params.WallMinApproachAngle) return;
+        bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
+            Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
+        if (sameWall) return;
+        _wallNormal = _contacts.WallNormal;
+        if (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _)) return;
+        _wallTangent = MovementMath.WallTangent(_contacts.WallIncoming, _wallNormal, wish);
+        _wallSpeed = Mathf.Min(MovementMath.Horizontal(_contacts.WallIncoming).magnitude, _params.MaxSpeed);
+        _wallTime = _clock;
+        WallApproachAngle = _contacts.WallAngle;
+        _wallLocked = true;
+        _lockedNormal = _wallNormal;
+        _lockedPoint = _contacts.WallPoint;
+        State = MovementState.WallSlide;
+        SetHorizontal(_wallTangent * _wallSpeed);
+    }
+
+    private void UpdateWall(float dt, Vector3 wish)
+    {
+        if (_wallTangent != Vector3.zero) _wallSpeed = Mathf.Min(_wallSpeed, HorizontalSpeed);
+        if (_wallTangent == Vector3.zero) _wallTangent = MovementMath.WallTangent(Vector3.zero, _wallNormal, wish);
+        if (WallWindowRemaining <= 0f)
+        {
+            if (_wallTangent == Vector3.zero) _wallSpeed = 0f;
+            else _wallSpeed *= Mathf.Exp(-_params.WallFriction * dt);
+        }
+        SetHorizontal(_wallTangent * _wallSpeed);
+    }
+
+    private void JumpFromWall()
+    {
+        if (_clock - _lastWallJump < _params.WallJumpCooldown) return;
+        float speed = Mathf.Min(_params.MaxSpeed, _wallSpeed + (WallWindowRemaining > 0f ? _params.WallJumpBoost : 0f));
+        SetHorizontal(MovementMath.WallJump(_wallTangent, _wallNormal, speed, _params.WallJumpAngle));
+        Jump(_params.WallJumpUpImpulse);
+        _lastWallJump = _clock;
+        WallJumpCount++;
+    }
+
+    private void RearmWall()
+    {
+        if (!_wallLocked || IsWallSliding) return;
+        float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
+        if (separation >= _params.WallRearmDistance && _clock - _lastWallJump >= _params.WallJumpCooldown)
+            _wallLocked = false;
+    }
+
+    private void ExitWall() { State = MovementState.Airborne; _wallSpeed = 0f; }
+    private void Jump(float speed)
+    {
+        _jumpUntil = float.NegativeInfinity;
+        _velocity.y = speed;
+        State = MovementState.Airborne;
+        JumpCount++;
+    }
+
+    private Vector3 WishDirection(Vector2 move)
+    {
+        move = Vector2.ClampMagnitude(move, 1f);
+        Vector3 forward = _movementReference != null
+            ? MovementMath.Horizontal(_movementReference.forward)
+            : _initialMovementRotation * Vector3.forward;
+        if (forward.sqrMagnitude < 0.0001f) forward = _initialMovementRotation * Vector3.forward;
+        forward.Normalize();
+        return Vector3.Cross(Vector3.up, forward) * move.x + forward * move.y;
+    }
+
+    private void UpdateFacing(Vector3 wish, float dt)
+    {
+        if (wish == Vector3.zero) { _facingAngularVelocity = 0f; return; }
+        float targetYaw = Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg;
+        float yaw = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetYaw, ref _facingAngularVelocity,
+            _params.FacingSmoothTime, Mathf.Infinity, dt);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+    }
+
+    private bool TryStand()
+    {
+        if (!_contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius)) return false;
+        IsSliding = false;
+        return true;
+    }
+
+    private void UpdateCapsule()
+    {
+        if (IsSliding) return;
         float t = Mathf.InverseLerp(_params.CapsuleShrinkStartSpeed, _params.CapsuleShrinkEndSpeed, HorizontalSpeed);
-        SetCapsule(Mathf.Lerp(_params.CapsuleBaseHeight, _params.CapsuleFastHeight, t),
-            Mathf.Lerp(_params.CapsuleBaseRadius, _params.CapsuleMinRadius, t));
+        float height = Mathf.Lerp(_params.CapsuleBaseHeight, _params.CapsuleFastHeight, t);
+        float radius = Mathf.Lerp(_params.CapsuleBaseRadius, _params.CapsuleMinRadius, t);
+        if ((height > _controller.height || radius > _controller.radius) && !_contacts.CanResize(height, radius)) return;
+        SetCapsule(height, radius);
     }
 
     private void SetCapsule(float height, float radius)
     {
-        _controller.height = height;
         _controller.radius = radius;
-        _controller.center = new Vector3(0f, height * 0.5f, 0f); // 底面始终贴住 pivot（脚底）
+        _controller.height = Mathf.Max(height, radius * 2f);
+        _controller.center = Vector3.up * (_controller.height * 0.5f);
+    }
+    private void SetHorizontal(Vector3 value) { _velocity.x = value.x; _velocity.z = value.z; }
+    private void OnControllerColliderHit(ControllerColliderHit hit) => _contacts?.RecordHit(hit);
+
+    public void ResetState()
+    {
+        _velocity = Vector3.zero;
+        _facingAngularVelocity = 0f;
+        Energy = 0f;
+        JumpCount = WallJumpCount = 0;
+        State = MovementState.Airborne;
+        IsSliding = IsSprinting = _wallLocked = false;
+        _clock = _wallTime = _wallSpeed = WallApproachAngle = 0f;
+        _landTime = _jumpUntil = _lastWallJump = float.NegativeInfinity;
+        _wallNormal = _wallTangent = _lockedNormal = _lockedPoint = Vector3.zero;
+        _input?.Clear();
+        if (_controller != null && _params != null) SetCapsule(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius);
     }
 
-    private void UpdateGroundState()
+    public void Teleport(Vector3 position)
     {
-        bool wasGrounded = _grounded;
-        _grounded = _controller.isGrounded;
-        if (_grounded)
-        {
-            _wallTouch = false;
-            if (!wasGrounded)
-            {
-                _lastLandTime = _playerTime; // 免摩擦窗口自落地 tick 起算
-            }
-        }
+        Vector3 delta = position - transform.position;
+        bool wasEnabled = _controller.enabled;
+        _controller.enabled = false;
+        transform.position = position;
+        ResetState();
+        _controller.enabled = wasEnabled;
+        Physics.SyncTransforms();
+        Teleported?.Invoke(delta);
     }
 
-    private Vector3 HorizontalVelocity() => new Vector3(_velocity.x, 0f, _velocity.z);
-
-    // 调试：速度向量（红）；落地免摩擦窗口内（黄）；滑铲中（青）
-    private void OnDrawGizmos()
+    private void OnDisable()
     {
-        if (!Application.isPlaying || _params == null) return;
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + _velocity);
-
-        if (InFrictionWindow)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position + Vector3.up * (_controller.radius * 0.5f), _controller.radius);
-        }
-
-        if (_sliding)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireCube(transform.position + Vector3.up * (_controller.height * 0.5f),
-                new Vector3(_controller.radius * 2f, _controller.height, _controller.radius * 2f));
-        }
+        if (_input is PlayerInputReader reader) reader.Cleared -= ClearPendingInput;
+        if (_controller != null) _controller.stepOffset = _groundStepOffset;
+        if (_params != null) ResetState();
     }
 }

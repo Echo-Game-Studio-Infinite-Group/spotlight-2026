@@ -1,105 +1,36 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// 120ms 环形输入缓冲：按键按下沿先进缓冲，再由组合键仲裁表映射为意图
-// 时间戳走 unscaled：hitstop/时缓不应拉长输入窗口
-public class InputBuffer
+// 只缓存动作语义，不绑定设备；调用方在成功执行动作时消费。
+public sealed class InputBuffer
 {
-    public enum Intent
+    public enum Action { Attack, Skill, Jump }
+    public enum Intent { None, Rashomon, PushSlash, Turnaround, Accelerate, HighJump, TimeStop }
+    private struct Entry { public Action Action; public float Time; }
+    private readonly List<Entry> _entries = new List<Entry>(16);
+    private readonly float _window;
+    public InputBuffer(float window = 0.12f) => _window = window;
+    public void Clear() => _entries.Clear();
+    public void Push(Action action, float time)
     {
-        None,
-        Rashomon,   // 连斩
-        PushSlash,  // 推斩
-        Turnaround, // 折返
-        Accelerate, // 加速
-        HighJump,   // 高跳
-        TimeStop,   // 时停
+        Prune(time);
+        if (_entries.Count == 16) _entries.RemoveAt(0);
+        _entries.Add(new Entry { Action = action, Time = time });
     }
-
-    private struct Entry
+    public bool Consume(Action action, float time)
     {
-        public KeyCode Key;
-        public float Time;
+        Prune(time);
+        int index = _entries.FindIndex(entry => entry.Action == action);
+        if (index < 0) return false;
+        _entries.RemoveAt(index);
+        return true;
     }
-
-    private const float BufferWindow = 0.12f;
-    private const int Capacity = 16;
-
-    private readonly Entry[] _ring = new Entry[Capacity];
-    private int _write; // 下一个写入位
-    private int _count;
-
-    public void Push(KeyCode key)
+    public Intent ConsumeCombo(float time, bool skillHeld, Vector2 move)
     {
-        _ring[_write].Key = key;
-        _ring[_write].Time = TimeManager.UnscaledTime;
-        _write = (_write + 1) % Capacity;
-        _count = Mathf.Min(_count + 1, Capacity); // 满时覆盖最旧条目
+        if (skillHeld && Consume(Action.Attack, time)) return move.y > 0f ? Intent.Rashomon : Intent.PushSlash;
+        if (move.y != 0f && Consume(Action.Skill, time)) return move.y < 0f ? Intent.Turnaround : Intent.Accelerate;
+        if (skillHeld && Consume(Action.Jump, time)) return Intent.HighJump;
+        return skillHeld ? Intent.TimeStop : Intent.None;
     }
-
-    // 战斗组合键涉及的按键集合，由动作层每帧喂入；换输入方案时只改这里
-    public void PollBattleKeys()
-    {
-        if (Input.GetKeyDown(KeyCode.Mouse0)) Push(KeyCode.Mouse0);
-        if (Input.GetKeyDown(KeyCode.Mouse1)) Push(KeyCode.Mouse1);
-        if (Input.GetKeyDown(KeyCode.W)) Push(KeyCode.W);
-        if (Input.GetKeyDown(KeyCode.S)) Push(KeyCode.S);
-        if (Input.GetKeyDown(KeyCode.Space)) Push(KeyCode.Space);
-    }
-
-    public bool Consume(KeyCode key)
-    {
-        Prune();
-        for (int i = 0; i < _count; i++)
-        {
-            int idx = IndexFromNewest(i);
-            if (_ring[idx].Key == key)
-            {
-                RemoveAt(idx);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // 组合键仲裁（占位实现，优先级表内容待哈士奇确认）：连斩 > 推斩 > 折返 > 加速/高跳 > 时停
-    // 修饰键读实时按住状态，触发键走缓冲；时停为长按持续型，调用方自行做持续结算
-    public Intent ConsumeCombo()
-    {
-        Prune();
-        bool rmbHeld = Input.GetKey(KeyCode.Mouse1);
-
-        if (rmbHeld && Input.GetKey(KeyCode.W) && Consume(KeyCode.Mouse0)) return Intent.Rashomon;
-        if (rmbHeld && Consume(KeyCode.Mouse0)) return Intent.PushSlash;
-        if (Consume(KeyCode.Mouse1) && Input.GetKey(KeyCode.S)) return Intent.Turnaround;
-        if (Consume(KeyCode.Mouse1) && Input.GetKey(KeyCode.W)) return Intent.Accelerate;
-        if (rmbHeld && Consume(KeyCode.Space)) return Intent.HighJump;
-        if (rmbHeld) return Intent.TimeStop;
-        return Intent.None;
-    }
-
-    private void Prune()
-    {
-        float now = TimeManager.UnscaledTime;
-        while (_count > 0 && now - _ring[IndexFromOldest(0)].Time > BufferWindow)
-        {
-            _count--;
-        }
-    }
-
-    private int IndexFromNewest(int offset) => (_write - 1 - offset + Capacity * 2) % Capacity;
-    private int IndexFromOldest(int offset) => (_write - _count + offset + Capacity) % Capacity;
-
-    // 删除任意位：后续条目前移覆盖，保持旧→新顺序；被移除条目落在新写入区，随下次 Push 覆盖
-    private void RemoveAt(int idx)
-    {
-        int i = idx;
-        while (i != _write)
-        {
-            int next = (i + 1) % Capacity;
-            _ring[i] = _ring[next];
-            i = next;
-        }
-        _write = (_write - 1 + Capacity) % Capacity;
-        _count--;
-    }
+    private void Prune(float now) => _entries.RemoveAll(entry => now - entry.Time > _window);
 }
