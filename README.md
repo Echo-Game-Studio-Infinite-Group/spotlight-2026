@@ -59,10 +59,6 @@ Assets/             Unity 资产（代码、场景、预制体、设置都在里
   Shaders/          自己写的特效
   Art/              美术资产（模型 / 材质 / 图片）
 
-Docs/               策划案、会议记录、技术调研
-  aigc/             一些调研和分析稿
- 策划案v1.03.md      这个最重要，玩法需求以它为准
-
 Tools/
   movement-sim/     纯数学验算程序，不需要 Unity，命令行就能跑
   model-export/     模型导出与贴图检查脚本（Blender 侧）
@@ -80,8 +76,6 @@ Tools/
 - 空中以 ≥30° 夹角接触墙面进入划墙；0.15 秒窗口内蹬出可增速，超过窗口持续减速。
 - 参数统一在 `Assets/Settings/MovementParams.asset`。HUD 可查看入墙角和地面/墙面窗口。
 - 使用「超高速行者 → 装配 character 与 Cinemachine」修复接线。
-
-结构、参数和测试说明见 [Movement 代码简述](Docs/Movement代码简述.md)。
 
 ---
 
