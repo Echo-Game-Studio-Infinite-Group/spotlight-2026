@@ -40,8 +40,10 @@ public static class MovementSceneSetup
         if (parameters == null || actions == null) throw new InvalidOperationException("移动参数或 Action Map 缺失");
         ConfigurePrefab(parameters, actions);
 
-        GameObject oldPlayer = Find(scene, "Player");
-        GameObject character = Find(scene, "character");
+        // character.prefab 是模型变体，实例根沿用源预制体的名字（就是 "Player"），按名字找不到：
+        // 改为按「是否实例自 character.prefab」识别，避免重复实例化、以及把上一份装好的角色当成旧 Player 删掉
+        GameObject character = FindCharacterInstance(scene);
+        GameObject oldPlayer = FindLegacyPlayer(scene, character);
         if (character == null)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPath);
@@ -182,14 +184,14 @@ public static class MovementSceneSetup
 
     public static void Verify(Scene scene)
     {
-        GameObject character = Find(scene, "character");
+        GameObject character = FindCharacterInstance(scene);
         GameObject camera = Find(scene, "Main Camera");
         PlayerMotor motor = character != null ? character.GetComponent<PlayerMotor>() : null;
         CinemachineVirtualCamera vcam = character != null ? character.GetComponentInChildren<CinemachineVirtualCamera>() : null;
         if (motor == null || !motor.enabled || motor.Params == null || character.GetComponent<PlayerInputReader>() == null ||
             character.GetComponent<PlayerCameraRig>() == null || character.GetComponent<SpeedCameraFeedback>() == null ||
             camera == null || camera.GetComponent<CinemachineBrain>() == null || vcam == null || vcam.Follow == null ||
-            Find(scene, "Player") != null || Find(scene, "Player Virtual Camera") != null)
+            FindLegacyPlayer(scene, character) != null || Find(scene, "Player Virtual Camera") != null)
             throw new InvalidOperationException("character 的移动或 Cinemachine 接线校验失败");
         Debug.Log("[MovementSceneSetup] character 预制体及场景已绑定新运动与相机，旧 Player 已清理");
     }
@@ -205,6 +207,24 @@ public static class MovementSceneSetup
         foreach (GameObject root in scene.GetRootGameObjects())
             foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
                 if (child.name == name) return child.gameObject;
+        return null;
+    }
+
+    // character 实例的根名字继承自模型源预制体（就是 "Player"），只能按「实例自哪个预制体」识别
+    private static GameObject FindCharacterInstance(Scene scene)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPath);
+        if (prefab == null) return null;
+        foreach (GameObject root in scene.GetRootGameObjects())
+            if (PrefabUtility.GetCorrespondingObjectFromSource(root) == prefab) return root;
+        return null;
+    }
+
+    // 旧装配遗留的裸角色：挂着 PlayerMotor 但不是 character 实例（时间久了可能已被改名）
+    private static GameObject FindLegacyPlayer(Scene scene, GameObject character)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
+            if (root != character && root.GetComponent<PlayerMotor>() != null) return root;
         return null;
     }
 }
