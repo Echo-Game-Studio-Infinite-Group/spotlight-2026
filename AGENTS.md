@@ -37,18 +37,21 @@
 Assets/                    # Unity 资产（仓库根 = 工程根）
   Scripts/                 # 运行时代码（GameJam.Runtime 程序集）
     Movement/              # 两套移动机制 + 参数
-    Camera/                # 跟随相机 + 速度感后处理
-    Core/                  # 时间分层、输入缓冲
+    Camera/                # Cinemachine 机位与速度感后处理
+    Core/                  # 全局单例与整局流程、时间分层、输入缓冲
+    Character/             # 玩家实体、能量与时间效果
     Debug/                 # 调试 HUD
   Editor/                  # 编辑器工具（不进玩家包）
   Tests/PlayMode/          # PlayMode 测试（GameJam.Tests.PlayMode 程序集）
-  Scenes/TestScene.unity   # 主测试场景
+  Scenes/                  # BootScene（启动）+ TestScene（移动 / 战斗联调）
   Prefabs/Maps/            # 地图预制体（MapTestField）
   Settings/                # ScriptableObject 参数 + URP 管线资产
-  Shaders/  Materials/     # 速度感特效的自研 shader 与材质
+  Shaders/                 # 速度感特效的自研 shader
+  Art/                     # 美术资产（Models / Materials / Images）
 Docs/                      # 项目文档（**不要修改**，除非任务明确要求）
   aigc/                    # 调研与分析稿
 Tools/movement-sim/        # 纯 C# 移动数学仿真（dotnet run 可跑，产出 results/）
+Tools/model-export/        # 模型导出与贴图检查脚本（Blender 侧，非 Unity）
 AGENTS.md                  # 本文件
 README.md                  # 仓库总览（面向接收开发者，说人话）
 ```
@@ -58,23 +61,20 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 1. **逻辑帧 60Hz**：所有移动/判定公式按 tick 结算，`Fixed Timestep = 1/60`
 2. **数据驱动**：策划案数值全是占位符——一切可调参数进 `ScriptableObject` 或 `Inspector` 字段，禁止硬编码魔法数字（仿真程序里的参数扫描除外）
 3. **运动学控制器**：位置与速度手动积分，物理引擎只做碰撞查询（`CharacterController.Move`），禁止用刚体力模拟手感
-4. **输入用旧版 Input Manager**（`Input.GetKey` 直读），不引入新 Input System
+4. **输入用 Input System 1.7.0 Action Map**（用户已批准迁移），统一通过 `PlayerInputReader` 输出快照，不在运动和相机代码中直接读设备按键
 5. **时间分层**：游戏逻辑读 `TimeManager` 提供的缩放时间；UI/相机走 unscaled——新代码不得直接 `Time.timeScale` 散写
 6. 命名：公开成员 PascalCase、私有字段 `_camelCase`；一个类一个文件
 7. 注释用中文，只写"为什么/约束"，不写"这行在干什么"
 8. **禁止引入任何第三方包/插件**，除非任务明确要求
 9. **许可证红线**：Quake/Source 源码是 GPL/受限许可——公式可以照写（数学不受版权保护），代码不能拷贝。一切参考实现按"读懂后重写"处理
 
-## 两套移动机制（重要）
+## 移动与相机（重要）
 
-`Assets/Scripts/Movement/` 下有两套互斥的移动实现，**同一时间只能启用一个**：
+`Assets/Prefabs/character.prefab` 是玩家预制体，运动与相机反馈组件挂在它的根节点；场景使用 character 实例。`PlayerMotor` 是唯一运动控制器，状态为地面、空中、划墙，滑铲是独立姿态。`MovementContacts` 处理碰撞，`MovementMath` 提供公式，参数统一在 `MovementParams`。旧 `CharacterMovement` 已移除。
 
-| 类 | 说明 |
-| --- | --- |
-| `PlayerMotor` | 本项目自研的 Quake 式模型（泵油窗口/滑铲/蹬墙/能量），**默认启用** |
-| `CharacterMovement` | 移植自外部测试工程的相机相对移动，作为备选对照 |
+输入绑定在 `Assets/Input/PlayerControls.inputactions`；移动读取 `PlayerInputFrame`，测试通过 `IPlayerInput` 或 `Simulate` 注入。固定逻辑使用 `TimeManager.PlayerFixedDeltaTime`。
 
-两者都 `[RequireComponent(typeof(CharacterController))]` 且都直读输入，同时启用会互相抢控制权。改移动相关代码时先确认改的是哪一套。`DebugHUD` 依赖 `PlayerMotor`。
+相机使用 Cinemachine 2.10.7：`PlayerCameraRig` 控制 CameraTarget，`SpeedCameraFeedback` 控制速度反馈，不直接改渲染相机 Transform。`DebugHUD` 和重生统一依赖 `PlayerMotor`。说明见 `Docs/Movement代码简述.md`。
 
 ## 编辑器工具（菜单「超高速行者」）
 
@@ -88,11 +88,11 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 
 - `Tools/movement-sim`：`dotnet run` 直接可跑，输出速度增长曲线与参数扫描结果，结论写入 `results/`
 - Unity 工程：用 2022.3.33f1 打开无编译错误；`Assets/Scenes/TestScene.unity` 按播放能跑走/跳/冲刺/滑铲（灰盒验证，不需要动画）
-- PlayMode 三个测试全过（Window → General → Test Runner → PlayMode）
+- PlayMode 移动、输入与相机测试全过（当前 27 项，Window → General → Test Runner → PlayMode）
 
 ## 已知坑
 
-- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`CameraController` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
+- **移动/重组工程目录时，`Packages/` 必须跟着走**：Unity 打开一个只有 `Assets/` + `ProjectSettings/` 而没有 `Packages/` 的目录时，会**自动生成一份默认 manifest**（只有 `com.unity.modules.*`）。URP 与 test-framework 依赖会静默消失，表现为 `RadialRedshiftFeature`/`SpeedCameraFeedback` 报一堆 `CS0246`（找不到 `ScriptableRendererFeature`/`RTHandle`/`Volume` 等），紧接着 Unity 抛出 `Internal build system error ... backend process is still running`。
   - **注意：`Internal build system error` 是表象不是病根**——它只是 Bee 后端在编译失败后卡住。先看它上面的 `CS` 错误。
   - 修复：把 `com.unity.render-pipelines.universal` 与 `com.unity.test-framework` 补回 `Packages/manifest.json`，关掉 Unity，必要时删 `Library/Bee`（纯缓存）后重开。
   - 排查入口：`Library/ScriptAssemblies` 若为空说明编译从未成功；`Library/PackageCache` 里没有 `com.unity.render-pipelines.*` 说明包没装上。

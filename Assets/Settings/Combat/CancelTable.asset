@@ -1,0 +1,119 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86787c04d83ff63488abb08561195c1f, type: 3}
+  m_Name: CancelTable
+  m_EditorClassIdentifier: 
+  Rules:
+  - SourceAttack: {fileID: 11400000, guid: ddca474e5516f0245bc185018e859c28, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: 4202c39ad3d808c4389350bba03fa1ed, type: 2}
+    RequiredIntent: 2
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: ddca474e5516f0245bc185018e859c28, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c57f78acc1f5ebf4e923bcb0d69979c7, type: 2}
+    RequiredIntent: 3
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: 4402f24f3ea2f744eb74b5445fba8528, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: 4402f24f3ea2f744eb74b5445fba8528, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: ddca474e5516f0245bc185018e859c28, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0.8
+  - SourceAttack: {fileID: 11400000, guid: 4202c39ad3d808c4389350bba03fa1ed, type: 2}
+    SourcePhase: 2
+    SourceSegment: 0
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: 4202c39ad3d808c4389350bba03fa1ed, type: 2}
+    SourcePhase: 2
+    SourceSegment: 1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: 4202c39ad3d808c4389350bba03fa1ed, type: 2}
+    SourcePhase: 2
+    SourceSegment: 2
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: c57f78acc1f5ebf4e923bcb0d69979c7, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: c57f78acc1f5ebf4e923bcb0d69979c7, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: ddca474e5516f0245bc185018e859c28, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0.8
+  - SourceAttack: {fileID: 11400000, guid: 9463569ec8b95d846b0d3050ac8bfd71, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: bbb60ff9a29ddef4392fc38885e73162, type: 2}
+    RequiredIntent: 8
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: 9463569ec8b95d846b0d3050ac8bfd71, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: bbb60ff9a29ddef4392fc38885e73162, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: 6a73e43475e0020489457011f08bbd53, type: 2}
+    RequiredIntent: 8
+    MinSpeedRatio: 0
+  - SourceAttack: {fileID: 11400000, guid: bbb60ff9a29ddef4392fc38885e73162, type: 2}
+    SourcePhase: 2
+    SourceSegment: -1
+    WindowStart: 0
+    WindowEnd: 999
+    TargetAttack: {fileID: 11400000, guid: c16ba2534314d3342b46a05397e15257, type: 2}
+    RequiredIntent: 1
+    MinSpeedRatio: 0
