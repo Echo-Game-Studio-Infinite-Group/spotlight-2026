@@ -48,6 +48,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+_doc/
 
 # OS
 Thumbs.db
@@ -56,6 +57,9 @@ Thumbs.db
 
 # 本地临时
 *.log
+
+# 测试产物（Test Runner 每次跑都会重写，不入库）
+TestResults*.xml
 
 # 反排除：下面这两条是从通用模板抄来的规则，会误伤本仓库自己的源码文件，必须显式豁免
 # （父目录被排除时 Git 无法用 ! 重新包含其子文件，故必须反排除目录本身）
