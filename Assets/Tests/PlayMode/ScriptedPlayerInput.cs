@@ -20,6 +20,7 @@ public sealed class ScriptedPlayerInput : IPlayerInput
     public float Vertical => 1f;     // W 恒按住
     public bool RunHeld => true;     // 奔跑恒按住
     public bool RunPressed => false;
+    public bool CrouchHeld => false;
     public bool SlideTrigger => false;
 
     // 空中重新武装；着地且达到阈值后只发一次按下沿（模拟落地窗口内的 1 tick 起跳）

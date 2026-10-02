@@ -7,5 +7,6 @@ public interface IPlayerInput
     bool RunHeld { get; }       // 奔跑按住（Shift）
     bool RunPressed { get; }    // 奔跑按下沿（Shift GetKeyDown）
     bool JumpPressed { get; }   // 跳跃按下沿（Space GetKeyDown）
-    bool SlideTrigger { get; }  // 滑铲触发沿（按 Shift，或持有 Shift 时松开前进）
+    bool CrouchHeld { get; }    // 下蹲按住（Ctrl）——滑铲保持
+    bool SlideTrigger { get; }  // 滑铲触发沿（Ctrl 按下；Ctrl 独立于 Shift，框架 4.1）
 }

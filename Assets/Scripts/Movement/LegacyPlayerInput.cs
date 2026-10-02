@@ -10,6 +10,8 @@ public sealed class LegacyPlayerInput : IPlayerInput
     public bool RunPressed => Input.GetKeyDown(KeyCode.LeftShift);
     public bool JumpPressed => Input.GetKeyDown(KeyCode.Space);
 
-    // Shift 被奔跑共用，故“保持 Shift 但松开 W”也视为滑铲意图（策划案第 3 节）
-    public bool SlideTrigger => RunPressed || (RunHeld && !Input.GetKey(KeyCode.W));
+    // 下蹲/滑铲归 Ctrl（策划案加工版口径；v1.03 原文用 Shift）——Ctrl 独立于 Shift，
+    // 修掉“按住 Shift 松 W 即滑铲”的误触发
+    public bool CrouchHeld => Input.GetKey(KeyCode.LeftControl);
+    public bool SlideTrigger => Input.GetKeyDown(KeyCode.LeftControl);
 }
