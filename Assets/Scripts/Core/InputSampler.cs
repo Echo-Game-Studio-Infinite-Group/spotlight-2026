@@ -49,4 +49,13 @@ public class InputSampler : MonoBehaviour
     {
         if (Buffer != null) Buffer.Clear();
     }
+
+    /// <summary>
+    /// 测试注入快照：绕过 Update 直读引擎输入（PlayMode 测试无法发真实按键）。
+    /// 注入后由调用方自行禁用本组件，防止下一帧 Update 用空输入覆盖
+    /// </summary>
+    public void InjectSnapshot(in InputSnapshot snapshot)
+    {
+        Snapshot = snapshot;
+    }
 }
