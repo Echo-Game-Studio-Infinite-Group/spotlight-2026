@@ -57,6 +57,12 @@ public class PlayerMotor : MonoBehaviour, IEnergyAccount, IKnockbackReceiver
     public void SetInput(IPlayerInput input) { if (input != null) _input = input; }
     public void SetParams(MovementParams parameters) { if (parameters != null) _params = parameters; }
 
+    // 测试注入能量：战斗侧 PlayMode 测试需要可控余额验证「能量不足零副作用」（积能依赖高速移动，测试里凑不快）
+    public void SetEnergy(float value)
+    {
+        _energy = _params != null ? Mathf.Clamp(value, 0f, _params.EnergyMax) : Mathf.Max(0f, value);
+    }
+
     // 状态复位（掉落重生等）：速度/能量/滑铲清零，着地状态由下一次碰撞检测重建
     public void ResetState()
     {
