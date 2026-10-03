@@ -43,6 +43,8 @@ public sealed class PlayerMotor : MonoBehaviour
     public float FrictionWindowRemaining => IsGrounded ? Mathf.Max(0f, _params.FrictionExemptWindow - (_clock - _landTime)) : 0f;
     public float WallWindowRemaining => IsWallSliding ? Mathf.Max(0f, _params.WallGraceTime - (_clock - _wallTime)) : 0f;
     public event Action<Vector3> Teleported;
+    // 只报告不合格的新墙接触；反弹、伤害等撞墙反馈留给后续系统。
+    public event Action<WallContact> WallCollision;
 
     public void SetParams(MovementParams parameters)
     {
@@ -91,6 +93,7 @@ public sealed class PlayerMotor : MonoBehaviour
         if (_contacts == null || !_controller.enabled || dt < 0f) return;
         if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
         if (dt == 0f) return;
+        bool wallJumpFacingLocked = _clock - _lastWallJump < _params.WallJumpFacingLockTime;
         _clock += dt;
         Vector3 wish = WishDirection(input.Move);
         IsSprinting = input.SprintHeld && input.Move.y > 0f;
@@ -98,7 +101,7 @@ public sealed class PlayerMotor : MonoBehaviour
         if (IsWallSliding && (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _) ||
             Vector3.Dot(wish, _wallNormal) > 0.1f)) ExitWall();
 
-        UpdateFacing(wish, dt);
+        UpdateFacing(wish, dt, wallJumpFacingLocked);
         Vector3 drive = transform.forward * wish.magnitude;
         // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
         if (wish != Vector3.zero && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown)
@@ -122,8 +125,9 @@ public sealed class PlayerMotor : MonoBehaviour
         }
         else if (IsWallSliding)
         {
-            UpdateWall(dt, wish);
+            UpdateWall(dt);
             if (jump) JumpFromWall();
+            else if (_wallSpeed <= 0f) ExitWall();
         }
         else
         {
@@ -137,12 +141,14 @@ public sealed class PlayerMotor : MonoBehaviour
 
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
-        _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * dt;
-        if (IsWallSliding) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
+        float gravityDt = IsWallSliding ? WallUnprotectedDeltaTime(dt) : dt;
+        _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * gravityDt;
+        if (IsWallSliding && gravityDt > 0f) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
         UpdateCapsule();
         _controller.stepOffset = IsGrounded ? _groundStepOffset : 0f;
 
         bool wasGrounded = IsGrounded;
+        bool wasWallSliding = IsWallSliding;
         _contacts.Move(ref _velocity, dt);
         if (_contacts.Grounded)
         {
@@ -196,23 +202,48 @@ public sealed class PlayerMotor : MonoBehaviour
         _lockedPoint = _contacts.WallPoint;
         State = MovementState.WallSlide;
         SetHorizontal(_wallTangent * _wallSpeed);
+        FaceWallTangent();
     }
 
-    private void UpdateWall(float dt, Vector3 wish)
+    // 窗口横跨一个 tick 时只对过期后的部分施加重力和摩擦，保证完整的保护时长。
+    private float WallUnprotectedDeltaTime(float dt)
+    {
+        float elapsed = _clock - _wallTime;
+        // 浮点累加不能让窗口末帧提前触发下落限速，避免保速中的竖直速度突变。
+        if (Mathf.Approximately(elapsed, _params.WallGraceTime)) return 0f;
+        return Mathf.Clamp(elapsed - _params.WallGraceTime, 0f, dt);
+    }
+
+    private void ContinueWall(WallContact contact)
+    {
+        Vector3 tangent = MovementMath.WallTangent(contact.IncomingVelocity, contact.Normal, _wallTangent);
+        if (tangent == Vector3.zero) { WallCollision?.Invoke(contact); ExitWall(); return; }
+        _wallNormal = contact.Normal;
+        _wallTangent = tangent;
+        _lockedNormal = contact.Normal;
+        _lockedPoint = contact.Point;
+        _wallLastContactTime = _clock;
+        WallApproachAngle = contact.ApproachAngle;
+        // 连续滑墙只换墙面，不刷新 _wallTime，也不丢失已结算的墙面速度。
+        SetHorizontal(_wallTangent * _wallSpeed);
+        FaceWallTangent();
+    }
+
+    private void UpdateWall(float dt)
     {
         if (_wallTangent != Vector3.zero) _wallSpeed = Mathf.Min(_wallSpeed, HorizontalSpeed);
-        if (_wallTangent == Vector3.zero) _wallTangent = MovementMath.WallTangent(Vector3.zero, _wallNormal, wish);
-        if (WallWindowRemaining <= 0f)
+        float frictionDt = WallUnprotectedDeltaTime(dt);
+        if (frictionDt > 0f)
         {
             if (_wallTangent == Vector3.zero) _wallSpeed = 0f;
-            else _wallSpeed *= Mathf.Exp(-_params.WallFriction * dt);
+            else _wallSpeed *= Mathf.Exp(-_params.WallFriction * frictionDt);
         }
+        if (_wallSpeed <= _params.WallStopSpeed) _wallSpeed = 0f;
         SetHorizontal(_wallTangent * _wallSpeed);
     }
 
     private void JumpFromWall()
     {
-        if (_clock - _lastWallJump < _params.WallJumpCooldown) return;
         float speed = Mathf.Min(_params.MaxSpeed, _wallSpeed + (WallWindowRemaining > 0f ? _params.WallJumpBoost : 0f));
         SetHorizontal(MovementMath.WallJump(_wallTangent, _wallNormal, speed, _params.WallJumpAngle));
         Jump(_params.WallJumpUpImpulse);
@@ -248,8 +279,16 @@ public sealed class PlayerMotor : MonoBehaviour
         return Vector3.Cross(Vector3.up, forward) * move.x + forward * move.y;
     }
 
-    private void UpdateFacing(Vector3 wish, float dt)
+    private void FaceWallTangent()
     {
+        _facingAngularVelocity = 0f;
+        if (_wallTangent != Vector3.zero) transform.rotation = Quaternion.LookRotation(_wallTangent, Vector3.up);
+    }
+
+    private void UpdateFacing(Vector3 wish, float dt, bool wallJumpFacingLocked)
+    {
+        if (IsWallSliding) { FaceWallTangent(); return; }
+        if (wallJumpFacingLocked) { _facingAngularVelocity = 0f; return; }
         if (wish == Vector3.zero) { _facingAngularVelocity = 0f; return; }
         float targetYaw = Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg;
         float yaw = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetYaw, ref _facingAngularVelocity,

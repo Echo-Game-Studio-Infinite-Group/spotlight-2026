@@ -31,6 +31,8 @@ public sealed class MovementParams : ScriptableObject
     [Range(0f, 0.7f)] public float WallNormalMaxUpDot = 0.3f;
     [Min(0f)] public float WallGraceTime = 0.15f;
     [Min(0f)] public float WallFriction = 3f;
+    [Tooltip("滑墙减速到该水平速度时视为停止，避免指数摩擦永远无法归零")]
+    [Min(0f)] public float WallStopSpeed = 0.01f;
     [Min(0f)] public float WallGravityScale = 0.4f;
     [Min(0f)] public float WallMaxFallSpeed = 6f;
     [Min(0f)] public float WallJumpBoost = 1.5f;

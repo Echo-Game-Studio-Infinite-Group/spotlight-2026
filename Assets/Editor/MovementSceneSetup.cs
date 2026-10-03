@@ -74,6 +74,13 @@ public static class MovementSceneSetup
         GameObject oldCamera = Find(scene, "Player Virtual Camera");
         if (oldCamera != null && !oldCamera.transform.IsChildOf(character.transform))
             UnityEngine.Object.DestroyImmediate(oldCamera);
+        // 场景里遗留的独立虚拟相机可能与角色相机同优先级，抢走 Brain 的控制权。
+        GameObject looseCamera = Find(scene, "Virtual Camera");
+        if (looseCamera != null && !looseCamera.transform.IsChildOf(character.transform))
+        {
+            CinemachineVirtualCamera competingCamera = looseCamera.GetComponent<CinemachineVirtualCamera>();
+            if (competingCamera != null) competingCamera.enabled = false;
+        }
         if (Find(scene, "TimeManager") == null)
         {
             var time = new GameObject("TimeManager");
@@ -173,11 +180,14 @@ public static class MovementSceneSetup
             follow.VerticalArmLength = 0f;
             follow.CameraDistance = 6f;
             follow.CameraRadius = 0.2f;
-            follow.CameraCollisionFilter = ~0;
             follow.IgnoreTag = "Player";
         }
+        // 狭缝中避障会反复缩放镜头；遮挡由 CameraWallFade 接管。
+        follow.CameraCollisionFilter = 0;
         GetOrAdd<PlayerCameraRig>(character).Configure(motor, input, target, vcam);
         GetOrAdd<SpeedCameraFeedback>(character).Configure(motor, vcam, volume);
+        Material wallMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Materials/Wall.mat");
+        GetOrAdd<CameraWallFade>(character).Configure(target, wallMaterial);
         foreach (Component component in character.GetComponentsInChildren<Component>(true))
             if (component != null) EditorUtility.SetDirty(component);
     }
@@ -188,9 +198,11 @@ public static class MovementSceneSetup
         GameObject camera = Find(scene, "Main Camera");
         PlayerMotor motor = character != null ? character.GetComponent<PlayerMotor>() : null;
         CinemachineVirtualCamera vcam = character != null ? character.GetComponentInChildren<CinemachineVirtualCamera>() : null;
+        CinemachineVirtualCamera looseVcam = Find(scene, "Virtual Camera")?.GetComponent<CinemachineVirtualCamera>();
         if (motor == null || !motor.enabled || motor.Params == null || character.GetComponent<PlayerInputReader>() == null ||
             character.GetComponent<PlayerCameraRig>() == null || character.GetComponent<SpeedCameraFeedback>() == null ||
             camera == null || camera.GetComponent<CinemachineBrain>() == null || vcam == null || vcam.Follow == null ||
+            (looseVcam != null && looseVcam.isActiveAndEnabled && looseVcam != vcam) ||
             FindLegacyPlayer(scene, character) != null || Find(scene, "Player Virtual Camera") != null)
             throw new InvalidOperationException("character 的移动或 Cinemachine 接线校验失败");
         Debug.Log("[MovementSceneSetup] character 预制体及场景已绑定新运动与相机，旧 Player 已清理");

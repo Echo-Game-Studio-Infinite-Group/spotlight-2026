@@ -16,6 +16,8 @@ public sealed class WallMovementTests
     {
         _params = ScriptableObject.CreateInstance<MovementParams>();
         _params.Gravity = 0f;
+        _params.WallMaxApproachAngle = 45f;
+        _params.WallGraceTime = 0.15f;
         _params.CapsuleShrinkStartSpeed = 200f;
         _params.CapsuleShrinkEndSpeed = 300f;
         GameObject player = new GameObject("TestPlayer");
@@ -38,10 +40,12 @@ public sealed class WallMovementTests
         Object.DestroyImmediate(_params);
     }
 
-    [TestCase(29f, false)]
+    [TestCase(10f, true)]
     [TestCase(30f, true)]
-    [TestCase(31f, true)]
-    [TestCase(90f, true)]
+    [TestCase(44f, true)]
+    [TestCase(45f, false)]
+    [TestCase(60f, false)]
+    [TestCase(90f, false)]
     public void RealWall_ApproachAngleControlsEntry(float angle, bool expected)
     {
         Enter(angle);
@@ -52,7 +56,7 @@ public sealed class WallMovementTests
     [Test]
     public void GraceJump_PreservesSpeedAndAwardsExactlyOneBoost()
     {
-        Enter(45f);
+        Enter(30f);
         float speed = _motor.HorizontalSpeed;
         Step(jump: true);
         Assert.AreEqual(1, _motor.WallJumpCount);
@@ -63,9 +67,217 @@ public sealed class WallMovementTests
     }
 
     [Test]
+    public void ZeroFallLimit_StaysInWallSlideAcrossManyTicks()
+    {
+        _params.Gravity = 20f;
+        _params.WallMaxFallSpeed = 0f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        for (int i = 0; i < 20; i++) Step();
+        float height = _motor.transform.position.y;
+        for (int i = 0; i < 120; i++)
+        {
+            Step();
+            Assert.IsTrue(_motor.IsWallSliding, $"第 {i + 1} 帧丢失贴墙状态");
+            Assert.That(_motor.transform.position.y, Is.EqualTo(height).Within(0.01f));
+        }
+    }
+
+    [TestCase(-3f)]
+    [TestCase(3f)]
+    public void HalfSecondWallWindow_PreservesVelocityThenResumesGravityAndFriction(float verticalSpeed)
+    {
+        _params.WallGraceTime = 0.5f;
+        _params.Gravity = 20f;
+        _params.WallFriction = 3f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        Vector3 velocity = _motor.Velocity;
+        velocity.y = verticalSpeed;
+        SetVelocity(velocity);
+        float speed = _motor.HorizontalSpeed;
+        for (int i = 0; i < 30; i++)
+        {
+            Step(move: Vector2.left);
+            Assert.IsTrue(_motor.IsWallSliding);
+            Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(0.001f));
+            Assert.That(_motor.Velocity.y, Is.EqualTo(verticalSpeed).Within(0.001f));
+            Assert.Less(Vector3.Angle(_motor.transform.forward, Vector3.right), 0.01f);
+        }
+        _params.WallMaxFallSpeed = 100f;
+        Step();
+        Assert.Less(_motor.HorizontalSpeed, speed);
+        Assert.Less(_motor.Velocity.y, verticalSpeed);
+    }
+
+    [Test]
+    public void WallWindow_CrossingExpiryOnlyAppliesUnprotectedPartOfTick()
+    {
+        _params.WallGraceTime = Tick * 1.5f;
+        _params.Gravity = 20f;
+        _params.WallMaxFallSpeed = 100f;
+        Enter(30f);
+        SetVelocity(MovementMath.Horizontal(_motor.Velocity));
+        float speed = _motor.HorizontalSpeed;
+        Step();
+        Assert.That(_motor.Velocity.y, Is.EqualTo(0f).Within(0.001f));
+        Step();
+        Assert.That(_motor.Velocity.y,
+            Is.EqualTo(-_params.Gravity * _params.WallGravityScale * Tick * 0.5f).Within(0.001f));
+        Assert.That(_motor.HorizontalSpeed,
+            Is.EqualTo(speed * Mathf.Exp(-_params.WallFriction * Tick * 0.5f)).Within(0.001f));
+    }
+
+    [TestCase(30f, 1f)]
+    [TestCase(150f, -1f)]
+    public void WallFacing_UsesIncomingTangentAndIgnoresReverseInput(float angle, float direction)
+    {
+        _params.WallGraceTime = 0.5f;
+        Enter(angle);
+        Assert.IsTrue(_motor.IsWallSliding);
+        Vector3 tangent = Vector3.right * direction;
+        Assert.Less(Vector3.Angle(_motor.transform.forward, tangent), 0.01f);
+        for (int i = 0; i < 40; i++)
+        {
+            Step(move: new Vector2(-direction, 0f));
+            Assert.IsTrue(_motor.IsWallSliding);
+            Assert.Less(Vector3.Angle(_motor.transform.forward, tangent), 0.01f);
+        }
+    }
+
+    [Test]
+    public void WallFacing_IgnoresCameraRelativeForwardPointingAwayFromWall()
+    {
+        Enter(30f);
+        GameObject view = new GameObject("ReverseView");
+        _objects.Add(view);
+        view.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+        _motor.SetMovementReference(view.transform);
+        Vector3 facing = _motor.transform.forward;
+        for (int i = 0; i < 10; i++)
+        {
+            Step(move: Vector2.up);
+            Assert.IsTrue(_motor.IsWallSliding);
+            Assert.Less(Vector3.Angle(facing, _motor.transform.forward), 0.01f);
+        }
+    }
+
+    [Test]
+    public void WallFriction_StopsAndExitsAfterSharedWindow()
+    {
+        _params.WallGraceTime = 0f;
+        _params.WallFriction = 30f;
+        _params.WallStopSpeed = 1f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        for (int i = 0; i < 30 && _motor.IsWallSliding; i++) Step();
+        Assert.IsFalse(_motor.IsWallSliding);
+        Assert.AreEqual(0f, _motor.HorizontalSpeed);
+    }
+
+    [Test]
+    public void ShallowCorner_ContinuesWallSlideWithoutRefreshingFrictionWindow()
+    {
+        BuildCorner(30f);
+        _params.WallGraceTime = 2f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        float previousRemaining = _motor.WallWindowRemaining;
+        bool switchedWall = false;
+        for (int i = 0; i < 60; i++)
+        {
+            Step();
+            Assert.IsTrue(_motor.IsWallSliding);
+            Assert.LessOrEqual(_motor.WallWindowRemaining, previousRemaining + 0.0001f);
+            previousRemaining = _motor.WallWindowRemaining;
+            if (_motor.WallNormal.x < -0.2f) { switchedWall = true; break; }
+        }
+        Assert.IsTrue(switchedWall, "应在合格夹角处转入新墙");
+        Assert.Greater(_motor.transform.forward.x, 0f);
+        Assert.Less(_motor.transform.forward.z, -0.2f);
+    }
+
+    [Test]
+    public void SteepCorner_ReportsCollisionWithoutResettingWindow()
+    {
+        BuildCorner(60f);
+        _params.WallGraceTime = 2f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        int collisionCount = 0;
+        WallContact collision = default;
+        _motor.WallCollision += contact => { collisionCount++; collision = contact; };
+        for (int i = 0; i < 60 && collisionCount == 0; i++) Step();
+        Assert.AreEqual(1, collisionCount);
+        Assert.GreaterOrEqual(collision.ApproachAngle, _params.WallMaxApproachAngle);
+        Assert.IsFalse(_motor.IsWallSliding);
+    }
+
+    [Test]
+    public void WallJump_FacingAndOutwardMomentumStayLockedForHalfSecondThenTurningResumes()
+    {
+        _params.WallJumpFacingLockTime = 0.5f;
+        Enter(30f);
+        Step(jump: true, move: Vector2.left);
+        Assert.AreEqual(1, _motor.WallJumpCount);
+        Quaternion facing = _motor.transform.rotation;
+        Vector3 horizontal = MovementMath.Horizontal(_motor.Velocity);
+        Assert.Less(Vector3.Angle(_motor.transform.forward, Vector3.right), 0.01f);
+        for (int i = 0; i < 30; i++)
+        {
+            Step(move: Vector2.left);
+            Assert.Less(Quaternion.Angle(facing, _motor.transform.rotation), 0.01f);
+            Assert.Less((MovementMath.Horizontal(_motor.Velocity) - horizontal).magnitude, 0.001f);
+        }
+        for (int i = 0; i < 3; i++) Step(move: Vector2.left);
+        Assert.Greater(Quaternion.Angle(facing, _motor.transform.rotation), 1f);
+    }
+
+    [Test]
+    public void WallJump_FreezeDoesNotConsumeFacingLock_AndTeleportClearsIt()
+    {
+        Enter(30f);
+        Step(jump: true);
+        Quaternion facing = _motor.transform.rotation;
+        _now += 2f;
+        _motor.Simulate(new PlayerInputFrame { Move = Vector2.left }, 0f, _now);
+        Step(move: Vector2.left);
+        Assert.Less(Quaternion.Angle(facing, _motor.transform.rotation), 0.01f);
+        _motor.Teleport(Vector3.up * 100f);
+        Step(move: Vector2.left);
+        Assert.Greater(Quaternion.Angle(facing, _motor.transform.rotation), 1f);
+    }
+
+    [Test]
+    public void BriefLostContact_DoesNotDropWallJump()
+    {
+        _params.Gravity = 20f;
+        _params.WallMaxFallSpeed = 0f;
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        _objects[1].GetComponent<Collider>().enabled = false;
+        Step();
+        Assert.IsTrue(_motor.IsWallSliding);
+        _objects[1].GetComponent<Collider>().enabled = true;
+        Physics.SyncTransforms();
+        Step(jump: true);
+        Assert.AreEqual(1, _motor.WallJumpCount);
+    }
+
+    [Test]
+    public void LostWallBeyondContactGrace_ExitsWallSlide()
+    {
+        Enter(30f);
+        Assert.IsTrue(_motor.IsWallSliding);
+        _objects[1].GetComponent<Collider>().enabled = false;
+        for (int i = 0; i < 10; i++) Step();
+        Assert.IsFalse(_motor.IsWallSliding);
+    }
+
+    [Test]
     public void WallContact_ExpiresGraceAndDecaysWithoutRefreshing()
     {
-        Enter(45f);
+        Enter(30f);
         float speed = _motor.HorizontalSpeed;
         for (int i = 0; i < 25; i++) Step();
         Assert.IsTrue(_motor.IsWallSliding);
@@ -77,29 +289,26 @@ public sealed class WallMovementTests
     }
 
     [Test]
-    public void HeadOn_GraceAllowsReverseJumpButExpiredContactCannotBankSpeed()
+    public void HeadOn_DoesNotAttachOrGrantWallJump()
     {
         Enter(90f);
-        Assert.That(_motor.HorizontalSpeed, Is.LessThan(0.01f));
-        for (int i = 0; i < 20; i++) Step();
+        Assert.IsFalse(_motor.IsWallSliding);
         Step(jump: true);
-        Assert.AreEqual(1, _motor.WallJumpCount);
-        Assert.That(_motor.HorizontalSpeed, Is.LessThan(0.01f));
+        Assert.AreEqual(0, _motor.WallJumpCount);
     }
 
     [Test]
-    public void HeadOn_ImmediateJumpReturnsIncomingMomentum()
+    public void TooSteep_ImmediateJumpDoesNotCountAsWallJump()
     {
-        Enter(90f);
+        Enter(60f);
         Step(jump: true);
-        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(20f + _params.WallJumpBoost).Within(0.02f));
-        Assert.Less(_motor.Velocity.z, 0f);
+        Assert.AreEqual(0, _motor.WallJumpCount);
     }
 
     [Test]
     public void LeavingWall_ClearsJumpPermission()
     {
-        Enter(45f);
+        Enter(30f);
         _motor.transform.position += Vector3.back * 2f;
         Physics.SyncTransforms();
         Step(jump: true);
@@ -110,11 +319,12 @@ public sealed class WallMovementTests
     [Test]
     public void RecontactSameWall_RequiresSeparationThenCanBhopAgain()
     {
-        Enter(45f);
+        Enter(30f);
         Step(jump: true);
         for (int i = 0; i < 20; i++) Step();
         float speed = _motor.HorizontalSpeed;
-        SetVelocity(new Vector3(speed / Mathf.Sqrt(2f), 0f, speed / Mathf.Sqrt(2f)));
+        SetVelocity(new Vector3(Mathf.Cos(30f * Mathf.Deg2Rad), 0f,
+            Mathf.Sin(30f * Mathf.Deg2Rad)) * speed);
         for (int i = 0; i < 80 && !_motor.IsWallSliding; i++) Step();
         Assert.IsTrue(_motor.IsWallSliding);
         Step(jump: true);
@@ -125,25 +335,41 @@ public sealed class WallMovementTests
     [Test]
     public void WallJump_WithForwardInputStillSeparatesFromWall()
     {
-        Enter(45f);
+        Enter(30f);
         Step(jump: true, move: Vector2.up);
         Assert.Less(_motor.Velocity.z, 0f);
         Assert.AreEqual(1, _motor.WallJumpCount);
     }
 
     [Test]
-    public void JumpBuffer_TriggersOnFollowingContactTick()
+    public void WallJump_KeepsOutwardVelocityUntilSeparated()
     {
-        SetVelocity(new Vector3(14f, 0f, 14f));
+        _params.WallJumpAngle = 1f;
+        Enter(30f);
+        Step(jump: true, move: Vector2.up);
+        Assert.AreEqual(1, _motor.WallJumpCount);
+        for (int i = 0; i < 20; i++)
+        {
+            Step(move: Vector2.up);
+            Assert.Less(_motor.Velocity.z, 0f, $"第 {i + 1} 帧过早回头；z={_motor.transform.position.z}");
+        }
+        Assert.AreEqual(1, _motor.WallJumpCount);
+    }
+
+    [Test]
+    public void JumpOnContactTick_UsesBufferedPress()
+    {
+        _motor.transform.position = new Vector3(0f, 3f, 0.9f);
+        Physics.SyncTransforms();
+        SetVelocity(new Vector3(17f, 0f, 10f));
         Step(jump: true);
-        for (int i = 0; i < 7 && _motor.WallJumpCount == 0; i++) Step();
         Assert.AreEqual(1, _motor.WallJumpCount);
     }
 
     [Test]
     public void Freeze_DoesNotMoveOrGenerateEnergy_ExpiredJumpIsNotReplayed()
     {
-        Enter(45f);
+        Enter(30f);
         Vector3 position = _motor.transform.position;
         float energy = _motor.Energy;
         _motor.Simulate(new PlayerInputFrame { JumpPressed = true, JumpTime = _now }, 0f, _now);
@@ -168,7 +394,7 @@ public sealed class WallMovementTests
     [Test]
     public void Teleport_ClearsAllMotionAndContactState()
     {
-        Enter(45f);
+        Enter(30f);
         _motor.Teleport(Vector3.up * 10f);
         Assert.AreEqual(Vector3.zero, _motor.Velocity);
         Assert.AreEqual(0f, _motor.Energy);
@@ -182,7 +408,7 @@ public sealed class WallMovementTests
     public void JumpReward_RespectsSpeedCap()
     {
         _params.MaxSpeed = 20f;
-        Enter(45f);
+        Enter(30f);
         Step(jump: true);
         Assert.That(_motor.HorizontalSpeed, Is.LessThanOrEqualTo(20.001f));
     }
@@ -194,7 +420,7 @@ public sealed class WallMovementTests
         _objects.RemoveAt(1);
         Wall(new Vector3(-24f, 3f, 2f), new Vector3(50f, 20f, 1f));
         Wall(new Vector3(26f, 3f, 2f), new Vector3(50f, 20f, 1f));
-        Enter(45f);
+        Enter(30f);
         for (int i = 0; i < 30; i++) Step();
         Assert.IsTrue(_motor.IsWallSliding);
         Assert.Greater(_motor.transform.position.x, 1f);
@@ -228,7 +454,19 @@ public sealed class WallMovementTests
     {
         float radians = angle * Mathf.Deg2Rad;
         SetVelocity(new Vector3(Mathf.Cos(radians), 0f, Mathf.Sin(radians)) * 20f);
-        for (int i = 0; i < 16 && !_motor.IsWallSliding; i++) Step();
+        for (int i = 0; i < 60 && !_motor.IsWallSliding; i++) Step();
+    }
+
+    private void BuildCorner(float angle)
+    {
+        Object.DestroyImmediate(_objects[1]);
+        _objects.RemoveAt(1);
+        Wall(new Vector3(-1f, 3f, 2f), new Vector3(18f, 20f, 1f));
+        float radians = angle * Mathf.Deg2Rad;
+        Vector3 tangent = new Vector3(Mathf.Cos(radians), 0f, -Mathf.Sin(radians));
+        Wall(new Vector3(8f, 3f, 2f) + tangent * 6f, new Vector3(12f, 20f, 1f));
+        _objects[_objects.Count - 1].transform.rotation = Quaternion.Euler(0f, angle, 0f);
+        Physics.SyncTransforms();
     }
     private void Step(bool jump = false, Vector2 move = default)
     {

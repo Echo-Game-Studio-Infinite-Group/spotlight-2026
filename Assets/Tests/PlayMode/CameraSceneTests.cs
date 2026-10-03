@@ -94,7 +94,14 @@ public sealed class CameraSceneTests
         var camera = character.GetComponentInChildren<CinemachineVirtualCamera>(true);
         Assert.NotNull(camera);
         Assert.AreEqual(character.transform.Find("CameraTarget"), camera.Follow);
-        Assert.NotNull(camera.GetCinemachineComponent<Cinemachine3rdPersonFollow>());
+        Cinemachine3rdPersonFollow follow = camera.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
+        Assert.NotNull(follow);
+        Assert.AreEqual(0, follow.CameraCollisionFilter.value);
+        CameraWallFade wallFade = character.GetComponent<CameraWallFade>();
+        Assert.NotNull(wallFade);
+        var wallFadeBindings = new SerializedObject(wallFade);
+        Assert.AreEqual(camera.Follow, wallFadeBindings.FindProperty("_target").objectReferenceValue);
+        Assert.NotNull(wallFadeBindings.FindProperty("_wallMaterial").objectReferenceValue);
         var rig = new SerializedObject(character.GetComponent<PlayerCameraRig>());
         Assert.AreEqual(motor, rig.FindProperty("_motor").objectReferenceValue);
         var feedback = new SerializedObject(character.GetComponent<SpeedCameraFeedback>());
@@ -104,6 +111,54 @@ public sealed class CameraSceneTests
         foreach (Animator animator in character.GetComponentsInChildren<Animator>(true)) Assert.IsFalse(animator.applyRootMotion);
 #else
         Assert.Ignore("预制体接线验证在编辑器 PlayMode 中执行");
+#endif
+    }
+
+    [UnityTest]
+    public IEnumerator OccludingWallFadesAndRestoresWithoutChangingCollider()
+    {
+#if UNITY_EDITOR
+        Material wallMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Materials/Wall.mat");
+        Assert.NotNull(wallMaterial);
+        GameObject target = new GameObject("FadeTarget");
+        GameObject cameraObject = new GameObject("FadeTestCamera", typeof(Camera));
+        GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        GameObject fadeObject = new GameObject("CameraWallFadeTest");
+        try
+        {
+            target.transform.position = Vector3.up;
+            cameraObject.transform.position = Vector3.up + Vector3.back * 6f;
+            wall.transform.position = Vector3.up + Vector3.back * 3f;
+            wall.transform.localScale = new Vector3(2f, 3f, 0.5f);
+            Renderer renderer = wall.GetComponent<Renderer>();
+            Collider collider = wall.GetComponent<Collider>();
+            renderer.sharedMaterial = wallMaterial;
+            CameraWallFade fade = fadeObject.AddComponent<CameraWallFade>();
+            fade.Configure(target.transform, wallMaterial, cameraObject.GetComponent<Camera>());
+            Physics.SyncTransforms();
+            yield return null;
+            Assert.AreNotSame(wallMaterial, renderer.sharedMaterial);
+            var properties = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(properties);
+            Assert.Less(properties.GetColor("_BaseColor").a, 1f);
+            Assert.IsTrue(collider.enabled);
+
+            wall.transform.position += Vector3.right * 10f;
+            Physics.SyncTransforms();
+            for (int i = 0; i < 30 && renderer.sharedMaterial != wallMaterial; i++) yield return null;
+            Assert.AreSame(wallMaterial, renderer.sharedMaterial);
+            Assert.IsTrue(collider.enabled);
+        }
+        finally
+        {
+            Object.DestroyImmediate(fadeObject);
+            Object.DestroyImmediate(wall);
+            Object.DestroyImmediate(cameraObject);
+            Object.DestroyImmediate(target);
+        }
+#else
+        Assert.Ignore("遮挡材质验证在编辑器 PlayMode 中执行");
+        yield break;
 #endif
     }
 
@@ -126,17 +181,20 @@ public sealed class CameraSceneTests
         try
         {
             Assert.NotNull(motor);
-            Assert.AreEqual("character", motor.name);
             Assert.NotNull(motor.GetComponent<PlayerCameraRig>());
             Assert.NotNull(motor.GetComponent<SpeedCameraFeedback>());
+            Assert.NotNull(motor.GetComponent<CameraWallFade>());
             foreach (GameObject root in scene.GetRootGameObjects())
-                Assert.That(root.name, Is.Not.EqualTo("Player").And.Not.EqualTo("Player Virtual Camera"));
+                Assert.AreNotEqual("Player Virtual Camera", root.name);
             Assert.NotNull(brain);
             Assert.NotNull(time);
             Assert.IsTrue(brain.m_IgnoreTimeScale);
             // 场景加载恢复协程时，Brain 可能尚未经历第一次 LateUpdate。
             for (int i = 0; i < 10 && brain.ActiveVirtualCamera == null; i++) yield return null;
             Assert.NotNull(brain.ActiveVirtualCamera);
+            CinemachineVirtualCamera characterCamera = motor.GetComponentInChildren<CinemachineVirtualCamera>();
+            Assert.NotNull(characterCamera);
+            Assert.IsTrue(brain.IsLive(characterCamera), "Brain 应使用 character 下的虚拟相机");
             time.PlayerScale = 0f;
             Vector3 before = brain.transform.position;
             motor.Teleport(motor.transform.position + Vector3.up * 10f);
