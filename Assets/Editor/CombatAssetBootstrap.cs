@@ -17,6 +17,8 @@ public static class CombatAssetBootstrap
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
     private const string PlayerPrefabFolder = "Assets/Prefabs/Player";
     private const string PlayerPrefabPath = PlayerPrefabFolder + "/Player.prefab";
+    private const string EnemyPrefabFolder = "Assets/Prefabs/Enemies";
+    private const string EnemyPrefabPath = EnemyPrefabFolder + "/MeleeDummy.prefab";
 
     [MenuItem("超高速行者/战斗/创建示例战斗资产")]
     public static void CreateCombatAssets() => BuildCombatAssets(force: false);
@@ -116,11 +118,29 @@ public static class CombatAssetBootstrap
             SetPhase(def, 0, p => ConfigureDash(p, 0.10f, 0.22f, 16f, 35f, recoverySec: 0.50f));
         }, force);
 
+        // 敌人攻击 SO：不进取消表（取消表是玩家侧玩法），seed-only 创建即可
+        CreateAttack("EnemyMelee", "敌人近战挥击", def =>
+        {
+            def.CooldownSec = 1.5f;
+            def.DesignNote = "灰盒近战敌人（D3–D5 闭环验收：会攻击/会被杀）；前摇留玩家反应窗，数值占位";
+            SetPhase(def, 0, p =>
+            {
+                p.StartupSec = 0.35f; p.ActiveSec = 0.12f; p.RecoverySec = 0.55f;
+                p.BaseDamage = 10f; p.Knockback = 4f; p.HitStopSec = 0.03f;
+                p.DamageProfile = new HitboxProfile
+                {
+                    Shape = HitboxShape.Capsule,
+                    CapsuleRadius = 0.5f, CapsuleHeight = 1.2f,
+                    LocalOffset = new Vector3(0f, 1.0f, 0.9f),
+                };
+            });
+        }, force);
+
         AttackCancelTable table = CreateCancelTable(force, normal, fast, flash, rashomon, push, dash1, dash2, dash3);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[CombatAssetBootstrap] 战斗资产已就绪（force={force}）：8 个招式 + 取消表（{table.Rules.Length} 条规则）→ {CombatFolder}");
+        Debug.Log($"[CombatAssetBootstrap] 战斗资产已就绪（force={force}）：玩家 8 招式 + 敌人近战 1 + 取消表（{table.Rules.Length} 条规则）→ {CombatFolder}");
     }
 
     [MenuItem("超高速行者/战斗/装配战斗组件到场景")]
@@ -135,17 +155,7 @@ public static class CombatAssetBootstrap
         if (!EditorGuard.ConfirmSaveModifiedScenes()) return;
 
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        // 角色实例按 PlayerMotor 组件定位：prefab 根名随版本变过（"Player" → 随文件名的 "character"），不依赖名字
-        GameObject player = null;
-        foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            PlayerMotor motor = root.GetComponentInChildren<PlayerMotor>();
-            if (motor != null)
-            {
-                player = motor.gameObject;
-                break;
-            }
-        }
+        GameObject player = FindPlayerByMotor(scene);
         if (player == null)
         {
             Debug.LogError("[CombatAssetBootstrap] 场景缺少角色（未找到 PlayerMotor），装配中止");
@@ -270,6 +280,150 @@ public static class CombatAssetBootstrap
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("[CombatAssetBootstrap] 战斗组件装配完成：InputSampler/Health/Hurtbox/Hitbox×2/PlayerCombat/DamageResolver");
+    }
+
+    [MenuItem("超高速行者/战斗/装配示例敌人到场景")]
+    public static void WireEnemiesToScene()
+    {
+        EditorGuard.RunWhenEditing(WireEnemiesToSceneInner, "CombatAssetBootstrap");
+    }
+
+    // 敌人侧装配（D3–D5 闭环：一个敌人可攻击/可被击杀）。敌我物理隔离走层：
+    // 玩家受击层 Hurtbox（既有）+ 敌人受击层 EnemyHurtbox（本菜单注册）——
+    // 敌人 QueryMask 只查玩家层（敌人打不到敌人），玩家 QueryMask 扩为两层（打得着敌人）
+    private static void WireEnemiesToSceneInner()
+    {
+        // OpenScene(Single) 会静默丢弃当前场景未保存改动——先征求处理意愿，取消即中止
+        if (!EditorGuard.ConfirmSaveModifiedScenes()) return;
+
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        GameObject player = FindPlayerByMotor(scene);
+        if (player == null)
+        {
+            Debug.LogError("[CombatAssetBootstrap] 场景缺少角色（未找到 PlayerMotor），装配中止");
+            return;
+        }
+
+        // 1) 层注册（EnsureUserLayer 幂等：玩家层可能未建，一并确保）
+        int playerHurtLayer = EnsureUserLayer("Hurtbox");
+        int enemyHurtLayer = EnsureUserLayer("EnemyHurtbox");
+        if (playerHurtLayer < 0 || enemyHurtLayer < 0)
+        {
+            Debug.LogError("[CombatAssetBootstrap] 受击层注册失败（User Layer 槽满？），装配中止");
+            return;
+        }
+
+        // 2) 玩家伤害框掩码扩展：只在「恰好还是玩家层单掩码」时扩——手调过的掩码不碰（seed-only 纪律）
+        foreach (Hitbox box in player.GetComponents<Hitbox>())
+        {
+            if (box.Kind != HitboxKind.Damage) continue;
+            if (box.QueryMask.value == 1 << playerHurtLayer)
+            {
+                box.QueryMask = (1 << playerHurtLayer) | (1 << enemyHurtLayer);
+                EditorUtility.SetDirty(box);
+            }
+        }
+
+        // 3) 幂等：场景已有敌人实例则只补层掩码，不重复创建（prefab 内层设置已随资产）
+        if (Object.FindObjectsByType<EnemyCombat>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length > 0)
+        {
+            Debug.Log("[CombatAssetBootstrap] 场景已有敌人实例，本次仅确保层与掩码");
+            return;
+        }
+
+        AttackDefinition enemyAttack = AssetDatabase.LoadAssetAtPath<AttackDefinition>($"{CombatFolder}/EnemyMelee.asset");
+        if (enemyAttack == null)
+        {
+            Debug.LogError("[CombatAssetBootstrap] 缺少 EnemyMelee.asset——先执行「创建示例战斗资产」");
+            return;
+        }
+
+        // 4) 敌人实体：优先复用既有 prefab（seed-only——prefab 里手调的数值不因重跑被覆盖重建）
+        GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
+        GameObject first;
+        if (enemyPrefab != null)
+        {
+            first = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab, scene);
+        }
+        else
+        {
+            first = BuildEnemyGo(enemyAttack, playerHurtLayer, enemyHurtLayer);
+            EnsureFolder("Assets/Prefabs", "Enemies");
+            PrefabUtility.SaveAsPrefabAssetAndConnect(first, EnemyPrefabPath, InteractionMode.AutomatedAction);
+        }
+
+        // 5) 放两只在玩家前方两侧（灰盒摆位，后续关卡侧接手布怪）
+        Vector3 basePos = player.transform.position + player.transform.forward * 10f;
+        Place(first, basePos + Vector3.left * 3f, player.transform.position);
+        GameObject second = (GameObject)PrefabUtility.InstantiatePrefab(
+            AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath), scene);
+        Place(second, basePos + Vector3.right * 3f, player.transform.position);
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("[CombatAssetBootstrap] 敌人装配完成：MeleeDummy ×2（EnemyMotor/EnemyCombat/Health/Hurtbox/Hitbox）");
+    }
+
+    private static void Place(GameObject enemy, Vector3 position, Vector3 faceTarget)
+    {
+        enemy.transform.position = position;
+        Vector3 to = faceTarget - position;
+        to.y = 0f;
+        if (to.sqrMagnitude > 0.0001f) enemy.transform.rotation = Quaternion.LookRotation(to.normalized);
+        // 组装流是「Instantiate(零点) + 后设位」，EnemyCombat.Awake 记到的出生点是零点——显式纠正
+        EnemyCombat combat = enemy.GetComponent<EnemyCombat>();
+        if (combat != null) combat.SetSpawnPoint(position, enemy.transform.rotation);
+    }
+
+    // 组装敌人 GameObject（首次创建 prefab 用；组件结构对齐玩家：受击形状在子物体、与移动胶囊分层）
+    private static GameObject BuildEnemyGo(AttackDefinition attack, int playerHurtLayer, int enemyHurtLayer)
+    {
+        // 灰盒可见体：内置胶囊网格——原生 Collider 删掉（阻挡走 CharacterController，受击形状独立配置）
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        body.name = "MeleeDummy";
+        Object.DestroyImmediate(body.GetComponent<Collider>());
+
+        CharacterController controller = body.AddComponent<CharacterController>();
+        controller.center = new Vector3(0f, 0.9f, 0f);
+        controller.height = 1.8f;
+        controller.radius = 0.4f;
+
+        body.AddComponent<EnemyMotor>();
+
+        HealthComponent health = body.AddComponent<HealthComponent>();
+        health.Layer = TimeLayer.World; // 敌人属世界层：时停时敌人整体冻结
+        health.MaxHealth = 50f;
+
+        EnemyCombat combat = body.AddComponent<EnemyCombat>();
+        combat.Attack = attack;
+
+        Hitbox hitbox = body.AddComponent<Hitbox>();
+        hitbox.Kind = HitboxKind.Damage;
+        hitbox.QueryMask = 1 << playerHurtLayer; // 敌人只打玩家受击层——层即阵营，敌人互不误伤
+        combat.DamageHitbox = hitbox;
+
+        GameObject hurtGo = new GameObject("Hurtbox");
+        hurtGo.transform.SetParent(body.transform, false);
+        BoxCollider hurtCol = hurtGo.AddComponent<BoxCollider>();
+        hurtCol.center = new Vector3(0f, 0.95f, 0f);
+        hurtCol.size = new Vector3(0.8f, 1.8f, 0.8f);
+        hurtCol.isTrigger = true;
+        Hurtbox hurtbox = hurtGo.AddComponent<Hurtbox>();
+        hurtbox.Health = health;
+        hurtGo.layer = enemyHurtLayer;
+
+        return body;
+    }
+
+    // 角色实例按 PlayerMotor 组件定位：prefab 根名随版本变过（"Player" → 随文件名的 "character"），不依赖名字
+    private static GameObject FindPlayerByMotor(Scene scene)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            PlayerMotor motor = root.GetComponentInChildren<PlayerMotor>();
+            if (motor != null) return motor.gameObject;
+        }
+        return null;
     }
 
     // —— 资产构造辅助（seed-only：只在新建或 force 时写入模板值）——
