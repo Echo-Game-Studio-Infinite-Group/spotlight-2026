@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 矢量转换器与时间效果的全部可调数值（策划案 v1.03 第 4 节 / 第 6 节）
+// 矢量转换器（能量账户）的全部可调数值
 [CreateAssetMenu(fileName = "EnergyParams", menuName = "超高速行者/EnergyParams")]
 public class EnergyParams : ScriptableObject
 {
@@ -20,20 +20,4 @@ public class EnergyParams : ScriptableObject
 
     [Tooltip("折返：S + 右键，速度值不变、方向反向")]
     public float ReverseCost = 50f;
-
-    [Header("技能触发（按键不分先后，只按是否落在同一时间窗内判定）")]
-    [Tooltip("组合键时间窗：右键按下后，在本时长内再按下 W / 空格 / S，即判定为对应的机动技能")]
-    [Range(0.05f, 0.5f)]
-    public float ComboWindow = 0.15f;
-
-    [Tooltip("右键长按判定：右键持续按住超过（组合键时间窗 + 本值）仍无组合键落下，才视为长按（时停用）")]
-    [Range(0.05f, 0.5f)]
-    public float RightHoldExtra = 0.1f;
-
-    [Header("时间效果")]
-    [Tooltip("时停：长按右键，每 tick 消耗。满能量 200 / 本值 = 可维持的 tick 数（按 60tick/秒 约 3.33 秒）")]
-    public float TimeStopCostPerTick = 1f;
-
-    [Tooltip("parry 近战时缓：时间流速降到的比例")]
-    [Range(0f, 1f)] public float TimeSlowScale = 0.05f;
 }
