@@ -15,7 +15,7 @@ public sealed class CameraSceneTests
     public IEnumerator CameraOrbitsIndependently_AndWasdTurnsCharacterWithoutCameraFeedback()
     {
 #if UNITY_EDITOR
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/character.prefab");
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
         GameObject character = Object.Instantiate(prefab, Vector3.up * 100f, Quaternion.identity);
         GameObject cameraObject = new GameObject("FacingTestCamera", typeof(Camera), typeof(CinemachineBrain));
         try
@@ -80,8 +80,11 @@ public sealed class CameraSceneTests
     public void CharacterPrefab_HasOneMotorAndSelfContainedCameraBindings()
     {
 #if UNITY_EDITOR
-        GameObject character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/character.prefab");
+        GameObject character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
         Assert.NotNull(character);
+        Assert.NotNull(character.GetComponent<Player>());
+        Assert.NotNull(character.GetComponent<PlayerCombat>());
+        Assert.AreEqual(0, GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(character));
         PlayerMotor motor = character.GetComponent<PlayerMotor>();
         Assert.NotNull(motor);
         Assert.NotNull(motor.Params);
@@ -180,7 +183,14 @@ public sealed class CameraSceneTests
         }
         try
         {
+            int playerCount = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+                playerCount += root.GetComponentsInChildren<PlayerMotor>(true).Length;
+            Assert.AreEqual(1, playerCount, "场景必须只保留新版玩家，避免输入与相机互相竞争");
             Assert.NotNull(motor);
+            Assert.NotNull(motor.GetComponent<Player>());
+            Assert.NotNull(motor.GetComponent<PlayerCombat>());
+            Assert.NotNull(motor.GetComponent<PlayerHealth>());
             Assert.NotNull(motor.GetComponent<PlayerCameraRig>());
             Assert.NotNull(motor.GetComponent<SpeedCameraFeedback>());
             Assert.NotNull(motor.GetComponent<CameraWallFade>());
@@ -194,6 +204,10 @@ public sealed class CameraSceneTests
             Assert.NotNull(brain.ActiveVirtualCamera);
             CinemachineVirtualCamera characterCamera = motor.GetComponentInChildren<CinemachineVirtualCamera>();
             Assert.NotNull(characterCamera);
+            Assert.AreEqual(0, characterCamera.GetCinemachineComponent<Cinemachine3rdPersonFollow>().CameraCollisionFilter.value);
+            var wallBindings = new SerializedObject(motor.GetComponent<CameraWallFade>());
+            Assert.AreEqual(characterCamera.Follow, wallBindings.FindProperty("_target").objectReferenceValue);
+            Assert.NotNull(wallBindings.FindProperty("_wallMaterial").objectReferenceValue);
             Assert.IsTrue(brain.IsLive(characterCamera), "Brain 应使用 character 下的虚拟相机");
             time.PlayerScale = 0f;
             Vector3 before = brain.transform.position;

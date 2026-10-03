@@ -18,10 +18,12 @@ public sealed class PlayerMotor : MonoBehaviour
     private float _landTime = float.NegativeInfinity;
     private float _jumpUntil = float.NegativeInfinity;
     private float _wallTime;
+    private float _wallLastContactTime;
     private float _wallSpeed;
     private Vector3 _wallNormal;
     private Vector3 _wallTangent;
     private bool _wallLocked;
+    private bool _wallJumpExitProtected;
     private Vector3 _lockedNormal;
     private Vector3 _lockedPoint;
     private float _lastWallJump = float.NegativeInfinity;
@@ -98,13 +100,21 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 wish = WishDirection(input.Move);
         IsSprinting = input.SprintHeld && input.Move.y > 0f;
         RearmWall();
-        if (IsWallSliding && (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _) ||
-            Vector3.Dot(wish, _wallNormal) > 0.1f)) ExitWall();
+        if (IsWallSliding)
+        {
+            bool closeToWall = _contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _);
+            if (closeToWall) _wallLastContactTime = _clock;
+            float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
+            if (separation > _params.WallProbeDistance + _controller.skinWidth * 2f ||
+                _clock - _wallLastContactTime > _params.WallContactGraceTime)
+                ExitWall();
+        }
 
         UpdateFacing(wish, dt, wallJumpFacingLocked);
         Vector3 drive = transform.forward * wish.magnitude;
         // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
-        if (wish != Vector3.zero && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown)
+        if (wish != Vector3.zero && !IsWallSliding && !wallJumpFacingLocked && !_wallJumpExitProtected &&
+            _clock - _lastWallJump >= _params.WallJumpCooldown)
             SetHorizontal(transform.forward * HorizontalSpeed);
 
         if (input.SlidePressed && IsGrounded && !IsSliding &&
@@ -150,6 +160,9 @@ public sealed class PlayerMotor : MonoBehaviour
         bool wasGrounded = IsGrounded;
         bool wasWallSliding = IsWallSliding;
         _contacts.Move(ref _velocity, dt);
+        if (IsWallSliding && _contacts.HasWall &&
+            Vector3.Angle(_wallNormal, _contacts.WallNormal) <= _params.WallSeamAngle)
+            _wallLastContactTime = _clock;
         if (_contacts.Grounded)
         {
             if (!wasGrounded) _landTime = _clock;
@@ -159,7 +172,21 @@ public sealed class PlayerMotor : MonoBehaviour
         else
         {
             if (wasGrounded) State = MovementState.Airborne;
-            if (!IsSliding && !IsWallSliding) TryEnterWall(wish);
+            if (IsWallSliding && _contacts.TryGetWallTransition(_wallNormal, _params.WallSeamAngle, out WallContact corner))
+            {
+                if (corner.ApproachAngle + 0.01f < _params.WallMaxApproachAngle)
+                    ContinueWall(corner);
+                else
+                {
+                    WallCollision?.Invoke(corner);
+                    ExitWall();
+                }
+            }
+            if (!IsSliding && !IsWallSliding && !wasWallSliding)
+            {
+                TryEnterWall(wish);
+                if (jump && IsWallSliding) JumpFromWall();
+            }
         }
         Energy = Mathf.Min(_params.EnergyMax, Energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold)
             * _params.EnergyPerSecondPerExcessSpeed * dt);
@@ -186,16 +213,17 @@ public sealed class PlayerMotor : MonoBehaviour
 
     private void TryEnterWall(Vector3 wish)
     {
-        // CharacterController 返回的接触法线有浮点误差，边界角允许百分之一度容差。
-        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f < _params.WallMinApproachAngle) return;
+        // 以入墙速度与墙切线的锐角判定；只接受确实向墙内运动且小于上限的接触。
+        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle) return;
         bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
             Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
         if (sameWall) return;
         _wallNormal = _contacts.WallNormal;
-        if (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _)) return;
+        // 当前帧真实墙面碰撞足以入墙；贴墙时的 CapsuleCast 可能从重叠体积起步而漏报。
         _wallTangent = MovementMath.WallTangent(_contacts.WallIncoming, _wallNormal, wish);
         _wallSpeed = Mathf.Min(MovementMath.Horizontal(_contacts.WallIncoming).magnitude, _params.MaxSpeed);
         _wallTime = _clock;
+        _wallLastContactTime = _clock;
         WallApproachAngle = _contacts.WallAngle;
         _wallLocked = true;
         _lockedNormal = _wallNormal;
@@ -248,6 +276,7 @@ public sealed class PlayerMotor : MonoBehaviour
         SetHorizontal(MovementMath.WallJump(_wallTangent, _wallNormal, speed, _params.WallJumpAngle));
         Jump(_params.WallJumpUpImpulse);
         _lastWallJump = _clock;
+        _wallJumpExitProtected = true;
         WallJumpCount++;
     }
 
@@ -255,8 +284,13 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         if (!_wallLocked || IsWallSliding) return;
         float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
-        if (separation >= _params.WallRearmDistance && _clock - _lastWallJump >= _params.WallJumpCooldown)
+        if (separation >= _params.WallRearmDistance &&
+            !_contacts.ProbeWall(_lockedNormal, _params.WallRearmDistance, out _) &&
+            _clock - _lastWallJump >= _params.WallJumpCooldown)
+        {
             _wallLocked = false;
+            _wallJumpExitProtected = false;
+        }
     }
 
     private void ExitWall() { State = MovementState.Airborne; _wallSpeed = 0f; }
@@ -329,8 +363,8 @@ public sealed class PlayerMotor : MonoBehaviour
         Energy = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
-        IsSliding = IsSprinting = _wallLocked = false;
-        _clock = _wallTime = _wallSpeed = WallApproachAngle = 0f;
+        IsSliding = IsSprinting = _wallLocked = _wallJumpExitProtected = false;
+        _clock = _wallTime = _wallLastContactTime = _wallSpeed = WallApproachAngle = 0f;
         _landTime = _jumpUntil = _lastWallJump = float.NegativeInfinity;
         _wallNormal = _wallTangent = _lockedNormal = _lockedPoint = Vector3.zero;
         _input?.Clear();

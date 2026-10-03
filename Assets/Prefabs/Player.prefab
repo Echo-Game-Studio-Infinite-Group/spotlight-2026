@@ -801,7 +801,7 @@ GameObject:
   - component: {fileID: 1736711088833273241}
   - component: {fileID: 6266342168046747971}
   - component: {fileID: 2705782337457033224}
-  - component: {fileID: 1628139967701848346}
+  - component: {fileID: 5879452015283647305}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -871,13 +871,13 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 1.7652644
+  m_Height: 1.7
   m_Radius: 0.3793888
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0
-  m_Center: {x: 0, y: 0.8826322, z: 0}
+  m_Center: {x: 0, y: 0.85, z: 0}
 --- !u!114 &4126593561858522252
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1084,7 +1084,7 @@ MonoBehaviour:
   _slashHeight: 1.1
   _slashColor: {r: 0.75, g: 0.92, b: 1, a: 0.85}
   _logPlayback: 0
---- !u!114 &1628139967701848346
+--- !u!114 &5879452015283647305
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1093,9 +1093,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 2705039034352461038}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 7e7f2e285bd94f1a9c28cda10ed9b9fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _target: {fileID: 3179376418274453387}
+  _wallMaterial: {fileID: 2100000, guid: 854a649763aba2c46b5fc737bf27e677, type: 2}
+  _occludedAlpha: 0.2
+  _fadeSpeed: 8
+  _probeRadius: 0.1
+  _wallLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &2780969340537036426
 GameObject:
   m_ObjectHideFlags: 0
@@ -1230,7 +1238,6 @@ MonoBehaviour:
   _damageSourceBehaviour: {fileID: 5150173036752195327}
   _knockbackStrength: 1
   _logHits: 0
-  _probeInterval: 0.05
 --- !u!1 &3134915696120621023
 GameObject:
   m_ObjectHideFlags: 0
@@ -1517,7 +1524,7 @@ MonoBehaviour:
   CameraDistance: 6
   CameraCollisionFilter:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 0
   IgnoreTag: Player
   CameraRadius: 0.2
   DampingIntoCollision: 0

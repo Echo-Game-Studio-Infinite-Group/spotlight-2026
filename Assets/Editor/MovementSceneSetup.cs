@@ -11,7 +11,7 @@ using UnityEngine.Rendering.Universal;
 public static class MovementSceneSetup
 {
     public const string ScenePath = "Assets/Scenes/TestScene.unity";
-    public const string CharacterPath = "Assets/Prefabs/character.prefab";
+    public const string CharacterPath = "Assets/Prefabs/Player.prefab";
 
     [MenuItem("超高速行者/装配 character 与 Cinemachine")]
     public static void Rebuild()
@@ -23,7 +23,9 @@ public static class MovementSceneSetup
             EditorApplication.isPlaying = false;
             return;
         }
-        Apply(EditorSceneManager.OpenScene(ScenePath));
+        Scene scene = SceneManager.GetSceneByPath(ScenePath);
+        if (!scene.IsValid() || !scene.isLoaded) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+        Apply(scene);
     }
 
     private static void AfterPlay(PlayModeStateChange state)
@@ -40,8 +42,7 @@ public static class MovementSceneSetup
         if (parameters == null || actions == null) throw new InvalidOperationException("移动参数或 Action Map 缺失");
         ConfigurePrefab(parameters, actions);
 
-        // character.prefab 是模型变体，实例根沿用源预制体的名字（就是 "Player"），按名字找不到：
-        // 改为按「是否实例自 character.prefab」识别，避免重复实例化、以及把上一份装好的角色当成旧 Player 删掉
+        // 移动与战斗共用新版 Player，按预制体来源识别，避免重复装配生成两套玩家。
         GameObject character = FindCharacterInstance(scene);
         GameObject oldPlayer = FindLegacyPlayer(scene, character);
         if (character == null)
@@ -70,7 +71,8 @@ public static class MovementSceneSetup
         }
         ConfigureCharacter(character, parameters, actions, cameraObject.transform, volume);
         // 只清理由旧装配创建的控制对象，不碰地图、模型与其他场景内容。
-        if (oldPlayer != null && oldPlayer != character) UnityEngine.Object.DestroyImmediate(oldPlayer);
+        foreach (GameObject root in scene.GetRootGameObjects())
+            if (root != character && IsPlayerRoot(root)) UnityEngine.Object.DestroyImmediate(root);
         GameObject oldCamera = Find(scene, "Player Virtual Camera");
         if (oldCamera != null && !oldCamera.transform.IsChildOf(character.transform))
             UnityEngine.Object.DestroyImmediate(oldCamera);
@@ -135,14 +137,15 @@ public static class MovementSceneSetup
         controller.minMoveDistance = 0f;
         foreach (Animator animator in character.GetComponentsInChildren<Animator>(true))
         {
-            animator.runtimeAnimatorController = PlayerAnimationSetup.EnsureController();
+            if (animator.runtimeAnimatorController == null)
+                animator.runtimeAnimatorController = PlayerAnimationSetup.EnsureController();
             animator.applyRootMotion = false;
             EditorUtility.SetDirty(animator);
-            // character 是模型的变体，必须记录覆盖才能在重新导入后保留关闭状态。
+            // 模型是嵌套预制体，必须记录覆盖才能在重新导入后保留关闭状态。
             if (PrefabUtility.IsPartOfPrefabInstance(animator))
                 PrefabUtility.RecordPrefabInstancePropertyModifications(animator);
         }
-        foreach (Transform child in character.GetComponentsInChildren<Transform>(true)) child.gameObject.tag = "Player";
+        character.tag = "Player";
 
         PlayerInputReader input = GetOrAdd<PlayerInputReader>(character);
         input.Configure(actions);
@@ -150,7 +153,8 @@ public static class MovementSceneSetup
         motor.SetParams(parameters);
         motor.SetMovementReference(cameraReference);
         motor.enabled = true;
-        GetOrAdd<PlayerAnimation>(character).Configure(character.GetComponentInChildren<Animator>(true));
+        if (character.GetComponent<PlayerAnimation>() == null)
+            character.AddComponent<PlayerAnimation>().Configure(character.GetComponentInChildren<Animator>(true));
         GetOrAdd<PlayerRespawn>(character);
         GetOrAdd<DebugHUD>(character);
 
@@ -201,11 +205,14 @@ public static class MovementSceneSetup
         CinemachineVirtualCamera looseVcam = Find(scene, "Virtual Camera")?.GetComponent<CinemachineVirtualCamera>();
         if (motor == null || !motor.enabled || motor.Params == null || character.GetComponent<PlayerInputReader>() == null ||
             character.GetComponent<PlayerCameraRig>() == null || character.GetComponent<SpeedCameraFeedback>() == null ||
+            character.GetComponent<CameraWallFade>() == null ||
             camera == null || camera.GetComponent<CinemachineBrain>() == null || vcam == null || vcam.Follow == null ||
+            vcam.GetCinemachineComponent<Cinemachine3rdPersonFollow>() == null ||
+            vcam.GetCinemachineComponent<Cinemachine3rdPersonFollow>().CameraCollisionFilter.value != 0 ||
             (looseVcam != null && looseVcam.isActiveAndEnabled && looseVcam != vcam) ||
             FindLegacyPlayer(scene, character) != null || Find(scene, "Player Virtual Camera") != null)
-            throw new InvalidOperationException("character 的移动或 Cinemachine 接线校验失败");
-        Debug.Log("[MovementSceneSetup] character 预制体及场景已绑定新运动与相机，旧 Player 已清理");
+            throw new InvalidOperationException("Player 的移动、无碰撞相机或墙体透明接线校验失败");
+        Debug.Log("[MovementSceneSetup] 已保留唯一新版 Player，相机碰撞关闭，墙体透明已接线");
     }
 
     private static T GetOrAdd<T>(GameObject go) where T : Component
@@ -227,16 +234,24 @@ public static class MovementSceneSetup
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterPath);
         if (prefab == null) return null;
-        foreach (GameObject root in scene.GetRootGameObjects())
-            if (PrefabUtility.GetCorrespondingObjectFromSource(root) == prefab) return root;
+        GameObject[] roots = scene.GetRootGameObjects();
+        // 同一新版预制体被重复拖入时，保留层级中最后一个实例及其场景覆盖。
+        for (int i = roots.Length - 1; i >= 0; i--)
+            if (PrefabUtility.GetCorrespondingObjectFromSource(roots[i]) == prefab) return roots[i];
         return null;
     }
 
-    // 旧装配遗留的裸角色：挂着 PlayerMotor 但不是 character 实例（时间久了可能已被改名）
+    private static bool IsPlayerRoot(GameObject root)
+    {
+        if (root.GetComponent<PlayerMotor>() != null || root.GetComponent<Player>() != null) return true;
+        // 缺失模型源的旧变体也要清理；它可能已经无法读到任何运行时组件。
+        return PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root) == "Assets/Prefabs/character.prefab";
+    }
+
     private static GameObject FindLegacyPlayer(Scene scene, GameObject character)
     {
         foreach (GameObject root in scene.GetRootGameObjects())
-            if (root != character && root.GetComponent<PlayerMotor>() != null) return root;
+            if (root != character && IsPlayerRoot(root)) return root;
         return null;
     }
 }
