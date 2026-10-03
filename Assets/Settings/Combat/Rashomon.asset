@@ -1,0 +1,132 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 641ca553e629aaf4dbfe8b24116bda7f, type: 3}
+  m_Name: Rashomon
+  m_EditorClassIdentifier: 
+  DisplayName: "\u8FDE\u65A9"
+  EnergyCost: 100
+  CooldownSec: 0
+  ClearSpeedOnStart: 1
+  MinSpeedRatio: 0
+  MaxSpeedRatio: Infinity
+  ClearMomentumOnLandIfUnderived: 0
+  DesignNote: "\u7B56\u5212\u6848 \xA76\uFF08P2 \u9879\uFF09\uFF1A\u6570\u5200\u540E\u63A5\u5927\u5A01\u529B\u65A9\uFF0C\u6EDE\u7A7A\u51E0\u4E4E\u65E0\u6C34\u5E73\u4F4D\u79FB\uFF1B\u65E0
+    parry \u5224\u5B9A\uFF1B\u6536\u5C3E\u5927\u65A9\u540E\u4E0D\u53EF\u53D6\u6D88\uFF08\u6536\u5C3E\u6BB5\u6062\u590D\u7A97\u4E0D\u5F00\u7A97\u53E3\u5373\u6210\u7ACB\uFF09"
+  Phases:
+  - StartupSec: 0.08
+    ActiveSec: 0.06
+    RecoverySec: 0.06
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 6
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 1
+    HitStopSec: 0.03
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 2
+    MotionSpeed: 8
+    Sweep: 0
+  - StartupSec: 0.06
+    ActiveSec: 0.06
+    RecoverySec: 0.06
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 6
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 1
+    HitStopSec: 0.03
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 2
+    MotionSpeed: 8
+    Sweep: 0
+  - StartupSec: 0.06
+    ActiveSec: 0.06
+    RecoverySec: 0.06
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 6
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 1
+    HitStopSec: 0.03
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 2
+    MotionSpeed: 8
+    Sweep: 0
+  - StartupSec: 0.1
+    ActiveSec: 0.12
+    RecoverySec: 0.5
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 20
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 6
+    HitStopSec: 0.08
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 2
+    MotionSpeed: 8
+    Sweep: 0

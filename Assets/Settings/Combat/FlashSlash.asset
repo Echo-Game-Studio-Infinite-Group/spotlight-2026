@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 641ca553e629aaf4dbfe8b24116bda7f, type: 3}
+  m_Name: FlashSlash
+  m_EditorClassIdentifier: 
+  DisplayName: "\u95EA\u65A9"
+  EnergyCost: 0
+  CooldownSec: 0
+  ClearSpeedOnStart: 0
+  MinSpeedRatio: 0
+  MaxSpeedRatio: Infinity
+  ClearMomentumOnLandIfUnderived: 0
+  DesignNote: "\u7B56\u5212\u6848 \xA75\uFF1Aparry/\u65AD\u80A2\u540E\u6D3E\u751F\uFF08\u7A97\u53E3\u5728
+    PlayerCombat.ParryDeriveWindowSec\uFF09\uFF0C\u4F24\u5BB3\u7EA6\u4E3A\u666E\u653B
+    3 \u500D\uFF1B\u53EF\u88AB\u666E\u653B\u53D6\u6D88\u5F62\u6210\u8FDE\u7EED parry
+    \u94FE"
+  Phases:
+  - StartupSec: 0.08
+    ActiveSec: 0.1
+    RecoverySec: 0.3
+    HasDamage: 1
+    DamageProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    BaseDamage: 24
+    SpeedDamageScale: 0
+    DamageType: 1
+    Knockback: 5
+    HitStopSec: 0.08
+    HasParry: 0
+    ParryProfile:
+      Shape: 0
+      Orientation: 0
+      CapsuleRadius: 0.35
+      CapsuleHeight: 1.2
+      BoxSize: {x: 0.6, y: 0.6, z: 1.2}
+      LocalOffset: {x: 0, y: 1, z: 0.5}
+    Motion: 0
+    MotionSpeed: 8
+    Sweep: 0
