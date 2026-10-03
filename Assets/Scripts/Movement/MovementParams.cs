@@ -52,10 +52,6 @@ public sealed class MovementParams : ScriptableObject
     [Range(0.1f, 1f)] public float MoveSegmentRadiusRatio = 0.5f;
     [Min(1)] public int MaxMoveSegments = 128;
 
-    [Header("能量（按玩家时间秒结算）")]
-    [Min(0f)] public float EnergyMax = 200f;
-    [Min(0f)] public float EnergyPerSecondPerExcessSpeed = 60f;
-
     private void OnValidate()
     {
         MaxSpeed = Mathf.Max(GroundSpeedThreshold, MaxSpeed);
