@@ -69,11 +69,13 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         if (excess <= 0f) return;
 
         // 策划案公式按 tick 给，先把本帧时长换算成"相当于几个 tick"
-        // tick 时长从引擎读（工程改 Fixed Timestep 时这里自动跟随），PlayerDeltaTime 除以它即 tick 数
+        // tick 时长从引擎读（工程改 Fixed Timestep 时这里自动跟随）
+        // 口径必须用 PlayerFixedDeltaTime（固定步）：PlayerDeltaTime 是渲染帧 dt，帧率越高每步积得越少，
+        // 积能速率随刷新率漂移（5000fps 批处理实测每步仅积 ~0.07）——修复帧率依赖
         float tickSeconds = Time.fixedDeltaTime;
         if (tickSeconds <= 0f) return;
 
-        float tickRatio = TimeManager.PlayerDeltaTime / tickSeconds;
+        float tickRatio = TimeManager.PlayerFixedDeltaTime / tickSeconds;
         AddInternal(excess * _params.EnergyPerTickPerExcessSpeed * tickRatio);
     }
 
