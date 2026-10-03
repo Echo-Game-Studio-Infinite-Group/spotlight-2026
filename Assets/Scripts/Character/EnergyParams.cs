@@ -21,6 +21,15 @@ public class EnergyParams : ScriptableObject
     [Tooltip("折返：S + 右键，速度值不变、方向反向")]
     public float ReverseCost = 50f;
 
+    [Header("技能触发（按键不分先后，只按是否落在同一时间窗内判定）")]
+    [Tooltip("组合键时间窗：右键按下后，在本时长内再按下 W / 空格 / S，即判定为对应的机动技能")]
+    [Range(0.05f, 0.5f)]
+    public float ComboWindow = 0.15f;
+
+    [Tooltip("右键长按判定：右键持续按住超过（组合键时间窗 + 本值）仍无组合键落下，才视为长按（时停用）")]
+    [Range(0.05f, 0.5f)]
+    public float RightHoldExtra = 0.1f;
+
     [Header("时间效果")]
     [Tooltip("时停：长按右键，每 tick 消耗。满能量 200 / 本值 = 可维持的 tick 数（按 60tick/秒 约 3.33 秒）")]
     public float TimeStopCostPerTick = 1f;

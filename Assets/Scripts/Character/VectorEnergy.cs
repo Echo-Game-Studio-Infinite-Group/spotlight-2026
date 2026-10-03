@@ -1,9 +1,24 @@
 using UnityEngine;
 
+// 能量账户的对外契约
+// 放在提供方模块（本文件）里：dev 上原来的落点 Core/CombatSeams.cs 已被删除，
+// 调用方（PlayerCombat / DebugHUD）只认这个接口，不依赖 VectorEnergy 的具体实现
+public interface IEnergyAccount
+{
+    float CurrentEnergy { get; }
+    float MaxEnergy { get; }
+
+    /// <summary>够就扣并返回 true；不够完全不改状态、返回 false，调用方据此决定是否中断原动作</summary>
+    bool TrySpend(float amount);
+}
+
 // 矢量转换器能量账户
 // 全 tick 结算走 TimeManager.PlayerDeltaTime：玩家冻结时它退化为 0，积能与耗能自然停止
-// 由外部在 FixedUpdate 的"移动之后"调用 Accrue，保证技能读到的是本 tick 开始时的能量
-public class VectorEnergy : MonoBehaviour
+// 积能时机：本组件自己在 FixedUpdate 里调用 Accrue（执行序 10，排在 PlayerMotor(0) 的移动结算之后），
+//           保证本 tick 读到的是移动结算后的速度；技能/战斗在更早的序上扣费，读到的是 tick 开始时的能量
+// IEnergyAccount：战斗层（PlayerCombat）扣费的唯一入口
+[DefaultExecutionOrder(10)]
+public class VectorEnergy : MonoBehaviour, IEnergyAccount
 {
     private static VectorEnergy _instance;
 
@@ -16,18 +31,19 @@ public class VectorEnergy : MonoBehaviour
 
     public float Current => _energy;
 
+    /// <summary>IEnergyAccount：战斗层查余额用（与 Current 同值，两个名字各服务一侧）</summary>
+    public float CurrentEnergy => _energy;
+
+    /// <summary>能量上限，供 HUD 显示。参数未装配时为 0</summary>
+    public float MaxEnergy => _params != null ? _params.MaxEnergy : 0f;
+
     /// <summary>表现层（HUD、音效）监听这个，不反向依赖本组件</summary>
     public event System.Action<float> Changed;
 
     private void Awake()
     {
-        // 出现第二个账户时保留先来的，避免两份能量互相覆盖
-        if (_instance != null && _instance != this)
-        {
-            Debug.LogWarning("[VectorEnergy] 场景中已存在能量账户，本组件已禁用", this);
-            enabled = false;
-            return;
-        }
+        // 不做"场景中只留一个"的判重：多场景流程里新实例会被旧实例误伤而禁用。
+        // 账户状态全是实例字段，多个实例不会互相覆盖，谁挂在活着的角色上谁就在算
         _instance = this;
         _energy = 0f;
     }
@@ -37,7 +53,13 @@ public class VectorEnergy : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
-    /// <summary>移动结算之后调用</summary>
+    // 执行序 10：晚于 PlayerMotor(默认 0) 的移动结算，早于本 tick 的后续消费方
+    private void FixedUpdate()
+    {
+        Accrue();
+    }
+
+    /// <summary>本 tick 的积能结算。由本组件的 FixedUpdate 自动调用；测试可直接调用做单帧结算</summary>
     public void Accrue()
     {
         if (_params == null || _movementParams == null) return;
