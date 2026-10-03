@@ -88,6 +88,20 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         return true;
     }
 
+    /// <summary>
+    /// 一次性获得（命中/击杀返还——「敌人即资源」，决策 #8）；由 CombatEnergyBinder 调，本类不反向依赖战斗
+    /// </summary>
+    public void Grant(float amount) => AddInternal(amount);
+
+    /// <summary>
+    /// 注入参数资产（装配工具与测试用，先注入再激活——地速阈值与移动侧同源）
+    /// </summary>
+    public void SetParams(EnergyParams parameters, MovementParams movementParams)
+    {
+        _params = parameters;
+        _movementParams = movementParams;
+    }
+
     /// <summary>掉落、重生、整局重开的统一复位入口</summary>
     public void ResetEnergy()
     {
