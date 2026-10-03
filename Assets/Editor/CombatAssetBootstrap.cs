@@ -282,6 +282,18 @@ public static class CombatAssetBootstrap
             resolver = resolverGo.AddComponent<DamageResolver>();
         }
 
+        // 6) 死亡重试流程（闭环「可重试」）：场景级 RetryFlow 接玩家；Wire 每次重跑——
+        //    出生点按当前场景摆位重记录（重跑装配后以实际位形为准，幂等）
+        RetryFlow retry = FindInScene(scene, "RetryFlow")?.GetComponent<RetryFlow>();
+        if (retry == null)
+        {
+            GameObject retryGo = new GameObject("RetryFlow");
+            SceneManager.MoveGameObjectToScene(retryGo, scene);
+            retry = retryGo.AddComponent<RetryFlow>();
+        }
+        retry.Wire(player);
+        EditorUtility.SetDirty(retry);
+
         // SetDirty 只落在确实新建/改动的对象上：combat 与 hurtbox 有引用接线必动；health 仅新建时动
         EditorUtility.SetDirty(combat);
         EditorUtility.SetDirty(hurtbox);
