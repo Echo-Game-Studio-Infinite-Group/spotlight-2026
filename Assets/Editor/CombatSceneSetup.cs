@@ -16,16 +16,11 @@ public static class CombatSceneSetup
 {
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
     private const string PlayerPrefabPath = "Assets/Prefabs/Player.prefab";
-    private const string SwordPrefabPath = "Assets/Prefabs/Sword.prefab";
     private const string PopupPrefabPath = "Assets/Prefabs/DamagePopup.prefab";
     private const string AttackClipPath = "Assets/Animations/fbx/Attack.fbx";
-    private const string EnemyName = "MikuGandam";
+    private const string EnemyName = "Miku";
     private const string CameraName = "Main Camera";
 
-    // 剑在右手骨骼上的摆放：不同骨架差异很大，这两个值由实测调整后固化，改模型时需要重新对一次
-    private static readonly Vector3 SwordLocalPosition = new Vector3(0f, 0.12f, 0f);
-    private static readonly Vector3 SwordLocalEulerAngles = new Vector3(0f, 0f, 0f);
-    private static readonly Vector3 SwordLocalScale = Vector3.one;
 
     // 玩家实例在 TestScene 里位于 (-13.87, 0, -23.18)，敌人放在它正前方 5 米，
     // 保证一按播放就能看到并打到；世界原点那边是空场地，放过去会看起来「敌人没生成」。
@@ -34,7 +29,6 @@ public static class CombatSceneSetup
     private const float EnemyAttackPower = 8f;
     private const float EnemyMoveSpeed = 4f;
     private const float PlayerAttackDamage = 25f;
-    private const float PlayerMaxHealth = 100f;
     // 攻击窗口的兜底值：正常情况由 Attack.fbx 的片段时长覆盖（见 SetupPlayerPrefab）
     private const float PlayerAttackDuration = 1.6f;
     // 跳字存活与上浮速度：0.7s 在高速战斗里来不及被看到
@@ -81,7 +75,6 @@ public static class CombatSceneSetup
             return;
         }
 
-        ResetSwordPrefabTransform();
         // 先写动画事件：Hitbox 的开关完全由它驱动，必须在装配前就位
         ConfigureAttackAnimationEvents();
         EnsureDamagePopupPrefab();
@@ -94,46 +87,7 @@ public static class CombatSceneSetup
         Debug.Log("[CombatSceneSetup] 战斗装配完成");
     }
 
-    // Sword.prefab 上残留着「当年拖进场景时」的世界坐标（-13.4, 1.4, -22.8）与 0.1 的缩放。
-    // 它作为手的子物体被实例化时会继承这份垃圾位移，剑会飞到手外面几十米，必须先把预制体本身清干净。
-    private static void ResetSwordPrefabTransform()
-    {
-        GameObject root = PrefabUtility.LoadPrefabContents(SwordPrefabPath);
-        if (root == null)
-        {
-            Debug.LogError("[CombatSceneSetup] 找不到 " + SwordPrefabPath);
-            return;
-        }
 
-        try
-        {
-            bool dirty = false;
-            if (root.transform.localPosition != Vector3.zero)
-            {
-                root.transform.localPosition = Vector3.zero;
-                dirty = true;
-            }
-
-            if (root.transform.localRotation != Quaternion.identity)
-            {
-                root.transform.localRotation = Quaternion.identity;
-                dirty = true;
-            }
-
-            if (root.transform.localScale != Vector3.one)
-            {
-                root.transform.localScale = Vector3.one;
-                dirty = true;
-            }
-
-            if (dirty) PrefabUtility.SaveAsPrefabAsset(root, SwordPrefabPath);
-            Debug.Log("[CombatSceneSetup] Sword.prefab 根节点变换已归零: " + dirty);
-        }
-        finally
-        {
-            PrefabUtility.UnloadPrefabContents(root);
-        }
-    }
 
     private static void SetupPlayerPrefab()
     {
@@ -174,65 +128,39 @@ public static class CombatSceneSetup
                 combat.SetAttackDuration(clipLength);
             }
 
-            // 攻击判定盒 + 特效管理器。
-            // 判定盒不再写进预制体：它必须挂在手骨下，而手骨来自 fbx，写进预制体的父级关系
-            // 在换模型/重导入时容易失效（本项目遇到过渡PrefabInstance 块存在却不再实例化）。
-            // 改由 SwordBinder 在运行时把手骨、剑、判定盒一起建出来，引用不会因序列化而丢失。
-            SwordBinder binderForHitbox = root.GetComponent<SwordBinder>();
-            if (binderForHitbox != null)
+            Transform hitboxNode = root.transform.Find("Hitbox");
+            if (hitboxNode == null)
             {
-                binderForHitbox.SetHitboxParameters(PlayerHitboxRadius, PlayerHitboxOffset);
-                EditorUtility.SetDirty(binderForHitbox);
+                hitboxNode = new GameObject("Hitbox").transform;
+                hitboxNode.SetParent(root.transform, false);
             }
-
-            // 预制体里若残留旧的判定盒节点，清掉避免出现两个
-            Transform staleHitbox = root.transform.Find("PlayerHitbox");
-            if (staleHitbox != null)
-            {
-                Object.DestroyImmediate(staleHitbox.gameObject, true);
-                Debug.Log("[CombatSceneSetup] 已移除预制体里残留的 PlayerHitbox（改由运行时创建）");
-            }
-
-            AttackVFXManager vfx = EnsureAttackVfx(root, combat);
-            combat.SetReferences(null, vfx);
-
-            // 玩家受击标记：敌人的 Hitbox 靠它识别玩家（玩家走 PlayerHealth，不实现 IDamageable）
-            if (root.GetComponent<PlayerHitboxTarget>() == null) root.AddComponent<PlayerHitboxTarget>();
-
-            // 玩家生命值：敌人扣血走它，而不是 GameManager.Player（后者的 Instance getter
-            // 自动 new 出来的空壳没有 Awake，字段全为 null）
-            PlayerHealth health = root.GetComponent<PlayerHealth>();
-            if (health == null) health = root.AddComponent<PlayerHealth>();
-            health.Configure(PlayerMaxHealth);
-
-            SwordBinder binder = root.GetComponent<SwordBinder>();
-            if (binder == null) binder = root.AddComponent<SwordBinder>();
-            Transform sword = EnsureSwordInstance(root);
-            binder.Configure(sword, "mixamorig:RightHand", SwordLocalPosition, SwordLocalEulerAngles, SwordLocalScale);
-
-            // 动画事件接收器必须挂在 Animator 所在节点（PlayerDummy）上：
-            // Unity 的动画事件按「动画器所在 GameObject」派发，挂在根节点会报
-            // "AnimationEvent has no receiver!"，判定与特效在真实游玩时全部失效。
-            Transform animated = root.transform.Find("PlayerDummy");
+            BoxCollider box = hitboxNode.GetComponent<BoxCollider>();
+            if (box == null) box = hitboxNode.gameObject.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.center = new Vector3(0f, 0.6f, 1f);
+            box.size = new Vector3(1.3f, 1.2f, 0.8f);
+            box.enabled = false;
+            Hitbox hitbox = hitboxNode.GetComponent<Hitbox>();
+            if (hitbox == null) hitbox = hitboxNode.gameObject.AddComponent<Hitbox>();
+            hitbox.Configure(CampType.Player, combat);
+            PlayerVFXManager vfx = EnsureAttackVfx(root, combat);
+            combat.SetReferences(hitbox, vfx);
+            Animator animated = root.GetComponentInChildren<Animator>(true);
+            foreach (PlayerAnimation stale in root.GetComponentsInChildren<PlayerAnimation>(true))
+                if (animated != null && stale.gameObject != animated.gameObject) Object.DestroyImmediate(stale);
             if (animated != null)
             {
-                AttackAnimationEventReceiver receiver = animated.GetComponent<AttackAnimationEventReceiver>();
-                if (receiver == null) receiver = animated.gameObject.AddComponent<AttackAnimationEventReceiver>();
-                receiver.Configure(combat, null);
-                EditorUtility.SetDirty(receiver);
-            }
-            else
-            {
-                Debug.LogError("[CombatSceneSetup] 找不到 PlayerDummy 节点，动画事件无处投递");
+                PlayerAnimation animation = animated.GetComponent<PlayerAnimation>();
+                if (animation == null) animation = animated.gameObject.AddComponent<PlayerAnimation>();
+                animation.Configure(animated);
+                EditorUtility.SetDirty(animation);
             }
 
             EditorUtility.SetDirty(identity);
             EditorUtility.SetDirty(combat);
-            EditorUtility.SetDirty(binder);
             EditorUtility.SetDirty(vfx);
             PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
-            Debug.Log($"[CombatSceneSetup] Player.prefab 已装配: PlayerCombat + SwordBinder（运行时建剑与判定盒 "
-                + $"半径 {PlayerHitboxRadius}）+ 攻击特效 + PlayerHitboxTarget");
+            Debug.Log("[CombatSceneSetup] Player.prefab 已装配 PlayerCombat、Hitbox 与 PlayerAnimation");
         }
         finally
         {
@@ -240,27 +168,8 @@ public static class CombatSceneSetup
         }
     }
 
-    // 剑作为嵌套预制体实例挂在玩家根下，运行时再由 SwordBinder 移到手骨上：
     // 直接把手骨当父级写进预制体，换骨架/换模型时引用会静默丢失，且预制体无法保存对 fbx 内部骨骼的父级关系。
-    private static Transform EnsureSwordInstance(GameObject playerRoot)
-    {
-        Transform existing = FindChildByName(playerRoot.transform, "Sword");
-        if (existing != null && existing.parent == playerRoot.transform) return existing;
 
-        GameObject swordPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SwordPrefabPath);
-        if (swordPrefab == null)
-        {
-            Debug.LogError("[CombatSceneSetup] 找不到 " + SwordPrefabPath);
-            return null;
-        }
-
-        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(swordPrefab, playerRoot.transform);
-        instance.name = "Sword";
-        instance.transform.localPosition = SwordLocalPosition;
-        instance.transform.localRotation = Quaternion.Euler(SwordLocalEulerAngles);
-        instance.transform.localScale = SwordLocalScale;
-        return instance.transform;
-    }
 
     private static void SetupScene()
     {
@@ -337,13 +246,13 @@ public static class CombatSceneSetup
         ApplyDamageFeedback(enemyComponent);
         EditorUtility.SetDirty(enemyComponent);
 
-        // 受击盒是必需的：攻击检测要靠碰撞体命中 Damageable。
+        // 受击盒是必需的：攻击检测要靠碰撞体命中 Enemy。
         // 早先这个角色由 CharacterController 的胶囊兼任，移除追击模式后敌人就变成打不到的空壳。
         EnsureHitBox(enemy);
         // 敌人自己的攻击判定盒与特效：开关同样由动画事件驱动（缺事件时回退到 TryAttack 的代码结算）
         Hitbox enemyHitbox = EnsureHitbox(enemy, "EnemyHitbox", EnemyHitboxCenter, EnemyHitboxSize,
             CampType.Enemy, enemyComponent, onRightHand: false);
-        AttackVFXManager enemyVfx = EnsureAttackVfx(enemy, enemyComponent);
+        PlayerVFXManager enemyVfx = EnsureAttackVfx(enemy, enemyComponent);
         enemyComponent.ConfigureAttackHitbox(enemyHitbox, enemyVfx);
         EditorUtility.SetDirty(enemyHitbox);
         EditorUtility.SetDirty(enemyVfx);
@@ -459,9 +368,9 @@ public static class CombatSceneSetup
         Debug.Log($"[CombatSceneSetup] 已生成跳字预制体: {PopupPrefabPath}");
     }
 
-    // 在敌人身上放一个跳字实例并接给 Damageable。
-    // 实例化后保持激活以便连接引用，由 Damageable 在 Awake 里统一隐藏，避免它在场景里露出来。
-    private static void AttachDamagePopup(GameObject enemy, Damageable damageable)
+    // 在敌人身上放一个跳字实例并接给 Enemy。
+    // 实例化后保持激活以便连接引用，由 Enemy 在 Awake 里统一隐藏，避免它在场景里露出来。
+    private static void AttachDamagePopup(GameObject enemy, Enemy damageable)
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PopupPrefabPath);
         if (prefab == null)
@@ -497,7 +406,7 @@ public static class CombatSceneSetup
     private const float AttackWindowTailRatio = 0.9f;
     // 动画事件布局版本：改动事件名/时间比例后加一，旧事件会被识别为过期并重写。
     // 用 stringParameter 存这个标记，就能在不重导入的前提下判断布局是否最新。
-    private const int EventLayoutVersion = 2;
+    private const int EventLayoutVersion = 3;
     private static string EventLayoutTag => $"combat-v{EventLayoutVersion}";
 
     private static readonly Vector3 PlayerHitboxCenter = new Vector3(0f, 0.55f, 0.25f);
@@ -536,9 +445,10 @@ public static class CombatSceneSetup
         float length = imported != null && imported.length > 0.01f ? imported.length : 1.6f;
         if (motionEnd <= 0f) motionEnd = length;
 
-        float vfxTime = motionEnd * AttackVfxRatio;
-        float enableTime = motionEnd * HitboxStartRatio;
-        float disableTime = motionEnd * HitboxEndRatio;
+        // ModelImporter 的事件时间是归一化比例，不能直接写秒数。
+        float vfxTime = Mathf.Clamp01(motionEnd * AttackVfxRatio / length);
+        float enableTime = Mathf.Clamp01(motionEnd * HitboxStartRatio / length);
+        float disableTime = Mathf.Clamp01(motionEnd * HitboxEndRatio / length);
 
         // 幂等闸门：布局没变就跳过。
         // 为什么必须有：每次写 clipAnimations 都会触发重导入，而重导入会把片段长度往上带
@@ -570,6 +480,12 @@ public static class CombatSceneSetup
             {
                 time = disableTime,
                 functionName = "DisableHitbox",
+                stringParameter = EventLayoutTag,
+            },
+            new AnimationEvent
+            {
+                time = 0.8f,
+                functionName = "FinishAttack",
                 stringParameter = EventLayoutTag,
             },
         };
@@ -621,16 +537,16 @@ public static class CombatSceneSetup
         collider.enabled = false;
 
         Hitbox hitbox = host.AddComponent<Hitbox>();
-        hitbox.Configure(camp, damageSource, 1f);
+        hitbox.Configure(camp, damageSource);
         return hitbox;
     }
 
     // 给实体挂攻击特效管理器，并把 Hitbox 与特效一起接给战斗组件
-    private static AttackVFXManager EnsureAttackVfx(GameObject owner, MonoBehaviour damageSource)
+    private static PlayerVFXManager EnsureAttackVfx(GameObject owner, MonoBehaviour damageSource)
     {
-        AttackVFXManager vfx = owner.GetComponent<AttackVFXManager>();
-        if (vfx == null) vfx = owner.AddComponent<AttackVFXManager>();
-        vfx.Configure(owner.transform, PopupLifetime * 0.25f, 1.9f, 1.1f);
+        PlayerVFXManager vfx = owner.GetComponent<PlayerVFXManager>();
+        if (vfx == null) vfx = owner.AddComponent<PlayerVFXManager>();
+        vfx.Configure(owner.transform);
         EditorUtility.SetDirty(vfx);
         return vfx;
     }
@@ -748,7 +664,7 @@ public static class CombatSceneSetup
 
     // 受击反馈参数只能通过 SerializedObject 写：它们是 private 序列化字段，
     // 场景里已存过一份旧值，光改 C# 默认值不会生效（实测跳字存活一直停在 0.7s 就是这个原因）。
-    private static void ApplyDamageFeedback(Damageable damageable)
+    private static void ApplyDamageFeedback(Enemy damageable)
     {
         SerializedObject serialized = new SerializedObject(damageable);
         SetIfExists(serialized, "_numberLifetime", PopupLifetime);
@@ -851,14 +767,10 @@ public static class CombatSceneSetup
 
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
         PlayerCombat combat = player != null ? player.GetComponent<PlayerCombat>() : null;
-        SwordBinder binder = player != null ? player.GetComponent<SwordBinder>() : null;
         lines.Add("Player.prefab 有 PlayerCombat: " + (combat != null));
         lines.Add("Player.prefab 有 Player 身份组件: " + (player != null && player.GetComponent<Player>() != null));
-        PlayerHealth playerHealth = player != null ? player.GetComponent<PlayerHealth>() : null;
-        lines.Add("Player.prefab 有 PlayerHealth: " + (playerHealth != null)
-            + (playerHealth != null ? $"（上限 {playerHealth.MaxHealth}）" : ""));
-        lines.Add("Player.prefab 有 SwordBinder: " + (binder != null));
-        lines.Add("剑引用已接: " + (binder != null && binder.Sword != null));
+        lines.Add("Player.prefab 有玩家受击标记: "
+            + (player != null && player.GetComponent<Player>() != null));
         lines.Add("攻击参数 dmg/range/duration: " + (combat != null
             ? $"{combat.AttackDamage}/{combat.AttackRange}/{combat.AttackDuration}"
             : "无"));

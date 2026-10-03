@@ -15,7 +15,7 @@ MonoBehaviour:
   GroundSpeedThreshold: 10
   WalkSpeed: 3
   RunAccel: 10
-  GroundFriction: 6
+  GroundFriction: 2
   GroundStopSpeed: 0.05
   FrictionExemptWindow: 0.2
   Pump: 1
@@ -26,30 +26,35 @@ MonoBehaviour:
   JumpBufferWindow: 0.12
   FacingSmoothTime: 0.12
   SlideSpeedRatio: 0.8
-  SlideDecel: 15
+  SlideDecel: 4
   SlideEndSpeed: 2
   SlideCapsuleHeight: 1
-  WallMinApproachAngle: 30
+  WallMaxApproachAngle: 45
   WallNormalMaxUpDot: 0.3
-  WallGraceTime: 0.15
-  WallFriction: 3
-  WallGravityScale: 0.4
-  WallMaxFallSpeed: 6
-  WallJumpBoost: 1.5
-  WallJumpAngle: 45
+  WallGraceTime: 1
+  WallFriction: 1
+  WallStopSpeed: 0.01
+  WallGravityScale: 0.6
+  WallMaxFallSpeed: 1
+  WallJumpBoost: 10
+  WallJumpAngle: 9.3
   WallJumpUpImpulse: 8
   WallJumpCooldown: 0.2
-  WallRearmDistance: 0.15
+  WallJumpFacingLockTime: 0.9
+  WallRearmDistance: 0.17
   WallProbeDistance: 0.08
+  WallContactGraceTime: 0.08
   WallSeamAngle: 15
   CapsuleShrinkStartSpeed: 10
   CapsuleShrinkEndSpeed: 25
   CapsuleBaseRadius: 0.3793888
-  CapsuleMinRadius: 0.3
-  CapsuleBaseHeight: 1.7652644
+  CapsuleMinRadius: 0.15
+  CapsuleBaseHeight: 1.7
   CapsuleFastHeight: 1.7
   CollisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  MoveSegmentRadiusRatio: 0.5
+  MoveSegmentRadiusRatio: 0.50018
   MaxMoveSegments: 128
+  EnergyMax: 200
+  EnergyPerSecondPerExcessSpeed: 60

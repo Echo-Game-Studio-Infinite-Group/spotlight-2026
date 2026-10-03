@@ -13,7 +13,7 @@ public sealed class SpeedCameraFeedback : MonoBehaviour
     [SerializeField] private float _fastFov = 85f;
     [SerializeField] private float _fullEffectSpeed = 25f;
     [SerializeField] private float _response = 5f;
-    [SerializeField] private float _wallRoll = 5f;
+    [SerializeField] private float _wallRoll = 70f;
     [SerializeField, Range(0f, 1f)] private float _chromaticIntensity = 0.5f;
     [SerializeField, Range(0f, 1f)] private float _motionBlurIntensity = 0.5f;
     [SerializeField] private float _customMotionBlur = 2.5f;

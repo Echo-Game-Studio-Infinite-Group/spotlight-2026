@@ -8,7 +8,9 @@ public sealed class MovementContacts
     private readonly RaycastHit[] _hits = new RaycastHit[16];
     private readonly Collider[] _overlaps = new Collider[32];
     private readonly Vector3[] _normals = new Vector3[16];
+    private readonly WallContact[] _wallContacts = new WallContact[16];
     private int _normalCount;
+    private int _wallContactCount;
     private Vector3 _incoming;
 
     public bool Grounded { get; private set; }
@@ -30,7 +32,14 @@ public sealed class MovementContacts
         if (!IsWall(hit.normal) || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         Vector3 normal = MovementMath.Horizontal(hit.normal).normalized;
         float angle = MovementMath.ApproachAngle(_incoming, normal);
-        if (HasWall && angle <= WallAngle) return;
+        // 同一面墙会在分段 Move 中反复回调；保留不同法线，避免旧墙覆盖墙角接触。
+        bool alreadyRecorded = false;
+        for (int i = 0; i < _wallContactCount; i++)
+            if (Vector3.Dot(_wallContacts[i].Normal, normal) > 0.9999f)
+            { alreadyRecorded = true; break; }
+        if (!alreadyRecorded && _wallContactCount < _wallContacts.Length)
+            _wallContacts[_wallContactCount++] = new WallContact(hit.point, normal, _incoming, angle);
+        if (angle < 0f || (HasWall && angle >= WallAngle)) return;
         HasWall = true;
         WallAngle = angle;
         WallNormal = normal;
@@ -42,6 +51,7 @@ public sealed class MovementContacts
     {
         HasWall = false;
         WallAngle = -1f;
+        _wallContactCount = 0;
         float segmentLength = Mathf.Max(0.01f, _controller.radius * _params.MoveSegmentRadiusRatio);
         int count = Mathf.Clamp(Mathf.CeilToInt(velocity.magnitude * dt / segmentLength), 1, _params.MaxMoveSegments);
         CollisionFlags last = CollisionFlags.None;
@@ -65,6 +75,22 @@ public sealed class MovementContacts
         Grounded = (last & CollisionFlags.Below) != 0 && velocity.y <= 0f;
     }
 
+    public bool TryGetWallTransition(Vector3 currentNormal, float seamAngle, out WallContact transition)
+    {
+        transition = default;
+        bool found = false;
+        for (int i = 0; i < _wallContactCount; i++)
+        {
+            WallContact contact = _wallContacts[i];
+            if (Vector3.Angle(currentNormal, contact.Normal) <= seamAngle || contact.ApproachAngle < 0f)
+                continue;
+            // 多墙同时接触时，正面撞上的墙优先决定这次是否能继续滑行。
+            if (!found || transition.ApproachAngle < contact.ApproachAngle)
+            { transition = contact; found = true; }
+        }
+        return found;
+    }
+
     public bool ProbeWall(Vector3 normal, float distance, out RaycastHit contact)
     {
         Capsule(_controller.height, _controller.radius, out Vector3 bottom, out Vector3 top, out float radius);
@@ -76,13 +102,38 @@ public sealed class MovementContacts
         for (int i = 0; i < count; i++)
         {
             RaycastHit hit = _hits[i];
-            if (hit.transform.IsChildOf(_controller.transform) || !IsWall(hit.normal)) continue;
-            if (Vector3.Dot(MovementMath.Horizontal(hit.normal).normalized, normal) < alignment) continue;
+            if (!MatchesWall(hit, normal, alignment)) continue;
             if (hit.distance >= nearest) continue;
             nearest = hit.distance;
             contact = hit;
         }
+        if (nearest < float.PositiveInfinity) return true;
+
+        // 胶囊已贴住墙时 CapsuleCast 的起始体积会与墙重叠，投射可能没有命中。
+        // 沿胶囊轴线补射线，只接受朝向与当前墙一致的近距离实体墙。
+        float reach = _controller.radius + distance + _controller.skinWidth * 2f;
+        Vector3 middle = (bottom + top) * 0.5f;
+        for (int j = 0; j < 3; j++)
+        {
+            Vector3 origin = j == 0 ? middle : j == 1 ? bottom : top;
+            count = Physics.RaycastNonAlloc(origin, -normal, _hits, reach,
+                _params.CollisionMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = _hits[i];
+                if (!MatchesWall(hit, normal, alignment)) continue;
+                if (hit.distance >= nearest) continue;
+                nearest = hit.distance;
+                contact = hit;
+            }
+        }
         return nearest < float.PositiveInfinity;
+    }
+
+    private bool MatchesWall(RaycastHit hit, Vector3 normal, float alignment)
+    {
+        if (hit.collider == null || hit.transform.IsChildOf(_controller.transform) || !IsWall(hit.normal)) return false;
+        return Vector3.Dot(MovementMath.Horizontal(hit.normal).normalized, normal) >= alignment;
     }
 
     public bool CanResize(float height, float radius)

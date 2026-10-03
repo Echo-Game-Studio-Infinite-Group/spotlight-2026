@@ -27,18 +27,24 @@ public sealed class MovementParams : ScriptableObject
     [Min(0.1f)] public float SlideCapsuleHeight = 1f;
 
     [Header("划墙与墙面 bhop")]
-    [Range(0f, 90f)] public float WallMinApproachAngle = 30f;
+    [Range(0f, 90f)] public float WallMaxApproachAngle = 45f;
     [Range(0f, 0.7f)] public float WallNormalMaxUpDot = 0.3f;
-    [Min(0f)] public float WallGraceTime = 0.15f;
+    [Tooltip("入墙后免重力、免摩擦并保留速度的玩家时间窗口")]
+    [Min(0f)] public float WallGraceTime = 0.5f;
     [Min(0f)] public float WallFriction = 3f;
+    [Tooltip("滑墙减速到该水平速度时视为停止，避免指数摩擦永远无法归零")]
+    [Min(0f)] public float WallStopSpeed = 0.01f;
     [Min(0f)] public float WallGravityScale = 0.4f;
-    [Min(0f)] public float WallMaxFallSpeed = 6f;
-    [Min(0f)] public float WallJumpBoost = 1.5f;
+    [Min(0f)] public float WallMaxFallSpeed = 0.1f;
+    [Min(0f)] public float WallJumpBoost = 10.5f;
     [Range(1f, 90f)] public float WallJumpAngle = 45f;
     [Min(0f)] public float WallJumpUpImpulse = 8f;
-    [Min(0f)] public float WallJumpCooldown = 0.2f;
+    [Min(0f)] public float WallJumpCooldown = 0.05f;
+    [Tooltip("蹬墙跳发动后保持发动时朝向的玩家时间")]
+    [Min(0f)] public float WallJumpFacingLockTime = 0.5f;
     [Min(0.01f)] public float WallRearmDistance = 0.15f;
     [Min(0.01f)] public float WallProbeDistance = 0.08f;
+    [Min(0f)] public float WallContactGraceTime = 0.08f;
     [Range(0f, 45f)] public float WallSeamAngle = 15f;
 
     [Header("碰撞胶囊")]
@@ -51,6 +57,10 @@ public sealed class MovementParams : ScriptableObject
     public LayerMask CollisionMask = ~0;
     [Range(0.1f, 1f)] public float MoveSegmentRadiusRatio = 0.5f;
     [Min(1)] public int MaxMoveSegments = 128;
+
+    [Header("能量（按玩家时间秒结算）")]
+    [Min(0f)] public float EnergyMax = 200f;
+    [Min(0f)] public float EnergyPerSecondPerExcessSpeed = 60f;
 
     private void OnValidate()
     {
