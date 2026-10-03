@@ -36,6 +36,9 @@ public sealed class Enemy : Damageable, IDamageSource
     private float _verticalSpeed;
     [SerializeField] private Hitbox _attackHitbox;
     [SerializeField] private AttackVFXManager _attackVfx;
+    private bool _chaseConfig;                 // Awake 记录 Inspector 原值：OnDied 会把 _chasePlayer 置 false，复位按原配置恢复
+    private Vector3 _spawnPosition;            // 出生点（重开复位回这里）
+    private Quaternion _spawnRotation;
 
     public float AttackPower => _attackPower;
     /// <summary>IDamageSource 实现：Hitbox 从这里取伤害值。语义与 AttackPower 相同，名字对齐接口。</summary>
@@ -60,6 +63,9 @@ public sealed class Enemy : Damageable, IDamageSource
     {
         base.Awake();
         _controller = GetComponent<CharacterController>();
+        _chaseConfig = _chasePlayer;
+        _spawnPosition = transform.position;
+        _spawnRotation = transform.rotation;
         if (_attackHitbox == null) _attackHitbox = GetComponentInChildren<Hitbox>(true);
         if (_attackVfx == null) _attackVfx = GetComponentInChildren<AttackVFXManager>(true);
         if (_attackHitbox != null) _attackHitbox.Configure(CampType.Enemy, this, 0f);
@@ -222,6 +228,19 @@ public sealed class Enemy : Damageable, IDamageSource
         // 先停掉行为再淡出，避免死亡后还在追着玩家打
         _chasePlayer = false;
         if (_controller != null) _controller.enabled = false;
+    }
+
+    /// <summary>
+    /// 重开复位（死亡重试灰盒）：回满血、按 Inspector 原值恢复追击、恢复阻挡、清击退、回出生点——OnDied 的逆操作
+    /// </summary>
+    public void ResetForRestart()
+    {
+        SetMaxHealth(MaxHealth); // 基类语义：设上限同时回满血
+        _chasePlayer = _chaseConfig;
+        _knockback = Vector3.zero;
+        _verticalSpeed = 0f;
+        if (_controller != null) _controller.enabled = true;
+        transform.SetPositionAndRotation(_spawnPosition, _spawnRotation);
     }
 
     public void ApplyKnockback(Vector3 direction, float strength)
