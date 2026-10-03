@@ -16,6 +16,8 @@ public class PlayerCombatTests
     private PlayerCombat _combat;
     private InputSampler _sampler;
     private MovementParams _params;
+    private EnergyParams _energyParams;
+    private VectorEnergy _energy;
     private GameObject _timeGo;
 
     private int _started, _ended, _cancelled, _parried;
@@ -35,6 +37,9 @@ public class PlayerCombatTests
 
         _motor = _player.AddComponent<PlayerMotor>();
         _motor.SetParams(_params);
+        _energyParams = ScriptableObject.CreateInstance<EnergyParams>();
+        _energy = _player.AddComponent<VectorEnergy>();
+        _energy.SetParams(_energyParams, _params); // 唯一能量账户：PlayerCombat 扣费经接口走这里
         _combat = _player.AddComponent<PlayerCombat>();
         _sampler = _player.AddComponent<InputSampler>();
         _player.AddComponent<HealthComponent>(); // OnParrySuccess 授无敌的目标
@@ -58,6 +63,7 @@ public class PlayerCombatTests
         if (_timeGo != null) Object.Destroy(_timeGo);
         if (_player != null) Object.Destroy(_player);
         if (_params != null) Object.Destroy(_params);
+        if (_energyParams != null) Object.Destroy(_energyParams);
         _player = null;
         _params = null;
         yield return null;
@@ -106,21 +112,21 @@ public class PlayerCombatTests
     {
         AttackDefinition def = NewDef(energyCost: 50f);
         _combat.NormalAttack = def;
-        _motor.SetEnergy(10f);
+        _energy.SetForDebug(10f);
 
         PressAttack();
         yield return RunFor(0.02f);
 
         Assert.That(_combat.IsAttacking, Is.False, "能量不足不得出招");
-        Assert.That(_motor.CurrentEnergy, Is.EqualTo(10f).Within(1e-3f), "失败路径不得扣费");
+        Assert.That(_energy.CurrentEnergy, Is.EqualTo(10f).Within(1e-3f), "失败路径不得扣费");
         Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.True,
             "失败路径不得吞输入——按下沿保留在缓冲（框架 4.1：暂不可执行时保留到过期）");
 
         // 同一条目在能量补足后立即可用：验证「保留」而非「作废」
-        _motor.SetEnergy(100f);
+        _energy.SetForDebug(100f);
         yield return RunFor(0.02f);
         Assert.That(_combat.IsAttacking, Is.True, "能量补足后被保留的输入应能出招");
-        Assert.That(_motor.CurrentEnergy, Is.EqualTo(50f).Within(1e-3f), "成功提交才扣费");
+        Assert.That(_energy.CurrentEnergy, Is.EqualTo(50f).Within(1e-3f), "成功提交才扣费");
         Object.Destroy(def);
     }
 
@@ -170,14 +176,14 @@ public class PlayerCombatTests
     {
         AttackDefinition def = NewDef(energyCost: 20f);
         _combat.NormalAttack = def;
-        _motor.SetEnergy(100f);
+        _energy.SetForDebug(100f);
 
         PressAttack();
         yield return RunFor(0.03f);
 
         Assert.That(_combat.IsAttacking, Is.True, "应进入攻击状态");
         Assert.That(_combat.CurrentDefinition, Is.EqualTo(def), "当前招式应为被映射的定义");
-        Assert.That(_motor.CurrentEnergy, Is.EqualTo(80f).Within(1e-3f), "提交时应一次性扣费");
+        Assert.That(_energy.CurrentEnergy, Is.EqualTo(80f).Within(1e-3f), "提交时应一次性扣费");
         Assert.That(_sampler.Buffer.HasBuffered(LogicalButton.Attack), Is.False, "提交时应消费触发键");
         Assert.That(_started, Is.EqualTo(1), "起手应恰好触发一次事件");
 
@@ -529,11 +535,11 @@ public class PlayerCombatTests
         AttackDefinition costly = NewDef(energyCost: 50f);
         _combat.ResetForRestart();
         _combat.NormalAttack = costly;
-        _motor.SetEnergy(50f);
+        _energy.SetForDebug(50f);
         PressAttack();
         yield return RunFor(0.03f);
         Assert.That(_combat.IsAttacking, Is.True, "余额恰等于费用时应可出招");
-        Assert.That(_motor.CurrentEnergy, Is.EqualTo(0f).Within(1e-3f), "出招后扣至 0");
+        Assert.That(_energy.CurrentEnergy, Is.EqualTo(0f).Within(1e-3f), "出招后扣至 0");
         Object.Destroy(costly);
     }
 }

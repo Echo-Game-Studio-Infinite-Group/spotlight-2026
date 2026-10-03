@@ -1,8 +1,9 @@
 using UnityEngine;
 
-// 矢量转换器能量账户
-// 全 tick 结算走 TimeManager.PlayerDeltaTime：玩家冻结时它退化为 0，积能与耗能自然停止
-// 由外部在 FixedUpdate 的"移动之后"调用 Accrue，保证技能读到的是本 tick 开始时的能量
+// 矢量转换器能量账户（唯一能量账户——速度转能量、出招扣费、命中/击杀返还全走这里）
+// 自驱动积能：执行序 +10（扣费 -50 → 移动 0 → 积能 +10），保证技能扣费读到的是本 tick 开始时的能量，
+// 且积能用的水平速度是本 tick 移动结算后的值——顺序即语义，勿改执行序
+[DefaultExecutionOrder(10)]
 public class VectorEnergy : MonoBehaviour, IEnergyAccount
 {
     private static VectorEnergy _instance;
@@ -16,11 +17,22 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
 
     public float Current => _energy;
 
-    // IEnergyAccount（CombatSeams.cs）：战斗侧经接口消费，账户由本组件接管后战斗侧无感切换
+    // IEnergyAccount（CombatSeams.cs）：战斗侧经接口消费（PlayerCombat 统一提交扣费）
     public float CurrentEnergy => _energy;
+
+    public float MaxEnergy => _params != null ? _params.MaxEnergy : 0f;
 
     /// <summary>表现层（HUD、音效）监听这个，不反向依赖本组件</summary>
     public event System.Action<float> Changed;
+
+    /// <summary>
+    /// 注入参数资产（装配工具与测试用，先注入再激活——地速阈值与移动侧同源）
+    /// </summary>
+    public void SetParams(EnergyParams parameters, MovementParams movementParams)
+    {
+        _params = parameters;
+        _movementParams = movementParams;
+    }
 
     private void Awake()
     {
@@ -40,7 +52,13 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         if (_instance == this) _instance = null;
     }
 
-    /// <summary>移动结算之后调用</summary>
+    private void FixedUpdate()
+    {
+        if (TimeManager.IsPaused) return;
+        Accrue();
+    }
+
+    /// <summary>速度积能：速度超出地速阈值的部分按 tick 换算累积（玩家冻结时 PlayerDeltaTime=0，自然停积）</summary>
     public void Accrue()
     {
         if (_params == null || _movementParams == null) return;
@@ -68,6 +86,11 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         Changed?.Invoke(_energy);
         return true;
     }
+
+    /// <summary>
+    /// 一次性获得（命中/击杀返还——「敌人即资源」，决策 #8）。战斗经济绑定组件调，本类不反向依赖战斗
+    /// </summary>
+    public void Grant(float amount) => AddInternal(amount);
 
     /// <summary>掉落、重生、整局重开的统一复位入口</summary>
     public void ResetEnergy()

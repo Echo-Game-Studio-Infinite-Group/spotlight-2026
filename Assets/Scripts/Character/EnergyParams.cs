@@ -21,6 +21,13 @@ public class EnergyParams : ScriptableObject
     [Tooltip("折返：S + 右键，速度值不变、方向反向")]
     public float ReverseCost = 50f;
 
+    [Header("战斗经济（敌人即资源，决策 #8）")]
+    [Tooltip("命中返还：每次结算命中获得（Doom 式推进战斗经济——逼玩家持续进攻")]
+    public float HitEnergyGain = 0f;
+
+    [Tooltip("击杀返还：击杀敌人一次性获得")]
+    public float KillEnergyGain = 30f;
+
     [Header("时间效果")]
     [Tooltip("时停：长按右键，每 tick 消耗。满能量 200 / 本值 = 可维持的 tick 数（按 60tick/秒 约 3.33 秒）")]
     public float TimeStopCostPerTick = 1f;

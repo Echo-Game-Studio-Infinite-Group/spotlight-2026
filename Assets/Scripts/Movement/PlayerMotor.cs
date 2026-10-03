@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
+public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -37,7 +37,6 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
     public bool IsSprinting { get; private set; }
-    public float Energy { get; private set; }
     public int JumpCount { get; private set; }
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
@@ -88,19 +87,7 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
         transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + 180f, 0f);
     }
 
-    // IEnergyAccount：能量账户暂由移动层代管（外迁 VectorEnergy 后战斗侧经接口无感切换，框架 4.3）
-    public float CurrentEnergy => Energy;
-
-    public bool TrySpend(float amount)
-    {
-        if (Energy < amount) return false;
-        Energy -= amount;
-        return true;
-    }
-
-    // 测试注入：战斗侧 PlayMode 测试需要可控余额验证「能量不足零副作用」（积能依赖高速移动，测试凑不快）
-    public void SetEnergy(float value) =>
-        Energy = _params != null ? Mathf.Clamp(value, 0f, _params.EnergyMax) : Mathf.Max(0f, value);
+    // 能量账户代管已退役：唯一账户是 Character/VectorEnergy（框架 4.3 外迁决策），本类不再实现 IEnergyAccount
 
     private void Awake()
     {
@@ -233,8 +220,6 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
                 if (jump && IsWallSliding) JumpFromWall();
             }
         }
-        Energy = Mathf.Min(_params.EnergyMax, Energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold)
-            * _params.EnergyPerSecondPerExcessSpeed * dt);
     }
 
     private void UpdateFreeMovement(float dt, Vector3 wish)
@@ -372,7 +357,6 @@ public sealed class PlayerMotor : MonoBehaviour, IEnergyAccount, IMotorCommand
     {
         _velocity = Vector3.zero;
         _facingAngularVelocity = 0f;
-        Energy = 0f;
         _gravitySuspended = false;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;

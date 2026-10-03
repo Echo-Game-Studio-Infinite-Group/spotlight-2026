@@ -201,16 +201,14 @@ public sealed class WallMovementTests
     }
 
     [Test]
-    public void Freeze_DoesNotMoveOrGenerateEnergy_ExpiredJumpIsNotReplayed()
+    public void Freeze_DoesNotMove_ExpiredJumpIsNotReplayed()
     {
         Enter(30f);
         Vector3 position = _motor.transform.position;
-        float energy = _motor.Energy;
         _motor.Simulate(new PlayerInputFrame { JumpPressed = true, JumpTime = _now }, 0f, _now);
         _now += 1f;
         _motor.Simulate(default, 0f, _now);
         Assert.AreEqual(position, _motor.transform.position);
-        Assert.AreEqual(energy, _motor.Energy);
         Step();
         Assert.AreEqual(0, _motor.WallJumpCount);
     }
@@ -231,7 +229,6 @@ public sealed class WallMovementTests
         Enter(30f);
         _motor.Teleport(Vector3.up * 10f);
         Assert.AreEqual(Vector3.zero, _motor.Velocity);
-        Assert.AreEqual(0f, _motor.Energy);
         Assert.AreEqual(0f, _motor.WallWindowRemaining);
         Assert.AreEqual(MovementState.Airborne, _motor.State);
         Step(jump: true);

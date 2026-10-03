@@ -51,7 +51,7 @@ public class PlayerCombat : MonoBehaviour, IParryReceiver, IMotorLandingClient
     public float DashChainWindowSec = 0.9f;
 
     private PlayerMotor _motor;
-    private IEnergyAccount _energy;      // 能量账户缝：当前由 PlayerMotor 实现，外迁 VectorEnergy 后无感切换
+    private IEnergyAccount _energy;      // 能量账户缝：VectorEnergy 接管（框架 4.3「外迁后战斗侧无感」）——找得到就扣，找不到按无余额处理
     private InputSampler _sampler;
     private HealthComponent _health;
 
@@ -111,7 +111,7 @@ public class PlayerCombat : MonoBehaviour, IParryReceiver, IMotorLandingClient
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
-        _energy = _motor;
+        _energy = GetComponentInParent<VectorEnergy>(); // 账户外迁：VectorEnergy 是唯一账户（Motor 代管已退役）
         _sampler = GetComponent<InputSampler>();
         _health = GetComponent<HealthComponent>();
     }

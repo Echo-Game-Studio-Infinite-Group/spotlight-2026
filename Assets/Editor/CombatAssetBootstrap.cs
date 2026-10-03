@@ -256,6 +256,23 @@ public static class CombatAssetBootstrap
         combat.DamageHitbox = damageBox;
         combat.ParryHitbox = parryBox;
 
+        // 4.5) 能量账户与战斗经济（框架 4.3 外迁决策：VectorEnergy 唯一账户，Motor 代管已退役）
+        EnergyParams energyParams = EnsureEnergyAsset();
+        PlayerMotor playerMotor = player.GetComponent<PlayerMotor>();
+        VectorEnergy energy = player.GetComponent<VectorEnergy>();
+        if (energy == null)
+        {
+            energy = player.AddComponent<VectorEnergy>();
+            energy.SetParams(energyParams, playerMotor.Params);
+            EditorUtility.SetDirty(energy);
+        }
+        if (player.GetComponent<CombatEnergyBinder>() == null)
+        {
+            CombatEnergyBinder binder = player.AddComponent<CombatEnergyBinder>();
+            binder.SetSources(energy, energyParams, damageBox);
+            EditorUtility.SetDirty(binder);
+        }
+
         // 5) 场景级结算器（每 tick 命中结算）
         DamageResolver resolver = FindInScene(scene, "DamageResolver")?.GetComponent<DamageResolver>();
         if (resolver == null)
@@ -424,6 +441,19 @@ public static class CombatAssetBootstrap
             if (motor != null) return motor.gameObject;
         }
         return null;
+    }
+
+    // 能量参数资产（seed-only：已存在直接用，手调数值不覆写）
+    private static EnergyParams EnsureEnergyAsset()
+    {
+        const string path = "Assets/Settings/EnergyParams.asset";
+        EnergyParams asset = AssetDatabase.LoadAssetAtPath<EnergyParams>(path);
+        if (asset == null)
+        {
+            asset = ScriptableObject.CreateInstance<EnergyParams>();
+            AssetDatabase.CreateAsset(asset, path);
+        }
+        return asset;
     }
 
     // —— 资产构造辅助（seed-only：只在新建或 force 时写入模板值）——

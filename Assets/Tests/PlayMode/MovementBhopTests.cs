@@ -14,6 +14,8 @@ public class MovementBhopTests
     private PlayerMotor _motor;
     private ScriptedPlayerInput _input;
     private MovementParams _params;
+    private EnergyParams _energyParams;
+    private VectorEnergy _energy;
 
     private float _measuredJumpSpeed;
     private float _measuredEnergy;
@@ -46,9 +48,11 @@ public class MovementBhopTests
         if (_player != null) Object.Destroy(_player);
         if (_ground != null) Object.Destroy(_ground);
         if (_params != null) Object.Destroy(_params);
+        if (_energyParams != null) Object.Destroy(_energyParams);
         _player = null;
         _ground = null;
         _params = null;
+        _energyParams = null;
         yield return null;
     }
 
@@ -91,12 +95,12 @@ public class MovementBhopTests
 
         float ratio = _measuredJumpSpeed / _params.GroundSpeedThreshold;
         float capRatio = _params.MaxSpeed / _params.GroundSpeedThreshold;
-        Debug.Log($"[BhopTest] WindowPump 60 循环：第 60 次起跳水平速度 {_measuredJumpSpeed:F3} u/s = ×{ratio:F4} 阈值，MaxSpeed=×{capRatio:F2}，能量 {_measuredEnergy:F2}/{_params.EnergyMax:F0}");
+        Debug.Log($"[BhopTest] WindowPump 60 循环：第 60 次起跳水平速度 {_measuredJumpSpeed:F3} u/s = ×{ratio:F4} 阈值，MaxSpeed=×{capRatio:F2}，能量 {_measuredEnergy:F2}/{_energyParams.MaxEnergy:F0}");
 
         Assert.LessOrEqual(_measuredJumpSpeed, _params.MaxSpeed + 0.01f,
             $"60 循环后水平速度应不超软上限 MaxSpeed={_params.MaxSpeed}，实测 {_measuredJumpSpeed:F3}");
-        Assert.GreaterOrEqual(_measuredEnergy, _params.EnergyMax - 0.5f,
-            $"能量应饱和到 EnergyMax={_params.EnergyMax}，实测 {_measuredEnergy:F2}");
+        Assert.GreaterOrEqual(_measuredEnergy, _energyParams.MaxEnergy - 0.5f,
+            $"能量应饱和到 MaxEnergy={_energyParams.MaxEnergy}，实测 {_measuredEnergy:F2}");
     }
 
     // —— 搭建与驱动 —— //
@@ -117,6 +121,9 @@ public class MovementBhopTests
 
         _motor = _player.AddComponent<PlayerMotor>();
         _motor.SetParams(_params);
+        _energyParams = ScriptableObject.CreateInstance<EnergyParams>();
+        _energy = _player.AddComponent<VectorEnergy>();
+        _energy.SetParams(_energyParams, _params); // 积能公式与移动阈值同源（VectorEnergy 唯一账户）
         _input = new ScriptedPlayerInput(_motor, _params.GroundSpeedThreshold);
         _motor.SetInput(_input);
 
@@ -136,7 +143,7 @@ public class MovementBhopTests
         {
             if (trackEnergy)
             {
-                float energy = _motor.Energy;
+                float energy = _energy.Current;
                 Assert.GreaterOrEqual(energy, prevEnergy - 1e-3f,
                     $"能量应单调递增：上一帧 {prevEnergy:F3} → 本帧 {energy:F3}");
                 prevEnergy = energy;
@@ -148,7 +155,7 @@ public class MovementBhopTests
             {
                 lastJumps = _motor.JumpCount;
                 _measuredJumpSpeed = _motor.HorizontalSpeed;
-                _measuredEnergy = _motor.Energy;
+                _measuredEnergy = _energy.Current;
                 prevEnergy = _measuredEnergy;
             }
         }

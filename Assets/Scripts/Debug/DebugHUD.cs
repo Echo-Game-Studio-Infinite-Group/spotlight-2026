@@ -16,6 +16,7 @@ public sealed class DebugHUD : MonoBehaviour
     private PlayerMotor _motor;
     private PlayerInputReader _input;
     private PlayerCombat _combat; // 可选：未装配战斗组件时战斗面板静默隐藏
+    private VectorEnergy _energy; // 可选：能量账户（VectorEnergy 是唯一账户），未装配时能量行隐藏
     private GUIStyle _style;
 
     private Hitbox _damageHitbox;
@@ -27,6 +28,7 @@ public sealed class DebugHUD : MonoBehaviour
         _motor = GetComponent<PlayerMotor>();
         _input = GetComponent<PlayerInputReader>();
         _combat = GetComponent<PlayerCombat>();
+        _energy = GetComponent<VectorEnergy>();
 
         // 连击数挂攻击侧命中事件（设计 §五）；框不在本物体上则面板无连击行
         foreach (Hitbox box in GetComponents<Hitbox>())
@@ -70,7 +72,7 @@ public sealed class DebugHUD : MonoBehaviour
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
         GUILayout.Label($"墙切角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
-        GUILayout.Label($"能量 {_motor.Energy:F1} / {_motor.Params.EnergyMax:F0}", _style);
+        if (_energy != null) GUILayout.Label($"能量 {_energy.Current:F1} / {_energy.MaxEnergy:F0}", _style);
         GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · Esc 鼠标锁定 · F3 面板", _style);
 
