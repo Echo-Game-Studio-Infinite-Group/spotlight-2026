@@ -115,6 +115,9 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     // 普通攻击的消费口：与 ConsumeBattleIntent 共用同一个缓冲，
     // 但不会把「技能键 + 攻击」的组合意图提前解析掉，两条路径互不吞事件。
     public bool ConsumeAttack(float time) => Battle.ConsumeAttack(time);
+
+    // 招架（Skill 键）消费口：PlayerParry 轮询，与攻击消费同一缓冲不同动作位，互不吞事件
+    public bool ConsumeSkill(float time) => Battle.Consume(InputBuffer.Action.Skill, time);
     public void Clear()
     {
         _jumpPressed = _slidePressed = _sprintHeld = _slideHeld = false;

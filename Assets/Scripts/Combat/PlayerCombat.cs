@@ -32,6 +32,10 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     [SerializeField, Min(0f)] private float _facingAssistRadius = 3.5f;
     [SerializeField] private LayerMask _facingAssistMask = ~0;
 
+    [Header("Parry 派生")]
+    // 策划案：parry/断肢后派生闪斩，伤害约为普攻 3 倍——闪斩独立动画未备，先以「同动画伤害放大」占位
+    [SerializeField, Min(1f)] private float _deriveDamageMultiplier = 3f;
+
     [Header("引用")]
     [SerializeField] private Hitbox _hitbox;
     [SerializeField] private AttackVFXManager _vfx;
@@ -41,9 +45,11 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     private PlayerMotor _motor;
     private float _attackRemaining;
     private float _readyAt = float.NegativeInfinity;
+    private float _deriveUntil = float.NegativeInfinity;
+    private bool _deriveNext;
 
-    /// <summary>Hitbox 从这里取伤害值，因此攻击力只有一处真值。</summary>
-    public float AttackDamage => _attackDamage;
+    /// <summary>Hitbox 从这里取伤害值，因此攻击力只有一处真值。派生窗内的下一击为派生攻击（伤害放大）。</summary>
+    public float AttackDamage => _attackDamage * (_deriveNext ? _deriveDamageMultiplier : 1f);
     public float AttackDuration => _attackDuration;
     public float AttackCooldown => _attackCooldown;
     public float HitStopSeconds => _hitStopSeconds;
@@ -128,8 +134,21 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         // 攻击窗口内不重复响应输入：挥砍播完之前按左键无效，动画才不会被新攻击打断。
         // 输入仍留在 InputBuffer 里，窗口结束的那一帧会被消费，形成自然的连击节奏。
         if (IsAttacking) return;
-        if (_input != null && _input.ConsumeAttack(now)) BeginAttack(now);
+        if (_input != null && _input.ConsumeAttack(now))
+        {
+            // 派生窗内的下一击 = 派生攻击（闪斩占位）：伤害经 AttackDamage 放大，Hitbox 每击现读自动生效
+            _deriveNext = now < _deriveUntil;
+            BeginAttack(now);
+        }
     }
+
+    /// <summary>
+    /// 打开 parry 派生窗口（PlayerParry 在格挡成功时调用）：窗内下一次攻击为派生攻击
+    /// </summary>
+    public void OpenDeriveWindow(float seconds) => _deriveUntil = TimeManager.UnscaledTime + Mathf.Max(0f, seconds);
+
+    /// <summary>派生窗口是否开启（调试 HUD / 测试读数）</summary>
+    public bool IsDeriveWindowOpen => TimeManager.UnscaledTime < _deriveUntil;
 
     public bool BeginAttack(float now)
     {

@@ -132,6 +132,11 @@ public sealed class Hitbox : MonoBehaviour
     {
         Player marker = other.GetComponentInParent<Player>();
         if (marker == null) return;
+
+        // parry 窗口查询在伤害与去重之前：格挡不结算伤害，也不占「同挥砍仅一次」名额
+        PlayerParry parry = marker.GetComponentInParent<PlayerParry>();
+        if (parry != null && parry.TryParry(this)) return;
+
         if (!_hitTargets.Add(marker.GetInstanceID())) return;
 
         PlayerData health = GameManager.Instance.Player;
