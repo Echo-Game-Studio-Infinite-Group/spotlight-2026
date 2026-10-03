@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // CharacterController 撞不动物体（Move 只查碰撞，不算力），所以碰到刚体时在这里手动推开
-// PlayerMotor / CharacterMovement 都走 CharacterController，这个组件对两套移动都生效
+// 所有角色移动都走 CharacterController，本组件对现有移动实现生效
 [RequireComponent(typeof(CharacterController))]
 public class RigidbodyPusher : MonoBehaviour
 {

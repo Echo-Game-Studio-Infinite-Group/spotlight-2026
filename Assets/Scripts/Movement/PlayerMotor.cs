@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour
+public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -18,13 +18,16 @@ public sealed class PlayerMotor : MonoBehaviour
     private float _landTime = float.NegativeInfinity;
     private float _jumpUntil = float.NegativeInfinity;
     private float _wallTime;
+    private float _wallLastContactTime;
     private float _wallSpeed;
     private Vector3 _wallNormal;
     private Vector3 _wallTangent;
     private bool _wallLocked;
+    private bool _wallJumpExitProtected;
     private Vector3 _lockedNormal;
     private Vector3 _lockedPoint;
     private float _lastWallJump = float.NegativeInfinity;
+    private bool _gravitySuspended;
 
     public MovementParams Params => _params;
     public MovementState State { get; private set; } = MovementState.Airborne;
@@ -43,6 +46,10 @@ public sealed class PlayerMotor : MonoBehaviour
     public float WallWindowRemaining => IsWallSliding ? Mathf.Max(0f, _params.WallGraceTime - (_clock - _wallTime)) : 0f;
     public event Action<Vector3> Teleported;
 
+    // —— 战斗命令契约（战斗系统 §4.7；战斗不直接改速度/位移，全部经这些入口请求）——
+    /// <summary>Motor 落地时的战斗查询（高速普攻落地未派生则清空动量——判定在 Motor，决策在战斗侧）</summary>
+    public IMotorLandingClient LandingClient { get; set; }
+
     public void SetParams(MovementParams parameters)
     {
         _params = parameters;
@@ -50,6 +57,37 @@ public sealed class PlayerMotor : MonoBehaviour
     }
     public void SetInput(IPlayerInput input) => _input = input;
     public void SetMovementReference(Transform reference) => _movementReference = reference;
+
+    // —— 战斗命令实现（§4.7 场景一~四；接口形状待 3C 评审）——
+
+    /// <summary>沿方向位移请求（高速普攻前移/冲刺）：经 CharacterController 扫掠，返回实际位移（撞墙自动截断）</summary>
+    public Vector3 RequestMove(Vector3 direction, float distance)
+    {
+        Vector3 before = transform.position;
+        if (distance > 0f && direction.sqrMagnitude > 0.0001f) _controller.Move(direction.normalized * distance);
+        return transform.position - before;
+    }
+
+    /// <summary>直接设置水平速度（连斩清零、推斩击退后自身减速）</summary>
+    public void SetHorizontalSpeed(Vector3 horizontalVelocity) => SetHorizontal(horizontalVelocity);
+
+    /// <summary>设置竖直速度（连斩滞空的悬浮控制，配合 SetGravitySuspended）</summary>
+    public void SetVerticalSpeed(float verticalSpeed) => _velocity.y = verticalSpeed;
+
+    /// <summary>重力悬挂开关：悬挂期间竖直速度不被重力积分（Simulate 内生效）</summary>
+    public void SetGravitySuspended(bool suspended) => _gravitySuspended = suspended;
+
+    // —— IMotorCommand 实现（契约见 CombatSeams.cs）——
+    public void SetHorizontalSpeed(float speed) => SetHorizontal(transform.forward * Mathf.Max(0f, speed));
+    public void LaunchVertical(float upSpeed) => Jump(Mathf.Max(0f, upSpeed));
+
+    public void ReverseHorizontal()
+    {
+        SetHorizontal(-MovementMath.Horizontal(_velocity));
+        transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + 180f, 0f);
+    }
+
+    // 能量账户代管已退役：唯一账户是 Character/VectorEnergy（框架 4.3 外迁决策），本类不再实现 IEnergyAccount
 
     private void Awake()
     {
@@ -94,13 +132,22 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 wish = WishDirection(input.Move);
         IsSprinting = input.SprintHeld && input.Move.y > 0f;
         RearmWall();
-        if (IsWallSliding && (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _) ||
-            Vector3.Dot(wish, _wallNormal) > 0.1f)) ExitWall();
+        if (IsWallSliding)
+        {
+            bool closeToWall = _contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _);
+            if (closeToWall) _wallLastContactTime = _clock;
+            float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
+            if (Vector3.Dot(wish, _wallNormal) > 0.1f ||
+                separation > _params.WallProbeDistance + _controller.skinWidth * 2f ||
+                _clock - _wallLastContactTime > _params.WallContactGraceTime)
+                ExitWall();
+        }
 
         UpdateFacing(wish, dt);
         Vector3 drive = transform.forward * wish.magnitude;
         // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
-        if (wish != Vector3.zero && !IsWallSliding && _clock - _lastWallJump >= _params.WallJumpCooldown)
+        if (wish != Vector3.zero && !IsWallSliding && !_wallJumpExitProtected &&
+            _clock - _lastWallJump >= _params.WallJumpCooldown)
             SetHorizontal(transform.forward * HorizontalSpeed);
 
         if (input.SlidePressed && IsGrounded && !IsSliding &&
@@ -136,25 +183,43 @@ public sealed class PlayerMotor : MonoBehaviour
 
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
-        _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * dt;
-        if (IsWallSliding) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
+        if (_gravitySuspended)
+        {
+            // 滞空悬挂（连斩滞空）：竖直速度由战斗侧 SetVerticalSpeed 控制，重力不再积分
+        }
+        else
+        {
+            _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * dt;
+            if (IsWallSliding) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
+        }
         UpdateCapsule();
         _controller.stepOffset = IsGrounded ? _groundStepOffset : 0f;
 
         bool wasGrounded = IsGrounded;
         _contacts.Move(ref _velocity, dt);
+        if (IsWallSliding && _contacts.HasWall &&
+            Vector3.Angle(_wallNormal, _contacts.WallNormal) <= _params.WallSeamAngle)
+            _wallLastContactTime = _clock;
         if (_contacts.Grounded)
         {
-            if (!wasGrounded) _landTime = _clock;
+            if (!wasGrounded)
+            {
+                _landTime = _clock;
+                // 高速普攻落地未派生 → 清空动量（速度经济学：逼迫用招式链维持动量，§4.7）
+                if (LandingClient != null && LandingClient.ShouldClearMomentumOnLanding()) SetHorizontal(Vector3.zero);
+            }
             State = MovementState.Grounded;
             _wallSpeed = 0f;
         }
         else
         {
             if (wasGrounded) State = MovementState.Airborne;
-            if (!IsSliding && !IsWallSliding) TryEnterWall(wish);
+            if (!IsSliding && !IsWallSliding)
+            {
+                TryEnterWall(wish);
+                if (jump && IsWallSliding) JumpFromWall();
+            }
         }
-        // 能量不在这里结算：唯一账户是 VectorEnergy（执行序 10，在本组件之后自动积能）
     }
 
     private void UpdateFreeMovement(float dt, Vector3 wish)
@@ -178,16 +243,17 @@ public sealed class PlayerMotor : MonoBehaviour
 
     private void TryEnterWall(Vector3 wish)
     {
-        // CharacterController 返回的接触法线有浮点误差，边界角允许百分之一度容差。
-        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f < _params.WallMinApproachAngle) return;
+        // 以入墙速度与墙切线的锐角判定；只接受确实向墙内运动且小于上限的接触。
+        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle) return;
         bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
             Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
         if (sameWall) return;
         _wallNormal = _contacts.WallNormal;
-        if (!_contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _)) return;
+        // 当前帧真实墙面碰撞足以入墙；贴墙时的 CapsuleCast 可能从重叠体积起步而漏报。
         _wallTangent = MovementMath.WallTangent(_contacts.WallIncoming, _wallNormal, wish);
         _wallSpeed = Mathf.Min(MovementMath.Horizontal(_contacts.WallIncoming).magnitude, _params.MaxSpeed);
         _wallTime = _clock;
+        _wallLastContactTime = _clock;
         WallApproachAngle = _contacts.WallAngle;
         _wallLocked = true;
         _lockedNormal = _wallNormal;
@@ -215,6 +281,7 @@ public sealed class PlayerMotor : MonoBehaviour
         SetHorizontal(MovementMath.WallJump(_wallTangent, _wallNormal, speed, _params.WallJumpAngle));
         Jump(_params.WallJumpUpImpulse);
         _lastWallJump = _clock;
+        _wallJumpExitProtected = true;
         WallJumpCount++;
     }
 
@@ -222,8 +289,13 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         if (!_wallLocked || IsWallSliding) return;
         float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
-        if (separation >= _params.WallRearmDistance && _clock - _lastWallJump >= _params.WallJumpCooldown)
+        if (separation >= _params.WallRearmDistance &&
+            !_contacts.ProbeWall(_lockedNormal, _params.WallRearmDistance, out _) &&
+            _clock - _lastWallJump >= _params.WallJumpCooldown)
+        {
             _wallLocked = false;
+            _wallJumpExitProtected = false;
+        }
     }
 
     private void ExitWall() { State = MovementState.Airborne; _wallSpeed = 0f; }
@@ -285,10 +357,11 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         _velocity = Vector3.zero;
         _facingAngularVelocity = 0f;
+        _gravitySuspended = false;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
-        IsSliding = IsSprinting = _wallLocked = false;
-        _clock = _wallTime = _wallSpeed = WallApproachAngle = 0f;
+        IsSliding = IsSprinting = _wallLocked = _wallJumpExitProtected = false;
+        _clock = _wallTime = _wallLastContactTime = _wallSpeed = WallApproachAngle = 0f;
         _landTime = _jumpUntil = _lastWallJump = float.NegativeInfinity;
         _wallNormal = _wallTangent = _lockedNormal = _lockedPoint = Vector3.zero;
         _input?.Clear();
