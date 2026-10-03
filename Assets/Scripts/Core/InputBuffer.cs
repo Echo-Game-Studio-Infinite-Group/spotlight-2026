@@ -32,5 +32,11 @@ public sealed class InputBuffer
         if (skillHeld && Consume(Action.Jump, time)) return Intent.HighJump;
         return skillHeld ? Intent.TimeStop : Intent.None;
     }
+
+    // 普通攻击走独立窗口，不走 ConsumeCombo：
+    // ConsumeCombo 会把「按住技能键 + 攻击」提前解析成 Rashomon/PushSlash 并吃掉这次攻击，
+    // 两个消费点共存时先到先得，普通攻击会静默失效。这里只认「这一次攻击有没有被按过」。
+    public bool ConsumeAttack(float time) => Consume(Action.Attack, time);
+
     private void Prune(float now) => _entries.RemoveAll(entry => now - entry.Time > _window);
 }

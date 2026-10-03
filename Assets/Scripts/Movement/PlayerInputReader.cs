@@ -111,6 +111,10 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         return Battle.ConsumeCombo(TimeManager.UnscaledTime, _skill != null && _skill.IsPressed(),
             _move != null ? _move.ReadValue<Vector2>() : Vector2.zero);
     }
+
+    // 普通攻击的消费口：与 ConsumeBattleIntent 共用同一个缓冲，
+    // 但不会把「技能键 + 攻击」的组合意图提前解析掉，两条路径互不吞事件。
+    public bool ConsumeAttack(float time) => Battle.ConsumeAttack(time);
     public void Clear()
     {
         _jumpPressed = _slidePressed = _sprintHeld = _slideHeld = false;
