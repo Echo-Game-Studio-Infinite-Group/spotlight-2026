@@ -244,7 +244,7 @@ public static class MovementSceneSetup
 
     private static bool IsPlayerRoot(GameObject root)
     {
-        if (root.GetComponent<PlayerMotor>() != null || root.GetComponent<Player>() != null) return true;
+        if (root.GetComponent<PlayerMotor>() != null) return true;
         // 缺失模型源的旧变体也要清理；它可能已经无法读到任何运行时组件。
         return PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root) == "Assets/Prefabs/character.prefab";
     }

@@ -42,7 +42,6 @@ public sealed class Enemy : MonoBehaviour
     [SerializeField, Min(0f)] private float _knockbackDecay = 10f;
 
     private CharacterController _controller;
-    private Player _player;
     private Vector3 _knockback;
     private float _nextAttackTime;
     private float _verticalSpeed;
@@ -119,7 +118,7 @@ public sealed class Enemy : MonoBehaviour
     // 由 MCP 或调试器触发，正常玩法不调用。
     public void DebugDumpState()
     {
-        Player target = ResolvePlayer();
+        PlayerMotor target = ResolvePlayer();
         float distance = target != null
             ? Vector3.Distance(new Vector3(transform.position.x, 0f, transform.position.z),
                 new Vector3(target.transform.position.x, 0f, target.transform.position.z))
@@ -145,7 +144,7 @@ public sealed class Enemy : MonoBehaviour
 
     private void Chase(float dt)
     {
-        Player target = ResolvePlayer();
+        PlayerMotor target = ResolvePlayer();
         if (target == null) return;
 
         Vector3 toTarget = target.transform.position - transform.position;
@@ -192,7 +191,7 @@ public sealed class Enemy : MonoBehaviour
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
     }
 
-    private void TryAttack(Player target, float distance)
+    private void TryAttack(PlayerMotor target, float distance)
     {
         if (TimeManager.UnscaledTime < _nextAttackTime) return;
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
@@ -207,16 +206,9 @@ public sealed class Enemy : MonoBehaviour
         if (applied > 0f) CameraShaker.Shake(0.35f);
     }
 
-    private Player ResolvePlayer()
+    private PlayerMotor ResolvePlayer()
     {
-        if (_player != null) return _player;
-        // 不经过 GameManager.Instance：那个 getter 在找不到实例时会 new 一个空壳并覆盖真实实例，
-        // 玩家的注册随之丢失（实测表现为「敌人永远找不到玩家、站着不动」）。
-        // 这里只在缓存的注册引用有效时用它，否则退化为直接查场景。
-        GameManager manager = FindObjectOfType<GameManager>();
-        if (manager != null && manager.Player.Target != null) _player = manager.Player.Target;
-        if (_player == null) _player = FindObjectOfType<Player>();
-        return _player;
+        return GameManager.Instance.Player.Target;
     }
 
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
