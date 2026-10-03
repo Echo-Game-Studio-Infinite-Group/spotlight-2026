@@ -22,7 +22,7 @@ public sealed class AnimationSceneTests
         try
         {
             PlayerMotor motor = character.GetComponent<PlayerMotor>();
-            Animator animator = character.transform.Find("PlayerDummy").GetComponent<Animator>();
+            Animator animator = character.GetComponentInChildren<Animator>(true);
             motor.enabled = false;
             float now = 0f;
             const float tick = 1f / 60f;
@@ -90,8 +90,8 @@ public sealed class AnimationSceneTests
 #if UNITY_EDITOR
         GameObject character = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
         Assert.NotNull(character);
-        Assert.NotNull(character.GetComponent<PlayerAnimation>());
-        Animator animator = character.transform.Find("PlayerDummy").GetComponent<Animator>();
+        Assert.NotNull(character.GetComponentInChildren<Animator>(true).GetComponent<PlayerAnimation>());
+        Animator animator = character.GetComponentInChildren<Animator>(true);
         Assert.NotNull(animator);
         Assert.IsFalse(animator.applyRootMotion);
         Assert.NotNull(animator.avatar);
@@ -137,7 +137,7 @@ public sealed class AnimationSceneTests
         {
             PlayerMotor motor = character.GetComponent<PlayerMotor>();
             PlayerCombat combat = character.GetComponent<PlayerCombat>();
-            Animator animator = character.transform.Find("PlayerDummy").GetComponent<Animator>();
+            Animator animator = character.GetComponentInChildren<Animator>(true);
             Assert.NotNull(combat, "Player.prefab 缺少 PlayerCombat");
             motor.enabled = false;
 
@@ -150,6 +150,7 @@ public sealed class AnimationSceneTests
             }
 
             Assert.IsFalse(combat.IsAttacking);
+            now = TimeManager.UnscaledTime;
             Assert.IsTrue(combat.BeginAttack(now), "首次攻击应能立即触发");
             Assert.IsFalse(combat.BeginAttack(now), "冷却期内不应重复触发");
 
@@ -161,6 +162,7 @@ public sealed class AnimationSceneTests
             // 攻击窗口结束后必须回到移动/待机编号，不允许卡在攻击状态
             yield return new WaitForSeconds(combat.AttackDuration + 0.1f);
             Assert.IsFalse(combat.IsAttacking);
+            Assert.IsFalse(combat.Hitbox.GetComponent<Collider>().enabled, "收招后判定盒必须关闭");
             yield return null;
             Assert.AreNotEqual(PlayerAnimation.MotionStateAttack, animator.GetInteger("MotionState"));
         }
@@ -171,6 +173,74 @@ public sealed class AnimationSceneTests
         }
 #else
         Assert.Ignore("攻击动画验证在编辑器 PlayMode 中执行");
+        yield break;
+#endif
+    }
+
+    [Test]
+    public void AttackEventsStayInsideClip()
+    {
+#if UNITY_EDITOR
+        var clips = AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx");
+        foreach (var asset in clips)
+        {
+            if (!(asset is AnimationClip clip) || clip.name.StartsWith("__preview__")) continue;
+            var events = AnimationUtility.GetAnimationEvents(clip);
+            Assert.That(events.Length, Is.GreaterThanOrEqualTo(3));
+            foreach (var entry in events)
+                Assert.That(entry.time, Is.InRange(0f, clip.length), entry.functionName);
+        }
+#endif
+    }
+
+    [UnityTest]
+    public IEnumerator PrefabAnimationHitsStaticEnemyPlaysVfxAndExitsAttack()
+    {
+#if UNITY_EDITOR
+        var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
+        var character = Object.Instantiate(source, new Vector3(0, 20, 0), Quaternion.identity);
+        var target = new GameObject("StaticEnemy");
+        try
+        {
+            character.GetComponent<PlayerMotor>().enabled = false;
+            var animator = character.GetComponentInChildren<Animator>(true);
+            var combat = character.GetComponent<PlayerCombat>();
+            var vfx = character.GetComponent<PlayerVFXManager>();
+            Assert.NotNull(vfx);
+            Assert.NotNull(vfx.attack1);
+            var box = combat.Hitbox.GetComponent<BoxCollider>();
+            target.transform.position = box.transform.TransformPoint(box.center);
+            target.AddComponent<BoxCollider>().size = Vector3.one * 0.3f;
+            var enemy = target.AddComponent<Enemy>();
+            enemy.SetInvulnerableTime(10f);
+            TimeManager.ClearSlowMotion();
+            combat.Configure(25, 5, 0, 1);
+            Assert.IsTrue(combat.BeginAttack(TimeManager.UnscaledTime));
+            bool opened = false, particles = false, entered = false;
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < 2.2f)
+            {
+                yield return null;
+                opened |= box.enabled;
+                particles |= vfx.attack1.isPlaying;
+                entered |= animator.GetCurrentAnimatorStateInfo(0).IsName("Attack");
+                if (entered && !combat.IsAttacking && !animator.GetCurrentAnimatorStateInfo(0).IsName("Attack")) break;
+            }
+            Assert.IsTrue(entered, "必须实际进入 Attack");
+            Assert.IsTrue(opened, "动画事件必须打开判定");
+            Assert.Less(enemy.Health, enemy.MaxHealth, "没有刚体的敌人也必须收到触发伤害");
+            Assert.IsTrue(particles, "攻击粒子必须播放");
+            Assert.IsFalse(combat.IsAttacking, "收招必须覆盖过长的计时窗口");
+            Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(0).IsName("Attack"));
+            Assert.IsFalse(box.enabled);
+        }
+        finally
+        {
+            Object.DestroyImmediate(character);
+            Object.DestroyImmediate(target);
+            TimeManager.ClearSlowMotion();
+        }
+#else
         yield break;
 #endif
     }

@@ -17,6 +17,17 @@ public class PlayerData
 
     public float MaxHealth = 100f;
     public float Health;
+    [SerializeField, Min(0f)] private float _invulnerableTime = 0.6f;
+    [NonSerialized] private float _invulnerableUntil = float.NegativeInfinity;
+
+    public bool IsAlive => Health > 0f;
+    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
+    public float InvulnerableTime => _invulnerableTime;
+
+    public void SetInvulnerableTime(float seconds)
+    {
+        _invulnerableTime = Mathf.Max(0f, seconds);
+    }
 
     public float Speed
     {
@@ -26,11 +37,18 @@ public class PlayerData
     public void Reset()
     {
         Health = MaxHealth;
+        _invulnerableUntil = float.NegativeInfinity;
     }
 
-    public void TakeDamage(float amount)
+    public float TakeDamage(float amount)
     {
-        Health = Mathf.Max(0f, Health - amount);
+        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
+
+        float applied = Mathf.Min(amount, Health);
+        Health -= applied;
+        // 所有玩家受击入口共享无敌帧，避免同一帧被多个碰撞体重复扣血。
+        _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
+        return applied;
     }
 
     public void Heal(float amount)

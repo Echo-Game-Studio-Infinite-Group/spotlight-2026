@@ -32,17 +32,18 @@ public sealed class DebugHUD : MonoBehaviour
     // 战斗数值单独一段：血量与减速是「打击感是否生效」最直接的两个观察点
     private void DrawCombatLines()
     {
-        PlayerHealth health = GetComponent<PlayerHealth>();
-        if (health != null)
-        {
-            GUILayout.Label($"玩家血量 {health.Health:F0} / {health.MaxHealth:F0}", _style);
-        }
-        else
-        {
-            GUILayout.Label("玩家血量 缺少 PlayerHealth 组件", _style);
-        }
+        PlayerData health = GameManager.Instance.Player;
+        GUILayout.Label($"玩家血量 {health.Health:F0} / {health.MaxHealth:F0}", _style);
 
-        Enemy enemy = FindObjectOfType<Enemy>();
+        Enemy enemy = null;
+        float nearest = float.PositiveInfinity;
+        foreach (Enemy candidate in FindObjectsOfType<Enemy>())
+        {
+            float distance = (candidate.transform.position - transform.position).sqrMagnitude;
+            if (distance >= nearest) continue;
+            nearest = distance;
+            enemy = candidate;
+        }
         if (enemy == null)
         {
             GUILayout.Label("敌人 未找到", _style);

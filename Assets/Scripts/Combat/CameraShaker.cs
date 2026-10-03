@@ -32,7 +32,7 @@ public sealed class CameraShaker : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
-    // 静态入口：命中发生在 PlayerCombat / Damageable 里，让它们免于持有场景引用
+    // 静态入口：命中发生在 PlayerCombat / Enemy 里，让它们免于持有场景引用
     public static void Shake(float amplitude)
     {
         if (_instance == null) return;

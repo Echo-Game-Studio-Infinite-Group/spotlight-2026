@@ -190,7 +190,7 @@ public sealed class CameraSceneTests
             Assert.NotNull(motor);
             Assert.NotNull(motor.GetComponent<Player>());
             Assert.NotNull(motor.GetComponent<PlayerCombat>());
-            Assert.NotNull(motor.GetComponent<PlayerHealth>());
+            Assert.NotNull(GameManager.Instance.Player);
             Assert.NotNull(motor.GetComponent<PlayerCameraRig>());
             Assert.NotNull(motor.GetComponent<SpeedCameraFeedback>());
             Assert.NotNull(motor.GetComponent<CameraWallFade>());

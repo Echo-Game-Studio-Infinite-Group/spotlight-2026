@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 伤害跳字组件：作为**预制体里的常驻组件**使用，由 Damageable 复用，不再运行时动态生成。
+// 伤害跳字组件：作为**预制体里的常驻组件**使用，由 Enemy 复用，不再运行时动态生成。
 //
 // 为什么不做动态生成：每次命中要 new GameObject + AddComponent(Canvas/Text/Outline/CanvasGroup)
 // + 从系统字体建动态字体 + 结束时 Destroy —— 高速战斗里这是持续的对象与 GC 压力。
@@ -60,7 +60,7 @@ public sealed class DamagePopup : MonoBehaviour
         _rise = rise;
     }
 
-    // 原型实例登记进池；Damageable 会在初始化时调用一次
+    // 原型实例登记进池；Enemy 会在初始化时调用一次
     public static void RegisterTemplate(DamagePopup template)
     {
         if (template != null && !Pool.Contains(template)) Pool.Add(template);
@@ -77,7 +77,6 @@ public sealed class DamagePopup : MonoBehaviour
 
     public static void ReleaseAll()
     {
-        foreach (DamagePopup popup in Pool) Pool.Remove(popup);
         Pool.Clear();
     }
 
@@ -107,6 +106,7 @@ public sealed class DamagePopup : MonoBehaviour
         if (_group != null) _group.alpha = 1f;
         if (_canvas != null) _canvas.sortingOrder = 100;
 
+        EnsureFont();
         gameObject.SetActive(true);
         ApplyPosition();
         FaceCamera();

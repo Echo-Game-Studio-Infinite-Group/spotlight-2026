@@ -10,7 +10,7 @@ using UnityEngine;
 //   前摇不打人、后摇不打人，表现与判定天然一致。
 [RequireComponent(typeof(CharacterController))]
 [DisallowMultipleComponent]
-public sealed class PlayerCombat : MonoBehaviour, IDamageSource
+public sealed class PlayerCombat : MonoBehaviour
 {
     [Header("攻击")]
     [SerializeField, Min(0f)] private float _attackDamage = 25f;
@@ -27,14 +27,9 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     [SerializeField, Min(0f)] private float _impactSeconds = 0.09f;
     [SerializeField, Range(0.05f, 1f)] private float _impactTimeScale = 0.35f;
 
-    [Header("攻击朝向辅助")]
-    [SerializeField] private bool _faceNearestTargetOnAttack = true;
-    [SerializeField, Min(0f)] private float _facingAssistRadius = 3.5f;
-    [SerializeField] private LayerMask _facingAssistMask = ~0;
-
     [Header("引用")]
     [SerializeField] private Hitbox _hitbox;
-    [SerializeField] private AttackVFXManager _vfx;
+    [SerializeField] private PlayerVFXManager _vfx;
     [SerializeField] private bool _logHits;
 
     private PlayerInputReader _input;
@@ -80,7 +75,7 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         SyncHitboxDamage();
     }
 
-    public void SetReferences(Hitbox hitbox, AttackVFXManager vfx)
+    public void SetReferences(Hitbox hitbox, PlayerVFXManager vfx)
     {
         _hitbox = hitbox;
         _vfx = vfx;
@@ -97,23 +92,26 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     }
 
     // 惰性解析：Awake 不保证跑过（编辑模式装配工具、测试里 AddComponent 都不会触发它）。
-    // 判定盒与剑由 SwordBinder 在运行时创建，创建时机可能晚于本组件的 Awake，
     // 所以引用为空时必须能重新找到，不能只在 Awake 里缓存一次。
     private void EnsureReferences()
     {
         if (_motor == null) _motor = GetComponent<PlayerMotor>();
         if (_input == null) _input = GetComponent<PlayerInputReader>();
         if (_hitbox == null) _hitbox = GetComponentInChildren<Hitbox>(true);
-        if (_vfx == null) _vfx = GetComponentInChildren<AttackVFXManager>(true);
+        if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>(true);
     }
 
     private void SyncHitboxDamage()
     {
-        // 每次攻击前重设伤害来源：Hitbox 的 _damageSource 只在 Configure 时赋值，
-        // 而组件初始化顺序不保证（SwordBinder.Awake 可能跑在拿到引用之前），
-        // 一旦漏掉它就永远是 null —— Strike() 会在第一行直接 return false，
-        // 表现就是「判定盒明明开着、也检测到碰撞体，却一次伤害都不结算」。
-        if (_hitbox != null) _hitbox.SetDamageSource(this);
+        if (_hitbox != null) _hitbox.Configure(CampType.Player, this);
+    }
+
+    private void OnDisable() => ResetAttackState();
+
+    private void Update()
+    {
+        // 攻击被状态切换或计时结束打断时，收招事件可能来不及播放。
+        if (!IsAttacking && _hitbox != null) _hitbox.DisableHitbox();
     }
 
     private void FixedUpdate()
@@ -139,7 +137,6 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         SyncHitboxDamage();
         _readyAt = now + _attackCooldown;
         _windowEnd = now + _attackDuration;
-        if (_faceNearestTargetOnAttack) FaceNearestTarget();
         return true;
     }
 
@@ -148,6 +145,7 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     /// <summary>挥砍起手：由 Attack 动画的动画事件调用。</summary>
     public void EnableHitbox()
     {
+        if (!IsAttacking) return;
         EnsureReferences();
         if (_hitbox != null) _hitbox.EnableHitbox();
         else Debug.LogError("[PlayerCombat] 没有判定盒，挥砍不会造成伤害");
@@ -158,6 +156,12 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     {
         EnsureReferences();
         if (_hitbox != null) _hitbox.DisableHitbox();
+    }
+
+    public void FinishAttack()
+    {
+        _windowEnd = float.NegativeInfinity;
+        DisableHitbox();
     }
 
     /// <summary>攻击特效：第 cnt 段。由动画事件调用，与参考实现 UpdateAttack(int) 同名。</summary>
@@ -177,37 +181,9 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         DisableHitbox();
     }
 
-    // 攻击朝向辅助：把玩家水平转向辅助半径内最近的受击目标。
-    // 没有它时挥砍方向永远是 transform.forward，而敌人会绕到玩家侧后方，出现「贴身空刀」。
-    private void FaceNearestTarget()
-    {
-        Collider[] nearby = Physics.OverlapSphere(transform.position, _facingAssistRadius,
-            _facingAssistMask, QueryTriggerInteraction.Collide);
-        if (nearby.Length == 0) return;
-
-        Damageable nearest = null;
-        float nearestDistance = float.MaxValue;
-        for (int i = 0; i < nearby.Length; i++)
-        {
-            Damageable candidate = nearby[i].GetComponentInParent<Damageable>();
-            if (candidate == null || !candidate.IsAlive || candidate.gameObject == gameObject) continue;
-            if (Mathf.Abs(candidate.transform.position.y - transform.position.y) > 2f) continue;
-            float distance = MovementMath.Horizontal(candidate.transform.position - transform.position).sqrMagnitude;
-            if (distance >= nearestDistance) continue;
-            nearestDistance = distance;
-            nearest = candidate;
-        }
-
-        if (nearest == null) return;
-        Vector3 toTarget = MovementMath.Horizontal(nearest.transform.position - transform.position);
-        if (toTarget.sqrMagnitude < 0.0001f) return;
-        // 直接写 rotation 即可：Hitbox 是碰撞体，跟手骨走，不依赖「立刻读 transform.forward」
-        transform.rotation = Quaternion.LookRotation(toTarget.normalized, Vector3.up);
-    }
-
     // ===== 打击感 =====
     // 由 Hitbox 在成功造成伤害后回调（伤害被无敌帧挡下时不会走到这里）
-    public void OnLandedHit(Damageable target, Vector3 point, Vector3 direction, float applied)
+    public void OnLandedHit(Enemy target, Vector3 point, Vector3 direction, float applied)
     {
         if (applied <= 0f) return;
         if (_logHits)

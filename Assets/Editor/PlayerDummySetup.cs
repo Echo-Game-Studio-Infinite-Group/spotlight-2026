@@ -81,7 +81,9 @@ public static class PlayerDummySetup
                 PrefabUtility.RecordPrefabInstancePropertyModifications(child.gameObject);
             }
             PrefabUtility.RecordPrefabInstancePropertyModifications(animator);
-            contents.GetComponent<PlayerAnimation>().Configure(animator);
+            var animation = animator.GetComponent<PlayerAnimation>();
+            if (animation == null) animation = animator.gameObject.AddComponent<PlayerAnimation>();
+            animation.Configure(animator);
             PrefabUtility.SaveAsPrefabAsset(contents, MovementSceneSetup.CharacterPath);
         }
         finally { PrefabUtility.UnloadPrefabContents(contents); }

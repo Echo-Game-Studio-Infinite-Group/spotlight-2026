@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 敌人：血量/受击反馈继承自 Damageable，本类只负责「战斗属性 + 追击 + 攻击」这套行为。
+// 敌人：自行维护血量与受击反馈，Hitbox 负责碰撞判定。
 // 追击用 Vector3.MoveTowards 的直线靠近，不接 NavMesh：本阶段是灰盒预研，
 // 场景里没有烘焙导航网格，接 NavMeshAgent 只会得到一群原地不动的敌人。
 //
@@ -9,8 +9,20 @@ using UnityEngine;
 // 加了 RequireComponent 的话，只要挂上 Enemy 就会被强行塞一个 CharacterController，
 // 「只想要一个能被打的靶子」就做不到了。需要追击时由装配工具显式添加。
 [DisallowMultipleComponent]
-public sealed class Enemy : Damageable, IDamageSource
+public sealed class Enemy : MonoBehaviour
 {
+    [Header("生命")]
+    [SerializeField, Min(1f)] private float _maxHealth = 100f;
+    [SerializeField, Min(0f)] private float _invulnerableTime = 0.45f;
+    private float _health;
+    private float _invulnerableUntil = float.NegativeInfinity;
+    public float MaxHealth => _maxHealth;
+    public float Health => _health;
+    public bool IsAlive => _health > 0f;
+    public float HealthRatio => _maxHealth > 0f ? _health / _maxHealth : 0f;
+    public int DamagedCount { get; private set; }
+    public float InvulnerableTime => _invulnerableTime;
+    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
     [Header("战斗属性")]
     [SerializeField, Min(0f)] private float _attackPower = 8f;
     [SerializeField, Min(0f)] private float _moveSpeed = 4f;
@@ -35,10 +47,9 @@ public sealed class Enemy : Damageable, IDamageSource
     private float _nextAttackTime;
     private float _verticalSpeed;
     private Hitbox _attackHitbox;
-    private AttackVFXManager _attackVfx;
+    private PlayerVFXManager _attackVfx;
 
     public float AttackPower => _attackPower;
-    /// <summary>IDamageSource 实现：Hitbox 从这里取伤害值。语义与 AttackPower 相同，名字对齐接口。</summary>
     public float AttackDamage => _attackPower;
     public float MoveSpeed => _moveSpeed;
     public float AttackRange => _attackRange;
@@ -56,10 +67,11 @@ public sealed class Enemy : Damageable, IDamageSource
         _chasePlayer = chase;
     }
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
+        _health = _maxHealth;
         _controller = GetComponent<CharacterController>();
+        if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -90,14 +102,14 @@ public sealed class Enemy : Damageable, IDamageSource
         if (_attackHitbox != null) _attackHitbox.DisableHitbox();
     }
 
-    // 攻击特效：与玩家 AttackVFXManager 同名事件，动画事件可直接同时挂
+    // 攻击特效：与玩家 PlayerVFXManager 同名事件，动画事件可直接同时挂
     public void UpdateAttack(int cnt = 1)
     {
         if (_attackVfx != null) _attackVfx.UpdateAttack(cnt);
     }
 
     // 供装配工具写入敌人自己的受击盒与特效
-    public void ConfigureAttackHitbox(Hitbox hitbox, AttackVFXManager vfx)
+    public void ConfigureAttackHitbox(Hitbox hitbox, PlayerVFXManager vfx)
     {
         _attackHitbox = hitbox;
         _attackVfx = vfx;
@@ -186,7 +198,7 @@ public sealed class Enemy : Damageable, IDamageSource
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
-        PlayerHealth health = target.GetComponent<PlayerHealth>();
+        PlayerData health = GameManager.Instance.Player;
         if (health == null || !health.IsAlive) return;
 
         _nextAttackTime = TimeManager.UnscaledTime + _attackCooldown;
@@ -207,18 +219,36 @@ public sealed class Enemy : Damageable, IDamageSource
         return _player;
     }
 
-    protected override void OnDamaged(float applied)
+    public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
     {
-        // 受击硬直由击退体现，不改速度：速度是属性，不该被单次命中污染
+        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
+        float applied = Mathf.Min(amount, _health);
+        _health -= applied;
+        DamagedCount++;
+        if (_damagePopup != null)
+            _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
+                transform, Camera.main, _numberLifetime, _riseSpeed);
+        CameraShaker.Shake(_shakeAmplitude);
+        _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
+        if (!IsAlive)
+        {
+            _chasePlayer = false;
+            if (_controller != null) _controller.enabled = false;
+        }
+        return applied;
     }
 
-    protected override void OnDied()
-    {
-        Debug.Log($"[Enemy] {name} 已被击破");
-        // 先停掉行为再淡出，避免死亡后还在追着玩家打
-        _chasePlayer = false;
-        if (_controller != null) _controller.enabled = false;
-    }
+    [SerializeField] private DamagePopup _damagePopup;
+    [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);
+    [SerializeField] private float _numberLifetime = 1.2f;
+    [SerializeField] private float _riseSpeed = 2.2f;
+    [SerializeField] private float _shakeAmplitude = 0.6f;
+    public DamagePopup DamagePopupTemplate => _damagePopup;
+    public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
+
+    public void ResetHealth() { _health = _maxHealth; _invulnerableUntil = float.NegativeInfinity; DamagedCount = 0; }
+    public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
+    public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
 
     public void ApplyKnockback(Vector3 direction, float strength)
     {

@@ -153,8 +153,9 @@ public static class MovementSceneSetup
         motor.SetParams(parameters);
         motor.SetMovementReference(cameraReference);
         motor.enabled = true;
-        if (character.GetComponent<PlayerAnimation>() == null)
-            character.AddComponent<PlayerAnimation>().Configure(character.GetComponentInChildren<Animator>(true));
+        Animator modelAnimator = character.GetComponentInChildren<Animator>(true);
+        if (modelAnimator != null && modelAnimator.GetComponent<PlayerAnimation>() == null)
+            modelAnimator.gameObject.AddComponent<PlayerAnimation>().Configure(modelAnimator);
         GetOrAdd<PlayerRespawn>(character);
         GetOrAdd<DebugHUD>(character);
 

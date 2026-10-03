@@ -30,7 +30,7 @@ public sealed class CombatSceneEnemyTests
     public IEnumerator AttackHitboxDamagesEnemy()
     {
         PlayerCombat combat = SpawnPlayer(out PlayerMotor motor, out Hitbox playerHitbox);
-        Enemy enemy = SpawnEnemy(out Damageable damageable);
+        Enemy enemy = SpawnEnemy(out Enemy damageable);
 
         // 敌人摆在玩家正前方，进入判定盒范围
         Vector3 facing = combat.transform.forward;
@@ -78,7 +78,7 @@ public sealed class CombatSceneEnemyTests
     public IEnumerator DamagePopupIsReusedNotCreated()
     {
         PlayerCombat combat = SpawnPlayer(out _, out _);
-        Enemy enemy = SpawnEnemy(out Damageable damageable);
+        Enemy enemy = SpawnEnemy(out Enemy damageable);
         enemy.transform.position = combat.transform.position + combat.transform.forward * 1.4f;
         yield return null;
 
@@ -98,7 +98,7 @@ public sealed class CombatSceneEnemyTests
     public IEnumerator InvulnerabilityBlocksRepeatedHits()
     {
         SpawnPlayer(out _, out _);
-        Enemy enemy = SpawnEnemy(out Damageable damageable);
+        Enemy enemy = SpawnEnemy(out Enemy damageable);
 
         // 第一次命中生效
         float first = damageable.TakeDamage(10f, Vector3.zero, Vector3.forward);
@@ -120,7 +120,7 @@ public sealed class CombatSceneEnemyTests
     public IEnumerator HitAppliesSlowMotionThenRecovers()
     {
         PlayerCombat combat = SpawnPlayer(out _, out _);
-        Enemy enemy = SpawnEnemy(out Damageable damageable);
+        Enemy enemy = SpawnEnemy(out Enemy damageable);
         enemy.transform.position = combat.transform.position + combat.transform.forward * 1.4f;
         yield return null;
 
@@ -141,13 +141,19 @@ public sealed class CombatSceneEnemyTests
         Assert.AreEqual(rateBefore, TimeManager.PlayerRate, 0.001f, "减速结束后速率应恢复原值");
     }
 
-    private Enemy SpawnEnemy(out Damageable damageable)
+    private Enemy SpawnEnemy(out Enemy damageable)
     {
         GameObject host = new GameObject("TestEnemy");
         host.SetActive(false);
-        host.AddComponent<CharacterController>();
+        var body = host.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
         Enemy found = host.AddComponent<Enemy>();
         found.ConfigureStats(120f, 8f, 4f);
+        var popupObject = new GameObject("DamagePopup");
+        popupObject.transform.SetParent(host.transform, false);
+        found.SetDamagePopup(popupObject.AddComponent<DamagePopup>());
+        popupObject.SetActive(false);
         // 受击盒：判定靠碰撞体，没有它永远打不中
         BoxCollider hitBox = host.AddComponent<BoxCollider>();
         hitBox.size = new Vector3(1f, 2f, 1f);
@@ -175,6 +181,10 @@ public sealed class CombatSceneEnemyTests
         controller.height = 1.8f;
         controller.radius = 0.35f;
         motor = host.AddComponent<PlayerMotor>();
+        var parameters = ScriptableObject.CreateInstance<MovementParams>();
+        motor.SetParams(parameters);
+        motor.enabled = false;
+        _spawned.Add(parameters);
         PlayerCombat combat = host.AddComponent<PlayerCombat>();
 
         // 判定盒挂在玩家子物体上，默认关闭，由 EnableHitbox 打开
@@ -186,7 +196,7 @@ public sealed class CombatSceneEnemyTests
         box.size = new Vector3(1.2f, 1.2f, 1.6f);
         box.enabled = false;
         hitbox = hitboxHost.AddComponent<Hitbox>();
-        hitbox.Configure(CampType.Player, combat, 1f);
+        hitbox.Configure(CampType.Player, combat);
 
         host.SetActive(true);
         combat.SetReferences(hitbox, null);
