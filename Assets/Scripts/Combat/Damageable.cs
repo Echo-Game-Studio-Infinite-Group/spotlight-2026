@@ -2,22 +2,16 @@ using System;
 using UnityEngine;
 
 // 可受击实体：血量 / 攻击力 / 速度这类战斗属性的载体，实现 IDamageable 供攻击检测使用。
-// 一次成功命中在同一个地方统一触发四件事——扣血、伤害跳字、震屏、受击颜色闪烁，
+// 一次成功命中在同一个地方统一触发三件事——扣血、伤害跳字、震屏，
 // 分散到调用方会让「打击感」在换武器/换敌人时各处不一致。
 [DisallowMultipleComponent]
 public class Damageable : MonoBehaviour, IDamageable
 {
-    // URP 用 _BaseColor，Built-in/其他材质用 _Color；只改存在的那个，避免静默无效
-    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-    private static readonly int ColorId = Shader.PropertyToID("_Color");
-
     [Header("战斗属性")]
     [SerializeField, Min(1f)] private float _maxHealth = 100f;
 
     [Header("打击反馈")]
     [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);
-    [SerializeField] private Color _hitFlashColor = new Color(1f, 0.35f, 0.35f);
-    [SerializeField, Min(0f)] private float _hitFlashDuration = 0.12f;
     [SerializeField, Min(0f)] private float _shakeAmplitude = 0.6f;
     // 无敌帧：受击后这段时间内免疫后续伤害，避免同一刀/连击把血瞬间打空。
     // 取自参考实现 LittleAdventure 的做法（isHurting + invulnerableTimer 计时）。
@@ -31,14 +25,6 @@ public class Damageable : MonoBehaviour, IDamageable
     [SerializeField, Min(1)] private int _popupPoolSize = 3;
 
     private float _health;
-    // 受击闪烁要覆盖全身所有渲染器，且**每个渲染器各自记住自己的基准色**。
-    // 早先只抓第一个渲染器：Miku 有 80+ 个材质，闪烁写的是第一个渲染器的颜色，
-    // 还原时用的却是它自己缓存的基准色 —— 两者一旦对不上，裙子就会永久偏红。
-    private Renderer[] _renderers = System.Array.Empty<Renderer>();
-    private Color[] _baseColors = System.Array.Empty<Color>();
-    private MaterialPropertyBlock _block;
-    private float _flashUntil = float.NegativeInfinity;
-    private bool _isFlashing;
     private float _invulnerableUntil = float.NegativeInfinity;
     private DamagePopup[] _popupPool = System.Array.Empty<DamagePopup>();
     private int _nextPopup;
@@ -75,12 +61,11 @@ public class Damageable : MonoBehaviour, IDamageable
         _health = _maxHealth;
     }
 
-    // 子类钩子：基类负责「扣血 + 跳字 + 震屏 + 闪烁」，子类只关心自己的额外反应
+    // 子类钩子：基类负责「扣血 + 跳字 + 震屏」，子类只关心自己的额外反应
     protected virtual void Awake()
     {
         _health = _maxHealth;
         _numberAnchor = _numberAnchor != null ? _numberAnchor : transform;
-        CacheRenderers();
         InitializePopupPool();
     }
 
@@ -103,40 +88,6 @@ public class Damageable : MonoBehaviour, IDamageable
         Debug.Log($"[Damageable] {name} 跳字池就绪: 请求={_popupPoolSize} 实得={_popupPool.Length}");
     }
 
-    private void Update()
-    {
-        if (!_isFlashing || TimeManager.UnscaledTime < _flashUntil) return;
-        _isFlashing = false;
-        RestoreBaseColors();
-    }
-
-    // 诊断用：打印缓存状态与还原前后的首个渲染器颜色。
-    // 92 个渲染器全被压色说明还原没生效，必须看清是哪一环断了。
-    public void DebugDumpFlashState()
-    {
-        Renderer probe = null;
-        for (int i = 0; i < _renderers.Length; i++)
-        {
-            if (_renderers[i] != null) { probe = _renderers[i]; break; }
-        }
-
-        Debug.Log($"[FlashState] {name} 渲染器数={_renderers.Length} 基准色数={_baseColors.Length} "
-            + $"闪烁中={_isFlashing} 距到期={_flashUntil - TimeManager.UnscaledTime:0.###}s");
-        if (probe == null)
-        {
-            Debug.LogWarning("[FlashState] 没有可用的渲染器探针");
-            return;
-        }
-
-        MaterialPropertyBlock block = new MaterialPropertyBlock();
-        probe.GetPropertyBlock(block);
-        string current = block.isEmpty
-            ? "无覆盖"
-            : (block.HasColor(BaseColorId) ? block.GetColor(BaseColorId).ToString() : "有块但无 _BaseColor");
-        Debug.Log($"[FlashState] 探针 {probe.name}: MaterialPropertyBlock={current} "
-            + $"共享材质={probe.sharedMaterial?.name ?? "空"}");
-    }
-
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
     {
         if (!IsAlive || amount <= 0f) return 0f;
@@ -153,7 +104,6 @@ public class Damageable : MonoBehaviour, IDamageable
         Vector3 spawnPoint = basePoint + Vector3.up * 0.5f;
         PlayDamageNumber(applied, spawnPoint);
         CameraShaker.Shake(_shakeAmplitude);
-        StartFlash();
 
         Damaged?.Invoke(this, applied);
         OnDamaged(applied);
@@ -193,9 +143,7 @@ public class Damageable : MonoBehaviour, IDamageable
     public void ResetHealth()
     {
         _health = _maxHealth;
-        _isFlashing = false;
         _invulnerableUntil = float.NegativeInfinity;
-        RestoreBaseColors();
         gameObject.SetActive(true);
     }
 
@@ -206,72 +154,4 @@ public class Damageable : MonoBehaviour, IDamageable
     protected virtual void OnDamaged(float applied) { }
     protected virtual void OnDied() { }
 
-    private void StartFlash()
-    {
-        if (_renderers.Length == 0 || _hitFlashDuration <= 0f) return;
-        _isFlashing = true;
-        _flashUntil = TimeManager.UnscaledTime + _hitFlashDuration;
-        ApplyColor(_hitFlashColor);
-    }
-
-    // 缓存全身渲染器与各自的基准色。
-    // 只取当前激活的对象：被禁用的部件（如未解锁的装饰）不该参与闪烁。
-    private void CacheRenderers()
-    {
-        Renderer[] found = GetComponentsInChildren<Renderer>(false);
-        if (found.Length == 0) return;
-
-        _renderers = found;
-        _baseColors = new Color[found.Length];
-        for (int i = 0; i < found.Length; i++)
-        {
-            _baseColors[i] = ReadBaseColor(found[i]);
-        }
-    }
-
-    // 读共享材质的颜色作为基准：读实例材质会把上一次的闪烁色当成基准色
-    private static Color ReadBaseColor(Renderer renderer)
-    {
-        Material shared = renderer.sharedMaterial;
-        if (shared == null) return Color.white;
-        if (shared.HasProperty(BaseColorId)) return shared.GetColor(BaseColorId);
-        if (shared.HasProperty(ColorId)) return shared.GetColor(ColorId);
-        return Color.white;
-    }
-
-    // 闪烁结束：每个渲染器各自还原自己的基准色
-    private void RestoreBaseColors()
-    {
-        for (int i = 0; i < _renderers.Length; i++)
-        {
-            if (_renderers[i] == null) continue;
-            WriteColorTo(_renderers[i], _baseColors[i]);
-        }
-    }
-
-    private void ApplyColor(Color color)
-    {
-        for (int i = 0; i < _renderers.Length; i++)
-        {
-            if (_renderers[i] == null) continue;
-            WriteColorTo(_renderers[i], color);
-        }
-    }
-
-    // 用 MaterialPropertyBlock 覆盖颜色：不复制材质，闪烁结束也不会留下脏资产。
-    // 只写该材质真正拥有的属性，避免写了个不存在的属性导致「看着像没生效」。
-    private void WriteColorTo(Renderer renderer, Color color)
-    {
-        Material shared = renderer.sharedMaterial;
-        if (shared == null) return;
-
-        _block ??= new MaterialPropertyBlock();
-        _block.Clear(); // 复用一个 block，避免每个渲染器都新建
-        bool wrote = false;
-        if (shared.HasProperty(BaseColorId)) { _block.SetColor(BaseColorId, color); wrote = true; }
-        if (shared.HasProperty(ColorId)) { _block.SetColor(ColorId, color); wrote = true; }
-        if (!wrote) return;
-
-        renderer.SetPropertyBlock(_block);
-    }
 }

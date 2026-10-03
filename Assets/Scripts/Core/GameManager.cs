@@ -18,6 +18,13 @@ public class PlayerData
     public float MaxHealth = 100f;
     public float Health;
 
+    [Min(0f)] public float InvulnerableTime = 0.6f;
+    [NonSerialized] private float _invulnerableUntil = float.NegativeInfinity;
+    public bool IsAlive => Health > 0f;
+    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
+
+    public void SetInvulnerableTime(float seconds) => InvulnerableTime = Mathf.Max(0f, seconds);
+
     public float Speed
     {
         get { return Target != null ? Target.Speed : 0f; }
@@ -26,11 +33,16 @@ public class PlayerData
     public void Reset()
     {
         Health = MaxHealth;
+        _invulnerableUntil = float.NegativeInfinity;
     }
 
-    public void TakeDamage(float amount)
+    public float TakeDamage(float amount)
     {
-        Health = Mathf.Max(0f, Health - amount);
+        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
+        float applied = Mathf.Min(Health, amount);
+        Health -= applied;
+        _invulnerableUntil = TimeManager.UnscaledTime + InvulnerableTime;
+        return applied;
     }
 
     public void Heal(float amount)

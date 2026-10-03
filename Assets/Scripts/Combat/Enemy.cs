@@ -34,8 +34,8 @@ public sealed class Enemy : Damageable, IDamageSource
     private Vector3 _knockback;
     private float _nextAttackTime;
     private float _verticalSpeed;
-    private Hitbox _attackHitbox;
-    private AttackVFXManager _attackVfx;
+    [SerializeField] private Hitbox _attackHitbox;
+    [SerializeField] private AttackVFXManager _attackVfx;
 
     public float AttackPower => _attackPower;
     /// <summary>IDamageSource 实现：Hitbox 从这里取伤害值。语义与 AttackPower 相同，名字对齐接口。</summary>
@@ -60,6 +60,9 @@ public sealed class Enemy : Damageable, IDamageSource
     {
         base.Awake();
         _controller = GetComponent<CharacterController>();
+        if (_attackHitbox == null) _attackHitbox = GetComponentInChildren<Hitbox>(true);
+        if (_attackVfx == null) _attackVfx = GetComponentInChildren<AttackVFXManager>(true);
+        if (_attackHitbox != null) _attackHitbox.Configure(CampType.Enemy, this, 0f);
     }
 
     private void Update()
@@ -79,7 +82,7 @@ public sealed class Enemy : Damageable, IDamageSource
     // ===== 动画事件入口 =====
     // 敌人的攻击判定同样走「动画事件开关 Hitbox」这套（与玩家的 Hitbox 同一个组件）。
     // 敌人当前用的动画控制器里还没有这些事件，缺了它就只靠 TryAttack 的代码结算 ——
-    // 补上事件后会自动切到动画驱动，无需改代码。
+    // 当前追击模式由 TryAttack 结算；动画入口供独立动画攻击使用。
     public void EnableHitbox()
     {
         if (_attackHitbox != null) _attackHitbox.EnableHitbox();
@@ -186,7 +189,7 @@ public sealed class Enemy : Damageable, IDamageSource
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
-        PlayerHealth health = target.GetComponent<PlayerHealth>();
+        PlayerData health = GameManager.Instance.Player;
         if (health == null || !health.IsAlive) return;
 
         _nextAttackTime = TimeManager.UnscaledTime + _attackCooldown;
@@ -214,6 +217,7 @@ public sealed class Enemy : Damageable, IDamageSource
 
     protected override void OnDied()
     {
+        DisableHitbox();
         Debug.Log($"[Enemy] {name} 已被击破");
         // 先停掉行为再淡出，避免死亡后还在追着玩家打
         _chasePlayer = false;

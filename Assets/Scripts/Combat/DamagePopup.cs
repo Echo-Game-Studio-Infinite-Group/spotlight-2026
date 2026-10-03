@@ -69,6 +69,8 @@ public sealed class DamagePopup : MonoBehaviour
     // 从池里取 3 个可用实例，Pooled 只接受 DamagePopup 数组，故返回数组
     public static DamagePopup[] AcquirePool(int size)
     {
+        // 未激活过的原型销毁时可能不触发 OnDestroy，场景切换后要清掉失效引用。
+        Pool.RemoveAll(popup => popup == null);
         if (size <= 0 || Pool.Count == 0) return System.Array.Empty<DamagePopup>();
         DamagePopup[] result = new DamagePopup[size];
         for (int i = 0; i < size; i++) result[i] = Pool[i % Pool.Count];

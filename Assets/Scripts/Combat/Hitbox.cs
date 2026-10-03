@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // 攻击方阵营。命名与职责照抄参考实现 LittleAdventure 的 CampaignType。
@@ -11,12 +12,6 @@ public enum CampType
 public interface IDamageSource
 {
     float AttackDamage { get; }
-}
-
-// 玩家受击目标标记：玩家的 Hitbox 只认它，避免误伤普通物块。
-[DisallowMultipleComponent]
-public sealed class PlayerHitboxTarget : MonoBehaviour
-{
 }
 
 // 攻击判定盒 —— 照参考实现 LittleAdventure 的 Hitbox.cs 写：
@@ -38,13 +33,14 @@ public sealed class Hitbox : MonoBehaviour
     private Collider _collider;
     private PlayerCombat _combat;
     private bool _combatResolved;
+    private readonly HashSet<int> _hitTargets = new HashSet<int>();
 
     public CampType Camp => _campType;
 
     public void Configure(CampType campType, MonoBehaviour damageSource, float knockbackStrength)
     {
         _campType = campType;
-        _damageSourceBehaviour = damageSource;
+        SetDamageSource(damageSource);
         _knockbackStrength = Mathf.Max(0f, knockbackStrength);
     }
 
@@ -56,6 +52,11 @@ public sealed class Hitbox : MonoBehaviour
 
     private void Awake()
     {
+        // 静态敌人只有 Collider，武器必须提供运动学刚体才能收到 Trigger 回调。
+        Rigidbody body = GetComponent<Rigidbody>();
+        if (body == null) body = gameObject.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
         _collider = GetComponent<Collider>();
         if (_damageSourceBehaviour != null) _damageSource = _damageSourceBehaviour as IDamageSource;
         // 默认关闭：等动画事件来开。忘了关会让敌人一进场就被打。
@@ -66,7 +67,10 @@ public sealed class Hitbox : MonoBehaviour
     public void EnableHitbox()
     {
         if (_collider == null) _collider = GetComponent<Collider>();
-        if (_collider != null) _collider.enabled = true;
+        if (_collider == null || _collider.enabled) return;
+        _hitTargets.Clear();
+        _collider.isTrigger = true;
+        _collider.enabled = true;
     }
 
     // 动画事件调用：收招
@@ -76,10 +80,12 @@ public sealed class Hitbox : MonoBehaviour
         if (_collider != null) _collider.enabled = false;
     }
 
+    private void OnDisable() => DisableHitbox();
+
     // 目标撞进判定盒 —— 唯一的判定入口
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null) return;
+        if (other == null || _collider == null || !_collider.enabled || !isActiveAndEnabled) return;
 
         IDamageSource source = ResolveDamageSource();
         if (source == null) return;
@@ -116,17 +122,19 @@ public sealed class Hitbox : MonoBehaviour
         Damageable target = other.GetComponentInParent<Damageable>();
         if (target == null || !target.IsAlive) return;
         if (_damageSourceBehaviour != null && target.gameObject == _damageSourceBehaviour.gameObject) return;
+        if (!_hitTargets.Add(target.GetInstanceID())) return;
 
         ApplyDamage(target, damage, other);
     }
 
-    // 敌人打玩家：目标带 PlayerHitboxTarget（玩家走 PlayerHealth，不走 IDamageable）
+    // 敌人打玩家：目标带 Player（玩家走 GameManager.Player，不走 IDamageable）
     private void StrikeEnemyCamp(Collider other, float damage)
     {
-        PlayerHitboxTarget marker = other.GetComponentInParent<PlayerHitboxTarget>();
+        Player marker = other.GetComponentInParent<Player>();
         if (marker == null) return;
+        if (!_hitTargets.Add(marker.GetInstanceID())) return;
 
-        PlayerHealth health = marker.GetComponent<PlayerHealth>();
+        PlayerData health = GameManager.Instance.Player;
         if (health == null || !health.IsAlive) return;
 
         float applied = health.TakeDamage(damage);

@@ -19,8 +19,7 @@ ModelImporter:
     rigImportErrors: 
     rigImportWarnings: 
     animationImportErrors: 
-    animationImportWarnings: Event DisableHitbox has a time (3.782285) outside the
-      clip's valid range (0.000000..1.633333). It will never be fired
+    animationImportWarnings:
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
     importAnimatedCustomProperties: 0
@@ -58,23 +57,23 @@ ModelImporter:
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
       events:
-      - time: 0.28000003
+      - time: 0.17142858
         functionName: UpdateAttack
-        data: combat-v2
+        data: combat-v3
         objectReferenceParameter: {instanceID: 0}
         floatParameter: 0
         intParameter: 1
         messageOptions: 0
-      - time: 0.33600003
+      - time: 0.2057143
         functionName: EnableHitbox
-        data: combat-v2
+        data: combat-v3
         objectReferenceParameter: {instanceID: 0}
         floatParameter: 0
         intParameter: 0
         messageOptions: 0
-      - time: 1.1340001
+      - time: 0.6942857
         functionName: DisableHitbox
-        data: combat-v2
+        data: combat-v3
         objectReferenceParameter: {instanceID: 0}
         floatParameter: 0
         intParameter: 0

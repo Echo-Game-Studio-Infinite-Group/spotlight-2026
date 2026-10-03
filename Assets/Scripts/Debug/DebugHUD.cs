@@ -32,14 +32,14 @@ public sealed class DebugHUD : MonoBehaviour
     // 战斗数值单独一段：血量与减速是「打击感是否生效」最直接的两个观察点
     private void DrawCombatLines()
     {
-        PlayerHealth health = GetComponent<PlayerHealth>();
+        PlayerData health = GameManager.Instance.Player;
         if (health != null)
         {
             GUILayout.Label($"玩家血量 {health.Health:F0} / {health.MaxHealth:F0}", _style);
         }
         else
         {
-            GUILayout.Label("玩家血量 缺少 PlayerHealth 组件", _style);
+            GUILayout.Label("玩家血量数据不可用", _style);
         }
 
         Enemy enemy = FindObjectOfType<Enemy>();

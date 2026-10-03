@@ -34,7 +34,6 @@ public static class CombatSceneSetup
     private const float EnemyAttackPower = 8f;
     private const float EnemyMoveSpeed = 4f;
     private const float PlayerAttackDamage = 25f;
-    private const float PlayerMaxHealth = 100f;
     // 攻击窗口的兜底值：正常情况由 Attack.fbx 的片段时长覆盖（见 SetupPlayerPrefab）
     private const float PlayerAttackDuration = 1.6f;
     // 跳字存活与上浮速度：0.7s 在高速战斗里来不及被看到
@@ -196,14 +195,7 @@ public static class CombatSceneSetup
             AttackVFXManager vfx = EnsureAttackVfx(root, combat);
             combat.SetReferences(null, vfx);
 
-            // 玩家受击标记：敌人的 Hitbox 靠它识别玩家（玩家走 PlayerHealth，不实现 IDamageable）
-            if (root.GetComponent<PlayerHitboxTarget>() == null) root.AddComponent<PlayerHitboxTarget>();
-
-            // 玩家生命值：敌人扣血走它，而不是 GameManager.Player（后者的 Instance getter
-            // 自动 new 出来的空壳没有 Awake，字段全为 null）
-            PlayerHealth health = root.GetComponent<PlayerHealth>();
-            if (health == null) health = root.AddComponent<PlayerHealth>();
-            health.Configure(PlayerMaxHealth);
+            // 玩家生命值由 GameManager.Player 统一维护。
 
             SwordBinder binder = root.GetComponent<SwordBinder>();
             if (binder == null) binder = root.AddComponent<SwordBinder>();
@@ -232,7 +224,7 @@ public static class CombatSceneSetup
             EditorUtility.SetDirty(vfx);
             PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Debug.Log($"[CombatSceneSetup] Player.prefab 已装配: PlayerCombat + SwordBinder（运行时建剑与判定盒 "
-                + $"半径 {PlayerHitboxRadius}）+ 攻击特效 + PlayerHitboxTarget");
+                + $"半径 {PlayerHitboxRadius}）+ 攻击特效 + Player");
         }
         finally
         {
@@ -497,7 +489,7 @@ public static class CombatSceneSetup
     private const float AttackWindowTailRatio = 0.9f;
     // 动画事件布局版本：改动事件名/时间比例后加一，旧事件会被识别为过期并重写。
     // 用 stringParameter 存这个标记，就能在不重导入的前提下判断布局是否最新。
-    private const int EventLayoutVersion = 2;
+    private const int EventLayoutVersion = 3;
     private static string EventLayoutTag => $"combat-v{EventLayoutVersion}";
 
     private static readonly Vector3 PlayerHitboxCenter = new Vector3(0f, 0.55f, 0.25f);
@@ -536,14 +528,12 @@ public static class CombatSceneSetup
         float length = imported != null && imported.length > 0.01f ? imported.length : 1.6f;
         if (motionEnd <= 0f) motionEnd = length;
 
-        float vfxTime = motionEnd * AttackVfxRatio;
-        float enableTime = motionEnd * HitboxStartRatio;
-        float disableTime = motionEnd * HitboxEndRatio;
+        // ModelImporterClipAnimation.events 使用归一化时间，不能写入秒数。
+        float vfxTime = Mathf.Clamp01(motionEnd / length) * AttackVfxRatio;
+        float enableTime = Mathf.Clamp01(motionEnd / length) * HitboxStartRatio;
+        float disableTime = Mathf.Clamp01(motionEnd / length) * HitboxEndRatio;
 
-        // 幂等闸门：布局没变就跳过。
-        // 为什么必须有：每次写 clipAnimations 都会触发重导入，而重导入会把片段长度往上带
-        // （实测一路增长到 3.782s），事件时间又是按长度比例算的 —— 无闸门就会每跑一次漂移一次。
-        // 带一个版本标记：改了布局后把 EventLayoutVersion 加一，旧事件会被识别为过期并重写。
+        // 事件布局未变时跳过，避免重复重导入模型。
         if (HasHitboxEvents(clip) && IsEventLayoutCurrent(clip, vfxTime, enableTime, disableTime))
         {
             Debug.Log($"[CombatSceneSetup] Attack 动画事件布局已是最新（版本 {EventLayoutVersion}），跳过写入");
@@ -579,8 +569,8 @@ public static class CombatSceneSetup
         importer.SaveAndReimport();
 
         Debug.Log($"[CombatSceneSetup] Attack 动画事件已写入: 片段 {clip.name} 长度≈{length:0.###}s "
-            + $"特效@{length * AttackVfxRatio:0.###}s 开判定@{length * HitboxStartRatio:0.###}s "
-            + $"关判定@{length * HitboxEndRatio:0.###}s（占比 {HitboxStartRatio:P0}~{HitboxEndRatio:P0}）");
+            + $"特效@{length * vfxTime:0.###}s 开判定@{length * enableTime:0.###}s "
+            + $"关判定@{length * disableTime:0.###}s（占比 {HitboxStartRatio:P0}~{HitboxEndRatio:P0}）");
     }
 
     // 在实体上搭攻击判定盒：子物体 + 默认关闭的 Trigger BoxCollider + Hitbox 组件
@@ -854,9 +844,7 @@ public static class CombatSceneSetup
         SwordBinder binder = player != null ? player.GetComponent<SwordBinder>() : null;
         lines.Add("Player.prefab 有 PlayerCombat: " + (combat != null));
         lines.Add("Player.prefab 有 Player 身份组件: " + (player != null && player.GetComponent<Player>() != null));
-        PlayerHealth playerHealth = player != null ? player.GetComponent<PlayerHealth>() : null;
-        lines.Add("Player.prefab 有 PlayerHealth: " + (playerHealth != null)
-            + (playerHealth != null ? $"（上限 {playerHealth.MaxHealth}）" : ""));
+        lines.Add("玩家血量由 GameManager.Player 维护");
         lines.Add("Player.prefab 有 SwordBinder: " + (binder != null));
         lines.Add("剑引用已接: " + (binder != null && binder.Sword != null));
         lines.Add("攻击参数 dmg/range/duration: " + (combat != null

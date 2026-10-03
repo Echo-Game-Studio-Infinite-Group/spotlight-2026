@@ -14,6 +14,42 @@ public sealed class CombatSceneEnemyTests
 {
     private readonly List<Object> _spawned = new List<Object>();
 
+#if UNITY_EDITOR
+    [Test]
+    public void ImportedAttackEventsStayInsideAttackWindow()
+    {
+        AnimationClip clip = null;
+        foreach (Object asset in UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx"))
+            if (asset is AnimationClip candidate && !candidate.name.StartsWith("__preview__")) clip = candidate;
+        Assert.IsNotNull(clip);
+        AnimationEvent[] events = clip.events;
+        Assert.AreEqual(3, events.Length);
+        Assert.AreEqual("UpdateAttack", events[0].functionName);
+        Assert.AreEqual("EnableHitbox", events[1].functionName);
+        Assert.AreEqual("DisableHitbox", events[2].functionName);
+        Assert.Greater(events[1].time, events[0].time);
+        Assert.Greater(events[2].time, events[1].time);
+        PlayerCombat prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab")
+            .GetComponent<PlayerCombat>();
+        Assert.Less(events[2].time, Mathf.Min(clip.length, prefab.AttackDuration));
+        Assert.AreEqual(0.336f, events[1].time, 0.02f, "导入后的开判定事件应位于挥砍前段");
+    }
+#endif
+
+    [UnityTest]
+    public IEnumerator SlowMotionKeepsAttackWindowInPlayerTime()
+    {
+        PlayerCombat combat = SpawnPlayer(out _, out _);
+        combat.SetAttackDuration(0.4f);
+        TimeManager.SlowMotion(1f, 0.1f);
+        combat.BeginAttack(TimeManager.UnscaledTime);
+        yield return new WaitForSecondsRealtime(0.5f);
+        Assert.IsTrue(combat.IsAttacking, "慢动作期间不应按真实时间提前结束动作");
+        TimeManager.ClearSlowMotion();
+        yield return new WaitForSecondsRealtime(0.5f);
+        Assert.IsFalse(combat.IsAttacking);
+    }
+
     [TearDown]
     public void TearDown()
     {
@@ -145,9 +181,12 @@ public sealed class CombatSceneEnemyTests
     {
         GameObject host = new GameObject("TestEnemy");
         host.SetActive(false);
-        host.AddComponent<CharacterController>();
         Enemy found = host.AddComponent<Enemy>();
         found.ConfigureStats(120f, 8f, 4f);
+        GameObject popupHost = new GameObject("TestDamagePopup");
+        popupHost.transform.SetParent(host.transform, false);
+        popupHost.SetActive(false);
+        found.SetDamagePopup(popupHost.AddComponent<DamagePopup>());
         // 受击盒：判定靠碰撞体，没有它永远打不中
         BoxCollider hitBox = host.AddComponent<BoxCollider>();
         hitBox.size = new Vector3(1f, 2f, 1f);
@@ -156,6 +195,94 @@ public sealed class CombatSceneEnemyTests
         _spawned.Add(host);
         damageable = found;
         return found;
+    }
+
+    [UnityTest]
+    public IEnumerator MultipleCollidersTakeOneHitPerSwing()
+    {
+        PlayerCombat combat = SpawnPlayer(out _, out Hitbox hitbox);
+        Enemy enemy = SpawnEnemy(out Damageable target);
+        target.SetInvulnerableTime(0f);
+        enemy.gameObject.AddComponent<BoxCollider>();
+        enemy.transform.position = new Vector3(0f, 0f, 1.4f);
+        Assert.IsNull(enemy.GetComponent<Rigidbody>(), "必须覆盖真实场景中的静态敌人");
+        combat.BeginAttack(TimeManager.UnscaledTime);
+        combat.EnableHitbox();
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(target.MaxHealth - combat.AttackDamage, target.Health);
+
+        hitbox.EnableHitbox();
+        enemy.transform.position += Vector3.right * 10f;
+        yield return new WaitForFixedUpdate();
+        enemy.transform.position -= Vector3.right * 10f;
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(1, target.DamagedCount, "同一刀离开再进入也不能重复扣血");
+
+        combat.DisableHitbox();
+        yield return new WaitForFixedUpdate();
+        combat.EnableHitbox();
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(2, target.DamagedCount, "下一段挥砍应重新允许命中");
+    }
+
+    [UnityTest]
+    public IEnumerator AttackExpiryAndDisableCloseHitbox()
+    {
+        PlayerCombat combat = SpawnPlayer(out _, out Hitbox hitbox);
+        combat.SetAttackDuration(0.1f);
+        combat.BeginAttack(TimeManager.UnscaledTime);
+        combat.EnableHitbox();
+        yield return new WaitForSeconds(0.2f);
+        Assert.IsFalse(combat.IsAttacking);
+        Assert.IsFalse(hitbox.GetComponent<Collider>().enabled, "漏掉动画收招事件时也必须关闭");
+        combat.ResetAttackState();
+        combat.BeginAttack(TimeManager.UnscaledTime);
+        combat.EnableHitbox();
+        combat.enabled = false;
+        Assert.IsFalse(hitbox.GetComponent<Collider>().enabled);
+        Assert.IsFalse(combat.IsAttacking);
+    }
+
+    [UnityTest]
+    public IEnumerator EnemyHitboxDamagesGameManagerPlayer()
+    {
+        PlayerCombat player = SpawnPlayer(out _, out _);
+        player.gameObject.AddComponent<Player>();
+        GameManager manager = GameManager.Instance;
+        _spawned.Add(manager.gameObject);
+        manager.Player.Reset();
+        Enemy enemy = SpawnEnemy(out _);
+        GameObject weapon = new GameObject("EnemyWeapon");
+        weapon.transform.SetParent(enemy.transform, false);
+        weapon.transform.position = player.transform.position;
+        BoxCollider box = weapon.AddComponent<BoxCollider>();
+        box.size = Vector3.one * 3f;
+        Hitbox hitbox = weapon.AddComponent<Hitbox>();
+        hitbox.Configure(CampType.Enemy, enemy, 0f);
+        hitbox.EnableHitbox();
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(manager.Player.MaxHealth - enemy.AttackPower, manager.Player.Health);
+        Assert.AreEqual(0f, manager.Player.TakeDamage(10f), "玩家无敌帧应由同一份数据维护");
+        manager.Player.Reset();
+        Assert.IsFalse(manager.Player.IsInvulnerable);
+        Assert.AreEqual(manager.Player.MaxHealth, manager.Player.Health);
+    }
+
+    [UnityTest]
+    public IEnumerator ImpactRecoversToTailSpeedBeforeSlowMotionEnds()
+    {
+        PlayerCombat combat = SpawnPlayer(out _, out _);
+        combat.OnLandedHit(null, Vector3.zero, Vector3.forward, 1f);
+        Assert.That(TimeManager.PlayerRate, Is.EqualTo(combat.ImpactTimeScale).Within(0.001f));
+        yield return new WaitForSecondsRealtime(0.12f);
+        Assert.That(TimeManager.PlayerRate, Is.EqualTo(combat.HitTimeScale).Within(0.001f),
+            "短冲击结束后必须恢复尾部速度，不能把强减速延长至整个命中窗口");
+        yield return new WaitForSecondsRealtime(0.12f);
+        Assert.That(TimeManager.PlayerRate, Is.EqualTo(1f).Within(0.001f));
     }
 
     private PlayerCombat SpawnPlayer(out PlayerMotor motor, out Hitbox hitbox)
@@ -174,7 +301,7 @@ public sealed class CombatSceneEnemyTests
         CharacterController controller = host.AddComponent<CharacterController>();
         controller.height = 1.8f;
         controller.radius = 0.35f;
-        motor = host.AddComponent<PlayerMotor>();
+        motor = null;
         PlayerCombat combat = host.AddComponent<PlayerCombat>();
 
         // 判定盒挂在玩家子物体上，默认关闭，由 EnableHitbox 打开

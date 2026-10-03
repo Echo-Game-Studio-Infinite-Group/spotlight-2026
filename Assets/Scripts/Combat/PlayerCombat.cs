@@ -39,7 +39,7 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
 
     private PlayerInputReader _input;
     private PlayerMotor _motor;
-    private float _windowEnd = float.NegativeInfinity;
+    private float _attackRemaining;
     private float _readyAt = float.NegativeInfinity;
 
     /// <summary>Hitbox 从这里取伤害值，因此攻击力只有一处真值。</summary>
@@ -66,10 +66,8 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         }
     }
 
-    // 攻击相关的所有计时统一走 UnscaledTime：
-    //   · InputBuffer 内部按 TimeManager.UnscaledTime 记录按下时刻，消费时用同一时钟才不会「刚按下就过期」；
-    //   · TimeManager 的减速窗口也是按 UnscaledTime 记的，这样「窗口开着」的判定与写入必然一致。
-    public bool IsAttacking => TimeManager.UnscaledTime < _windowEnd;
+    // 动作与 Animator 使用同一玩家速率；输入缓冲和冷却仍使用未缩放时间。
+    public bool IsAttacking => _attackRemaining > 0f;
 
     public void Configure(float damage, float duration, float hitStopSeconds, float hitTimeScale)
     {
@@ -96,7 +94,7 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
         SyncHitboxDamage();
     }
 
-    // 惰性解析：Awake 不保证跑过（编辑模式装配工具、测试里 AddComponent 都不会触发它）。
+    // 惰性解析：编辑模式装配与运行时初始化都需要解析引用。
     // 判定盒与剑由 SwordBinder 在运行时创建，创建时机可能晚于本组件的 Awake，
     // 所以引用为空时必须能重新找到，不能只在 Awake 里缓存一次。
     private void EnsureReferences()
@@ -109,15 +107,17 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
 
     private void SyncHitboxDamage()
     {
-        // 每次攻击前重设伤害来源：Hitbox 的 _damageSource 只在 Configure 时赋值，
-        // 而组件初始化顺序不保证（SwordBinder.Awake 可能跑在拿到引用之前），
-        // 一旦漏掉它就永远是 null —— Strike() 会在第一行直接 return false，
-        // 表现就是「判定盒明明开着、也检测到碰撞体，却一次伤害都不结算」。
+        // 运行时判定盒可能晚于本组件创建，拿到引用后重新绑定。
         if (_hitbox != null) _hitbox.SetDamageSource(this);
     }
 
     private void FixedUpdate()
     {
+        if (IsAttacking)
+        {
+            _attackRemaining = Mathf.Max(0f, _attackRemaining - TimeManager.PlayerFixedDeltaTime);
+            if (!IsAttacking) DisableHitbox();
+        }
         if (_input == null || !_input.GameplayEnabled) return;
         TickAttack(TimeManager.UnscaledTime);
     }
@@ -133,12 +133,12 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
 
     public bool BeginAttack(float now)
     {
-        if (!enabled || now < _readyAt) return false;
+        if (!isActiveAndEnabled || IsAttacking || now < _readyAt) return false;
         EnsureReferences();
         // 开窗前重新绑定伤害来源，避免初始化顺序问题导致 Hitbox 拿不到攻击力
         SyncHitboxDamage();
         _readyAt = now + _attackCooldown;
-        _windowEnd = now + _attackDuration;
+        _attackRemaining = _attackDuration;
         if (_faceNearestTargetOnAttack) FaceNearestTarget();
         return true;
     }
@@ -148,6 +148,7 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     /// <summary>挥砍起手：由 Attack 动画的动画事件调用。</summary>
     public void EnableHitbox()
     {
+        if (!isActiveAndEnabled || !IsAttacking) return;
         EnsureReferences();
         if (_hitbox != null) _hitbox.EnableHitbox();
         else Debug.LogError("[PlayerCombat] 没有判定盒，挥砍不会造成伤害");
@@ -173,9 +174,11 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
     public void ResetAttackState()
     {
         _readyAt = float.NegativeInfinity;
-        _windowEnd = float.NegativeInfinity;
+        _attackRemaining = 0f;
         DisableHitbox();
     }
+
+    private void OnDisable() => ResetAttackState();
 
     // 攻击朝向辅助：把玩家水平转向辅助半径内最近的受击目标。
     // 没有它时挥砍方向永远是 transform.forward，而敌人会绕到玩家侧后方，出现「贴身空刀」。
@@ -215,10 +218,13 @@ public sealed class PlayerCombat : MonoBehaviour, IDamageSource
             Debug.Log($"[PlayerCombat] 命中 {target.name} 伤害 {applied:0.#}，剩余 {target.Health:0.#}/{target.MaxHealth:0.#}");
         }
 
-        // 先叠一层短促强冲击，再压上 0.75x 的尾巴。
-        // TimeManager 的规则是「取更强的那一档、按更长的时间延长」，两段自然合成
-        // 「瞬间 0.35x → 剩余 0.75x」的手感，不需要额外缓动曲线。
-        if (_impactSeconds > 0f) TimeManager.SlowMotion(_impactSeconds, _impactTimeScale);
+        // 短冲击与尾部减速分别计时，不能连续请求 SlowMotion，否则强减速会被延长到尾部结束。
+        // 两层倍率相乘，因此换算冲击层倍率，使最终倍率仍为配置的冲击速度。
+        if (_impactSeconds > 0f)
+        {
+            float tailScale = _hitStopSeconds > 0f ? _hitTimeScale : 1f;
+            TimeManager.HitStop(_impactSeconds, Mathf.Clamp01(_impactTimeScale / tailScale));
+        }
         TimeManager.SlowMotion(_hitStopSeconds, _hitTimeScale);
     }
 }

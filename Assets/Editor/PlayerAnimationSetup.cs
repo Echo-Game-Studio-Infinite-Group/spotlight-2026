@@ -140,9 +140,8 @@ public static class PlayerAnimationSetup
             transition.AddCondition(AnimatorConditionMode.Equals, motionState, "MotionState");
         }
 
-        // 攻击：布尔参数是主通道，编号通道保留以维持「编号 = 下标」的一致性
+        // 攻击统一由布尔参数进入，避免两个入口重复请求同一动作。
         AddAnyStateTransition(machine, attack, AnimatorConditionMode.If, 0f, AttackParameterName, 0.08f);
-        AddAnyStateTransition(machine, attack, AnimatorConditionMode.Equals, AttackIndex, "MotionState", 0.08f);
         AddExitTransition(attack, idle, AttackParameterName);
 
         EditorUtility.SetDirty(locomotion);
@@ -163,12 +162,11 @@ public static class PlayerAnimationSetup
         transition.AddCondition(mode, threshold, parameter);
     }
 
-    // 攻击 → 待机：等挥砍播完再回，否则动画会被拦腰打断
+    // 攻击窗口由 PlayerCombat 计时，结束后立即退出；再等动画 90% 会让模型收招后停住。
     private static void AddExitTransition(AnimatorState attack, AnimatorState destination, string parameter)
     {
         AnimatorStateTransition exit = attack.AddTransition(destination);
-        exit.hasExitTime = true;
-        exit.exitTime = 0.9f;
+        exit.hasExitTime = false;
         exit.hasFixedDuration = true;
         exit.duration = 0.1f;
         exit.AddCondition(AnimatorConditionMode.IfNot, 0f, parameter);
