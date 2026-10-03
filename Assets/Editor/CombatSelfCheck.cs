@@ -16,7 +16,6 @@ public static class CombatSelfCheck
     private const string MenuRoot = "超高速行者/战斗工具/";
     private const string DiagnoseRoot = "超高速行者/诊断/战斗/";
 
-    [MenuItem(MenuRoot + "自检")]
     public static void Run()
     {
         if (EditorApplication.isPlaying)
@@ -151,7 +150,6 @@ public static class CombatSelfCheck
 
     // 实机（Play 模式）状态快照：Play 模式下自检不能跑，但排障时正需要看清运行时状态。
     // 只读，不修改任何东西。
-    [MenuItem(MenuRoot + "实机状态快照")]
     public static void DumpRuntimeState()
     {
         if (!EditorApplication.isPlaying)
@@ -223,7 +221,6 @@ public static class CombatSelfCheck
 
     // 实机触发一次玩家攻击：用于在没有手柄/键盘输入的环境里验证完整链路。
     // 走的是和真实输入同一条代码路径（BeginAttack，受冷却约束），只是把手柄输入换成了菜单命令。
-    [MenuItem(MenuRoot + "实机触发一次攻击")]
     public static void TriggerPlayerAttack()
     {
         if (!EditorApplication.isPlaying)
@@ -287,7 +284,6 @@ public static class CombatSelfCheck
     }
 
     // 实机复查一次「战斗结果」：攻击后隔几帧再点，用来确认扣血与减速确实发生了
-    [MenuItem(MenuRoot + "实机复查战斗结果")]
     public static void ReportRuntimeResult()
     {
         if (!EditorApplication.isPlaying)
@@ -307,7 +303,6 @@ public static class CombatSelfCheck
     // 伤害跳字专项诊断：把每个跳字的渲染要素全部打出来。
     // 「看不到跳字」可能是字体没建出来、Canvas 缩放太小、位置在相机外、alpha 为 0 等多种原因，
     // 只报数量看不出病根，这里逐项列出来。
-    [MenuItem(DiagnoseRoot + "伤害跳字")]
     public static void DiagnoseDamagePopups()
     {
         if (!EditorApplication.isPlaying)
@@ -348,7 +343,6 @@ public static class CombatSelfCheck
     }
 
     // 动画参数诊断：自己触发一次攻击并立刻采样，否则窗口只有 0.25s，外部读到的永远是「已结束」。
-    [MenuItem(DiagnoseRoot + "攻击动画参数")]
     public static void DiagnoseAttackAnimation()
     {
         if (!EditorApplication.isPlaying)
@@ -405,7 +399,6 @@ public static class CombatSelfCheck
     // 判定专项诊断：复刻 PlayerCombat.Detect 的几何，把搜索结果逐个列出来。
     // 「按了左键但没伤害」可能是朝向不对、距离超出、层级遮罩过滤、碰撞体在子物体等多种原因，
     // 只看最终布尔值定位不了真因，这里把命中列表和参数原样打出来。
-    [MenuItem(DiagnoseRoot + "攻击判定")]
     public static void DiagnoseHitDetection()
     {
         if (!EditorApplication.isPlaying)
@@ -481,7 +474,6 @@ public static class CombatSelfCheck
 
     // 动画状态顺序诊断：MotionState 编号 = states 下标，顺序错了整条移动动画都会错位。
     // 只读，用于确认控制器结构是否与 PlayerAnimation 的常量一致。
-    [MenuItem(DiagnoseRoot + "动画状态顺序")]
     public static void DiagnoseAnimatorStateOrder()
     {
         AnimatorController controller =
@@ -519,7 +511,6 @@ public static class CombatSelfCheck
 
     // 攻击片段时长诊断：动画被打断的常见根因是「攻击窗口比片段短」。
     // 这里把片段时长与当前窗口配置并排列出来，一眼能看出是不是窗口太短。
-    [MenuItem(DiagnoseRoot + "攻击片段时长")]
     public static void DiagnoseAttackClipLength()
     {
         AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx")
@@ -549,7 +540,6 @@ public static class CombatSelfCheck
 
     // 跳字接线诊断：直接把 Damageable 的运行时状态打出来。
     // 「跳字不显示」的根因可能是引用为空、池为空、实例被销毁，只有把中间状态列出来才能定位。
-    [MenuItem(DiagnoseRoot + "跳字接线")]
     public static void DiagnosePopupWiring()
     {
         if (!EditorApplication.isPlaying)
@@ -578,7 +568,6 @@ public static class CombatSelfCheck
 
     // 无敌帧自检：编辑模式构造两个实体，验证「首次受击生效 / 无敌帧内免疫 / 到期后恢复」。
     // 用两组实测数据说话，比只打印「时长=0.45s」这种配置值可靠。
-    [MenuItem(MenuRoot + "自检无敌帧")]
     public static void SelfCheckInvulnerability()
     {
         if (EditorApplication.isPlaying)
@@ -652,7 +641,6 @@ public static class CombatSelfCheck
     // 但 Mixamo 的片段常带长尾（动作结束后还有大段静止/缓慢归位），
     // 若把窗口设成整段长度，玩家就会被多锁住好几秒 —— 表现就是"攻击完卡住一段时间"。
     // 这里对每条曲线求"最后一次显著变化"的时间，作为动作真正的结束点。
-    [MenuItem(DiagnoseRoot + "攻击动作结束点")]
     public static void DiagnoseAttackMotionEnd()
     {
         AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(AttackClipPathForDiagnostics)

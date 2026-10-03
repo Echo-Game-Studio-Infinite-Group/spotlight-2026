@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour
+public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -50,6 +50,26 @@ public sealed class PlayerMotor : MonoBehaviour
     }
     public void SetInput(IPlayerInput input) => _input = input;
     public void SetMovementReference(Transform reference) => _movementReference = reference;
+
+    public void SetHorizontalSpeed(float speed)
+    {
+        Vector3 direction = MovementMath.Horizontal(_velocity);
+        if (direction.sqrMagnitude < 0.0001f) direction = MovementMath.Horizontal(transform.forward);
+        SetHorizontal(direction.normalized * Mathf.Clamp(speed, 0f, _params.MaxSpeed));
+        if (IsWallSliding) _wallSpeed = HorizontalSpeed;
+    }
+
+    public void LaunchVertical(float upSpeed)
+    {
+        if (IsWallSliding) ExitWall();
+        Jump(upSpeed);
+    }
+
+    public void ReverseHorizontal()
+    {
+        SetHorizontal(-MovementMath.Horizontal(_velocity));
+        if (IsWallSliding) _wallTangent = -_wallTangent;
+    }
 
     private void Awake()
     {

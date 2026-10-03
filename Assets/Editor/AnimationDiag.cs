@@ -6,9 +6,9 @@ using UnityEditor.Animations;
 using UnityEngine;
 public static class AnimationDiag
 {
- [MenuItem("超高速行者/诊断/检查动画资产")] public static void Run(){Go();}
+public static void Run(){Go();}
 
- [MenuItem("超高速行者/诊断/检查相机与根运动")] public static void InspectCameraOnce() { EditorApplication.delayCall += () => {
+public static void InspectCameraOnce() { EditorApplication.delayCall += () => {
   var sb = new StringBuilder();
   foreach (var a in Resources.FindObjectsOfTypeAll<Animator>()) {
    if (!a.gameObject.scene.IsValid()) continue;
@@ -21,8 +21,8 @@ public static class AnimationDiag
    sb.AppendLine($"Vcam {v.name} active={v.isActiveAndEnabled} priority={v.Priority} follow={v.Follow?.name}");
   }
   var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
-  var visualAnimator = prefab.transform.Find("PlayerDummy").GetComponent<Animator>();
-  sb.AppendLine($"Saved prefab visual rootMotion={visualAnimator.applyRootMotion}");
+  var visualAnimator = prefab != null ? prefab.GetComponentInChildren<Animator>(true) : null;
+  sb.AppendLine($"Saved prefab visual rootMotion={visualAnimator?.applyRootMotion}");
   sb.AppendLine($"Checked at {DateTime.Now:O}");
   System.IO.File.WriteAllText("Temp/camera-diagnostic.txt", sb.ToString());
  }; }

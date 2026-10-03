@@ -9,17 +9,19 @@ public static class FollowProbe
 {
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
-    // 与 CinemachineFramingTransposer 的 TrackedObjectOffset.y 对齐，角度判定才有意义
-    private const float TrackedHeight = 1.45f;
+    private static Transform followTarget;
 
     private static int frames;
     private static GameObject player;
     private static Transform cam;
     private static Vector3 lastCameraPosition;
 
-    [MenuItem("超高速行者/探针/相机跟随实测")]
     public static void Run()
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new System.InvalidOperationException("请先退出播放模式");
+        frames = 0;
+        EditorApplication.update -= Step;
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         EditorApplication.update += Step;
         EditorApplication.EnterPlaymode();
@@ -36,7 +38,9 @@ public static class FollowProbe
 
         if (frames == 1)
         {
-            player = GameObject.Find("Player");
+            PlayerMotor motorInScene = Object.FindObjectOfType<PlayerMotor>();
+            player = motorInScene != null ? motorInScene.gameObject : null;
+            followTarget = player != null ? player.transform.Find("CameraTarget") : null;
             Camera mainCamera = Camera.main;
             cam = mainCamera != null ? mainCamera.transform : null;
             Debug.Log("[Probe] player=" + (player != null) + " camera=" + (cam != null));
@@ -72,7 +76,7 @@ public static class FollowProbe
             Debug.Log("[Probe] 静止: player=" + player.transform.position + " cam=" + cam.position
                 + " 水平距离=" + HorizontalDistance());
             // 手动瞬移玩家，不依赖输入
-            player.transform.position += new Vector3(20f, 0f, 0f);
+            player.GetComponent<PlayerMotor>().Teleport(player.transform.position + new Vector3(20f, 0f, 0f));
             return;
         }
 
@@ -82,7 +86,7 @@ public static class FollowProbe
                 + " 水平距离=" + HorizontalDistance()
                 + " 相机位移=" + (cam.position - lastCameraPosition).magnitude.ToString("F2"));
             lastCameraPosition = cam.position;
-            player.transform.position += new Vector3(0f, 0f, 25f);
+            player.GetComponent<PlayerMotor>().Teleport(player.transform.position + new Vector3(0f, 0f, 25f));
             return;
         }
 
@@ -92,7 +96,7 @@ public static class FollowProbe
                 + " 水平距离=" + HorizontalDistance()
                 + " 相机位移=" + (cam.position - lastCameraPosition).magnitude.ToString("F2"));
             Debug.Log("[Probe] 相机朝向与玩家夹角=" + Vector3.Angle(cam.forward,
-                (player.transform.position + Vector3.up * TrackedHeight) - cam.position).ToString("F1")
+                (followTarget != null ? followTarget.position : player.transform.position) - cam.position).ToString("F1")
                 + " 度（越肩 POV 机位不为 0 属正常）");
             Finish(0);
         }
@@ -102,7 +106,7 @@ public static class FollowProbe
     {
         EditorApplication.update -= Step;
         EditorApplication.ExitPlaymode();
-        EditorApplication.Exit(exitCode);
+        if (Application.isBatchMode) EditorApplication.Exit(exitCode);
     }
 
     private static string HorizontalDistance()

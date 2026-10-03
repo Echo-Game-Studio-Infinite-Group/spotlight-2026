@@ -124,7 +124,9 @@ public static class PlayerAnimationSetup
         AnimatorState idle = State(machine, "Idle", idleClip, new Vector3(240f, 0f));
         State(machine, "Move", locomotion, new Vector3(500f, 0f));
         State(machine, "Jump", jumpClip, new Vector3(500f, 100f));
-        State(machine, "Trackle", slideClip, new Vector3(240f, 100f));
+        AnimatorState slide = State(machine, "Trackle", slideClip, new Vector3(240f, 100f));
+        // 滑铲重定向到不同身材时保留脚部接触，避免腿部穿地。
+        slide.iKOnFeet = true;
         AnimatorState attack = State(machine, "Attack", attackClip, new Vector3(760f, 100f));
         machine.defaultState = idle;
 

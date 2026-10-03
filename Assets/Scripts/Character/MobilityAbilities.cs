@@ -40,7 +40,7 @@ public class MobilityAbilities : MonoBehaviour
     /// <summary>能量是否够放这个技能（给输入层做判定用，不扣费）。账户未装配时一律返回 false</summary>
     public bool CanAfford(MobilityAbility ability)
     {
-        if (_params == null || _energy == null) return false;
+        if (!isActiveAndEnabled || _motor == null || _params == null || _energy == null) return false;
 
         switch (ability)
         {
@@ -59,7 +59,7 @@ public class MobilityAbilities : MonoBehaviour
     /// <returns>真正生效返回 true；能量不足或执行端未就绪返回 false</returns>
     public bool TryTrigger(MobilityAbility ability)
     {
-        if (_params == null || _movementParams == null || _energy == null) return false;
+        if (!isActiveAndEnabled || _motor == null || _params == null || _movementParams == null || _energy == null) return false;
 
         switch (ability)
         {

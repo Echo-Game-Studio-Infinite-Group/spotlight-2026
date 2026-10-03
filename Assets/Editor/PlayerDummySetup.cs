@@ -3,12 +3,11 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-// 仅显式菜单装配，避免脚本重载覆盖用户手工调整。
+// 仅内部显式调用装配，避免脚本重载覆盖用户手工调整。
 public static class PlayerDummySetup
 {
     private const string ModelPath = "Assets/Art/Models/PlayerDummy.fbx";
     private const string RunPath = "Assets/Animations/fbx/Running.fbx";
-    [MenuItem("超高速行者/装配 PlayerDummy 与新版 Running")]
     public static void Install()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

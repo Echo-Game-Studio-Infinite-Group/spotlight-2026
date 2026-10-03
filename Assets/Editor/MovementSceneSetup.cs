@@ -11,9 +11,8 @@ using UnityEngine.Rendering.Universal;
 public static class MovementSceneSetup
 {
     public const string ScenePath = "Assets/Scenes/TestScene.unity";
-    public const string CharacterPath = "Assets/Prefabs/character.prefab";
+    public const string CharacterPath = "Assets/Prefabs/Player.prefab";
 
-    [MenuItem("超高速行者/装配 character 与 Cinemachine")]
     public static void Rebuild()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -40,8 +39,8 @@ public static class MovementSceneSetup
         if (parameters == null || actions == null) throw new InvalidOperationException("移动参数或 Action Map 缺失");
         ConfigurePrefab(parameters, actions);
 
-        // character.prefab 是模型变体，实例根沿用源预制体的名字（就是 "Player"），按名字找不到：
-        // 改为按「是否实例自 character.prefab」识别，避免重复实例化、以及把上一份装好的角色当成旧 Player 删掉
+        // Player.prefab 是模型变体，实例根沿用源预制体的名字（就是 "Player"），按名字找不到：
+        // 改为按「是否实例自 Player.prefab」识别，避免重复实例化、以及把上一份装好的角色当成旧 Player 删掉
         GameObject character = FindCharacterInstance(scene);
         GameObject oldPlayer = FindLegacyPlayer(scene, character);
         if (character == null)

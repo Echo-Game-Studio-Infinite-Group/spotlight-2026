@@ -50,7 +50,6 @@ public static class CombatSceneSetup
     private const float HitTimeScale = 0.75f;
     private const float HitSlowSeconds = 0.2f;
 
-    [MenuItem("超高速行者/装配战斗与敌人")]
     public static void Build()
     {
         // 播放模式下不能打开/保存场景，先退出再重试（与 ProjectBootstrap 同一处坑）
@@ -834,7 +833,6 @@ public static class CombatSceneSetup
 
     private const string ControllerPathForDiagnostics = "Assets/Animations/player.controller";
 
-    [MenuItem("超高速行者/检查战斗装配")]
     public static void Verify()
     {
         List<string> lines = new List<string>();
