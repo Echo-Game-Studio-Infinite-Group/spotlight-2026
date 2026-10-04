@@ -743,6 +743,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1099802399739285478, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.54
+      objectReference: {fileID: 0}
+    - target: {fileID: 5039998566654623894, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.56
+      objectReference: {fileID: 0}
     - target: {fileID: 7146600531868507599, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.y
       value: 2.7529144
@@ -803,6 +811,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8747713642616214842, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.68
+      objectReference: {fileID: 0}
     - target: {fileID: 9185369908108026766, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_Name
       value: Player
@@ -823,6 +835,7 @@ GameObject:
   - component: {fileID: 1522442431}
   - component: {fileID: 1522442432}
   - component: {fileID: 1522442433}
+  - component: {fileID: 1522442434}
   m_Layer: 0
   m_Name: EnemyTest
   m_TagString: Untagged
@@ -907,6 +920,35 @@ CharacterController:
   m_SkinWidth: 0.03
   m_MinMoveDistance: 0
   m_Center: {x: 0.000000014901161, y: 0, z: 0}
+--- !u!114 &1522442434
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1522442430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
+  _deathChance: 1
+  _waist: {fileID: 0}
+  _waistOffset: -0.12
+  _fallbackHeight: 0.55
+  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
+  _edgeWidth: 0.015
+  _separationSpeed: 2.5
+  _liftSpeed: 2
+  _gravity: 18
+  _spinSpeed: 110
+  _lowerSeparationMultiplier: 0.35
+  _lowerSpinMultiplier: 0.5
+  _lifetime: 0
+  _groundMask:
+    serializedVersion: 2
+    m_Bits: 51
 --- !u!1 &1741678494
 GameObject:
   m_ObjectHideFlags: 0

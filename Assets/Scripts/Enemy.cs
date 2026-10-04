@@ -249,6 +249,7 @@ public sealed class Enemy : MonoBehaviour
         {
             Speed = 0f;
             FinishAttack();
+            GetComponent<GibComponent>()?.TrySlice(hitDirection);
             if (_animation != null) _animation.PlayDeath();
             if (_controller != null) _controller.enabled = false;
         }
@@ -264,7 +265,13 @@ public sealed class Enemy : MonoBehaviour
     public DamagePopup DamagePopupTemplate => _damagePopup;
     public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
 
-    public void ResetHealth() { _health = _maxHealth; _invulnerableUntil = float.NegativeInfinity; DamagedCount = 0; }
+    public void ResetHealth()
+    {
+        GetComponent<GibComponent>()?.ResetEffect();
+        _health = _maxHealth;
+        _invulnerableUntil = float.NegativeInfinity;
+        DamagedCount = 0;
+    }
     public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
 
