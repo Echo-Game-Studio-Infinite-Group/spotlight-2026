@@ -29,7 +29,6 @@ public sealed class PlayerCombat : MonoBehaviour
 
     [Header("引用")]
     [SerializeField] private Hitbox _hitbox;
-    [SerializeField] private PlayerVFXManager _vfx;
     [SerializeField] private bool _logHits;
 
     private PlayerInputReader _input;
@@ -75,10 +74,9 @@ public sealed class PlayerCombat : MonoBehaviour
         SyncHitboxDamage();
     }
 
-    public void SetReferences(Hitbox hitbox, PlayerVFXManager vfx)
+    public void SetReferences(Hitbox hitbox)
     {
         _hitbox = hitbox;
-        _vfx = vfx;
         SyncHitboxDamage();
     }
 
@@ -98,7 +96,6 @@ public sealed class PlayerCombat : MonoBehaviour
         if (_motor == null) _motor = GetComponent<PlayerMotor>();
         if (_input == null) _input = GetComponent<PlayerInputReader>();
         if (_hitbox == null) _hitbox = GetComponentInChildren<Hitbox>(true);
-        if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>(true);
     }
 
     private void SyncHitboxDamage()
@@ -162,14 +159,6 @@ public sealed class PlayerCombat : MonoBehaviour
     {
         _windowEnd = float.NegativeInfinity;
         DisableHitbox();
-    }
-
-    /// <summary>攻击特效：第 cnt 段。由动画事件调用，与参考实现 UpdateAttack(int) 同名。</summary>
-    public void UpdateAttack(int cnt = 1)
-    {
-        EnsureReferences();
-        if (_vfx != null) _vfx.UpdateAttack(cnt);
-        else Debug.LogWarning($"[PlayerCombat] 没有配置攻击特效管理器，第 {cnt} 段特效未播放");
     }
 
     // 复位攻击状态：清掉冷却与窗口。

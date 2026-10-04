@@ -52,7 +52,6 @@ public sealed class PlayerAnimation : MonoBehaviour
     // Unity 只把动画事件发给 Animator 同节点组件。
     public void EnableHitbox() { if (_combat != null) _combat.EnableHitbox(); }
     public void DisableHitbox() { if (_combat != null) _combat.DisableHitbox(); }
-    public void UpdateAttack(int cnt = 1) { if (_combat != null) _combat.UpdateAttack(cnt); }
     public void FinishAttack() { if (_combat != null) _combat.FinishAttack(); }
 
     private void Update()

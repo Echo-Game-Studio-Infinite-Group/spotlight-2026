@@ -6,9 +6,20 @@ public sealed class DebugHUD : MonoBehaviour
     [SerializeField] private bool _visible = true;
     private PlayerMotor _motor;
     private PlayerInputReader _input;
+
+    // 能量改读新的能量账户：同物体上的 VectorEnergy。不能再用 PlayerMotor.Energy：
+    // 那是移动侧的旧实现，走帧缓存 dt + 每秒系数，与 VectorEnergy 的每 tick 结算不是同一条链
+    // 取接口而不是具体类型：将来换实现（或并入空气那条线）这里不用改
+    private IEnergyAccount _energy;
+
     private GUIStyle _style;
 
-    private void Awake() { _motor = GetComponent<PlayerMotor>(); _input = GetComponent<PlayerInputReader>(); }
+    private void Awake()
+    {
+        _motor = GetComponent<PlayerMotor>();
+        _input = GetComponent<PlayerInputReader>();
+        _energy = GetComponent<IEnergyAccount>();
+    }
     private void OnEnable() { if (_input != null) _input.ToggleHUD += Toggle; }
     private void OnDisable() { if (_input != null) _input.ToggleHUD -= Toggle; }
     private void Toggle() => _visible = !_visible;
@@ -22,7 +33,10 @@ public sealed class DebugHUD : MonoBehaviour
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
         GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
-        GUILayout.Label($"能量 {_motor.Energy:F1} / {_motor.Params.EnergyMax:F0}", _style);
+        // 能量行改走能量账户，读不到时明确写出来，避免把"没接上"误看成"能量是 0"
+        GUILayout.Label(_energy != null
+            ? $"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}"
+            : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
         GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击 · Esc 鼠标锁定 · F3 面板", _style);
