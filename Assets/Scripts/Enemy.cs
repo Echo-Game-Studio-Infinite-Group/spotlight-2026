@@ -1,13 +1,14 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 // 敌人：自行维护血量与受击反馈，Hitbox 负责碰撞判定。
-// 追击用直线靠近，不接 NavMesh：本阶段是灰盒预研，
-// 场景里没有烘焙导航网格，接 NavMeshAgent 只会得到一群原地不动的敌人。
+// 追击与位移全部交给 NavMeshAgent（寻路、绕障、贴地、转向都是它的事），
+// Enemy 只做决策（追不追、打不打）与战斗结算，不碰 Transform、不管重力。
+// 2026-10-04 主程定：旧的直线追击位移系统废弃，原 CharacterController 那套随之移除。
 //
-// 刻意不加 [RequireComponent(typeof(CharacterController))]：
-// 那是追击模式专用的位移载体，而它的胶囊以包围盒为基准体积可观，会改变敌人外观。
-// 加了 RequireComponent 的话，只要挂上 Enemy 就会被强行塞一个 CharacterController，
-// 「只想要一个能被打的靶子」就做不到了。需要追击时由装配工具显式添加。
+// 刻意不加 [RequireComponent(typeof(NavMeshAgent))]：
+// CombatSelfCheck 之类只想要「一个能被打的靶子」的地方不该被强行塞一个 agent，
+// 那种场合没有 agent 也能正常工作（只是不追击）。需要追击时在 Inspector 挂上即可。
 [DisallowMultipleComponent]
 public sealed class Enemy : MonoBehaviour
 {
@@ -43,22 +44,20 @@ public sealed class Enemy : MonoBehaviour
     [SerializeField, Min(0f)] private float _gravity = 25f;
 
     [Header("行为")]
-    // 默认不追击：追击要靠 CharacterController 位移，而它的胶囊以包围盒为基准体积可观，
-    // 不该在「只需要一个能被打的靶子」时强加给敌人。需要时在 Inspector 勾上。
+    // 寻路与位移全部交给 NavMeshAgent（2026-10-04 主程定：旧的直线追击位移系统废弃）
+    // Enemy 只保留决策与攻击判定，不再碰 Transform、不管重力
+    // 刻意不用 [RequireComponent]：CombatSelfCheck 之类只想要"能被打的靶子"的地方
+    // 不该被强行塞一个 agent，所以缺失时只跳过追击，不报错也不禁用
+    [SerializeField] private NavMeshAgent _agent;
+
+    // 默认不追击：需要时在 Inspector 勾上
+    // 朝向由 NavMeshAgent.updateRotation 处理，Enemy 不再自己转
     [SerializeField] private bool _chasePlayer;
     [SerializeField, Min(0f)] private float _sightRange = 14f;
     [SerializeField, Min(0f)] private float _attackRange = 2.2f;
     [SerializeField, Min(0f)] private float _attackCooldown = 1.1f;
-    [SerializeField, Min(0f)] private float _facingResponse = 12f;
 
-    [Header("受击反馈")]
-    [SerializeField, Min(0f)] private float _knockbackSpeed = 6f;
-    [SerializeField, Min(0f)] private float _knockbackDecay = 10f;
-
-    private CharacterController _controller;
-    private Vector3 _knockback;
     private float _nextAttackTime;
-    private float _verticalSpeed;
     private Hitbox _attackHitbox;
     private bool _runningChase;
 
@@ -83,12 +82,15 @@ public sealed class Enemy : MonoBehaviour
     private void Awake()
     {
         _health = _maxHealth;
-        PreviousPosition = transform.position;
-        PreviousRotation = transform.rotation;
-        _controller = GetComponent<CharacterController>();
-        _animation = GetComponentInChildren<EnemyAnimation>(true);
-        _attackHitbox = GetComponentInChildren<Hitbox>(true);
-        if (_attackHitbox != null) _attackHitbox.Configure(CampType.Enemy, this);
+        _agent = GetComponent<NavMeshAgent>();
+        if (_agent != null)
+        {
+            // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
+            _agent.speed = _moveSpeed;
+            // 关键：停止距离必须等于攻击距离。若 agent 的停止距离更小，
+            // agent 会在攻击距离之外就停住，出现"既不走近也不攻击"的空档
+            _agent.stoppingDistance = _attackRange;
+        }
         if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
     }
 
@@ -140,20 +142,7 @@ public sealed class Enemy : MonoBehaviour
         Debug.Log($"[Enemy] {name} 状态: 存活={IsAlive} 血量={Health}/{MaxHealth} 追击={_chasePlayer} "
             + $"玩家={(target != null ? target.name : "未找到")} 水平距离={distance:0.##} 攻击距离={_attackRange} "
             + $"视野={_sightRange} 下次攻击={_nextAttackTime:0.##} 当前={TimeManager.UnscaledTime:0.##} "
-            + $"控制器={(_controller != null && _controller.enabled)} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
-    }
-
-    private void ApplyPhysics(float dt)
-    {
-        if (_controller == null || !_controller.enabled) return;
-
-        _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, _knockbackDecay * dt);
-
-        if (_controller.isGrounded && _verticalSpeed < 0f) _verticalSpeed = -2f;
-        _verticalSpeed -= _gravity * dt;
-
-        Vector3 motion = _knockback + Vector3.up * _verticalSpeed;
-        _controller.Move(motion * dt);
+            + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
     private void Chase(float dt)
@@ -164,7 +153,6 @@ public sealed class Enemy : MonoBehaviour
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
-        if (distance > _sightRange) return;
 
         FaceTowards(toTarget, dt);
 
@@ -192,25 +180,22 @@ public sealed class Enemy : MonoBehaviour
     {
         if (_controller != null && _controller.enabled)
         {
-            _controller.Move(step);
+            StopMoving();
+            TryAttack(target, distance);
             return;
         }
 
-        transform.position += step;
+        // 寻路与位移交给 agent；它自己处理绕障、贴地与转向
+        if (_agent != null && _agent.isOnNavMesh)
+        {
+            _agent.isStopped = false;
+            _agent.SetDestination(target.transform.position);
+        }
     }
 
-    // 允许装配工具和测试显式注入位移载体。
-    public void SetController(CharacterController controller)
+    private void StopMoving()
     {
-        _controller = controller;
-    }
-
-    private void FaceTowards(Vector3 toTarget, float dt)
-    {
-        if (toTarget.sqrMagnitude < 0.0001f) return;
-        float targetYaw = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
-        float yaw = Mathf.LerpAngle(transform.eulerAngles.y, targetYaw, Mathf.Clamp01(_facingResponse * dt));
-        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        if (_agent != null && _agent.isOnNavMesh) _agent.isStopped = true;
     }
 
     private void TryAttack(PlayerMotor target)
@@ -274,10 +259,4 @@ public sealed class Enemy : MonoBehaviour
     }
     public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
-
-    public void ApplyKnockback(Vector3 direction, float strength)
-    {
-        Vector3 flat = new Vector3(direction.x, 0f, direction.z).normalized;
-        _knockback = flat * (_knockbackSpeed * Mathf.Max(0f, strength));
-    }
 }

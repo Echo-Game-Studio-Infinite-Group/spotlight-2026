@@ -1,0 +1,131 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: slide
+  m_EditorClassIdentifier: 
+  ActionId: slide
+  DisplayName: "\u6ED1\u94F2"
+  Description: "\u6B64\u793A\u4F8B\u53EA\u8868\u793A\u6ED1\u94F2\u53D6\u6D88\u5173\u7CFB\uFF1B\u5B9E\u9645\u8FDB\u5165\u901F\u5EA6\u4E0E\u59FF\u6001\u7531\u672A\u6765\u63A5\u5165\u65B9\u68C0\u67E5\u3002"
+  Timeline:
+  - SegmentId: startup_a
+    DisplayName: "\u8D77\u52BF"
+    Phase: 0
+    DurationFrames: 4
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: startup_b
+    DisplayName: "\u5F15\u5200 / \u51C6\u5907"
+    Phase: 0
+    DurationFrames: 6
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: active
+    DisplayName: "\u6267\u884C"
+    Phase: 1
+    DurationFrames: 6
+    Events:
+    - Frame: 0
+      EventKey: action.active
+      HitGroup: 1
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: recovery
+    DisplayName: "\u6062\u590D"
+    Phase: 2
+    DurationFrames: 14
+    Events:
+    - Frame: 0
+      EventKey: action.recovery
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CancelWindows:
+  - WindowId: 8ec179c5834b4ca397a66f5700789266
+    DisplayName: "\u524D\u8DF3\u53D6\u6D88"
+    Start:
+      SegmentId: active
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 94cfe69bb45889a42a5a622a1a518ebb, type: 2}
+    RequireAll:
+    - forward_jump
+    RequireAny: []
+    Priority: 0
+  Input:
+    Steps:
+    - Button: 16
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 0
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    MaxStepGapFrames: 0
+    PreInputFrames: 6
+    BufferGroup: main
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 0
+    RequireAll: []
+    RequireAny: []
+  StartConditions: []
+  EnergyCost: 0
+  CooldownFrames: 0
