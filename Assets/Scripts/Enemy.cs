@@ -26,7 +26,22 @@ public sealed class Enemy : MonoBehaviour
     public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
     [Header("战斗属性")]
     [SerializeField, Min(0f)] private float _attackPower = 8f;
-    [SerializeField, Min(0f)] private float _moveSpeed = 4f;
+    [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
+    [SerializeField, Min(0f)] private float _walkSpeed = 2f;
+    [SerializeField, Min(0f)] private float _runSpeed = 5f;
+    [SerializeField, Min(0f)] private float _runDistance = 6f;
+    [SerializeField, Min(0f)] private float _runHysteresis = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float _injuredThreshold = 0.3f;
+    public float Speed { get; private set; }
+    public float WalkSpeed => _walkSpeed;
+    public float RunSpeed => _runSpeed;
+    // 比较比例，避免 100 * 0.3f 的舍入把恰好 30 血误判为受伤。
+    public bool IsInjured => HealthRatio < _injuredThreshold;
+    public bool IsAttacking { get; private set; }
+    internal Vector3 PreviousPosition { get; private set; }
+    internal Quaternion PreviousRotation { get; private set; }
+    private EnemyAnimation _animation;
+    [SerializeField, Min(0f)] private float _gravity = 25f;
 
     [Header("行为")]
     // 寻路与位移全部交给 NavMeshAgent（2026-10-04 主程定：旧的直线追击位移系统废弃）
@@ -44,10 +59,11 @@ public sealed class Enemy : MonoBehaviour
 
     private float _nextAttackTime;
     private Hitbox _attackHitbox;
+    private bool _runningChase;
 
     public float AttackPower => _attackPower;
     public float AttackDamage => _attackPower;
-    public float MoveSpeed => _moveSpeed;
+    public float MoveSpeed => _walkSpeed;
     public float AttackRange => _attackRange;
     public bool IsChasing => _chasePlayer;
 
@@ -55,7 +71,7 @@ public sealed class Enemy : MonoBehaviour
     {
         SetMaxHealth(maxHealth);
         _attackPower = attackPower;
-        _moveSpeed = moveSpeed;
+        _walkSpeed = Mathf.Max(0f, moveSpeed);
     }
 
     public void SetChasePlayer(bool chase)
@@ -78,27 +94,29 @@ public sealed class Enemy : MonoBehaviour
         if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        if (!IsAlive)
-        {
-            return;
-        }
-
-        float dt = TimeManager.WorldDeltaTime;
+        PreviousPosition = transform.position;
+        PreviousRotation = transform.rotation;
+        Speed = 0f;
+        if (!IsAlive) return;
+        float dt = TimeManager.WorldFixedDeltaTime;
         if (dt <= 0f) return;
-
-        // 位移已交给 NavMeshAgent，这里只做追击与攻击的决策
-        if (_chasePlayer) Chase(dt);
+        ApplyPhysics(dt);
+        if (_chasePlayer && !IsAttacking && (_animation == null || !_animation.IsHurting)) Chase(dt);
     }
 
-    // ===== 动画事件入口 =====
-    // 敌人的攻击判定同样走「动画事件开关 Hitbox」这套（与玩家的 Hitbox 同一个组件）。
-    // 敌人当前用的动画控制器里还没有这些事件，缺了它就只靠 TryAttack 的代码结算 ——
-    // 补上事件后会自动切到动画驱动，无需改代码。
+    private void OnDisable() => FinishAttack();
+
+    public void FinishAttack()
+    {
+        IsAttacking = false;
+        DisableHitbox();
+    }
+
     public void EnableHitbox()
     {
-        if (_attackHitbox != null) _attackHitbox.EnableHitbox();
+        if (IsAlive && IsAttacking && _attackHitbox != null) _attackHitbox.EnableHitbox();
     }
 
     public void DisableHitbox()
@@ -130,21 +148,37 @@ public sealed class Enemy : MonoBehaviour
     private void Chase(float dt)
     {
         PlayerMotor target = ResolvePlayer();
-        if (target == null) return;
+        if (target == null || !GameManager.Instance.Player.IsAlive) return;
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
 
-        // 看不见就停下等：不清空路径会让敌人沿着上一次的目的地继续走
-        if (distance > _sightRange)
+        FaceTowards(toTarget, dt);
+
+        if (distance - _attackRange > 0.001f)
         {
-            StopMoving();
+            // 进跑与退跑分开阈值，避免跟随移动玩家时在边界反复切换。
+            _runningChase = _runningChase
+                ? distance > Mathf.Max(_attackRange, _runDistance - _runHysteresis)
+                : distance >= _runDistance;
+            float desiredSpeed = _runningChase ? _runSpeed : _walkSpeed;
+            Vector3 before = transform.position;
+            MoveStep(toTarget.normalized * Mathf.Min(desiredSpeed * dt, distance - _attackRange));
+            Vector3 displacement = transform.position - before;
+            displacement.y = 0f;
+            Speed = displacement.magnitude / dt;
+            if (Mathf.Abs(Speed - desiredSpeed) < 0.001f) Speed = desiredSpeed;
             return;
         }
 
-        // 够得着就打，不再往前挤（挤会把自己推进玩家身体里）
-        if (distance <= _attackRange)
+        TryAttack(target);
+    }
+
+    // 位移走 CharacterController.Move，与玩家一致：物理引擎只做碰撞，不接管运动
+    private void MoveStep(Vector3 step)
+    {
+        if (_controller != null && _controller.enabled)
         {
             StopMoving();
             TryAttack(target, distance);
@@ -164,19 +198,20 @@ public sealed class Enemy : MonoBehaviour
         if (_agent != null && _agent.isOnNavMesh) _agent.isStopped = true;
     }
 
-    private void TryAttack(PlayerMotor target, float distance)
+    private void TryAttack(PlayerMotor target)
     {
-        if (TimeManager.UnscaledTime < _nextAttackTime) return;
+        if (TimeManager.WorldTime < _nextAttackTime) return;
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
         PlayerData health = GameManager.Instance.Player;
         if (health == null || !health.IsAlive) return;
 
-        _nextAttackTime = TimeManager.UnscaledTime + _attackCooldown;
-        float applied = health.TakeDamage(_attackPower);
-        // 被打中也要有反馈：与玩家命中敌人共用同一套震屏通道
-        if (applied > 0f) CameraShaker.Shake(0.35f);
+        // 没有动画或判定盒就不凭距离直接扣血。
+        if (_animation == null || !_animation.CanAttack || _attackHitbox == null) return;
+        _nextAttackTime = TimeManager.WorldTime + _attackCooldown;
+        IsAttacking = true;
+        _animation.PlayAttack();
     }
 
     private PlayerMotor ResolvePlayer()
@@ -197,14 +232,13 @@ public sealed class Enemy : MonoBehaviour
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         if (!IsAlive)
         {
-            _chasePlayer = false;
-            // 死掉就停住，别让尸体继续按最后一条路径往前走
-            if (_agent != null && _agent.isOnNavMesh)
-            {
-                _agent.isStopped = true;
-                _agent.ResetPath();
-            }
+            Speed = 0f;
+            FinishAttack();
+            GetComponent<GibComponent>()?.TrySlice(hitDirection);
+            if (_animation != null) _animation.PlayDeath();
+            if (_controller != null) _controller.enabled = false;
         }
+        else if (_animation != null) _animation.PlayHurt();
         return applied;
     }
 
@@ -216,7 +250,13 @@ public sealed class Enemy : MonoBehaviour
     public DamagePopup DamagePopupTemplate => _damagePopup;
     public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
 
-    public void ResetHealth() { _health = _maxHealth; _invulnerableUntil = float.NegativeInfinity; DamagedCount = 0; }
+    public void ResetHealth()
+    {
+        GetComponent<GibComponent>()?.ResetEffect();
+        _health = _maxHealth;
+        _invulnerableUntil = float.NegativeInfinity;
+        DamagedCount = 0;
+    }
     public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
 }

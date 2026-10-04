@@ -1576,9 +1576,13 @@ MonoBehaviour:
   _maxHealth: 120
   _invulnerableTime: 0.45
   _attackPower: 8
-  _moveSpeed: 4
-  _agent: {fileID: 0}
-  _chasePlayer: 1
+  _walkSpeed: 4
+  _runSpeed: 5
+  _runDistance: 6
+  _runHysteresis: 0.5
+  _injuredThreshold: 0.3
+  _gravity: 25
+  _chasePlayer: 0
   _sightRange: 14
   _attackRange: 2.2
   _attackCooldown: 1.1
@@ -1730,9 +1734,13 @@ MonoBehaviour:
   _maxHealth: 120
   _invulnerableTime: 0.45
   _attackPower: 8
-  _moveSpeed: 4
-  _agent: {fileID: 0}
-  _chasePlayer: 1
+  _walkSpeed: 4
+  _runSpeed: 5
+  _runDistance: 6
+  _runHysteresis: 0.5
+  _injuredThreshold: 0.3
+  _gravity: 25
+  _chasePlayer: 0
   _sightRange: 14
   _attackRange: 2.2
   _attackCooldown: 1.1
@@ -2095,7 +2103,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8747713642616214842, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1.09
+      value: -1.68
       objectReference: {fileID: 0}
     - target: {fileID: 9185369908108026766, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_Name
