@@ -31,7 +31,7 @@ Unity 菜单 **超高速行者 → 动作序列配表**。新模块位于 `Asset
 `ActionSequencePlayer` 是纯 C# 类，不读取 Unity 时间、设备、Animator、Motor 或资源账户。未来接入方需要：
 
 1. 从 `PlayerInputReader` 提供的统一快照构造 `ActionInputSample`。`Tick` 严格递增，按下/松开事件按实际顺序排列；事件携带当时的按住键与输入方向，避免按下后改变方向使请求变招。方向语义键由快照适配器生成，不在执行器读 WASD。
-2. 每个采样 tick 调用 `Tick(sample, TimeManager.PlayerFixedDeltaTime * ActionSequencePlayer.FramesPerSecond, TimeManager.InHitStop)`。动作时间缩放与输入采样时钟分开。UI 暂停时停止 gameplay 采样并调用 `Reset`，不在恢复时补发旧输入。
+2. 每个采样 tick 调用 `Tick(sample, TimeManager.PlayerFixedDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop)`。顿帧标记由接入层根据顿帧来源提供；不能用总时间倍率代替，因为时缓也会降低倍率。动作时间缩放与输入采样时钟分开。UI 暂停时停止 gameplay 采样并调用 `Reset`，不在恢复时补发旧输入。
 3. 实现 `IActionSequenceHost`：解释条件键、检查目标是否合法、在 `TryCommit` 统一扣费及消费派生资格。失败必须无副作用，成功后执行器才退出旧动作；动态推斩耗能在这里计算。一次性耗能不乘时间缩放。
 4. 实现 `IActionSequenceSink`：动作进入、子段进入、帧事件、退出、只读状态采样。移动指令交给唯一的 `PlayerMotor`；退出回调关闭该实例的判定并释放限制。动画适配器使用状态中的实例号、子段绑定及 `AnimationNormalizedTime`，避免动画机自行决定取消。
 5. 已由外部识别的请求可通过 `Queue(target, inputTick, direction)` 注入，仍会检查窗口、进入条件、冷却和 Host 提交。此入口不重新识别输入资格。
@@ -51,4 +51,4 @@ Unity 菜单 **超高速行者 → 动作序列配表**。新模块位于 `Asset
 
 Compile 使用已安装的 dotnet SDK 和冻结版 Unity 参考程序集。其他阶段在 `Temp/ActionSequenceValidation` 副本运行 Unity，复制 Assets、Packages、ProjectSettings 和现有包缓存，不修改当前场景和工程设置；结果 XML 与日志位于副本。Examples 生成副本中的示例资产和 `ActionSequenceReports/cancel-chain.svg`。仓库另附 `Tools/ActionSequences/example-cancel-chain.svg`，可直接查看示例取消关系。
 
-本次验证新增 30 项 EditMode 测试全部通过，覆盖逻辑边界、输入归属、缓冲、提交失败、配置撤销与落盘、图导出和四个页签绘制。现有 PlayMode 为 51 通过、10 失败；通过 `-Stage BaselinePlayMode` 排除新模块后，失败项完全一致，涉及已有动画/相机资源与战斗场景引用。没有为绕过这些失败修改当前角色或场景。
+模块开发时新增 30 项 EditMode 测试全部通过，覆盖逻辑边界、输入归属、缓冲、提交失败、配置撤销与落盘、图导出和四个页签绘制。当时所在分支的 PlayMode 为 51 通过、10 失败；通过 `-Stage BaselinePlayMode` 排除新模块后，失败项完全一致，涉及已有动画/相机资源与战斗场景引用。没有为绕过这些失败修改当前角色或场景。最新 dev 已移除原 PlayMode 测试，PlayMode 与 BaselinePlayMode 阶段仅适用于含相应测试的分支。
