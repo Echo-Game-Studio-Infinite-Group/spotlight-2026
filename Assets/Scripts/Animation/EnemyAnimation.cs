@@ -83,6 +83,15 @@ public sealed class EnemyAnimation : MonoBehaviour
         _animator.SetTrigger("Hurt");
     }
 
+    public void ResetAfterDeath()
+    {
+        if (_animator == null || _animator.runtimeAnimatorController == null) return;
+        // Die 没有出口；复用敌人时必须恢复默认状态，不能只清掉 Dead 参数。
+        _enteredAttack = false;
+        _animator.Rebind();
+        if (_animator.isActiveAndEnabled) _animator.Update(0f);
+    }
+
     public void EnableHitbox() { if (_enemy != null) _enemy.EnableHitbox(); }
     public void DisableHitbox() { if (_enemy != null) _enemy.DisableHitbox(); }
     public void FinishAttack() { if (_enemy != null) _enemy.FinishAttack(); }

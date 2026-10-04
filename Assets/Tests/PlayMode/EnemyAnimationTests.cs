@@ -4,12 +4,59 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEditor.SceneManagement;
 
 public sealed class EnemyAnimationTests
 {
+    [TearDown]
+    public void ReleaseTestTime() => TimeManager.Release(TimeManager.TimeLayer.World, this);
+
+    private NavMeshAgent GetBakedAgent(Enemy enemy)
+    {
+        var agent = enemy.GetComponent<NavMeshAgent>();
+        Assert.NotNull(agent, "场景必须保存 NavMeshAgent");
+        Assert.IsTrue(agent.isOnNavMesh, "场景烘焙数据必须覆盖敌人出生点");
+        return agent;
+    }
+
+    [UnityTest]
+    public IEnumerator BothScenes_BakedEnemiesActuallyChase()
+    {
+        foreach (string scene in new[] { "AnimTestScene", "TestScene" })
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode($"Assets/Scenes/{scene}.unity",
+                new LoadSceneParameters(LoadSceneMode.Single));
+            GameManager.Instance.StartGame();
+            var player = Object.FindObjectOfType<PlayerMotor>();
+            Assert.NotNull(player);
+            player.enabled = false;
+            var enemies = Object.FindObjectsOfType<Enemy>();
+            Assert.IsNotEmpty(enemies);
+            foreach (var enemy in enemies) Assert.IsTrue(enemy.IsChasing, scene + " 必须开启追击");
+            foreach (var enemy in enemies) enemy.SetChasePlayer(false);
+            foreach (var enemy in enemies)
+            {
+                var agent = GetBakedAgent(enemy);
+                Vector3 start = enemy.transform.position;
+                var filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = agent.areaMask };
+                Assert.IsTrue(NavMesh.SamplePosition(start + Vector3.forward * 8f, out var destination, 3f, filter));
+                var path = new NavMeshPath();
+                Assert.IsTrue(agent.CalculatePath(destination.position, path));
+                Assert.AreEqual(NavMeshPathStatus.PathComplete, path.status, scene + "/" + enemy.name);
+                player.Teleport(destination.position + Vector3.up * agent.baseOffset);
+                enemy.SetChasePlayer(true);
+                yield return new WaitForSeconds(1.5f);
+                Assert.Greater(Vector3.Distance(start, enemy.transform.position), .5f,
+                    scene + "/" + enemy.name + " 必须实际移动");
+                enemy.SetChasePlayer(false);
+            }
+            Object.Destroy(GameManager.Instance.gameObject);
+            yield return null;
+        }
+    }
     [Test]
     public void Attack_ReturnsToMove_AndCanRepeat()
     {
@@ -106,6 +153,7 @@ public sealed class EnemyAnimationTests
         GameManager.Instance.StartGame();
         player.enabled = false;
         enemy.SetChasePlayer(false);
+        var agent = GetBakedAgent(enemy);
         yield return new WaitForSeconds(.6f);
         enemy.enabled = false;
         enemy.SetInvulnerableTime(0);
@@ -162,7 +210,9 @@ public sealed class EnemyAnimationTests
         }
         Assert.IsTrue(ran,"far chase runs");
         Assert.IsTrue(walked,"near chase walks");
-        Assert.IsTrue(enemy.IsAttacking,"arrived in attack range");
+        Assert.IsTrue(enemy.IsAttacking, $"arrived in attack range: enemy={enemy.transform.position}, player={player.transform.position}, "
+            + $"remaining={agent.remainingDistance}, stop={agent.stoppingDistance}, velocity={agent.velocity}, "
+            + $"path={agent.pathStatus}, speed={enemy.Speed}, canAttack={enemy.GetComponentInChildren<EnemyAnimation>().CanAttack}");
         Assert.AreEqual(100, GameManager.Instance.Player.Health,"proximity must not cause damage");
         enemy.SetChasePlayer(false);
         yield return new WaitForSeconds(1.9f);
@@ -186,12 +236,18 @@ public sealed class EnemyAnimationTests
         Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Move"));
         Assert.IsFalse(enemy.GetComponentInChildren<EnemyAnimation>().IsHurting, "AI must unlock after Hurt");
         enemy.TakeDamage(1, enemy.transform.position, Vector3.zero);
+        var gib = enemy.GetComponent<GibComponent>();
+        var gibSettings = new UnityEditor.SerializedObject(gib);
+        gibSettings.FindProperty("_deathChance").floatValue = 1f;
+        gibSettings.ApplyModifiedPropertiesWithoutUndo();
         enemy.TakeDamage(enemy.MaxHealth, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(.3f);
         Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Die"));
         Assert.IsFalse(enemy.IsAttacking);
         Assert.IsFalse(hitbox.GetComponent<Collider>().enabled);
-        Assert.IsFalse(enemy.GetComponent<CharacterController>().enabled);
+        Assert.IsTrue(agent.isStopped, "死亡立即停止导航");
+        Assert.IsTrue(gib.IsSliced, "导航敌人的致命伤正常触发断肢");
+        Assert.IsFalse(agent.hasPath, "死亡清除旧路径");
         float hp=GameManager.Instance.Player.Health;
         Vector3 position=enemy.transform.position;
         yield return new WaitForSeconds(5);
@@ -199,6 +255,24 @@ public sealed class EnemyAnimationTests
         Assert.AreEqual(position,enemy.transform.position,"dead enemy cannot chase");
         Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(0).loop);
         Assert.GreaterOrEqual(animator.GetCurrentAnimatorStateInfo(0).normalizedTime,1);
+        enemy.ResetHealth();
+        player.Teleport(enemy.transform.position + Vector3.forward * 9);
+        enemy.SetChasePlayer(true);
+        yield return new WaitForSeconds(1f);
+        Assert.Greater(enemy.Speed, 0f, "重置后恢复导航追击");
+        Assert.IsFalse(gib.IsSliced, "重置后回收断肢");
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Move"), "重置后退出死亡动画");
+        TimeManager.Apply(TimeManager.TimeLayer.World, 0f, owner: this);
+        yield return new WaitForFixedUpdate();
+        position = enemy.transform.position;
+        yield return new WaitForSeconds(.2f);
+        Assert.Less(Vector3.Distance(position, enemy.transform.position), .01f, "世界时停停止导航");
+        TimeManager.Release(TimeManager.TimeLayer.World, this);
+        agent.enabled = false;
+        enemy.TakeDamage(enemy.MaxHealth, enemy.transform.position, Vector3.zero);
+        enemy.ResetHealth();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(0f, enemy.Speed, "禁用的 agent 不应被访问");
         Debug.Log("ENEMY_PLAYMODE_OK");
         Object.Destroy(GameManager.Instance.gameObject);
     }
