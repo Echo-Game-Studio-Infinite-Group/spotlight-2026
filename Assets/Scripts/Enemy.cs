@@ -41,7 +41,6 @@ public sealed class Enemy : MonoBehaviour
     internal Vector3 PreviousPosition { get; private set; }
     internal Quaternion PreviousRotation { get; private set; }
     private EnemyAnimation _animation;
-    [SerializeField, Min(0f)] private float _gravity = 25f;
 
     [Header("行为")]
     // 寻路与位移全部交给 NavMeshAgent（2026-10-04 主程定：旧的直线追击位移系统废弃）
@@ -77,19 +76,28 @@ public sealed class Enemy : MonoBehaviour
     public void SetChasePlayer(bool chase)
     {
         _chasePlayer = chase;
+        if (!chase) StopMoving();
     }
 
     private void Awake()
     {
         _health = _maxHealth;
-        _agent = GetComponent<NavMeshAgent>();
+        if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+        _animation = GetComponentInChildren<EnemyAnimation>();
+        _attackHitbox = GetComponentInChildren<Hitbox>(true);
+        if (_attackHitbox != null)
+        {
+            _attackHitbox.Configure(CampType.Enemy, this);
+            _attackHitbox.DisableHitbox();
+        }
+        PreviousPosition = transform.position;
+        PreviousRotation = transform.rotation;
         if (_agent != null)
         {
             // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
-            _agent.speed = _moveSpeed;
-            // 关键：停止距离必须等于攻击距离。若 agent 的停止距离更小，
-            // agent 会在攻击距离之外就停住，出现"既不走近也不攻击"的空档
-            _agent.stoppingDistance = _attackRange;
+            _agent.speed = _walkSpeed;
+            // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
+            _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
         }
         if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
     }
@@ -99,14 +107,21 @@ public sealed class Enemy : MonoBehaviour
         PreviousPosition = transform.position;
         PreviousRotation = transform.rotation;
         Speed = 0f;
-        if (!IsAlive) return;
+        if (!IsAlive) { StopMoving(); return; }
         float dt = TimeManager.WorldFixedDeltaTime;
-        if (dt <= 0f) return;
-        ApplyPhysics(dt);
-        if (_chasePlayer && !IsAttacking && (_animation == null || !_animation.IsHurting)) Chase(dt);
+        if (dt <= 0f || !_chasePlayer || IsAttacking || (_animation != null && _animation.IsHurting))
+        {
+            StopMoving();
+            return;
+        }
+        Chase();
     }
 
-    private void OnDisable() => FinishAttack();
+    private void OnDisable()
+    {
+        StopMoving();
+        FinishAttack();
+    }
 
     public void FinishAttack()
     {
@@ -145,16 +160,16 @@ public sealed class Enemy : MonoBehaviour
             + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
-    private void Chase(float dt)
+    private void Chase()
     {
         PlayerMotor target = ResolvePlayer();
-        if (target == null || !GameManager.Instance.Player.IsAlive) return;
+        if (target == null || !GameManager.Instance.Player.IsAlive) { StopMoving(); return; }
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
 
-        FaceTowards(toTarget, dt);
+        if (distance > _sightRange) { StopMoving(); return; }
 
         if (distance - _attackRange > 0.001f)
         {
@@ -163,39 +178,30 @@ public sealed class Enemy : MonoBehaviour
                 ? distance > Mathf.Max(_attackRange, _runDistance - _runHysteresis)
                 : distance >= _runDistance;
             float desiredSpeed = _runningChase ? _runSpeed : _walkSpeed;
-            Vector3 before = transform.position;
-            MoveStep(toTarget.normalized * Mathf.Min(desiredSpeed * dt, distance - _attackRange));
-            Vector3 displacement = transform.position - before;
-            displacement.y = 0f;
-            Speed = displacement.magnitude / dt;
-            if (Mathf.Abs(Speed - desiredSpeed) < 0.001f) Speed = desiredSpeed;
+            if (AgentReady)
+            {
+                float rate = TimeManager.WorldRate;
+                _agent.speed = desiredSpeed * rate;
+                _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+                _agent.isStopped = false;
+                _agent.SetDestination(target.transform.position);
+                Speed = Vector3.ProjectOnPlane(_agent.velocity, Vector3.up).magnitude / rate;
+            }
             return;
         }
 
+        StopMoving();
         TryAttack(target);
     }
 
-    // 位移走 CharacterController.Move，与玩家一致：物理引擎只做碰撞，不接管运动
-    private void MoveStep(Vector3 step)
-    {
-        if (_controller != null && _controller.enabled)
-        {
-            StopMoving();
-            TryAttack(target, distance);
-            return;
-        }
-
-        // 寻路与位移交给 agent；它自己处理绕障、贴地与转向
-        if (_agent != null && _agent.isOnNavMesh)
-        {
-            _agent.isStopped = false;
-            _agent.SetDestination(target.transform.position);
-        }
-    }
+    private bool AgentReady => _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
 
     private void StopMoving()
     {
-        if (_agent != null && _agent.isOnNavMesh) _agent.isStopped = true;
+        Speed = 0f;
+        if (!AgentReady) return;
+        _agent.isStopped = true;
+        _agent.velocity = Vector3.zero;
     }
 
     private void TryAttack(PlayerMotor target)
@@ -232,13 +238,17 @@ public sealed class Enemy : MonoBehaviour
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         if (!IsAlive)
         {
-            Speed = 0f;
+            StopMoving();
+            if (AgentReady) _agent.ResetPath();
             FinishAttack();
             GetComponent<GibComponent>()?.TrySlice(hitDirection);
             if (_animation != null) _animation.PlayDeath();
-            if (_controller != null) _controller.enabled = false;
         }
-        else if (_animation != null) _animation.PlayHurt();
+        else if (_animation != null)
+        {
+            StopMoving();
+            _animation.PlayHurt();
+        }
         return applied;
     }
 
@@ -252,10 +262,17 @@ public sealed class Enemy : MonoBehaviour
 
     public void ResetHealth()
     {
+        bool wasDead = !IsAlive;
+        StopMoving();
+        if (AgentReady) _agent.ResetPath();
+        FinishAttack();
+        _runningChase = false;
+        _nextAttackTime = 0f;
         GetComponent<GibComponent>()?.ResetEffect();
         _health = _maxHealth;
         _invulnerableUntil = float.NegativeInfinity;
         DamagedCount = 0;
+        if (wasDead && _animation != null) _animation.ResetAfterDeath();
     }
     public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);

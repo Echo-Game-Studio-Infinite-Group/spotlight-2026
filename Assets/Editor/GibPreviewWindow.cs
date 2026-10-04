@@ -25,7 +25,7 @@ public sealed class GibPreviewWindow : EditorWindow
     private bool _playing;
     private string _error;
 
-    [MenuItem("超高速行者/Gib 动态预览")]
+    
     private static void OpenSelected()
     {
         Open(Selection.activeGameObject != null ? Selection.activeGameObject.GetComponentInParent<GibComponent>() : null);

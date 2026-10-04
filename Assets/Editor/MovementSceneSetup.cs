@@ -13,7 +13,7 @@ public static class MovementSceneSetup
     public const string ScenePath = "Assets/Scenes/TestScene.unity";
     public const string CharacterPath = "Assets/Prefabs/Player.prefab";
 
-    [MenuItem("超高速行者/装配 character 与 Cinemachine")]
+    
     public static void Rebuild()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

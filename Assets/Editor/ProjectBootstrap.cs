@@ -21,7 +21,7 @@ public static class ProjectBootstrap
     private const string RedshiftMaterialPath = "Assets/Materials/RadialRedshift.mat";
     private const string ScenePath = "Assets/Scenes/TestScene.unity";
 
-    [MenuItem("超高速行者/装配 URP 与测试场景")]
+    
     public static void Build()
     {
         // 播放模式下 EditorSceneManager.OpenScene 会被 Unity 直接拒绝（InvalidOperationException），
@@ -213,7 +213,7 @@ public static class ProjectBootstrap
     }
 
     // 自检：把关键绑定打成一条日志，批次模式下可直接从 stdout 判定成功与否
-    [MenuItem("超高速行者/检查装配结果")]
+    
     public static void Verify()
     {
         List<string> lines = new List<string>();
