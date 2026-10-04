@@ -15,7 +15,7 @@ public static class EnemyWaistCutoutValidation
         Runner.RegisterCallbacks(new Results());
     }
 
-    [MenuItem("超高速行者/验证/EnemyTest 腰斩与动画回归")]
+    
     public static void Run()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return;
@@ -27,7 +27,7 @@ public static class EnemyWaistCutoutValidation
         }));
     }
 
-    [MenuItem("超高速行者/验证/Gib 预览与资源回收")]
+    
     public static void ValidatePreview()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) return;
