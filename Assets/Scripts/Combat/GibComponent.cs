@@ -16,7 +16,9 @@ public sealed class GibComponent : MonoBehaviour
     [SerializeField, Min(0f)] private float _liftSpeed = 2f;
     [SerializeField, Min(0f)] private float _gravity = 18f;
     [SerializeField, Min(0f)] private float _spinSpeed = 110f;
-    [Tooltip("非 Humanoid 模型可手动指定左右上臂；这些骨骼及子骨骼所属顶点完整保留在上半身")]
+    [Tooltip("躯干和双臂胶囊的半径倍率，用于调整尸块贴地程度")]
+    [SerializeField, Range(0.1f, 1.5f)] private float _colliderRadiusScale = 0.85f;
+    [Tooltip("非 Humanoid 模型按左、右顺序指定上臂；这些骨骼及子骨骼所属顶点完整保留在上半身")]
     [SerializeField] private Transform[] _protectedArmRoots = System.Array.Empty<Transform>();
     [Tooltip("尸块保留的世界时间秒数；0 表示不自动回收")]
     [SerializeField, Min(0f)] private float _lifetime = 8f;
@@ -84,6 +86,7 @@ public sealed class GibComponent : MonoBehaviour
             Vector3.Cross(Vector3.up, direction) * _spinSpeed);
         var lower = CreatePiece("WaistCut_Lower", pivot, Vector3.zero, Vector3.zero);
         lower.Settled = true;
+        var colliderPoints = new[] { new List<Vector3>(), new List<Vector3>(), new List<Vector3>() };
 
         foreach (var source in visible)
         {
@@ -94,15 +97,19 @@ public sealed class GibComponent : MonoBehaviour
             Vector3[] normals = mesh.normals;
             Matrix4x4 matrix = source.transform.localToWorldMatrix;
             Matrix4x4 normalMatrix = matrix.inverse.transpose;
-            bool[] protectedVertices = GetProtectedVertices(source, animator);
+            int[] vertexParts = GetVertexParts(source, animator);
             var distances = new List<Vector2>(vertices.Length);
             for (int i = 0; i < vertices.Length; i++)
             {
                 vertices[i] = matrix.MultiplyPoint3x4(vertices[i]) - pivot;
                 if (i < normals.Length) normals[i] = normalMatrix.MultiplyVector(normals[i]).normalized;
-                float distance = protectedVertices[i] ? Mathf.Max(0.1f, Mathf.Abs(vertices[i].y)) : vertices[i].y;
+                float distance = vertexParts[i] > 0 ? Mathf.Max(0.1f, Mathf.Abs(vertices[i].y)) : vertices[i].y;
                 distances.Add(new Vector2(distance, 0f));
-                if (distance >= 0f) Include(upper, vertices[i]);
+                if (distance >= 0f)
+                {
+                    Include(upper, vertices[i]);
+                    colliderPoints[vertexParts[i]].Add(vertices[i]);
+                }
                 Include(lower, new Vector3(vertices[i].x, Mathf.Min(0f, vertices[i].y), vertices[i].z));
             }
             mesh.vertices = vertices;
@@ -143,9 +150,7 @@ public sealed class GibComponent : MonoBehaviour
         if (Application.isPlaying)
         {
             // 只给脱离的上半身添加碰撞；下半身仍由死亡动画驱动。
-            var collider = upper.Root.gameObject.AddComponent<BoxCollider>();
-            collider.center = upper.Bounds.center;
-            collider.size = Vector3.Max(upper.Bounds.size, Vector3.one * 0.01f);
+            AddUpperColliders(upper, colliderPoints, animator);
             upper.Body = upper.Root.gameObject.AddComponent<Rigidbody>();
             upper.Body.useGravity = false;
             upper.Body.interpolation = RigidbodyInterpolation.Interpolate;
@@ -157,30 +162,80 @@ public sealed class GibComponent : MonoBehaviour
         return true;
     }
 
-    private bool[] GetProtectedVertices(SkinnedMeshRenderer source, Animator animator)
+    private int[] GetVertexParts(SkinnedMeshRenderer source, Animator animator)
     {
-        var roots = new List<Transform>(_protectedArmRoots);
+        var roots = new List<Transform>();
         if (animator != null && animator.isHuman)
         {
             roots.Add(animator.GetBoneTransform(HumanBodyBones.LeftUpperArm));
             roots.Add(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
         }
+        roots.AddRange(_protectedArmRoots);
         Transform[] bones = source.bones;
-        var protectedBones = new bool[bones.Length];
+        var boneParts = new int[bones.Length];
         for (int i = 0; i < bones.Length; i++)
-            protectedBones[i] = roots.Exists(root => root != null && bones[i] != null
+        {
+            int rootIndex = roots.FindIndex(root => root != null && bones[i] != null
                 && (bones[i] == root || bones[i].IsChildOf(root)));
-        var result = new bool[source.sharedMesh.vertexCount];
+            boneParts[i] = rootIndex < 0 ? 0 : 1 + rootIndex % 2;
+        }
+        var result = new int[source.sharedMesh.vertexCount];
         BoneWeight[] weights = source.sharedMesh.boneWeights;
         for (int i = 0; i < weights.Length; i++)
         {
             BoneWeight w = weights[i];
             // 保护任何受手臂骨骼影响的顶点，包含肩部混合权重和手指。
-            result[i] = Protected(w.boneIndex0, w.weight0) || Protected(w.boneIndex1, w.weight1)
-                || Protected(w.boneIndex2, w.weight2) || Protected(w.boneIndex3, w.weight3);
+            float strongest = 0f;
+            Assign(w.boneIndex0, w.weight0);
+            Assign(w.boneIndex1, w.weight1);
+            Assign(w.boneIndex2, w.weight2);
+            Assign(w.boneIndex3, w.weight3);
+            void Assign(int index, float weight)
+            {
+                if (index < 0 || index >= boneParts.Length || boneParts[index] == 0 || weight <= strongest) return;
+                result[i] = boneParts[index];
+                strongest = weight;
+            }
         }
         return result;
-        bool Protected(int index, float weight) => weight > 0f && index < protectedBones.Length && protectedBones[index];
+    }
+
+    private void AddUpperColliders(Piece upper, List<Vector3>[] parts, Animator animator)
+    {
+        // 玩家与地面共用 Default，不能禁用整层碰撞；只忽略实际玩家的碰撞体。
+        var playerColliders = new List<Collider>();
+        foreach (var player in FindObjectsOfType<PlayerMotor>())
+            playerColliders.AddRange(player.GetComponentsInChildren<Collider>(true));
+        upper.Root.gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+        string[] names = { "TorsoCollider", "LeftArmCollider", "RightArmCollider" };
+        for (int part = 0; part < parts.Length; part++)
+        {
+            List<Vector3> points = parts[part];
+            if (points.Count == 0) continue;
+            Vector3 axis = transform.up;
+            if (part > 0 && animator != null && animator.isHuman)
+            {
+                Transform shoulder = animator.GetBoneTransform(part == 1 ? HumanBodyBones.LeftUpperArm : HumanBodyBones.RightUpperArm);
+                Transform hand = animator.GetBoneTransform(part == 1 ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+                if (shoulder != null && hand != null && (hand.position - shoulder.position).sqrMagnitude > 0.0001f)
+                    axis = (hand.position - shoulder.position).normalized;
+            }
+            Quaternion rotation = Quaternion.FromToRotation(Vector3.up, axis);
+            Quaternion inverse = Quaternion.Inverse(rotation);
+            var bounds = new Bounds(inverse * points[0], Vector3.zero);
+            foreach (Vector3 point in points) bounds.Encapsulate(inverse * point);
+            var child = new GameObject(names[part]);
+            child.layer = upper.Root.gameObject.layer;
+            child.transform.SetParent(upper.Root, false);
+            child.transform.localRotation = rotation;
+            var capsule = child.AddComponent<CapsuleCollider>();
+            capsule.direction = 1;
+            capsule.center = bounds.center;
+            capsule.radius = Mathf.Max(0.01f, Mathf.Max(bounds.extents.x, bounds.extents.z) * _colliderRadiusScale);
+            capsule.height = Mathf.Max(bounds.size.y, capsule.radius * 2f);
+            foreach (Collider playerCollider in playerColliders)
+                Physics.IgnoreCollision(capsule, playerCollider);
+        }
     }
 
     private Piece CreatePiece(string name, Vector3 pivot, Vector3 velocity, Vector3 spin)

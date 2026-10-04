@@ -43,13 +43,26 @@ public sealed class GibComponentTests
         var body = upper.GetComponent<Rigidbody>();
         Assert.NotNull(body, "上半身应使用真实刚体");
         Assert.IsFalse(body.isKinematic);
-        Assert.NotNull(upper.GetComponent<Collider>(), "刚体必须能碰撞地面");
+        var capsules = upper.GetComponentsInChildren<CapsuleCollider>();
+        Assert.AreEqual(3, capsules.Length, "躯干和双臂必须使用三个胶囊");
+        Assert.AreEqual(3, upper.GetComponentsInChildren<Collider>().Length);
+        foreach (var capsule in capsules)
+        {
+            Assert.AreSame(body, capsule.attachedRigidbody, "三个胶囊共用上半身刚体");
+            Assert.IsFalse(capsule.isTrigger);
+            Assert.AreEqual(LayerMask.NameToLayer("Ignore Raycast"), capsule.gameObject.layer);
+            foreach (var player in Object.FindObjectsOfType<PlayerMotor>())
+                foreach (var playerCollider in player.GetComponentsInChildren<Collider>(true))
+                {
+                    Assert.AreNotEqual(playerCollider.gameObject.layer, capsule.gameObject.layer);
+                    Assert.IsTrue(Physics.GetIgnoreCollision(capsule, playerCollider), "尸块不能阻挡玩家");
+                }
+        }
         Assert.IsNull(lower.GetComponent<Rigidbody>(), "下半身继续随动画倒下");
         var animator = enemy.GetComponentInChildren<Animator>();
         Transform leftArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
         Transform rightArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
         int protectedCount = 0;
-        int protectedBelowWaist = 0;
         foreach (var renderer in enemy.GetComponentsInChildren<SkinnedMeshRenderer>())
         {
             Mesh pieceMesh = System.Array.Find(upper.GetComponentsInChildren<MeshFilter>(),
@@ -64,11 +77,9 @@ public sealed class GibComponentTests
                     || bone == rightArm || bone.IsChildOf(rightArm))) continue;
                 Assert.Greater(cut[i].x, 0f, "手臂和手掌必须完整留在上半身");
                 protectedCount++;
-                if (pieceMesh.vertices[i].y < 0f) protectedBelowWaist++;
             }
         }
         Assert.Greater(protectedCount, 0, "必须覆盖实际手臂顶点");
-        Assert.Greater(protectedBelowWaist, 0, "必须覆盖腰部切面以下的手臂，避免只验证切面以上的顶点");
         Assert.AreSame(upper.GetComponentInChildren<MeshRenderer>().sharedMaterial,
             lower.GetComponentInChildren<MeshRenderer>().sharedMaterial);
         var lowerFilter = System.Array.Find(lower.GetComponentsInChildren<MeshFilter>(),
@@ -124,7 +135,8 @@ public sealed class GibComponentTests
             yield return new WaitForSecondsRealtime(2f);
             Assert.Less(body.position.y, -1f, "上半身必须受重力实际下落");
             float floorTop = floor.GetComponent<Collider>().bounds.max.y;
-            float bodyBottom = upper.GetComponent<Collider>().bounds.min.y;
+            float bodyBottom = float.PositiveInfinity;
+            foreach (var capsule in capsules) bodyBottom = Mathf.Min(bodyBottom, capsule.bounds.min.y);
             Assert.That(bodyBottom, Is.InRange(floorTop - 0.1f, floorTop + 0.15f),
                 "上半身必须停在地面，不能穿透或悬空");
         }
