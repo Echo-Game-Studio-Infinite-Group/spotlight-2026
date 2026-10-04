@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: chain
+  m_EditorClassIdentifier: 
+  ActionId: chain
+  DisplayName: "\u8FDE\u65A9"
+  Description: "\u793A\u4F8B\u914D\u7F6E\uFF0C\u5E27\u6570\u9700\u901A\u8FC7\u624B\u611F\u6D4B\u8BD5\u8C03\u6574\uFF1B\u5F53\u524D\u4E0D\u9A71\u52A8\u6E38\u620F\u52A8\u4F5C\u3002"
+  Timeline:
+  - SegmentId: start
+    DisplayName: "\u8D77\u52BF"
+    Phase: 0
+    DurationFrames: 4
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: rapid
+    DisplayName: "\u8FDE\u7EED\u65A9"
+    Phase: 1
+    DurationFrames: 18
+    Events:
+    - Frame: 0
+      EventKey: attack.strike
+      HitGroup: 1
+      Value: 0
+    - Frame: 6
+      EventKey: attack.strike
+      HitGroup: 2
+      Value: 0
+    - Frame: 12
+      EventKey: attack.strike
+      HitGroup: 3
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: finisher_start
+    DisplayName: "\u672B\u65A9\u53D1\u751F"
+    Phase: 0
+    DurationFrames: 4
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: finisher
+    DisplayName: "\u672B\u65A9"
+    Phase: 1
+    DurationFrames: 5
+    Events:
+    - Frame: 0
+      EventKey: attack.finisher
+      HitGroup: 4
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: locked_recovery
+    DisplayName: "\u4E0D\u53EF\u53D6\u6D88\u6536\u62DB"
+    Phase: 2
+    DurationFrames: 15
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CancelWindows:
+  - WindowId: f5609f757dff463ab771c855d3d8dc1f
+    DisplayName: "\u524D\u6BB5\u63A5\u666E\u653B"
+    Start:
+      SegmentId: rapid
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: finisher_start
+      RelativeTo: 0
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 3b2b6c0792ac7e04da8ae09846cead3b, type: 2}
+    - {fileID: 11400000, guid: 63b98058bf162624b9f2f7faa30b54b3, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+  Input:
+    Steps:
+    - Button: 1
+      Trigger: 0
+      RequireHeld: 34
+      ForbidHeld: 0
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    MaxStepGapFrames: 0
+    PreInputFrames: 10
+    BufferGroup: main
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 30
+    RequireAll: []
+    RequireAny: []
+  StartConditions: []
+  EnergyCost: 100
+  CooldownFrames: 0
