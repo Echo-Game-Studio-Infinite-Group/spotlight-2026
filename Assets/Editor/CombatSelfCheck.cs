@@ -252,7 +252,8 @@ public static class CombatSelfCheck
         else
         {
             Debug.Log("[CombatSelfCheck] 通过动画事件接收器触发（真实链路）");
-            receiver.UpdateAttack(1);
+            PlayerVFXManager vfx = receiver.GetComponent<PlayerVFXManager>();
+            if (vfx != null) vfx.UpdateAttack(1);
             receiver.EnableHitbox();
         }
 

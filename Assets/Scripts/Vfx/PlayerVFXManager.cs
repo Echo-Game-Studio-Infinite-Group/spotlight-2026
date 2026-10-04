@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// 与 Animator 挂在同一节点，直接接收 UpdateAttack 动画事件，不经过战斗组件。
 // 使用配置好的粒子，不用程序生成替代特效。
 [DisallowMultipleComponent]
 public sealed class PlayerVFXManager : MonoBehaviour

@@ -46,7 +46,6 @@ public sealed class Enemy : MonoBehaviour
     private float _nextAttackTime;
     private float _verticalSpeed;
     private Hitbox _attackHitbox;
-    private PlayerVFXManager _attackVfx;
 
     public float AttackPower => _attackPower;
     public float AttackDamage => _attackPower;
@@ -101,17 +100,10 @@ public sealed class Enemy : MonoBehaviour
         if (_attackHitbox != null) _attackHitbox.DisableHitbox();
     }
 
-    // 攻击特效：与玩家 PlayerVFXManager 同名事件，动画事件可直接同时挂
-    public void UpdateAttack(int cnt = 1)
-    {
-        if (_attackVfx != null) _attackVfx.UpdateAttack(cnt);
-    }
-
-    // 供装配工具写入敌人自己的受击盒与特效
-    public void ConfigureAttackHitbox(Hitbox hitbox, PlayerVFXManager vfx)
+    // 供装配工具写入敌人自己的攻击判定盒
+    public void ConfigureAttackHitbox(Hitbox hitbox)
     {
         _attackHitbox = hitbox;
-        _attackVfx = vfx;
     }
 
     // 实机联调用：把敌人的决策输入一次性打出来，便于定位「为什么不追/不攻击」。
