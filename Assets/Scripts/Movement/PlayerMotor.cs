@@ -36,7 +36,6 @@ public sealed class PlayerMotor : MonoBehaviour
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
     public bool IsSprinting { get; private set; }
-    public float Energy { get; private set; }
     public int JumpCount { get; private set; }
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
@@ -188,8 +187,7 @@ public sealed class PlayerMotor : MonoBehaviour
                 if (jump && IsWallSliding) JumpFromWall();
             }
         }
-        Energy = Mathf.Min(_params.EnergyMax, Energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold)
-            * _params.EnergyPerSecondPerExcessSpeed * dt);
+        // 能量不在这里结算：唯一账户是 VectorEnergy（执行序 10，在本组件之后自动积能）
     }
 
     private void UpdateFreeMovement(float dt, Vector3 wish)
@@ -360,7 +358,6 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         _velocity = Vector3.zero;
         _facingAngularVelocity = 0f;
-        Energy = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
         IsSliding = IsSprinting = _wallLocked = _wallJumpExitProtected = false;
