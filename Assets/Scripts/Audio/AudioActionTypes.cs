@@ -46,6 +46,7 @@ public enum DynamicAudioActionStopMode
 public struct DynamicAudioActionRequest
 {
     public string ActionId;
+    public int InstanceId;
     public DynamicAudioActionPhase Phase;
     public DynamicAudioActionStopMode StopMode;
     public float NormalizedSpeed;
@@ -60,10 +61,12 @@ public struct DynamicAudioActionRequest
         float contactIntensity = 0f,
         float direction = 0f,
         string surfaceId = "",
-        int seed = 0)
+        int seed = 0,
+        int instanceId = 0)
     {
         return Build(
             actionId,
+            instanceId,
             DynamicAudioActionPhase.Start,
             DynamicAudioActionStopMode.Release,
             normalizedSpeed,
@@ -78,10 +81,12 @@ public struct DynamicAudioActionRequest
         float normalizedSpeed,
         float contactIntensity,
         float direction = 0f,
-        string surfaceId = "")
+        string surfaceId = "",
+        int instanceId = 0)
     {
         return Build(
             actionId,
+            instanceId,
             DynamicAudioActionPhase.Update,
             DynamicAudioActionStopMode.Release,
             normalizedSpeed,
@@ -93,10 +98,12 @@ public struct DynamicAudioActionRequest
 
     public static DynamicAudioActionRequest Stop(
         string actionId,
-        DynamicAudioActionStopMode stopMode = DynamicAudioActionStopMode.Release)
+        DynamicAudioActionStopMode stopMode = DynamicAudioActionStopMode.Release,
+        int instanceId = 0)
     {
         return Build(
             actionId,
+            instanceId,
             DynamicAudioActionPhase.Stop,
             stopMode,
             0f,
@@ -108,6 +115,7 @@ public struct DynamicAudioActionRequest
 
     private static DynamicAudioActionRequest Build(
         string actionId,
+        int instanceId,
         DynamicAudioActionPhase phase,
         DynamicAudioActionStopMode stopMode,
         float normalizedSpeed,
@@ -119,6 +127,7 @@ public struct DynamicAudioActionRequest
         return new DynamicAudioActionRequest
         {
             ActionId = actionId ?? string.Empty,
+            InstanceId = instanceId,
             Phase = phase,
             StopMode = stopMode,
             NormalizedSpeed = Mathf.Clamp01(normalizedSpeed),

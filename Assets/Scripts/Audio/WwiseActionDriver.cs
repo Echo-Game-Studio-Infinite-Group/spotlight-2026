@@ -23,6 +23,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
     private sealed class Channel
     {
         public string ActionId;
+        public int InstanceId;
         public WwiseActionBindings.Entry Binding;
         public WwiseActionPcmRenderer Renderer;
         public float[] PcmScratch;
@@ -44,6 +45,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
     {
         public bool Active;
         public string Name;
+        public int InstanceId;
         public string State;
         public float Elapsed;
         public float NormalizedSpeed;
@@ -135,10 +137,17 @@ public sealed class WwiseActionDriver : MonoBehaviour
             return;
         }
 
-        if (!_channels.TryGetValue(request.ActionId, out Channel channel))
+        string channelKey = BuildChannelKey(
+            request.ActionId,
+            request.InstanceId);
+        if (!_channels.TryGetValue(channelKey, out Channel channel))
         {
-            channel = new Channel { ActionId = request.ActionId };
-            _channels.Add(request.ActionId, channel);
+            channel = new Channel
+            {
+                ActionId = request.ActionId,
+                InstanceId = request.InstanceId
+            };
+            _channels.Add(channelKey, channel);
         }
 
         if (channel.Binding == null)
@@ -152,6 +161,12 @@ public sealed class WwiseActionDriver : MonoBehaviour
         {
             StopChannel(channel, request.StopMode);
             return;
+        }
+
+        if (request.Phase == DynamicAudioActionPhase.Start &&
+            channel.Renderer != null)
+        {
+            ReleaseChannel(channel);
         }
 
         if (channel.Renderer == null)
@@ -387,6 +402,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
             {
                 Active = true,
                 Name = channel.ActionId,
+                InstanceId = channel.InstanceId,
                 State = channel.ReleaseRequested
                     ? "Release"
                     : channel.Renderer.LoopEntered
@@ -431,5 +447,12 @@ public sealed class WwiseActionDriver : MonoBehaviour
 
         AkBankManager.LoadBank(DynamicActionBankName, false, false);
         _bankLoaded = true;
+    }
+
+    private static string BuildChannelKey(string actionId, int instanceId)
+    {
+        return instanceId == 0
+            ? actionId
+            : $"{actionId}#{instanceId}";
     }
 }

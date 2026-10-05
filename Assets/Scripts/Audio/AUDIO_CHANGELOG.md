@@ -1417,6 +1417,40 @@ Unity.exe -batchmode -nographics `
 
 本次仍未 commit。
 
+## 2026-10-06：动态动作快速重触发与规则化 Adapter
+
+问题：
+
+- 新 driver 用 `ActionId` 复用 channel，动作停止进入 Release 后，新的 Start
+  会被旧的 Release renderer 挡住，必须等尾音播完。
+- `PlayerDynamicAudioActionSource` 仍然写死 slide / wall_slide。
+
+修复：
+
+- `DynamicAudioActionRequest` 增加 `InstanceId`。
+- channel key 改为 `ActionId + InstanceId`。
+- 同一实例新的 `Start` 会立即释放旧 renderer 并重新创建 voice。
+- 快速连续触发可以使用不同 `InstanceId` 并存，不再等待旧 Release。
+- `PlayerDynamicAudioActionSource` 改成规则表：
+  ```text
+  ActionId + ConditionKey + ContactIntensity
+  ```
+- 默认规则仍映射：
+  ```text
+  slide      <- sliding
+  wall_slide <- wall_sliding
+  ```
+- ConditionKey 交给现有 `PlayerActionRunner.CheckCondition` 判断；新增条件
+  不需要改 `WwiseActionDriver`。
+
+日志：
+
+```text
+Logs/wwise-adapter-interface-2.log
+```
+
+本次仍未 commit。
+
 ## 2026-10-06：Slide / WallSlide Adapter 接入
 
 - `WwiseActionDriver` 已改为按 `ActionId` 管理通用 channel 池。

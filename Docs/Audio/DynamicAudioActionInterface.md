@@ -54,6 +54,7 @@ public enum DynamicAudioActionStopMode
 public struct DynamicAudioActionRequest
 {
     public string ActionId;
+    public int InstanceId;
     public DynamicAudioActionPhase Phase;
     public DynamicAudioActionStopMode StopMode;
     public float NormalizedSpeed;
@@ -77,6 +78,7 @@ DynamicAudioActionRequest.Stop(...)
 | 字段 | 范围 | 说明 |
 | --- | --- | --- |
 | `ActionId` | 非空字符串 | 稳定逻辑 ID，例如 `slide`、`wall_slide` |
+| `InstanceId` | 0 或唯一整数 | 0 表示同一 ActionId 单实例；非零用于并发或快速重触发 |
 | `Phase` | 枚举 | 开始、更新或请求停止 |
 | `StopMode` | 枚举 | 仅 `Phase == Stop` 时有意义 |
 | `NormalizedSpeed` | `0..1` | 动作速度，用于 Wwise RTPC |
@@ -132,7 +134,11 @@ Stop(Release)
 
 `Update` 应该逐帧发送，或者至少在控制参数变化时发送。音频系统会缓存最后一次控制值。
 
-不要每帧重复发送 `Start`。如果 channel 已经存在，`Start` 会被当作一次更新处理，但推荐明确遵守生命周期。
+不要每帧重复发送 `Start`。`Start` 表示一次新的触发，会强制重启同实例 channel。
+
+同一个 `ActionId` 需要同时存在多个实例时，为每个触发分配不同的 `InstanceId`。快速重复触发也推荐使用新的 `InstanceId`，避免旧 Release 尾音占用新动作的 channel。
+
+同一 `ActionId + InstanceId` 收到新的 `Start` 时，音频系统会立即释放旧实例并重新启动，不会等待旧 Release 播完。
 
 ## 7. 停止模式
 
@@ -190,14 +196,16 @@ public sealed class MyActionAudioSource :
 Assets/Scripts/Audio/PlayerDynamicAudioActionSource.cs
 ```
 
-它读取现有 `PlayerMotor` 的公开状态，上报：
+它使用规则表把动作条件 key 映射到 `ActionId`：
 
 ```text
-slide
-wall_slide
+slide      <- sliding
+wall_slide <- wall_sliding
 ```
 
-因此移动、战斗、Character、动画和模型代码不需要为了这两个动作新增音频依赖。
+规则表位于组件的 Inspector 中，新增条件映射不需要改音频驱动。动作条件 key
+由现有 `PlayerActionRunner` 统一判断；没有 ActionRunner 时会退回 Motor 的
+基础状态判断。
 
 ## 9. 接入检查表
 

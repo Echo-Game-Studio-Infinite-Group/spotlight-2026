@@ -1,86 +1,125 @@
+using System;
 using System.Collections.Generic;
+using GameJam.Actions;
 using UnityEngine;
 
 /// <summary>
-/// Transitional adapter for the existing PlayerMotor state. It is the first
-/// consumer of IDynamicAudioActionSource and reports the two continuous slide
-/// actions without requiring changes in the movement, combat or character code.
+/// Data-driven adapter for existing player conditions. Each rule maps an
+/// ActionId to a condition key already understood by PlayerActionRunner.
+/// New actions should usually implement IDynamicAudioActionSource directly.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerDynamicAudioActionSource :
     MonoBehaviour,
     IDynamicAudioActionSource
 {
-    [SerializeField] private string _slideActionId = "slide";
-    [SerializeField] private string _wallSlideActionId = "wall_slide";
+    [Serializable]
+    public sealed class Rule
+    {
+        public string ActionId = "action";
+        public string ConditionKey = "sliding";
+        [Range(0f, 1f)] public float ContactIntensity = 1f;
+    }
+
+    [SerializeField]
+    private Rule[] _rules =
+    {
+        new Rule
+        {
+            ActionId = "slide",
+            ConditionKey = "sliding",
+            ContactIntensity = 1f
+        },
+        new Rule
+        {
+            ActionId = "wall_slide",
+            ConditionKey = "wall_sliding",
+            ContactIntensity = 1f
+        }
+    };
 
     private PlayerMotor _motor;
-    private bool _lastSliding;
-    private bool _lastWallSliding;
+    private PlayerActionRunner _actionRunner;
+    private bool[] _lastActive;
 
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
+        _actionRunner = GetComponent<PlayerActionRunner>();
+        _lastActive = new bool[_rules != null ? _rules.Length : 0];
     }
 
     public void CollectDynamicAudioActions(
         List<DynamicAudioActionRequest> output)
     {
-        if (_motor == null || output == null) return;
+        if (_motor == null || output == null || _rules == null) return;
+        if (_lastActive == null || _lastActive.Length != _rules.Length)
+        {
+            _lastActive = new bool[_rules.Length];
+        }
 
         float speed = NormalizedSpeed();
-        bool sliding = _motor.IsSliding;
-        if (sliding && !_lastSliding)
+        float direction = Direction();
+        for (int i = 0; i < _rules.Length; i++)
         {
-            output.Add(DynamicAudioActionRequest.Start(
-                _slideActionId,
-                speed,
-                1f,
-                Direction()));
+            Rule rule = _rules[i];
+            if (rule == null || string.IsNullOrEmpty(rule.ConditionKey))
+            {
+                continue;
+            }
+
+            bool active = Evaluate(rule.ConditionKey);
+            if (active && !_lastActive[i])
+            {
+                output.Add(DynamicAudioActionRequest.Start(
+                    rule.ActionId,
+                    speed,
+                    rule.ContactIntensity,
+                    direction));
+            }
+
+            if (active)
+            {
+                output.Add(DynamicAudioActionRequest.Update(
+                    rule.ActionId,
+                    speed,
+                    rule.ContactIntensity,
+                    direction));
+            }
+            else if (_lastActive[i])
+            {
+                output.Add(DynamicAudioActionRequest.Stop(
+                    rule.ActionId,
+                    DynamicAudioActionStopMode.Release));
+            }
+
+            _lastActive[i] = active;
         }
-        if (sliding)
+    }
+
+    private bool Evaluate(string conditionKey)
+    {
+        if (_actionRunner != null)
         {
-            output.Add(DynamicAudioActionRequest.Update(
-                _slideActionId,
-                speed,
-                1f,
-                Direction()));
-        }
-        else if (_lastSliding)
-        {
-            output.Add(DynamicAudioActionRequest.Stop(
-                _slideActionId,
-                DynamicAudioActionStopMode.Release));
+            return _actionRunner.CheckCondition(
+                conditionKey,
+                default,
+                default);
         }
 
-        bool wallSliding = _motor.IsWallSliding;
-        float wallContact = Mathf.Clamp01(
-            _motor.WallApproachAngle / 90f);
-        if (wallSliding && !_lastWallSliding)
+        switch (conditionKey)
         {
-            output.Add(DynamicAudioActionRequest.Start(
-                _wallSlideActionId,
-                speed,
-                wallContact,
-                Direction()));
+            case "sliding":
+                return _motor.IsSliding;
+            case "wall_sliding":
+                return _motor.IsWallSliding;
+            case "grounded":
+                return _motor.IsGrounded;
+            case "airborne":
+                return !_motor.IsGrounded;
+            default:
+                return false;
         }
-        if (wallSliding)
-        {
-            output.Add(DynamicAudioActionRequest.Update(
-                _wallSlideActionId,
-                speed,
-                wallContact,
-                Direction()));
-        }
-        else if (_lastWallSliding)
-        {
-            output.Add(DynamicAudioActionRequest.Stop(
-                _wallSlideActionId,
-                DynamicAudioActionStopMode.Release));
-        }
-
-        _lastSliding = sliding;
-        _lastWallSliding = wallSliding;
     }
 
     private float NormalizedSpeed()
