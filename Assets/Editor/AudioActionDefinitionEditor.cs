@@ -99,12 +99,12 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (_previewUpdateBound) EditorApplication.update -= OnPreviewUpdate;
         _previewUpdateBound = false;
-        AudioActionPreviewPlayer.Stop();
+        WwiseActionPreviewPlayer.Stop();
     }
 
     private void OnPreviewUpdate()
     {
-        if (_previewHeld || AudioActionPreviewPlayer.IsActive) Repaint();
+        if (_previewHeld || WwiseActionPreviewPlayer.IsActive) Repaint();
     }
 
     // ---------------- ADSR ----------------
@@ -514,7 +514,36 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (!force && ReferenceEquals(_analysisClip, definition.Clip)) return;
         _analysisClip = definition.Clip;
-        _analysis = definition.Clip != null ? AudioActionClipAnalysis.Analyze(definition.Clip) : null;
+        if (AudioActionSourceLocator.TryResolve(
+                definition,
+                out string sourceRelativePath,
+                out string sourcePathError))
+        {
+            WwiseActionPcmSource.Data source = WwiseActionPcmSource.Load(
+                sourceRelativePath,
+                out string error);
+            if (source != null)
+            {
+                _analysis = AudioActionClipAnalysis.Analyze(
+                    source.Samples,
+                    source.Channels,
+                    source.SampleRate);
+                return;
+            }
+
+            _analysis = new AudioActionClipAnalysis { Error = error };
+            return;
+        }
+
+        _analysis = definition.Clip != null
+            ? AudioActionClipAnalysis.Analyze(definition.Clip)
+            : null;
+        if (_analysis != null &&
+            !_analysis.Success &&
+            !string.IsNullOrEmpty(sourcePathError))
+        {
+            _analysis.Error = sourcePathError;
+        }
     }
 
     private void ApplySuggestedLoop(AudioActionDefinition definition)
@@ -751,14 +780,16 @@ public sealed class AudioActionDefinitionEditor : Editor
         if (_previewHeld)
         {
             double elapsed = EditorApplication.timeSinceStartup - _previewStartTime;
-            float gain = AudioActionPreviewPlayer.EvaluateGain(definition, (float)elapsed);
+            float gain = WwiseActionPreviewPlayer.EvaluateGain(
+                definition,
+                (float)elapsed);
             _previewStatus =
-                $"{AudioActionPreviewPlayer.DescribeStage(definition, (float)elapsed)} · " +
+                $"{WwiseActionPreviewPlayer.DescribeStage(definition, (float)elapsed)} · " +
                 $"held {elapsed * 1000.0:0} ms · Gain {gain:0.00}";
         }
-        else if (AudioActionPreviewPlayer.IsActive)
+        else if (WwiseActionPreviewPlayer.IsActive)
         {
-            _previewStatus = AudioActionPreviewPlayer.Status;
+            _previewStatus = WwiseActionPreviewPlayer.Status;
         }
 
         EditorGUILayout.HelpBox(
@@ -770,8 +801,8 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         _previewHeld = true;
         _previewStartTime = EditorApplication.timeSinceStartup;
-        AudioActionPreviewPlayer.Stop();
-        _previewStatus = AudioActionPreviewPlayer.Begin(
+        WwiseActionPreviewPlayer.Stop();
+        _previewStatus = WwiseActionPreviewPlayer.Begin(
             definition, _previewSpeed, _previewContact, out string error)
             ? "Attack"
             : error;
@@ -787,8 +818,8 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (!_previewHeld) return;
         _previewHeld = false;
-        AudioActionPreviewPlayer.Release();
-        _previewStatus = AudioActionPreviewPlayer.Status;
+        WwiseActionPreviewPlayer.Release();
+        _previewStatus = WwiseActionPreviewPlayer.Status;
         Repaint();
     }
 

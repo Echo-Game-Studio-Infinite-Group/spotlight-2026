@@ -1177,11 +1177,12 @@ GameObject:
   m_Component:
   - component: {fileID: 643871755}
   - component: {fileID: 643871754}
-  - component: {fileID: 643871753}
   - component: {fileID: 643871757}
   - component: {fileID: 643871758}
   - component: {fileID: 643871760}
   - component: {fileID: 643871759}
+  - component: {fileID: 643871762}
+  - component: {fileID: 643871761}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1189,14 +1190,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &643871753
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 643871751}
-  m_Enabled: 1
 --- !u!20 &643871754
 Camera:
   m_ObjectHideFlags: 0
@@ -1386,6 +1379,103 @@ MonoBehaviour:
   _standHeight: 1.2
   _slideHeight: 0.6
   _heightResponse: 12
+--- !u!114 &643871761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643871751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d2b78e114e34894193e483002d4bbae, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  isDefaultListener: 1
+  bOverrideScalingFactor: 0
+  scalingFactor: -1
+  listenerId: 0
+--- !u!114 &643871762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 643871751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0e7f07cd2460374da9b57f3be60f80d, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  m_listeners:
+    initialListenerList: []
+    useDefaultListeners: 1
+  isEnvironmentAware: 0
+  isStaticObject: 0
+  usePositionOffsetData: 0
+  m_positionOffsetData:
+    KeepMe: 0
+    positionOffset: {x: 0, y: 0, z: 0}
+  scalingFactor: 1
+  m_posOffsetData: {fileID: 0}
+  listenerMask: 1
+--- !u!1 &673717279
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 673717281}
+  - component: {fileID: 673717280}
+  m_Layer: 0
+  m_Name: WwiseGlobal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &673717280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673717279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: babdf4e091e3bbf4b95fb81e58d77912, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  InitializationSettings: {fileID: 11400000, guid: a037d73f62aebba438ea0b467ecabb56, type: 2}
+  basePath:
+  language:
+  defaultPoolSize: 0
+  lowerPoolSize: 0
+  streamingPoolSize: 0
+  memoryCutoffThreshold: 0
+  monitorPoolSize: 0
+  monitorQueuePoolSize: 0
+  callbackManagerBufferSize: 0
+  spatialAudioPoolSize: 0
+  maxSoundPropagationDepth: 0
+  engineLogging: 0
+--- !u!4 &673717281
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673717279}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &728446627
 GameObject:
   m_ObjectHideFlags: 0
@@ -1726,8 +1816,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
-  _attackPower: 8
   _walkSpeed: 4
   _runSpeed: 5
   _runDistance: 6
@@ -1737,8 +1825,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 14
   _attackRange: 2.2
-  _attackCooldown: 1.1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 398992680}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -1961,8 +2047,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
-  _attackPower: 8
   _walkSpeed: 4
   _runSpeed: 5
   _runDistance: 6
@@ -1972,8 +2056,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 14
   _attackRange: 2.2
-  _attackCooldown: 1.1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 994512931}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -2414,8 +2496,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000008
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2432,8 +2512,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2448,3 +2526,4 @@ SceneRoots:
   - {fileID: 1136354512}
   - {fileID: 1942894695}
   - {fileID: 4446090}
+  - {fileID: 673717281}

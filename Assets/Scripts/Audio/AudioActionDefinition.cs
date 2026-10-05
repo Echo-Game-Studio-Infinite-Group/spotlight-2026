@@ -71,7 +71,9 @@ public sealed class AudioActionDefinition : ScriptableObject
     [Header("随机差分")]
     public AudioRange StartPitchSemitones = new AudioRange(-0.35f, 0.35f);
     public AudioRange SustainPitchSemitones = new AudioRange(-0.2f, 0.2f);
-    public AudioRange ReleasePitchSemitones = new AudioRange(-1.2f, 1.2f);
+    [Tooltip("尾音的随机移调。默认关闭，避免松手瞬间出现明显变调；" +
+             "需要特殊效果时再手动增大。")]
+    public AudioRange ReleasePitchSemitones = new AudioRange(0f, 0f);
     public AudioRange GainDbVariation = new AudioRange(-2f, 1.5f);
     public AudioRange LowpassVariation = new AudioRange(-1800f, 1800f);
 
@@ -145,7 +147,7 @@ public sealed class AudioActionDefinition : ScriptableObject
         LowpassFollow = AudioEnvelope.Linear();
         StartPitchSemitones = new AudioRange(-0.35f, 0.35f);
         SustainPitchSemitones = new AudioRange(-0.2f, 0.2f);
-        ReleasePitchSemitones = new AudioRange(-1.2f, 1.2f);
+        ReleasePitchSemitones = new AudioRange(0f, 0f);
         GainDbVariation = new AudioRange(-2f, 1.5f);
         LowpassVariation = new AudioRange(-1800f, 1800f);
         PitchFollowMaxSemitones = 0.9f;

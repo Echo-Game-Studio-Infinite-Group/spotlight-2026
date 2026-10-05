@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}" SchemaVersion="123">
+	<AudioObjects>
+		<WorkUnit Name="Default Work Unit" ID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}" PersistMode="Standalone">
+			<ChildrenList>
+				<ActorMixer Name="DynamicAction" ID="{FAB36E24-A7E2-4FDF-8EEE-8DD95CF26132}" ShortID="760541489">
+					<ReferenceList>
+						<Reference Name="Conversion">
+							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{05551753-E682-41C2-B5B1-7D8F9144B8DE}"/>
+						</Reference>
+						<Reference Name="OutputBus">
+							<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{AE0FFFE9-CB32-450C-8977-2C4122595285}"/>
+						</Reference>
+					</ReferenceList>
+					<ChildrenList>
+						<Sound Name="SlideSinePlugin" ID="{738DE4BB-31FB-4A1E-B330-69D390FDC467}" ShortID="1054947463">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{05551753-E682-41C2-B5B1-7D8F9144B8DE}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="DynamicAction" ID="{92A110F2-695D-4D3B-84A4-80D144398F02}" WorkUnitID="{AE0FFFE9-CB32-450C-8977-2C4122595285}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<SourcePlugin Name="SpotlightActionSource" ID="{9F4F67C6-C230-48DF-B3B1-512D81065551}" ShortID="99229470" PluginName="Wwise Spotlight Action Source" CompanyID="0" PluginID="4242">
+									<Language>SFX</Language>
+								</SourcePlugin>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="SpotlightActionSource" ID="{9F4F67C6-C230-48DF-B3B1-512D81065551}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+					</ChildrenList>
+				</ActorMixer>
+			</ChildrenList>
+		</WorkUnit>
+	</AudioObjects>
+</WwiseDocument>

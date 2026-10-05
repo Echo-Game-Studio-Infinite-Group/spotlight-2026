@@ -52,11 +52,46 @@ public sealed class AudioDebugOverlay : MonoBehaviour
             DrawMeter("Pitch Follow", voice.PitchEnvelopeValue, new Color(0.35f, 0.7f, 1f));
             DrawMeter("Lowpass Follow", voice.LowpassEnvelopeValue, new Color(1f, 0.72f, 0.3f));
         }
+
+        WwiseActionDriver[] wwiseDrivers =
+            FindObjectsOfType<WwiseActionDriver>();
+        for (int i = 0; i < wwiseDrivers.Length; i++)
+        {
+            WwiseActionDriver driver = wwiseDrivers[i];
+            DrawWwiseSnapshot(driver.SlideDebug, ref visible);
+            DrawWwiseSnapshot(driver.WallSlideDebug, ref visible);
+        }
+
         if (visible == 0) GUILayout.Label("no active action voice", _label);
 
         GUILayout.Space(6f);
         GUILayout.Label("Keyboard: F3 via PlayerInputReader", _label);
         GUILayout.EndArea();
+    }
+
+    private void DrawWwiseSnapshot(
+        WwiseActionDriver.DebugSnapshot snapshot,
+        ref int visible)
+    {
+        if (!snapshot.Active) return;
+        visible++;
+        GUILayout.Label(
+            $"[Wwise {snapshot.Name}] {snapshot.State}  " +
+            $"t={snapshot.Elapsed:0.00}  v={snapshot.NormalizedSpeed:0.00}  " +
+            $"LP={snapshot.LowpassHz:0}Hz",
+            _label);
+        DrawMeter(
+            "Gain",
+            snapshot.EnvelopeGain,
+            new Color(0.3f, 0.9f, 0.45f));
+        DrawMeter(
+            "Pitch Follow",
+            snapshot.PitchEnvelopeValue,
+            new Color(0.35f, 0.7f, 1f));
+        DrawMeter(
+            "Lowpass Follow",
+            snapshot.LowpassEnvelopeValue,
+            new Color(1f, 0.72f, 0.3f));
     }
 
     private void DrawMeter(string label, float value, Color color)

@@ -57,6 +57,8 @@ Thumbs.db
 
 # 本地临时
 *.log
+WwiseUnityIntegration_*_Src.zip
+logRunSetup.txt
 
 # 测试产物（Test Runner 每次跑都会重写，不入库）
 TestResults*.xml
@@ -72,3 +74,12 @@ TestResults*.xml
 #    Unity 自动生成的 .csproj 确实该忽略，但 Tools/ 下的项目文件是源码
 !Tools/**/*.csproj
 !Tools/**/*.sln
+
+# Wwise 集成中的调试符号和帮助文档不参与运行，避免把仓库膨胀数百 MB。
+Assets/Wwise/Documentation/
+Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
+Assets/Wwise/API/Runtime/Plugins/Mac/Profile/
+Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/
+Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Profile/
+Assets/Wwise/**/*.pdb
+Assets/Wwise/**/*.dSYM/

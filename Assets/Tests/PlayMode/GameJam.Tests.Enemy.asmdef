@@ -1,6 +1,10 @@
 {
   "name": "GameJam.Tests.Enemy",
-  "references": ["GameJam.Runtime"],
+    "references": [
+        "GameJam.Runtime",
+        "AK.Wwise.Unity.API",
+        "AK.Wwise.Unity.MonoBehaviour"
+    ],
   "optionalUnityReferences": ["TestAssemblies"],
   "defineConstraints": ["UNITY_INCLUDE_TESTS"]
 }

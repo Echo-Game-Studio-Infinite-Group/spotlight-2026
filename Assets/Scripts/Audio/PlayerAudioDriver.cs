@@ -6,7 +6,7 @@ using UnityEngine;
 /// 目前只负责滑铲和墙滑：读 <see cref="PlayerMotor"/> 的公开状态，上升沿开始播放、
 /// 每帧喂速度和接触强度、下降沿请求 Release（走完这一遍循环再播尾音）。
 ///
-/// 脚步 / 跳跃 / 攻击 / 命中 / 故障 / 音乐等已移除，后续交给 FMOD。
+/// 脚步 / 跳跃 / 攻击 / 命中 / 故障 / 音乐等已移除，后续交给 Wwise。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerAudioDriver : MonoBehaviour
@@ -26,6 +26,9 @@ public sealed class PlayerAudioDriver : MonoBehaviour
     private bool _lastSliding;
     private bool _lastWallSliding;
 
+    public AudioActionDefinition SlideAction => _slideAction;
+    public AudioActionDefinition WallSlideAction => _wallSlideAction;
+
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
@@ -35,6 +38,7 @@ public sealed class PlayerAudioDriver : MonoBehaviour
     {
         if (_audio == null) _audio = AudioSystem.Instance;
         if (_audio == null || _motor == null) return;
+        if (GetComponent<WwiseActionDriver>() != null) return;
         if (_slideAction == null && _wallSlideAction == null) return;
 
         float dt = TimeManager.UnscaledDeltaTime;

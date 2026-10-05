@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 只负责"动态连续动作音效"的运行期容器：动作声源池 + 播放句柄 + 驱动自动挂载。
 ///
-/// 一次性音效、脚步、战斗音效、主题曲、风声、故障效果已移除，后续交给 FMOD 实现。
+/// 一次性音效、脚步、战斗音效、主题曲、风声、故障效果已移除，后续交给 Wwise 实现。
 /// </summary>
 [DefaultExecutionOrder(-40)]
 [DisallowMultipleComponent]
@@ -92,6 +92,8 @@ public sealed class AudioSystem : MonoBehaviour
         if (motor == null) return;
         _driver = motor.gameObject.GetComponent<PlayerAudioDriver>();
         if (_driver == null) _driver = motor.gameObject.AddComponent<PlayerAudioDriver>();
+        if (motor.gameObject.GetComponent<WwiseActionDriver>() == null)
+            motor.gameObject.AddComponent<WwiseActionDriver>();
         PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
         if (input != null && input != _boundInput)
         {

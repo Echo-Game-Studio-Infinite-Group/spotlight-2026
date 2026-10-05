@@ -96,25 +96,62 @@ public static class ActionClipRenderer
         };
         if (Cache.TryGetValue(key, out AudioClip cached) && cached != null) return cached;
 
-        AudioClip built = Build(clip, loopStartSample, loopEndSample, crossfadeSamples);
+        float[] pcm = GetCrossfadeLoopPcm(
+            clip,
+            loopStartSample,
+            loopEndSample,
+            crossfadeSamples);
+        if (pcm == null) return null;
+
+        AudioClip built = CreateClip(
+            $"{clip.name}_xfade_{loopStartSample}_{loopEndSample}_{crossfadeSamples}",
+            pcm,
+            clip.channels,
+            clip.frequency);
         if (built != null) Cache[key] = built;
         return built;
     }
 
-    private static AudioClip Build(
+    /// <summary>
+    /// 纯 PCM 版本，不创建 AudioClip。Wwise 搬运路径和离线测试使用这里，
+    /// 因此不要求 Unity 音频系统处于启用状态。
+    /// </summary>
+    public static float[] GetCrossfadeLoopPcm(
         AudioClip clip, int loopStartSample, int loopEndSample, int crossfadeSamples)
     {
-        int channels = clip.channels;
-        int totalFrames = clip.samples;
+        if (clip == null || clip.samples <= 0 || clip.channels <= 0) return null;
+        if (clip.loadType == AudioClipLoadType.Streaming) return null;
+
+        return GetCrossfadeLoopPcm(
+            GetSourceSamples(clip),
+            clip.channels,
+            clip.samples,
+            loopStartSample,
+            loopEndSample,
+            crossfadeSamples);
+    }
+
+    /// <summary>纯 PCM 源数据版本，供 Wwise 搬运路径和无 Unity 音频环境使用。</summary>
+    public static float[] GetCrossfadeLoopPcm(
+        float[] source,
+        int channels,
+        int totalFrames,
+        int loopStartSample,
+        int loopEndSample,
+        int crossfadeSamples)
+    {
+        if (source == null || source.Length == 0 || channels <= 0 ||
+            totalFrames <= 0)
+        {
+            return null;
+        }
+
         loopStartSample = Mathf.Clamp(loopStartSample, 0, totalFrames - 1);
         loopEndSample = Mathf.Clamp(loopEndSample, loopStartSample + 2, totalFrames);
         int loopLength = loopEndSample - loopStartSample;
         int crossfade = Mathf.Clamp(crossfadeSamples, 0, loopLength / 2);
         int outputLength = loopLength - crossfade;
         if (outputLength <= 1) return null;
-
-        var source = GetSourceSamples(clip);
-        if (source == null) return null;
 
         var output = new float[outputLength * channels];
         int crossfadeStart = outputLength - crossfade;
@@ -148,11 +185,7 @@ public static class ActionClipRenderer
             }
         }
 
-        var result = AudioClip.Create(
-            $"{clip.name}_xfade_{loopStartSample}_{loopEndSample}_{crossfade}",
-            outputLength, channels, clip.frequency, false);
-        result.SetData(output, 0);
-        return result;
+        return output;
     }
 
     /// <summary>
@@ -203,9 +236,100 @@ public static class ActionClipRenderer
         };
         if (Cache.TryGetValue(key, out AudioClip cached) && cached != null) return cached;
 
-        int channels = clip.channels;
-        var source = GetSourceSamples(clip);
-        if (source == null) return null;
+        float[] output = GetGranularLoopPcm(
+            clip,
+            loopStartSample,
+            loopEndSample,
+            grainSeconds,
+            spacingSeconds,
+            randomStart01,
+            tuneCents,
+            fadeCurve,
+            seed);
+        if (output == null) return null;
+
+        var result = CreateClip(
+            $"{clip.name}_grain_{loopStartSample}_{loopEndSample}_{grainFrames}_{spacingFrames}",
+            output,
+            clip.channels,
+            clip.frequency);
+        if (result == null) return null;
+        if (Cache.Count >= MaxCacheEntries)
+        {
+            Cache.Clear();
+            // 解码缓存跟渲染结果一起回收，避免素材采样长期占内存。
+            SourceCache.Clear();
+        }
+        Cache[key] = result;
+        return result;
+    }
+
+    /// <summary>
+    /// 纯 PCM 版本，不创建 AudioClip。颗粒参数和缓存键与 AudioClip 版本一致。
+    /// </summary>
+    public static float[] GetGranularLoopPcm(
+        AudioClip clip,
+        int loopStartSample,
+        int loopEndSample,
+        float grainSeconds,
+        float spacingSeconds,
+        float randomStart01,
+        float tuneCents,
+        AudioCurveMapping fadeCurve,
+        int seed)
+    {
+        if (clip == null || clip.samples <= 0 || clip.channels <= 0) return null;
+        if (clip.loadType == AudioClipLoadType.Streaming) return null;
+
+        return GetGranularLoopPcm(
+            GetSourceSamples(clip),
+            clip.channels,
+            clip.frequency,
+            loopStartSample,
+            loopEndSample,
+            grainSeconds,
+            spacingSeconds,
+            randomStart01,
+            tuneCents,
+            fadeCurve,
+            seed);
+    }
+
+    /// <summary>纯 PCM 源数据版本，供 Wwise 搬运路径和无 Unity 音频环境使用。</summary>
+    public static float[] GetGranularLoopPcm(
+        float[] source,
+        int channels,
+        int sampleRate,
+        int loopStartSample,
+        int loopEndSample,
+        float grainSeconds,
+        float spacingSeconds,
+        float randomStart01,
+        float tuneCents,
+        AudioCurveMapping fadeCurve,
+        int seed)
+    {
+        if (source == null || source.Length == 0 || channels <= 0 ||
+            sampleRate <= 0)
+        {
+            return null;
+        }
+
+        int loopLength = Mathf.Max(2, loopEndSample - loopStartSample);
+        int grainFrames = Mathf.Clamp(
+            Mathf.RoundToInt(grainSeconds * sampleRate),
+            64,
+            loopLength);
+        int spacingFrames = Mathf.Clamp(
+            Mathf.RoundToInt(spacingSeconds * sampleRate),
+            1,
+            grainFrames);
+        int grainCount = Mathf.Clamp(
+            Mathf.CeilToInt(2.5f / Mathf.Max(0.005f, spacingSeconds)),
+            4,
+            512);
+        int totalFrames = grainCount * spacingFrames;
+        if (totalFrames <= 1) return null;
 
         var output = new float[totalFrames * channels];
         int fadeFrames = Mathf.Clamp(Mathf.RoundToInt(grainFrames * 0.45f), 1, grainFrames / 2);
@@ -278,18 +402,21 @@ public static class ActionClipRenderer
             for (int i = 0; i < output.Length; i++) output[i] *= scale;
         }
 
-        var result = AudioClip.Create(
-            $"{clip.name}_grain_{loopStartSample}_{loopEndSample}_{grainFrames}_{spacingFrames}",
-            totalFrames, channels, clip.frequency, false);
-        result.SetData(output, 0);
-        if (Cache.Count >= MaxCacheEntries)
-        {
-            Cache.Clear();
-            // 解码缓存跟渲染结果一起回收，避免素材采样长期占内存。
-            SourceCache.Clear();
-        }
-        Cache[key] = result;
-        return result;
+        return output;
+    }
+
+    private static AudioClip CreateClip(
+        string name, float[] pcm, int channels, int sampleRate)
+    {
+        if (pcm == null || pcm.Length == 0 || channels <= 0 || sampleRate <= 0)
+            return null;
+
+        int frames = pcm.Length / channels;
+        if (frames <= 0) return null;
+
+        var clip = AudioClip.Create(name, frames, channels, sampleRate, false);
+        clip.SetData(pcm, 0);
+        return clip;
     }
 
     private static float GrainWindow(
