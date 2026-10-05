@@ -38,6 +38,11 @@ public class PlayerData
     {
         Health = MaxHealth;
         _invulnerableUntil = float.NegativeInfinity;
+        if (Target != null)
+        {
+            GameJam.Actions.PlayerActionRunner runner = Target.GetComponent<GameJam.Actions.PlayerActionRunner>();
+            if (runner != null) { runner.SetAlive(true); runner.ResetActions(); }
+        }
     }
 
     public float TakeDamage(float amount)
@@ -46,6 +51,7 @@ public class PlayerData
 
         float applied = Mathf.Min(amount, Health);
         Health -= applied;
+        if (Health <= 0f && Target != null) Target.GetComponent<GameJam.Actions.PlayerActionRunner>()?.SetAlive(false);
         // 所有玩家受击入口共享无敌帧，避免同一帧被多个碰撞体重复扣血。
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         return applied;

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GameJam.Actions.Editor
 {
-    public sealed class ActionSequencePreview : IActionSequenceHost, IActionSequenceSink
+    public sealed class ActionSequencePreview : IActionSequenceHost, IActionSequenceSink, IActionSequenceSimulationSink
     {
         private readonly ActionCatalog _catalog;
         private readonly List<ActionInputEdge> _edges = new List<ActionInputEdge>();
@@ -25,6 +25,9 @@ namespace GameJam.Actions.Editor
         private double _nextStepTime;
         public ActionSequencePlayer Player => _player;
         public bool Playing => _playing;
+        public Action<ActionExecutionState, double, bool> AnimationSampled;
+        private ActionDefinition _scheduledSource, _scheduledTarget;
+        private int _scheduledFrame;
 
         public ActionSequencePreview(ActionCatalog catalog)
         {
@@ -49,13 +52,15 @@ namespace GameJam.Actions.Editor
 
         private void Step()
         {
+            if (_scheduledTarget != null && _player.State.Action == _scheduledSource && _player.State.ActionFrame >= _scheduledFrame)
+            { _player.Queue(_scheduledTarget, _nextTick, _move); _scheduledTarget = null; }
             _player.Tick(new ActionInputSample(_nextTick++, _held, _move, _edges), _hitStop ? 0 : _rate, _hitStop);
             _edges.Clear();
         }
 
         public void Draw(ActionDefinition selected)
         {
-            EditorGUILayout.HelpBox("独立沙盒只调用新执行器与通知接口。条件、能量和输入均为模拟值；不会改变场景、角色或 Animator。修改配置会重置沙盒。", MessageType.Info);
+            EditorGUILayout.HelpBox("条件、能量和输入均为模拟值；模型预览使用独立克隆，只采样骨骼，不执行场景伤害和运动命令。修改配置会重置沙盒。", MessageType.Info);
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button(_playing ? "暂停" : "播放", GUILayout.Width(70))) { _playing = !_playing; _nextStepTime = EditorApplication.timeSinceStartup; }
             if (GUILayout.Button("单个采样帧", GUILayout.Width(110))) Step();
@@ -137,10 +142,29 @@ namespace GameJam.Actions.Editor
             return true;
         }
         public void OnActionStarted(ActionExecutionState state) => Log("起招：" + state.Action.Label + " #" + state.InstanceId);
-        public void OnSegmentEntered(ActionExecutionState state) => Log("进入子段：" + state.Segment.DisplayName + " @" + state.ActionFrame);
+        public void OnSegmentEntered(ActionExecutionState state) { Log("进入子段：" + state.Segment.DisplayName + " @" + state.ActionFrame); AnimationSampled?.Invoke(state, 0, true); }
         public void OnFrameEvent(ActionExecutionState state, ActionFrameEvent frameEvent) => Log("帧事件：" + frameEvent.EventKey + " / 命中段 " + frameEvent.HitGroup + " @" + state.ActionFrame);
-        public void OnActionEnded(ActionExecutionState state, ActionExitReason reason) => Log("退出：" + state.Action.Label + " / " + reason);
-        public void OnStateSampled(ActionExecutionState state) { }
+        public void OnActionEnded(ActionExecutionState state, ActionExitReason reason) { Log("退出：" + state.Action.Label + " / " + reason); AnimationSampled?.Invoke(default, 0, false); }
+        public void OnStateSampled(ActionExecutionState state) => AnimationSampled?.Invoke(state, 0, false);
+        public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames) => AnimationSampled?.Invoke(to, frames, false);
+        public void OnFrameBoundary(ActionExecutionState state) => AnimationSampled?.Invoke(state, 0, false);
+        public void OnIdleSimulation(double frames) => AnimationSampled?.Invoke(default, frames, false);
+        public void PreviewCancel(ActionDefinition source, ActionDefinition target, ActionCancelWindow window)
+        {
+            Reset();
+            var flags = new HashSet<string>(_conditions);
+            foreach (string key in source.StartConditions) flags.Add(key);
+            foreach (string key in target.StartConditions) flags.Add(key);
+            foreach (string key in window.RequireAll) flags.Add(key);
+            if (window.RequireAny.Count > 0) flags.Add(window.RequireAny[0]);
+            _flags = string.Join(",", flags); ParseFlags();
+            _energy = Mathf.Max(_energy, source.EnergyCost + target.EnergyCost);
+            source.TryGetWindowRange(window, out _scheduledFrame, out _);
+            _scheduledSource = source; _scheduledTarget = target;
+            _player.Queue(source, _nextTick, _move);
+            _playing = true; _nextStepTime = EditorApplication.timeSinceStartup;
+            Log("已填充模拟条件，按窗口起点请求目标动作；实际准入仍由执行器检查。");
+        }
         private void Log(string text)
         {
             _log.Add("输入帧 " + _nextTick + " · " + text);
@@ -154,6 +178,7 @@ namespace GameJam.Actions.Editor
             _held = ActionInputButtons.None;
             _edges.Clear();
             _log.Clear();
+            _scheduledSource = _scheduledTarget = null;
             if (_catalog != null) _player = new ActionSequencePlayer(_catalog, this, this);
         }
     }

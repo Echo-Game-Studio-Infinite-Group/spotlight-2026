@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: PlayerSlide
+  m_EditorClassIdentifier: 
+  ActionId: player_slide
+  DisplayName: "\u6ED1\u94F2\u8D77\u624B"
+  Description: "\u8D77\u624B\u5207\u6362\u7269\u7406\u59FF\u6001\uFF1B\u6309\u4F4F\u6301\u7EED\u3001\u677E\u5F00\u548C\u5934\u9876\u7A7A\u95F4\u68C0\u67E5\u7531
+    Motor \u5904\u7406\u3002"
+  Timeline:
+  - SegmentId: enter
+    DisplayName: "\u8FDB\u5165\u6ED1\u94F2"
+    Phase: 0
+    DurationFrames: 1
+    Events:
+    - MotorCommand: 2
+      Frame: 0
+      EventKey: motor.command
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 1
+      AllowSlide: 1
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CancelWindows: []
+  Input:
+    Steps:
+    - Button: 16
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 0
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    MaxStepGapFrames: 0
+    PreInputFrames: 0
+    BufferGroup: slide
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 0
+    RequireAll: []
+    RequireAny: []
+  StartConditions:
+  - can_slide
+  EnergyCost: 0
+  CooldownFrames: 0
+  Combat:
+    Enabled: 0
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295

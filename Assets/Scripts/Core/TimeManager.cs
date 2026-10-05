@@ -119,6 +119,17 @@ public sealed class TimeManager : MonoBehaviour
 
     // 表现层用：任一层被压慢就是"减速中"，倍率取最慢的那层
     public static bool InSlowMotion => Mathf.Min(WorldRate, PlayerRate) < 1f;
+    public static bool InHitStop
+    {
+        get
+        {
+            TimeManager instance = Resolve();
+            if (instance == null) return false;
+            foreach (Source source in instance._playerSources)
+                if (ReferenceEquals(source.Owner, HitStopOwner) && (source.Until == 0f || Time.unscaledTime < source.Until)) return true;
+            return false;
+        }
+    }
     public static float SlowRate => Mathf.Min(WorldRate, PlayerRate);
 
     // 暂停：game 层速率归 0，并写进 Time.timeScale 让物理/粒子/动画一起停。

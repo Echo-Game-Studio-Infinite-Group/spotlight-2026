@@ -136,9 +136,13 @@ namespace GameJam.Actions
             {
                 double boundary = Math.Floor(_progress) + 1;
                 double step = Math.Min(remaining, boundary - _progress);
+                // 尾差并入当前步，避免近零的额外 Move 丢失接地并反复刷新免摩擦窗口；经过时间仍完整结算。
+                if (remaining - step <= FrameTolerance) step = remaining;
+                ActionExecutionState before = State;
                 _progress += step;
                 _actorFrame += step;
                 remaining -= step;
+                (_sink as IActionSequenceSimulationSink)?.OnSimulationStep(before, State, step);
                 if (boundary - _progress > FrameTolerance) break;
                 _progress = boundary;
                 if (_progress >= _action.TotalFrames)
@@ -160,14 +164,16 @@ namespace GameJam.Actions
                 EmitCurrentFrame();
             }
             _actorFrame += remaining;
+            if (remaining > 0) (_sink as IActionSequenceSimulationSink)?.OnIdleSimulation(remaining);
         }
 
         private void EmitCurrentFrame()
         {
             ActionExecutionState state = State;
-            if (state.Segment?.Events == null) return;
-            foreach (ActionFrameEvent frameEvent in state.Segment.Events)
-                if (frameEvent != null && frameEvent.Frame == state.SegmentFrame) _sink?.OnFrameEvent(state, frameEvent);
+            if (state.Segment?.Events != null)
+                foreach (ActionFrameEvent frameEvent in state.Segment.Events)
+                    if (frameEvent != null && frameEvent.Frame == state.SegmentFrame) _sink?.OnFrameEvent(state, frameEvent);
+            (_sink as IActionSequenceSimulationSink)?.OnFrameBoundary(state);
         }
 
         private void End(ActionExitReason reason)
@@ -197,6 +203,18 @@ namespace GameJam.Actions
             _actorFrame = 0;
             _progress = 0;
             LastRejection = null;
+        }
+
+        public void ClearPendingInput()
+        {
+            _buffer.Clear();
+            _recognizer.Clear();
+        }
+
+        public void Interrupt()
+        {
+            if (IsRunning) End(ActionExitReason.Interrupted);
+            ClearPendingInput();
         }
     }
 }

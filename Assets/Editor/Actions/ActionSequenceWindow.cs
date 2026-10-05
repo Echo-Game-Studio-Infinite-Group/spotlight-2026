@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditor.Animations;
 using UnityEngine;
 
 namespace GameJam.Actions.Editor
@@ -26,6 +27,9 @@ namespace GameJam.Actions.Editor
         private float _scrub;
         private Vector2 _graphSize;
         private bool _fitGraph;
+        [SerializeField] private AnimatorController _previewController;
+        [SerializeField] private GameObject _previewPrefab;
+        private ActionModelPreview _modelPreview;
 
         [MenuItem("超高速行者/动作序列配表")]
         public static void Open() => Show(null, null);
@@ -43,6 +47,9 @@ namespace GameJam.Actions.Editor
         private void OnEnable()
         {
             _graph = new ActionCancelGraphView();
+            _modelPreview = new ActionModelPreview();
+            if (_previewController == null) _previewController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ActionPlayerSetup.ControllerPath);
+            if (_previewPrefab == null) _previewPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ActionPlayerSetup.PlayerPath);
             Undo.undoRedoPerformed += Changed;
             EditorApplication.projectChanged += Changed;
             EditorApplication.update += UpdatePreview;
@@ -57,6 +64,7 @@ namespace GameJam.Actions.Editor
         {
             _graph?.SaveLayout();
             _preview?.Reset();
+            _modelPreview?.Dispose();
             Undo.undoRedoPerformed -= Changed;
             EditorApplication.projectChanged -= Changed;
             EditorApplication.update -= UpdatePreview;
@@ -64,6 +72,7 @@ namespace GameJam.Actions.Editor
         private void Changed()
         {
             _cacheDirty = true;
+            ActionAnimatorAuthoring.Invalidate();
             _preview?.Reset();
             if (_catalog == null)
             {
@@ -107,6 +116,7 @@ namespace GameJam.Actions.Editor
         {
             if (!_cacheDirty) return;
             _issues = ActionCatalogValidator.Validate(_catalog);
+            _issues.AddRange(ActionAnimatorAuthoring.Validate(_catalog, _previewController));
             _graph.Refresh(_catalog, ActionCancelGraph.Build(_catalog));
             _cacheDirty = false;
         }
@@ -114,6 +124,7 @@ namespace GameJam.Actions.Editor
         private void OnGUI()
         {
             DrawToolbar();
+            ActionAnimatorAuthoring.Controller = _previewController;
             if (_catalog == null)
             {
                 EditorGUILayout.HelpBox("先新建动作集，或创建独立示例。所有配置均为资产，不自动挂到当前角色。", MessageType.Info);
@@ -129,7 +140,12 @@ namespace GameJam.Actions.Editor
             {
                 bool invalid = _issues.Exists(issue => issue.Level == ActionValidationIssue.Severity.Error);
                 if (invalid) EditorGUILayout.HelpBox("配置存在错误，先在「动作集与检查」修复后运行沙盒。", MessageType.Error);
-                else _preview.Draw(_selected);
+                else
+                {
+                    _preview.AnimationSampled = _modelPreview.Sample;
+                    _preview.Draw(_selected);
+                    DrawModelPreview(false);
+                }
             }
             else
             {
@@ -155,6 +171,15 @@ namespace GameJam.Actions.Editor
                 if (GUILayout.Button("全量检查", EditorStyles.toolbarButton, GUILayout.Width(75))) { _cacheDirty = true; _tab = 3; }
             }
             if (GUILayout.Button("打开 / 创建示例", EditorStyles.toolbarButton, GUILayout.Width(120))) SetCatalog(ActionSequenceExamples.Create());
+            using (new EditorGUI.DisabledScope(_catalog == null || _previewController == null))
+                if (GUILayout.Button("装配动画状态", EditorStyles.toolbarButton, GUILayout.Width(100)))
+                {
+                    Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup();
+                    ActionPlayerSetup.EnsureAnimator(_previewController, _catalog, true);
+                    Undo.FlushUndoRecordObjects(); Undo.CollapseUndoOperations(group);
+                    AssetDatabase.SaveAssetIfDirty(_previewController);
+                    Changed();
+                }
             EditorGUILayout.EndHorizontal();
         }
         private void DrawActionList()
@@ -208,9 +233,10 @@ namespace GameJam.Actions.Editor
             _scrub = EditorGUILayout.Slider("预览帧", _scrub, 0, Mathf.Max(1, _selected.TotalFrames));
             EditorGUILayout.EndHorizontal();
             ActionTimelineView.Draw(_selected, _scrub, _selectedWindow, index => SelectAction(_selected, index));
+            DrawModelPreview(true);
             foreach (ActionValidationIssue issue in _issues)
                 if (issue.Action == _selected) EditorGUILayout.HelpBox(issue.Message, issue.Level == ActionValidationIssue.Severity.Error ? MessageType.Error : MessageType.Warning);
-            EditorGUILayout.HelpBox("取消窗口采用左闭右开区间；有效窗口授予权限的并集。条件键由未来接入方解释。预输入使用输入采样帧，时间轴与取消窗口使用玩家动作帧。", MessageType.None);
+            EditorGUILayout.HelpBox("取消窗口采用左闭右开区间；有效窗口授予权限的并集。PlayerActionRunner 提供物理和速度条件，扩展条件可通过 SetCondition 注入。预输入使用输入采样帧，时间轴与取消窗口使用玩家动作帧。", MessageType.None);
             if (_actionSerialized == null || _actionSerialized.targetObject != _selected) _actionSerialized = new SerializedObject(_selected);
             if (ActionAuthoringGUI.Draw(_actionSerialized, _selected, _selectedWindow)) Changed();
         }
@@ -242,6 +268,9 @@ namespace GameJam.Actions.Editor
                 EditorGUILayout.LabelField(_selected.Label + " → " + window.DisplayName, EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("全部：" + string.Join(", ", window.RequireAll) + "  任一：" + string.Join(", ", window.RequireAny), EditorStyles.wordWrappedMiniLabel);
                 if (GUILayout.Button("编辑这个窗口", GUILayout.Width(150))) _tab = 0;
+                foreach (ActionDefinition target in window.Targets)
+                    if (target != null && GUILayout.Button("预览取消 → " + target.Label, GUILayout.Width(240)))
+                    { _preview.AnimationSampled = _modelPreview.Sample; _preview.PreviewCancel(_selected, target, window); _tab = 2; }
             }
         }
         private void DrawCatalog()
@@ -259,6 +288,18 @@ namespace GameJam.Actions.Editor
                 if (issue.Action != null && GUILayout.Button("定位", GUILayout.Width(50))) { SelectAction(issue.Action, issue.WindowIndex); _tab = 0; }
                 EditorGUILayout.EndHorizontal();
             }
+        }
+        private void DrawModelPreview(bool scrub)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUI.BeginChangeCheck();
+            _previewController = (AnimatorController)EditorGUILayout.ObjectField("动画控制器", _previewController, typeof(AnimatorController), false);
+            _previewPrefab = (GameObject)EditorGUILayout.ObjectField("预览角色", _previewPrefab, typeof(GameObject), false);
+            if (EditorGUI.EndChangeCheck()) { _modelPreview.Dispose(); _cacheDirty = true; ActionAnimatorAuthoring.Invalidate(); }
+            if (GUILayout.Button(_modelPreview.Loaded ? "重载模型" : "载入模型", GUILayout.Width(90))) _modelPreview.Load(_previewPrefab, _previewController);
+            EditorGUILayout.EndHorizontal();
+            if (scrub && _modelPreview.Loaded) _modelPreview.Scrub(_selected, _scrub);
+            _modelPreview.Draw();
         }
 
         private void CreateCatalog()

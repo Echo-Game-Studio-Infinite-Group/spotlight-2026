@@ -9,6 +9,8 @@ public sealed class PlayerVFXManager : MonoBehaviour
     public ParticleSystem attack1;
     public ParticleSystem attack2;
     public ParticleSystem attack3;
+    public bool IsSequenceDriven { get; private set; }
+    public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
 
     public void Configure(Transform origin) => _origin = origin;
 
@@ -22,11 +24,21 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     public void UpdateAttack(int cnt = 1)
     {
+        if (!IsSequenceDriven) PlayAttack(cnt);
+    }
+    public void PlayAttack(int cnt = 1)
+    {
         ParticleSystem effect = cnt == 1 ? attack1 : cnt == 2 ? attack2 : cnt == 3 ? attack3 : null;
         if (effect == null) return;
         Transform origin = _origin != null ? _origin : transform;
         effect.transform.SetPositionAndRotation(origin.position, origin.rotation * Quaternion.Euler(0f, 180f, 0f));
         effect.transform.SetParent(null, true);
         effect.Play();
+    }
+    public void StopAttacks()
+    {
+        if (attack1 != null) attack1.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (attack2 != null) attack2.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        if (attack3 != null) attack3.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 }

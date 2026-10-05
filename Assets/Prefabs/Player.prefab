@@ -237,8 +237,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   enemyBase: {fileID: 0}
   player: {fileID: 4486568241627599383}
   campType: 0
@@ -693,7 +693,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
       propertyPath: m_Controller
-      value:
+      value: 
       objectReference: {fileID: 9100000, guid: a316bce94ef718d4c81a26fb294c9399, type: 2}
     - target: {fileID: 5866666021909216657, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
       propertyPath: m_ApplyRootMotion
@@ -790,6 +790,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8295440450684657529}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2441600140555079402}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2303768388491720553}
   m_SourcePrefab: {fileID: 100100000, guid: d6b929ff34cae3945bb1d4cb74929e4c, type: 3}
 --- !u!95 &2509350774461096782 stripped
 Animator:
@@ -941,8 +947,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e7f2e285bd94f1a9c28cda10ed9b9fa, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _target: {fileID: 1441077811149185745}
   _wallMaterial: {fileID: 2100000, guid: 854a649763aba2c46b5fc737bf27e677, type: 2}
   _occludedAlpha: 0.2
@@ -961,8 +967,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d3a718575c4e4622a5f61fb8e0d20c7c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _animator: {fileID: 2509350774461096782}
   _idleSpeed: 0.1
   _blendResponse: 10
@@ -977,8 +983,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a9faa3d74f305904bb7d784a81046b18, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _attackDamage: 25
   _attackDuration: 1.6
   _attackCooldown: 0.35
@@ -998,12 +1004,47 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0b5ab64e974541e58ab4b7583ffa1b16, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _origin: {fileID: 8373086638844623156}
   attack1: {fileID: 8747713642616214840}
   attack2: {fileID: 1099802399739285464}
   attack3: {fileID: 5039998566654623896}
+--- !u!114 &2441600140555079402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9185369908108026766}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12ae2df30bba5814d833494f145ab6de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _animator: {fileID: 2509350774461096782}
+  _locomotion: {fileID: 4547364111500118352}
+  _vfx: {fileID: 8295440450684657529}
+  _returnBlendFrames: 6
+--- !u!114 &2303768388491720553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9185369908108026766}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14fb3d66053a7e74bbb61e631860971e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _catalog: {fileID: 11400000, guid: 20bb899262da46947af6e52b89d3245b, type: 2}
+  _input: {fileID: 2389787403145303572}
+  _motor: {fileID: 8721808960208543668}
+  _combat: {fileID: 4486568241627599383}
+  _animation: {fileID: 2441600140555079402}
+  _energySource: {fileID: 0}
+  _highSpeedRatio: 0.8
 --- !u!1001 &8747713641289270762
 PrefabInstance:
   m_ObjectHideFlags: 0
