@@ -68,6 +68,21 @@ public sealed class ActionPlayerPlayModeTests
         Assert.IsFalse(_root.GetComponent<PlayerInputReader>().ConsumeAttack(TimeManager.UnscaledTime));
     }
     [UnityTest]
+    public IEnumerator DisabledMotorStaysStillWhileRunnerIsEnabledAndResumesAfterEnable()
+    {
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        motor.enabled = false;
+        Vector3 position = _root.transform.position;
+        Vector3 velocity = motor.Velocity;
+        for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(_runner.enabled && _runner.IsConnected);
+        Assert.AreEqual(position, _root.transform.position);
+        Assert.AreEqual(velocity, motor.Velocity);
+        motor.enabled = true;
+        for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+        Assert.Less(_root.transform.position.y, position.y);
+    }
+    [UnityTest]
     public IEnumerator TeleportClearsActionAndReturnsInputOwnershipOnDisable()
     {
         InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Left));

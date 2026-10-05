@@ -186,7 +186,8 @@ namespace GameJam.Actions
         {
             float dt = (float)(frames / ActionSequencePlayer.FramesPerSecond);
             _motor.SetActionControl(control);
-            _motor.Simulate(_movementInput, dt, _inputTime);
+            // 外部接管模拟后仍须尊重 Motor 的禁用状态，场景工具与演出会用它暂停角色位移。
+            if (_motor.isActiveAndEnabled) _motor.Simulate(_movementInput, dt, _inputTime);
             _movementInput.JumpPressed = _movementInput.SlidePressed = false;
             LastSimulatedSeconds += dt;
         }
