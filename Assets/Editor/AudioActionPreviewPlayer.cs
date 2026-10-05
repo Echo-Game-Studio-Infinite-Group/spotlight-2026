@@ -421,6 +421,8 @@ public static class AudioActionPreviewPlayer
     /// <summary>每次触发把循环窗口整体挪一点点（长度不变），避免每遍试听完全一样。</summary>
     private static void ApplyLoopRegionJitter()
     {
+        // 同 ActionAudioVoice：颗粒模式不做区域抖动，避免缓存键爆炸导致每帧重渲染。
+        if (_definition.IsGranular) return;
         int loopLength = _loopEndSample - _loopStartSample;
         int range = Mathf.RoundToInt(loopLength * _definition.LoopRegionRandom01);
         if (range <= 0) return;

@@ -1066,3 +1066,47 @@ AudioSystem 无 Profile 时，兜底 Profile 的 SlideAction 绑定正确=True
 以后要接完整音效（脚步材质、战斗、音乐）时，再走
 `超高速行者/音频/创建音频库和玩家映射` 生成 Catalog + Profile，
 并在场景里放一个 `GameAudioInstaller`；有 Profile 时直连字段会被 Profile 覆盖。
+
+---
+
+## 2026-10-06
+
+### 修 bug：颗粒模式缓存爆炸（每次滑铲重渲染 27ms）
+
+现象：颗粒模式下几乎每次触发都要重新渲染循环 buffer（约 25~27ms，等于 1.6 帧卡顿）。
+
+根因：`ActionClipRenderer` 的缓存键包含 `(素材, LoopStart, LoopEnd, 交叠, 颗粒长度,
+间隔, 随机起点, 失谐, 曲线, seed)`，其中 seed 量化成 8 档。而
+`ApplyLoopRegionJitter()`（`LoopRegionRandom01`，默认 0.05）会**每次触发**把整个
+循环窗口平移，量化成约 17 档。于是单个定义最多
+`17 档区域 × 8 seed = 136` 条缓存，超过 64 条上限后 `Cache.Clear()` 被反复触发，
+缓存基本失效。
+
+修复：**颗粒模式不再做区域抖动**（`ActionAudioVoice.ApplyLoopRegionJitter` 与
+`AudioActionPreviewPlayer.ApplyLoopRegionJitter` 各加一行早退）。
+
+理由：颗粒渲染本身已经在循环区内随机取每颗的读取起点（`GrainRandomStart01`），
+再平移整个窗口几乎不增加听感差异，却把缓存键炸了 17 倍。
+
+实测（24 次触发，8 个 seed 变体）：
+
+```
+循环窗口固定：loopStart=66048 loopEnd=93568
+24 次触发 → 渲染 7 次（共 172ms，平均 24.5ms），缓存命中 17 次
+```
+
+即每个定义最多渲染 8 次，之后永久命中；开销不再随触发次数增长。
+
+### 顺带：颗粒渲染本身的性能优化（已改，未单独提交）
+
+首次渲染 91ms → 27ms（约 3.4 倍），改了三处：
+
+1. **颗粒窗预计算成表** —— 原来每个采样都调一次 `AudioCurveUtility.Map`，
+   SCurve 内含 `Mathf.Sin`，一轮 100 多万次。
+2. **去掉逐采样的整数取模与 `WrapIntoLoop()` 调用** —— 读指针改增量、
+   写指针越界归零、源帧越界只减一次（`tuneRatio` 恒在 1 附近，不会跨多圈）。
+3. **素材采样解码缓存**（`SourceCache`）—— 不再每次渲染都 `GetData` 整条素材；
+   与渲染缓存一起在超过上限时清空，避免长期占内存。
+
+注意：这仍然只是"把每次渲染变便宜"，**没有做预热**。如果要彻底消除前几次滑铲的
+一次性卡顿（每个定义前 8 次），需要按定义分帧预热 —— 这一项按你的要求暂不做。

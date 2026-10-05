@@ -334,6 +334,12 @@ public sealed class ActionAudioVoice : MonoBehaviour
     /// <summary>每次触发把循环窗口整体挪一点点（长度不变），避免每遍滑铲完全一样。</summary>
     private void ApplyLoopRegionJitter()
     {
+        // 颗粒模式不做区域抖动。
+        // 颗粒渲染本身已经在循环区内随机取每颗的读取起点（GrainRandomStart01），
+        // 再把整个窗口平移几乎不增加听感差异，却会把缓存键从 8 个（seed 变体）
+        // 炸成 136 个（17 档区域 × 8 seed），超过 64 条缓存上限后反复清空，
+        // 结果每次滑铲都要重新渲染一遍循环 buffer。
+        if (_definition.IsGranular) return;
         int loopLength = _loopEndSample - _loopStartSample;
         int range = Mathf.RoundToInt(loopLength * _definition.LoopRegionRandom01);
         if (range <= 0) return;
