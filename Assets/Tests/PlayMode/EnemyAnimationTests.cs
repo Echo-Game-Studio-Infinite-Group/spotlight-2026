@@ -146,9 +146,11 @@ public sealed class EnemyAnimationTests
         yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/AnimTestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
         var enemy = Object.FindObjectOfType<Enemy>();
         var player = Object.FindObjectOfType<PlayerMotor>();
+        var playerHealth = player.GetComponent<HealthComponent>();
         var animator = enemy.GetComponentInChildren<Animator>();
         var hitbox = enemy.GetComponentInChildren<Hitbox>();
         Assert.NotNull(player);
+        Assert.NotNull(playerHealth, "玩家必须有 HealthComponent");
         Assert.IsTrue(animator.isHuman, "Enemy avatar");
         GameManager.Instance.StartGame();
         player.enabled = false;
@@ -213,10 +215,10 @@ public sealed class EnemyAnimationTests
         Assert.IsTrue(enemy.IsAttacking, $"arrived in attack range: enemy={enemy.transform.position}, player={player.transform.position}, "
             + $"remaining={agent.remainingDistance}, stop={agent.stoppingDistance}, velocity={agent.velocity}, "
             + $"path={agent.pathStatus}, speed={enemy.Speed}, canAttack={enemy.GetComponentInChildren<EnemyAnimation>().CanAttack}");
-        Assert.AreEqual(100, GameManager.Instance.Player.Health,"proximity must not cause damage");
+        Assert.AreEqual(100, playerHealth.Health,"proximity must not cause damage");
         enemy.SetChasePlayer(false);
         yield return new WaitForSeconds(1.9f);
-        Assert.AreEqual(92, GameManager.Instance.Player.Health,"animation hitbox hits once");
+        Assert.AreEqual(92, playerHealth.Health,"animation hitbox hits once");
         Assert.IsFalse(enemy.IsAttacking,"attack finishes");
         Assert.IsFalse(hitbox.GetComponent<Collider>().enabled,"attack window closes");
 
@@ -248,10 +250,10 @@ public sealed class EnemyAnimationTests
         Assert.IsTrue(agent.isStopped, "死亡立即停止导航");
         Assert.IsTrue(gib.IsSliced, "导航敌人的致命伤正常触发断肢");
         Assert.IsFalse(agent.hasPath, "死亡清除旧路径");
-        float hp=GameManager.Instance.Player.Health;
+        float hp=playerHealth.Health;
         Vector3 position=enemy.transform.position;
         yield return new WaitForSeconds(5);
-        Assert.AreEqual(hp,GameManager.Instance.Player.Health,"dead enemy cannot damage");
+        Assert.AreEqual(hp,playerHealth.Health,"dead enemy cannot damage");
         Assert.AreEqual(position,enemy.transform.position,"dead enemy cannot chase");
         Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(0).loop);
         Assert.GreaterOrEqual(animator.GetCurrentAnimatorStateInfo(0).normalizedTime,1);

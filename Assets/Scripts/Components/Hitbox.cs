@@ -62,8 +62,10 @@ public sealed class Hitbox : MonoBehaviour
         {
             PlayerMotor victim = other.GetComponentInParent<PlayerMotor>();
             if (victim == null) return;
-            GameManager.Instance.Player.TakeDamage(enemyBase.AttackDamage);
-            // 结算与表现分开：伤害照旧走 GameManager，震屏方向由命中位置决定。
+            HealthComponent health = Player.Current != null ? Player.Current.Health : null;
+            if (health == null) return;
+            // 结算与表现分开：伤害走血量组件，震屏方向由命中位置决定。
+            health.TakeDamage(enemyBase.AttackDamage);
             enemyBase.PlayAttackImpulse(victim.transform.position);
         }
     }

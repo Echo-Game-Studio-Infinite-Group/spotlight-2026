@@ -1660,6 +1660,7 @@ GameObject:
   - component: {fileID: 1136354514}
   - component: {fileID: 1136354515}
   - component: {fileID: 1136354517}
+  - component: {fileID: 7700110000000000007}
   m_Layer: 0
   m_Name: MikuGandam
   m_TagString: Untagged
@@ -1719,8 +1720,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 120
-  _invulnerableTime: 0.45
+  _health: {fileID: 0}
   _attackPower: 8
   _walkSpeed: 4
   _runSpeed: 5
@@ -1872,6 +1872,7 @@ GameObject:
   - component: {fileID: 1569572961}
   - component: {fileID: 1569572962}
   - component: {fileID: 1569572963}
+  - component: {fileID: 7700110000000000008}
   m_Layer: 0
   m_Name: Miku
   m_TagString: Untagged
@@ -1958,8 +1959,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 120
-  _invulnerableTime: 0.45
+  _health: {fileID: 0}
   _attackPower: 8
   _walkSpeed: 4
   _runSpeed: 5
@@ -2368,6 +2368,34 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 904281566}
   m_SourcePrefab: {fileID: 100100000, guid: 61b3727b77973df4eb5b520ae71690e8, type: 3}
+--- !u!114 &7700110000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1136354511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e7a1b93c6f4a2e8b5d0c7f1a9e3b62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHealth: 120
+  _invulnerableTime: 0.1
+--- !u!114 &7700110000000000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1569572957}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e7a1b93c6f4a2e8b5d0c7f1a9e3b62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHealth: 120
+  _invulnerableTime: 0.1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

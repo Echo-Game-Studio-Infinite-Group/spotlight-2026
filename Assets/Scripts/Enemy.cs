@@ -14,17 +14,16 @@ using UnityEngine.AI;
 public sealed class Enemy : MonoBehaviour
 {
     [Header("生命")]
-    [SerializeField, Min(1f)] private float _maxHealth = 100f;
-    [SerializeField, Min(0f)] private float _invulnerableTime = 0.45f;
-    private float _health;
-    private float _invulnerableUntil = float.NegativeInfinity;
-    public float MaxHealth => _maxHealth;
-    public float Health => _health;
-    public bool IsAlive => _health > 0f;
-    public float HealthRatio => _maxHealth > 0f ? _health / _maxHealth : 0f;
+    // 血量完全交给 HealthComponent：与玩家共用同一份规则，数值也只有一处真值。
+    // 同物体找不到时 EnsureHealth 会补一个，免得老场景/预制体静默变成打不死。
+    [SerializeField] private HealthComponent _health;
     public int DamagedCount { get; private set; }
-    public float InvulnerableTime => _invulnerableTime;
-    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
+    public float MaxHealth => _health != null ? _health.MaxHealth : 0f;
+    public float Health => _health != null ? _health.Health : 0f;
+    public bool IsAlive => _health != null && _health.IsAlive;
+    public float HealthRatio => _health != null ? _health.HealthRatio : 0f;
+    public float InvulnerableTime => _health != null ? _health.InvulnerableTime : 0f;
+    public bool IsInvulnerable => _health != null && _health.IsInvulnerable;
     [Header("战斗属性")]
     [SerializeField, Min(0f)] private float _attackPower = 8f;
     [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
@@ -84,7 +83,7 @@ public sealed class Enemy : MonoBehaviour
 
     private void Awake()
     {
-        _health = _maxHealth;
+        EnsureHealth();
         if (_agent == null) _agent = GetComponent<NavMeshAgent>();
         if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
@@ -125,6 +124,15 @@ public sealed class Enemy : MonoBehaviour
     {
         StopMoving();
         FinishAttack();
+    }
+
+    // 血量走 HealthComponent；同物体找不到就补一个，
+    // 免得重构后老场景/预制体上的敌人静默变成打不死。
+    private void EnsureHealth()
+    {
+        if (_health != null) return;
+        _health = GetComponent<HealthComponent>();
+        if (_health == null) _health = gameObject.AddComponent<HealthComponent>();
     }
 
     public void FinishAttack()
@@ -173,8 +181,10 @@ public sealed class Enemy : MonoBehaviour
 
     private void Chase()
     {
-        PlayerMotor target = ResolvePlayer();
-        if (target == null || !GameManager.Instance.Player.IsAlive) { StopMoving(); return; }
+        Player player = Player.Current;
+        PlayerMotor target = player != null ? player.Motor : null;
+        HealthComponent health = player != null ? player.Health : null;
+        if (target == null || health == null || !health.IsAlive) { StopMoving(); return; }
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
@@ -221,7 +231,7 @@ public sealed class Enemy : MonoBehaviour
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
-        PlayerData health = GameManager.Instance.Player;
+        HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         if (health == null || !health.IsAlive) return;
 
         // 没有动画或判定盒就不凭距离直接扣血。
@@ -231,21 +241,24 @@ public sealed class Enemy : MonoBehaviour
         _animation.PlayAttack();
     }
 
+    // 玩家从场景级注册点取，不再经 GameManager —— 没有 GameManager 的场景里敌人 AI 照样工作。
     private PlayerMotor ResolvePlayer()
     {
-        return GameManager.Instance.Player.Target;
+        Player player = Player.Current;
+        return player != null ? player.Motor : null;
     }
 
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
     {
-        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
-        float applied = Mathf.Min(amount, _health);
-        _health -= applied;
+        EnsureHealth();
+        if (_health == null) return 0f;
+        // 无敌帧、已死亡、非正伤害都由 HealthComponent 统一挡下，这里只处理「挨打之后的表现」。
+        float applied = _health.TakeDamage(amount);
+        if (applied <= 0f) return 0f;
         DamagedCount++;
         if (_damagePopup != null)
             _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
                 transform, Camera.main, _numberLifetime, _riseSpeed);
-        _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         if (!IsAlive)
         {
             StopMoving();
@@ -278,11 +291,21 @@ public sealed class Enemy : MonoBehaviour
         _runningChase = false;
         _nextAttackTime = 0f;
         GetComponent<GibComponent>()?.ResetEffect();
-        _health = _maxHealth;
-        _invulnerableUntil = float.NegativeInfinity;
+        if (_health != null) _health.Reset();
         DamagedCount = 0;
         if (wasDead && _animation != null) _animation.ResetAfterDeath();
     }
-    public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
-    public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
+    public void SetMaxHealth(float value)
+    {
+        EnsureHealth();
+        if (_health != null) _health.SetMaxHealth(value);
+        ResetHealth();
+    }
+
+    public void SetInvulnerableTime(float seconds)
+    {
+        EnsureHealth();
+        // 只推无敌帧，不碰血量：自检会在半途改这个值，不该顺手把血补满。
+        if (_health != null) _health.SetInvulnerableTime(seconds);
+    }
 }
