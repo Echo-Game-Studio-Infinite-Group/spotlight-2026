@@ -46,11 +46,9 @@ public sealed class AudioDebugOverlay : MonoBehaviour
             visible++;
             ActionControlFrame frame = voice.Control;
             GUILayout.Label(
-                $"[{voice.name}] {voice.State}  t={frame.ActionElapsed:0.00}  v={frame.NormalizedSpeed:0.00}  LP={voice.LowpassHz:0}Hz",
+                $"[{voice.name}] {voice.State}  t={frame.ActionElapsed:0.00}  v={frame.NormalizedSpeed:0.00}",
                 _label);
             DrawMeter("Gain", voice.EnvelopeGain, new Color(0.3f, 0.9f, 0.45f));
-            DrawMeter("Pitch Follow", voice.PitchEnvelopeValue, new Color(0.35f, 0.7f, 1f));
-            DrawMeter("Lowpass Follow", voice.LowpassEnvelopeValue, new Color(1f, 0.72f, 0.3f));
         }
 
         WwiseActionDriver[] wwiseDrivers =
@@ -77,21 +75,12 @@ public sealed class AudioDebugOverlay : MonoBehaviour
         visible++;
         GUILayout.Label(
             $"[Wwise {snapshot.Name}] {snapshot.State}  " +
-            $"t={snapshot.Elapsed:0.00}  v={snapshot.NormalizedSpeed:0.00}  " +
-            $"LP={snapshot.LowpassHz:0}Hz",
+            $"t={snapshot.Elapsed:0.00}  v={snapshot.NormalizedSpeed:0.00}",
             _label);
         DrawMeter(
             "Gain",
             snapshot.EnvelopeGain,
             new Color(0.3f, 0.9f, 0.45f));
-        DrawMeter(
-            "Pitch Follow",
-            snapshot.PitchEnvelopeValue,
-            new Color(0.35f, 0.7f, 1f));
-        DrawMeter(
-            "Lowpass Follow",
-            snapshot.LowpassEnvelopeValue,
-            new Color(1f, 0.72f, 0.3f));
     }
 
     private void DrawMeter(string label, float value, Color color)

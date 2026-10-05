@@ -1417,6 +1417,39 @@ Unity.exe -batchmode -nographics `
 
 本次仍未 commit。
 
+## 2026-10-06：动态动作接口与曲线清理
+
+新增动态动作上报契约：
+
+```text
+DynamicAudioActionPhase
+DynamicAudioActionStopMode
+DynamicAudioActionRequest
+IDynamicAudioActionSource
+```
+
+动作代码只需上报：
+
+```text
+ActionId
+Start / Update / Stop
+StopMode
+NormalizedSpeed
+ContactIntensity
+Direction
+SurfaceId
+Seed
+```
+
+音频侧不再需要理解具体动作枚举。`WwiseActionBindings` 增加 `ActionId` 和按
+字符串查找，后续 `WwiseActionDriver` 可以切换成通用 channel 池。
+
+同时删除没有进入 Wwise 输出链路的 `Pitch Follow`、`Lowpass Follow` 及其
+配套参数、Inspector 标签页、调试表和旧的 `AudioEnvelope` 曲线类型。动作驱动
+的 Pitch、Lowpass、Volume、Pan 后续统一在 Wwise RTPC / Bus 中处理。
+
+本次仍未 commit。
+
 ## 2026-10-06：Play 模式后试听的最终清理
 
 真实 Enter Play / Exit Play 回归确认：

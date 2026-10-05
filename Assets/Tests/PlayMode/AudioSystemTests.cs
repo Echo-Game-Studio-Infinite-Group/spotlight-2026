@@ -15,26 +15,6 @@ public sealed class AudioSystemTests
     }
 
     [Test]
-    public void FrequencyInterpolation_IsLogarithmicAndClamped()
-    {
-        Assert.That(AudioCurveUtility.LerpFrequency(100f, 10000f, 0f), Is.EqualTo(100f).Within(0.01f));
-        Assert.That(AudioCurveUtility.LerpFrequency(100f, 10000f, 1f), Is.EqualTo(10000f).Within(0.01f));
-        Assert.That(AudioCurveUtility.LerpFrequency(100f, 10000f, 0.5f), Is.EqualTo(1000f).Within(0.01f));
-    }
-
-    [Test]
-    public void AudioEnvelope_EvaluatesPresetEndpoints()
-    {
-        AudioEnvelope fadeIn = AudioEnvelope.FadeIn();
-        Assert.That(fadeIn.Evaluate(0f), Is.EqualTo(0f).Within(1e-4f));
-        Assert.That(fadeIn.Evaluate(1f), Is.EqualTo(1f).Within(1e-4f));
-
-        AudioEnvelope fadeOut = AudioEnvelope.FadeOut();
-        Assert.That(fadeOut.Evaluate(0f), Is.EqualTo(1f).Within(1e-4f));
-        Assert.That(fadeOut.Evaluate(1f), Is.EqualTo(0f).Within(1e-4f));
-    }
-
-    [Test]
     public void AudioActionDefinition_ClampsSingleClipRegions()
     {
         AudioActionDefinition definition = ScriptableObject.CreateInstance<AudioActionDefinition>();

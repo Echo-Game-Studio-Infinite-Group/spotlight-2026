@@ -64,10 +64,6 @@ public sealed class AudioActionDefinition : ScriptableObject
              "Release 时长就等于这段尾音区间的长度，没有单独的 Release 时间字段。")]
     public AudioIntroReleaseMode IntroReleaseMode = AudioIntroReleaseMode.PlayFullOnce;
 
-    [Header("动作驱动音色曲线（映射速度，不是时间）")]
-    public AudioEnvelope PitchFollow = AudioEnvelope.Linear();
-    public AudioEnvelope LowpassFollow = AudioEnvelope.Linear();
-
     [Header("随机差分")]
     public AudioRange StartPitchSemitones = new AudioRange(-0.35f, 0.35f);
     public AudioRange SustainPitchSemitones = new AudioRange(-0.2f, 0.2f);
@@ -75,13 +71,6 @@ public sealed class AudioActionDefinition : ScriptableObject
              "需要特殊效果时再手动增大。")]
     public AudioRange ReleasePitchSemitones = new AudioRange(0f, 0f);
     public AudioRange GainDbVariation = new AudioRange(-2f, 1.5f);
-    public AudioRange LowpassVariation = new AudioRange(-1800f, 1800f);
-
-    [Header("动作驱动音色")]
-    [Min(0f)] public float PitchFollowMaxSemitones = 0.9f;
-    [Min(10f)] public float LowpassIdleHz = 18000f;
-    [Min(10f)] public float LowpassFastHz = 8500f;
-    [Range(0f, 1f)] public float DirectionPan = 0.35f;
 
     [Header("空间")]
     [Range(0f, 1f)] public float SpatialBlend = 1f;
@@ -103,10 +92,6 @@ public sealed class AudioActionDefinition : ScriptableObject
     {
         if (Envelope == null) Envelope = new AdsrEnvelope();
         Envelope.Clamp();
-        if (PitchFollow == null) PitchFollow = AudioEnvelope.Linear();
-        if (LowpassFollow == null) LowpassFollow = AudioEnvelope.Linear();
-        PitchFollow.EnsureDefaults();
-        LowpassFollow.EnsureDefaults();
         StartPosition01 = Mathf.Clamp01(StartPosition01);
         LoopStart01 = Mathf.Clamp01(LoopStart01);
         LoopEnd01 = Mathf.Clamp(LoopEnd01, LoopStart01 + 0.001f, 1f);
@@ -143,17 +128,10 @@ public sealed class AudioActionDefinition : ScriptableObject
         GrainFadeCurve = AudioCurveMapping.SCurve;
         Envelope = new AdsrEnvelope();
         IntroReleaseMode = AudioIntroReleaseMode.PlayFullOnce;
-        PitchFollow = AudioEnvelope.Linear();
-        LowpassFollow = AudioEnvelope.Linear();
         StartPitchSemitones = new AudioRange(-0.35f, 0.35f);
         SustainPitchSemitones = new AudioRange(-0.2f, 0.2f);
         ReleasePitchSemitones = new AudioRange(0f, 0f);
         GainDbVariation = new AudioRange(-2f, 1.5f);
-        LowpassVariation = new AudioRange(-1800f, 1800f);
-        PitchFollowMaxSemitones = 0.9f;
-        LowpassIdleHz = 18000f;
-        LowpassFastHz = 8500f;
-        DirectionPan = 0.35f;
         SpatialBlend = 1f;
         MinDistance = 1.5f;
         MaxDistance = 55f;

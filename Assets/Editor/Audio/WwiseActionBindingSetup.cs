@@ -42,6 +42,7 @@ public static class WwiseActionBindingSetup
         {
             new WwiseActionBindings.Entry
             {
+                ActionId = "slide",
                 Definition = slide,
                 PlayEvent = "Play_SlideSinePlugin",
                 StopEvent = "Stop_SlideSinePlugin",
@@ -49,6 +50,7 @@ public static class WwiseActionBindingSetup
             },
             new WwiseActionBindings.Entry
             {
+                ActionId = "wall_slide",
                 Definition = wallSlide,
                 PlayEvent = "Play_SlideSinePlugin",
                 StopEvent = "Stop_SlideSinePlugin",

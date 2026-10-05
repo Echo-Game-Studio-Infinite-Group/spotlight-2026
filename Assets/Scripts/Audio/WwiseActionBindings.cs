@@ -13,6 +13,7 @@ public sealed class WwiseActionBindings : ScriptableObject
     [Serializable]
     public sealed class Entry
     {
+        public string ActionId;
         public AudioActionDefinition Definition;
         public string PlayEvent;
         public string StopEvent;
@@ -32,6 +33,29 @@ public sealed class WwiseActionBindings : ScriptableObject
         {
             Entry entry = Entries[i];
             if (entry != null && entry.Definition == definition)
+            {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    public Entry Find(string actionId)
+    {
+        if (string.IsNullOrEmpty(actionId) || Entries == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < Entries.Length; i++)
+        {
+            Entry entry = Entries[i];
+            if (entry != null &&
+                string.Equals(
+                    entry.ActionId,
+                    actionId,
+                    StringComparison.Ordinal))
             {
                 return entry;
             }

@@ -32,9 +32,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         public float NormalizedSpeed;
         public float ContactIntensity;
         public float EnvelopeGain;
-        public float PitchEnvelopeValue;
-        public float LowpassEnvelopeValue;
-        public float LowpassHz;
         public bool ReleaseRequested;
         public bool ReleaseAudioStarted;
         public float ReleaseElapsed;
@@ -50,9 +47,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         public float Elapsed;
         public float NormalizedSpeed;
         public float EnvelopeGain;
-        public float PitchEnvelopeValue;
-        public float LowpassEnvelopeValue;
-        public float LowpassHz;
     }
 
     private PlayerAudioDriver _audioDriver;
@@ -139,7 +133,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
             channel.Elapsed += TimeManager.UnscaledDeltaTime;
             UpdateEnvelopeState(channel, definition);
             PumpPcm(channel, TargetBufferSeconds);
-            UpdateDebugValues(channel, definition);
 
             if (channel.Renderer.IsFinished &&
                 WwisePcmBridge.GetAvailableFrames(channel.VoiceId) == 0)
@@ -199,9 +192,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         channel.Emitter.AddComponent<AkGameObj>();
         channel.Elapsed = 0f;
         channel.EnvelopeGain = 0f;
-        channel.PitchEnvelopeValue = 0f;
-        channel.LowpassEnvelopeValue = 0f;
-        channel.LowpassHz = definition.LowpassIdleHz;
         channel.ReleaseRequested = false;
         channel.ReleaseAudioStarted = false;
         channel.ReleaseElapsed = 0f;
@@ -302,9 +292,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         channel.Renderer = null;
         channel.Elapsed = 0f;
         channel.EnvelopeGain = 0f;
-        channel.PitchEnvelopeValue = 0f;
-        channel.LowpassEnvelopeValue = 0f;
-        channel.LowpassHz = 0f;
         channel.ReleaseRequested = false;
         channel.ReleaseAudioStarted = false;
         channel.ReleaseElapsed = 0f;
@@ -344,25 +331,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         }
     }
 
-    private void UpdateDebugValues(
-        Channel channel, AudioActionDefinition definition)
-    {
-        if (channel.Renderer == null || definition == null) return;
-
-        channel.PitchEnvelopeValue =
-            definition.PitchFollow.Evaluate(channel.NormalizedSpeed);
-        channel.LowpassEnvelopeValue =
-            definition.LowpassFollow.Evaluate(channel.NormalizedSpeed);
-        channel.LowpassHz = AudioCurveUtility.LerpFrequency(
-            definition.LowpassIdleHz,
-            definition.LowpassFastHz,
-            channel.LowpassEnvelopeValue);
-        channel.LowpassHz = Mathf.Lerp(
-            channel.LowpassHz,
-            definition.LowpassIdleHz,
-            channel.ContactIntensity * 0.25f);
-    }
-
     private DebugSnapshot BuildDebug(Channel channel, string name)
     {
         return new DebugSnapshot
@@ -379,10 +347,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
                         : "Start",
             Elapsed = channel.Elapsed,
             NormalizedSpeed = channel.NormalizedSpeed,
-            EnvelopeGain = channel.EnvelopeGain,
-            PitchEnvelopeValue = channel.PitchEnvelopeValue,
-            LowpassEnvelopeValue = channel.LowpassEnvelopeValue,
-            LowpassHz = channel.LowpassHz
+            EnvelopeGain = channel.EnvelopeGain
         };
     }
 
