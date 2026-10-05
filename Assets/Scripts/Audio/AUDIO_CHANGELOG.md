@@ -1417,6 +1417,86 @@ Unity.exe -batchmode -nographics `
 
 本次仍未 commit。
 
+## 2026-10-06：Wwise 一次性事件桥接
+
+新增：
+
+```text
+Assets/Scripts/Audio/WwiseEventBindings.cs
+Assets/Scripts/Audio/WwiseEventBridge.cs
+Assets/Editor/Audio/WwiseEventBindingSetup.cs
+```
+
+用途：
+
+- 一次性动作不进入动态 PCM 系统。
+- gameplay 只调用逻辑 `EventId`。
+- `WwiseEventBindings.asset` 负责映射 `AK.Wwise.Event`。
+- 提供 Play / Stop / SetSwitch / SetRTPC 薄封装。
+
+使用示例：
+
+```csharp
+WwiseEventBridge.Play("player_land", gameObject);
+WwiseEventBridge.Play("hit_metal", gameObject);
+WwiseEventBridge.SetSwitch("Surface", "grass", gameObject);
+WwiseEventBridge.SetRTPC("ActionSpeed", speed01, gameObject);
+```
+
+绑定资产创建入口：
+
+```text
+超高速行者/音频/创建 Wwise 事件绑定资产
+```
+
+文档：
+
+```text
+Docs/Audio/WwiseEventBridge.md
+```
+
+本次仍未 commit。
+
+## 2026-10-06：通用 Wwise 动作绑定管理器
+
+新增 EditorWindow：
+
+```text
+超高速行者/音频/Wwise 动作绑定管理器
+```
+
+功能：
+
+- 选择任意 `AudioActionDefinition`。
+- 配置 `ActionId`、`Play Event`、`Stop Event`。
+- 从 Clip 自动复制 WAV 到 `StreamingAssets/Audio/Source/Generated/`。
+- 创建或更新 `WwiseActionBindings.Entry`。
+- 检查重复 `ActionId`。
+- 查看、选择和删除已有绑定。
+- `AudioActionDefinition` Inspector 增加直接打开绑定窗口的入口。
+
+旧的 `WwiseActionBindingSetup` 菜单不再写死 Slide / WallSlide，只打开通用窗口。
+
+本次仍未 commit。
+
+## 2026-10-06：移除 PlayerAudioDriver，动作源改为手动挂载
+
+- 删除旧 Unity AudioSource 路径的 `PlayerAudioDriver`。
+- `AudioSystem` 不再自动创建动作适配器，只负责自动挂载 `WwiseActionDriver`。
+- `PlayerDynamicAudioActionSource` 改为由使用者手动挂到 Player。
+- 新链路依赖：
+  ```text
+  PlayerMotor
+  -> PlayerDynamicAudioActionSource
+  -> IDynamicAudioActionSource
+  -> WwiseActionDriver
+  -> Wwise
+  ```
+- Player prefab 需要由使用者移除旧组件引用，并添加
+  `PlayerDynamicAudioActionSource`。
+
+本次仍未 commit。
+
 ## 2026-10-06：动态动作快速重触发与规则化 Adapter
 
 问题：

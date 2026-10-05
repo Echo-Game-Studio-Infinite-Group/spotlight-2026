@@ -67,6 +67,10 @@ public sealed class AudioActionDefinitionEditor : Editor
             Repaint();
         }
         EditorGUILayout.EndHorizontal();
+        if (GUILayout.Button("Wwise 绑定 / Event / 源 WAV"))
+        {
+            WwiseActionBindingWindow.Open(definition);
+        }
         DrawAdsrPanel(definition);
 
         EditorGUILayout.Space(6f);

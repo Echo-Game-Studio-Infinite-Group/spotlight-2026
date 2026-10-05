@@ -37,6 +37,25 @@ public static class AudioActionSourceLocator
             return true;
         }
 
+        return EnsureFromClip(
+            definition,
+            out relativePath,
+            out error);
+    }
+
+    public static bool EnsureFromClip(
+        AudioActionDefinition definition,
+        out string relativePath,
+        out string error)
+    {
+        relativePath = string.Empty;
+        error = string.Empty;
+        if (definition == null || definition.Clip == null)
+        {
+            error = "缺少 AudioActionDefinition 或 Clip。";
+            return false;
+        }
+
         string assetPath = AssetDatabase.GetAssetPath(definition.Clip);
         if (string.IsNullOrEmpty(assetPath) ||
             !string.Equals(

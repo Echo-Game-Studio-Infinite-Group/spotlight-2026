@@ -33,7 +33,7 @@ public static class WwisePcmBridgeSmokeTest
         const uint voiceId = 9001u;
         AudioActionDefinition definition =
             AssetDatabase.LoadAssetAtPath<AudioActionDefinition>(
-                "Assets/AudioCollection/Sfx/Slide.asset");
+                "Assets/AudioCollection/Sfx/PlayerSlideAudio.asset");
         if (definition == null)
         {
             throw new InvalidOperationException(
@@ -117,17 +117,17 @@ public static class WwisePcmBridgeSmokeTest
             System.Threading.Thread.Sleep(100);
             WwisePcmBridge.DestroyVoice(voiceId);
             RunPreviewTest(
-                "Assets/AudioCollection/Sfx/Slide.asset",
-                "Slide");
+                "Assets/AudioCollection/Sfx/PlayerSlideAudio.asset",
+                "PlayerSlide");
             RunPreviewTest(
-                "Assets/AudioCollection/Sfx/WallSlide.asset",
-                "WallSlide");
+                "Assets/AudioCollection/Sfx/PlayerWallSlideAudio.asset",
+                "PlayerWallSlide");
             RunPreviewTest(
                 "Assets/AudioCollection/Sfx/AudioActionDefinition.asset",
                 "UnboundAutoSource");
             AkUnitySoundEngineInitialization.Instance.ResetSoundEngine();
             RunPreviewTest(
-                "Assets/AudioCollection/Sfx/Slide.asset",
+                "Assets/AudioCollection/Sfx/PlayerSlideAudio.asset",
                 "AfterEngineReset");
             Debug.Log(
                 $"Wwise PCM bridge smoke test passed: playingId={playingId}");

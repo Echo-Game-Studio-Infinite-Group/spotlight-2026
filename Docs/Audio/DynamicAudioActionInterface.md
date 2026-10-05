@@ -11,6 +11,15 @@
 - 提供速度、接触强度、方向和表面等控制参数。
 - 在特殊情况下指定停止模式。
 
+普通一次性动作不实现本接口，应使用 `WwiseEventBridge`：
+
+```csharp
+WwiseEventBridge.Play("player_land", gameObject);
+WwiseEventBridge.Play("hit_metal", gameObject);
+```
+
+本接口只用于需要 `Start / Update / Stop` 动态生命周期的连续动作。
+
 音频系统负责：
 
 - 根据 `ActionId` 查找 `WwiseActionBindings`。
@@ -29,7 +38,7 @@ public interface IDynamicAudioActionSource
 }
 ```
 
-一个 `MonoBehaviour` 可以同时上报多个动作。例如同一个玩家组件可以同时上报 `slide` 和 `wall_slide`，但同一帧每个动作应只有一个最终状态。
+一个 `MonoBehaviour` 可以同时上报多个动作。例如同一个玩家组件可以同时上报 `player_slide` 和 `wall_slide`，但同一帧每个动作应只有一个最终状态。
 
 接口在主线程调用。不要在这里解析音频文件、创建 Wwise 对象或执行重 DSP。
 
@@ -77,7 +86,7 @@ DynamicAudioActionRequest.Stop(...)
 
 | 字段 | 范围 | 说明 |
 | --- | --- | --- |
-| `ActionId` | 非空字符串 | 稳定逻辑 ID，例如 `slide`、`wall_slide` |
+| `ActionId` | 非空字符串 | 稳定逻辑 ID，例如 `player_slide`、`wall_slide` |
 | `InstanceId` | 0 或唯一整数 | 0 表示同一 ActionId 单实例；非零用于并发或快速重触发 |
 | `Phase` | 枚举 | 开始、更新或请求停止 |
 | `StopMode` | 枚举 | 仅 `Phase == Stop` 时有意义 |
@@ -94,8 +103,8 @@ DynamicAudioActionRequest.Stop(...)
 每个动态动作必须在 `WwiseActionBindings` 中注册：
 
 ```text
-ActionId: slide
-Definition: Slide AudioActionDefinition
+ActionId: player_slide
+Definition: PlayerSlideAudio AudioActionDefinition
 PlayEvent: Play_SlideSinePlugin
 SourceRelativePath: Audio/Source/slide_tackle_2.wav
 ```
@@ -103,10 +112,38 @@ SourceRelativePath: Audio/Source/slide_tackle_2.wav
 动作代码只上报：
 
 ```csharp
-DynamicAudioActionRequest.Start("slide");
+DynamicAudioActionRequest.Start("player_slide");
 ```
 
-音频系统通过 `WwiseActionBindings.Find("slide")` 找到定义、事件和源文件。
+音频系统通过 `WwiseActionBindings.Find("player_slide")` 找到定义、事件和源文件。
+
+## 5.1 编辑器绑定流程
+
+打开：
+
+```text
+超高速行者/音频/Wwise 动作绑定管理器
+```
+
+也可以直接选中 `AudioActionDefinition`，在 Inspector 的
+`Wwise 绑定 / Event / 源 WAV` 按钮打开。
+
+操作：
+
+1. 把一个 `AudioActionDefinition` 拖入窗口。
+2. 填写 `ActionId`。
+3. 填写 `Play Event` 和可选的 `Stop Event`。
+4. 点击“从 Clip 自动生成源 WAV”。
+5. 点击“创建 / 更新绑定”。
+
+工具会：
+
+- 把源 WAV 复制到 `Assets/StreamingAssets/Audio/Source/Generated/`。
+- 创建或更新 `WwiseActionBindings.Entry`。
+- 检查 `ActionId` 是否与其他定义冲突。
+- 把绑定写回 `Assets/Resources/Audio/WwiseActionBindings.asset`。
+
+`WwiseActionBindingSetup` 的旧菜单现在只负责打开这个通用窗口。
 
 ## 6. 生命周期规则
 
@@ -196,11 +233,14 @@ public sealed class MyActionAudioSource :
 Assets/Scripts/Audio/PlayerDynamicAudioActionSource.cs
 ```
 
+该组件不再自动挂载。需要手动添加到 Player 对象，并确认 Player 对象上存在
+`PlayerMotor` 和 `WwiseActionDriver`。
+
 它使用规则表把动作条件 key 映射到 `ActionId`：
 
 ```text
-slide      <- sliding
-wall_slide <- wall_sliding
+player_slide <- sliding
+wall_slide   <- wall_sliding
 ```
 
 规则表位于组件的 Inspector 中，新增条件映射不需要改音频驱动。动作条件 key

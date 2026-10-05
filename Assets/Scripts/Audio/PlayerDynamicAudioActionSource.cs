@@ -26,7 +26,7 @@ public sealed class PlayerDynamicAudioActionSource :
     {
         new Rule
         {
-            ActionId = "slide",
+            ActionId = "player_slide",
             ConditionKey = "sliding",
             ContactIntensity = 1f
         },

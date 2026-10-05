@@ -17,14 +17,13 @@ public sealed class AudioSystem : MonoBehaviour
     private readonly List<AudioActionHandle> _activeActions = new List<AudioActionHandle>();
     private readonly List<AudioActionHandle> _actionRemoveBuffer = new List<AudioActionHandle>();
     private AudioDebugOverlay _debugOverlay;
-    private PlayerAudioDriver _driver;
     private PlayerInputReader _boundInput;
     private float _playerScanTimer;
+    private bool _playerBound;
     private System.Random _random;
 
     public static AudioSystem Instance => _instance;
     public int ActiveActionCount => _activeActions.Count;
-    public PlayerAudioDriver Driver => _driver;
     public IReadOnlyList<ActionAudioVoice> ActionVoices => _actionPool;
 
     private void Awake()
@@ -87,15 +86,12 @@ public sealed class AudioSystem : MonoBehaviour
         _playerScanTimer -= TimeManager.UnscaledDeltaTime;
         if (_playerScanTimer > 0f) return;
         _playerScanTimer = 0.5f;
-        if (_driver != null) return;
+        if (_playerBound) return;
         PlayerMotor motor = FindObjectOfType<PlayerMotor>();
         if (motor == null) return;
-        _driver = motor.gameObject.GetComponent<PlayerAudioDriver>();
-        if (_driver == null) _driver = motor.gameObject.AddComponent<PlayerAudioDriver>();
-        if (motor.gameObject.GetComponent<PlayerDynamicAudioActionSource>() == null)
-            motor.gameObject.AddComponent<PlayerDynamicAudioActionSource>();
         if (motor.gameObject.GetComponent<WwiseActionDriver>() == null)
             motor.gameObject.AddComponent<WwiseActionDriver>();
+        _playerBound = true;
         PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
         if (input != null && input != _boundInput)
         {
