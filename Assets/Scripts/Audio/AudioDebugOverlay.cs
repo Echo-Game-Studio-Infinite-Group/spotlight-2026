@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class AudioDebugOverlay : MonoBehaviour
@@ -56,8 +57,12 @@ public sealed class AudioDebugOverlay : MonoBehaviour
         for (int i = 0; i < wwiseDrivers.Length; i++)
         {
             WwiseActionDriver driver = wwiseDrivers[i];
-            DrawWwiseSnapshot(driver.SlideDebug, ref visible);
-            DrawWwiseSnapshot(driver.WallSlideDebug, ref visible);
+            IReadOnlyList<WwiseActionDriver.DebugSnapshot> snapshots =
+                driver.DebugSnapshots;
+            for (int j = 0; j < snapshots.Count; j++)
+            {
+                DrawWwiseSnapshot(snapshots[j], ref visible);
+            }
         }
 
         if (visible == 0) GUILayout.Label("no active action voice", _label);

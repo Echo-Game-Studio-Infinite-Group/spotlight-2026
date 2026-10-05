@@ -92,6 +92,8 @@ public sealed class AudioSystem : MonoBehaviour
         if (motor == null) return;
         _driver = motor.gameObject.GetComponent<PlayerAudioDriver>();
         if (_driver == null) _driver = motor.gameObject.AddComponent<PlayerAudioDriver>();
+        if (motor.gameObject.GetComponent<PlayerDynamicAudioActionSource>() == null)
+            motor.gameObject.AddComponent<PlayerDynamicAudioActionSource>();
         if (motor.gameObject.GetComponent<WwiseActionDriver>() == null)
             motor.gameObject.AddComponent<WwiseActionDriver>();
         PlayerInputReader input = motor.GetComponent<PlayerInputReader>();

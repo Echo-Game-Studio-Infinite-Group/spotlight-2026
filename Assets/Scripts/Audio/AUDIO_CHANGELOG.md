@@ -1417,6 +1417,46 @@ Unity.exe -batchmode -nographics `
 
 本次仍未 commit。
 
+## 2026-10-06：Slide / WallSlide Adapter 接入
+
+- `WwiseActionDriver` 已改为按 `ActionId` 管理通用 channel 池。
+- 新增 `PlayerDynamicAudioActionSource`，读取现有 `PlayerMotor` 状态并上报：
+  ```text
+  slide
+  wall_slide
+  ```
+- `PlayerMotor`、战斗、Character、动画和模型无需新增音频依赖。
+- `WwiseActionBindings` 通过 `ActionId` 查找 definition、Event 和源文件。
+- `WwiseActionPcmRenderer` 增加 `RequestStop(...)`，支持：
+  ```text
+  Release
+  Immediate
+  FinishCurrentLoop
+  PlayFullOnce
+  ```
+- 接口规范文档：
+  ```text
+  Docs/Audio/DynamicAudioActionInterface.md
+  ```
+
+烟测通过：
+
+```text
+Wwise action preview passed: Slide
+Wwise action preview passed: WallSlide
+Wwise action preview passed: UnboundAutoSource
+Wwise action preview passed: AfterEngineReset
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+日志：
+
+```text
+Logs/wwise-adapter-interface-2.log
+```
+
+本次仍未 commit。
+
 ## 2026-10-06：动态动作接口与曲线清理
 
 新增动态动作上报契约：

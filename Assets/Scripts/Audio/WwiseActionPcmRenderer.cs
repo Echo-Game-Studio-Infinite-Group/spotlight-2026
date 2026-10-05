@@ -218,6 +218,36 @@ public sealed class WwiseActionPcmRenderer
         }
     }
 
+    public void RequestStop(DynamicAudioActionStopMode stopMode)
+    {
+        switch (stopMode)
+        {
+            case DynamicAudioActionStopMode.Immediate:
+                _releasePending = false;
+                _state = RenderState.Finished;
+                break;
+
+            case DynamicAudioActionStopMode.PlayFullOnce:
+                if (_state == RenderState.Finished || _playFullOnce)
+                {
+                    return;
+                }
+                _playFullOnce = true;
+                BeginRelease(
+                    Mathf.Clamp(
+                        Mathf.RoundToInt((float)_sourceRead),
+                        0,
+                        _totalFrames - 1));
+                break;
+
+            case DynamicAudioActionStopMode.FinishCurrentLoop:
+            case DynamicAudioActionStopMode.Release:
+            default:
+                RequestRelease();
+                break;
+        }
+    }
+
     public int Render(float[] interleavedOutput, int frames)
     {
         if (interleavedOutput == null ||

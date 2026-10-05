@@ -1,12 +1,13 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using UnityEngine;
 
 /// <summary>
-/// Owns the Unity-side continuous action renderers and feeds their PCM into
-/// the thin Wwise transport plugin. One channel handles slide, another handles
-/// wall slide, so their lifecycles do not overwrite each other.
+/// Consumes DynamicAudioActionRequest values and routes each ActionId to one
+/// Unity-rendered PCM voice. Wwise remains a transport and bus layer only.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class WwiseActionDriver : MonoBehaviour
@@ -21,13 +22,13 @@ public sealed class WwiseActionDriver : MonoBehaviour
 
     private sealed class Channel
     {
+        public string ActionId;
         public WwiseActionBindings.Entry Binding;
         public WwiseActionPcmRenderer Renderer;
         public float[] PcmScratch;
         public GameObject Emitter;
         public uint VoiceId;
         public uint PlayingId = AkUnitySoundEngine.AK_INVALID_PLAYING_ID;
-        public bool LastActive;
         public float Elapsed;
         public float NormalizedSpeed;
         public float ContactIntensity;
@@ -49,121 +50,142 @@ public sealed class WwiseActionDriver : MonoBehaviour
         public float EnvelopeGain;
     }
 
-    private PlayerAudioDriver _audioDriver;
-    private PlayerMotor _motor;
+    private readonly Dictionary<string, Channel> _channels =
+        new Dictionary<string, Channel>(StringComparer.Ordinal);
+    private readonly List<IDynamicAudioActionSource> _sources =
+        new List<IDynamicAudioActionSource>();
+    private readonly List<DynamicAudioActionRequest> _requests =
+        new List<DynamicAudioActionRequest>();
+    private readonly List<DebugSnapshot> _debugSnapshots =
+        new List<DebugSnapshot>();
+
     private WwiseActionBindings _bindings;
-    private readonly Channel _slide = new Channel();
-    private readonly Channel _wallSlide = new Channel();
     private bool _bankLoaded;
 
-    public bool HasActiveAction =>
-        _slide.Renderer != null || _wallSlide.Renderer != null;
-
-    public DebugSnapshot SlideDebug =>
-        BuildDebug(_slide, "Slide");
-
-    public DebugSnapshot WallSlideDebug =>
-        BuildDebug(_wallSlide, "Wall Slide");
+    public IReadOnlyList<DebugSnapshot> DebugSnapshots =>
+        _debugSnapshots;
 
     private void Awake()
     {
-        _audioDriver = GetComponent<PlayerAudioDriver>();
-        _motor = GetComponent<PlayerMotor>();
-        _bindings = Resources.Load<WwiseActionBindings>(BindingsResourcePath);
-        _slide.Binding = _bindings != null && _audioDriver != null
-            ? _bindings.Find(_audioDriver.SlideAction)
-            : null;
-        _wallSlide.Binding = _bindings != null && _audioDriver != null
-            ? _bindings.Find(_audioDriver.WallSlideAction)
-            : null;
-
+        _bindings = Resources.Load<WwiseActionBindings>(
+            BindingsResourcePath);
         if (GetComponent<AkGameObj>() == null)
         {
             gameObject.AddComponent<AkGameObj>();
         }
 
+        DiscoverSources();
         StartCoroutine(EnsureBankLoaded());
     }
 
     private void Update()
     {
-        if (_motor == null ||
-            !_bankLoaded ||
-            !AkUnitySoundEngine.IsInitialized())
+        if (!_bankLoaded || !AkUnitySoundEngine.IsInitialized())
         {
             return;
         }
 
-        float speed01 = NormalizedSpeed();
-        UpdateChannel(
-            _slide,
-            _audioDriver != null ? _audioDriver.SlideAction : null,
-            _motor.IsSliding,
-            speed01,
-            1f);
-        UpdateChannel(
-            _wallSlide,
-            _audioDriver != null ? _audioDriver.WallSlideAction : null,
-            _motor.IsWallSliding,
-            speed01,
-            Mathf.Clamp01(_motor.WallApproachAngle / 90f));
+        if (_sources.Count == 0)
+        {
+            DiscoverSources();
+        }
+
+        CollectRequests();
+        for (int i = 0; i < _requests.Count; i++)
+        {
+            HandleRequest(_requests[i]);
+        }
+
+        float deltaTime = TimeManager.UnscaledDeltaTime;
+        foreach (Channel channel in _channels.Values)
+        {
+            TickChannel(channel, deltaTime);
+        }
+
+        RebuildDebugSnapshots();
     }
 
-    private void UpdateChannel(
-        Channel channel,
-        AudioActionDefinition definition,
-        bool active,
-        float normalizedSpeed,
-        float contactIntensity)
+    private void DiscoverSources()
     {
-        channel.NormalizedSpeed = Mathf.Clamp01(normalizedSpeed);
-        channel.ContactIntensity = Mathf.Clamp01(contactIntensity);
-
-        if (active && !channel.LastActive)
+        _sources.Clear();
+        MonoBehaviour[] behaviours =
+            GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
         {
-            StartChannel(channel, definition);
-        }
-        else if (!active && channel.LastActive)
-        {
-            StopChannel(channel);
-        }
-
-        if (channel.Renderer != null)
-        {
-            channel.Elapsed += TimeManager.UnscaledDeltaTime;
-            UpdateEnvelopeState(channel, definition);
-            PumpPcm(channel, TargetBufferSeconds);
-
-            if (channel.Renderer.IsFinished &&
-                WwisePcmBridge.GetAvailableFrames(channel.VoiceId) == 0)
+            if (behaviours[i] is IDynamicAudioActionSource source)
             {
-                ReleaseChannel(channel);
+                _sources.Add(source);
             }
         }
+    }
 
-        channel.LastActive = active;
+    private void CollectRequests()
+    {
+        _requests.Clear();
+        for (int i = 0; i < _sources.Count; i++)
+        {
+            _sources[i]?.CollectDynamicAudioActions(_requests);
+        }
+    }
+
+    private void HandleRequest(in DynamicAudioActionRequest request)
+    {
+        if (string.IsNullOrEmpty(request.ActionId))
+        {
+            return;
+        }
+
+        if (!_channels.TryGetValue(request.ActionId, out Channel channel))
+        {
+            channel = new Channel { ActionId = request.ActionId };
+            _channels.Add(request.ActionId, channel);
+        }
+
+        if (channel.Binding == null)
+        {
+            channel.Binding = _bindings != null
+                ? _bindings.Find(request.ActionId)
+                : null;
+        }
+
+        if (request.Phase == DynamicAudioActionPhase.Stop)
+        {
+            StopChannel(channel, request.StopMode);
+            return;
+        }
+
+        if (channel.Renderer == null)
+        {
+            StartChannel(channel, request);
+        }
+
+        channel.NormalizedSpeed = request.NormalizedSpeed;
+        channel.ContactIntensity = request.ContactIntensity;
     }
 
     private void StartChannel(
-        Channel channel, AudioActionDefinition definition)
+        Channel channel, in DynamicAudioActionRequest request)
     {
         if (channel.Binding == null ||
             string.IsNullOrEmpty(channel.Binding.PlayEvent) ||
-            definition == null)
+            channel.Binding.Definition == null)
         {
             return;
         }
 
         ReleaseChannel(channel);
         channel.Renderer = new WwiseActionPcmRenderer();
-        int seed = System.Environment.TickCount ^ GetInstanceID();
+        int seed = request.Seed != 0
+            ? request.Seed
+            : Environment.TickCount ^ GetInstanceID();
         if (!channel.Renderer.Begin(
-                definition,
+                channel.Binding.Definition,
                 channel.Binding.SourceRelativePath,
                 seed,
                 out string error))
         {
-            Debug.LogError($"Wwise PCM renderer failed: {error}");
+            Debug.LogError(
+                $"Wwise PCM renderer failed for {channel.ActionId}: {error}");
             channel.Renderer = null;
             return;
         }
@@ -177,7 +199,8 @@ public sealed class WwiseActionDriver : MonoBehaviour
                 channel.Renderer.SampleRate,
                 out error))
         {
-            Debug.LogError($"Wwise PCM bridge create failed: {error}");
+            Debug.LogError(
+                $"Wwise PCM bridge create failed for {channel.ActionId}: {error}");
             ReleaseChannel(channel);
             return;
         }
@@ -185,11 +208,10 @@ public sealed class WwiseActionDriver : MonoBehaviour
         channel.PcmScratch =
             new float[ChunkFrames * channel.Renderer.Channels];
         channel.Emitter = new GameObject(
-            channel.Binding.Definition != null
-                ? $"{channel.Binding.Definition.name}_WwiseEmitter"
-                : "Action_WwiseEmitter");
+            $"{channel.ActionId}_WwiseEmitter");
         channel.Emitter.transform.SetParent(transform, false);
         channel.Emitter.AddComponent<AkGameObj>();
+
         channel.Elapsed = 0f;
         channel.EnvelopeGain = 0f;
         channel.ReleaseRequested = false;
@@ -197,6 +219,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
         channel.ReleaseElapsed = 0f;
         channel.ReleaseStartLevel = 0f;
         channel.ReleaseDuration = 0f;
+
         PumpPcm(channel, PreRollSeconds);
         SendVoiceInfo(channel);
         channel.PlayingId = AkUnitySoundEngine.PostEvent(
@@ -204,14 +227,34 @@ public sealed class WwiseActionDriver : MonoBehaviour
             channel.Emitter);
     }
 
-    private void StopChannel(Channel channel)
+    private void TickChannel(Channel channel, float deltaTime)
+    {
+        if (channel.Renderer == null)
+        {
+            return;
+        }
+
+        channel.Elapsed += Mathf.Max(0f, deltaTime);
+        UpdateEnvelopeState(channel, channel.Binding.Definition);
+        PumpPcm(channel, TargetBufferSeconds);
+
+        if (channel.Renderer.IsFinished &&
+            WwisePcmBridge.GetAvailableFrames(channel.VoiceId) == 0)
+        {
+            ReleaseChannel(channel);
+        }
+    }
+
+    private void StopChannel(
+        Channel channel, DynamicAudioActionStopMode stopMode)
     {
         if (channel.Renderer == null) return;
+
         channel.ReleaseRequested = true;
         channel.ReleaseAudioStarted = false;
         channel.ReleaseElapsed = 0f;
         channel.ReleaseStartLevel = channel.EnvelopeGain;
-        channel.Renderer.RequestRelease();
+        channel.Renderer.RequestStop(stopMode);
     }
 
     private void PumpPcm(Channel channel, float minimumBufferedSeconds)
@@ -267,38 +310,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
         }
     }
 
-    private void ReleaseChannel(Channel channel)
-    {
-        if (channel.PlayingId != AkUnitySoundEngine.AK_INVALID_PLAYING_ID &&
-            AkUnitySoundEngine.IsInitialized())
-        {
-            AkUnitySoundEngine.StopPlayingID(channel.PlayingId);
-        }
-
-        if (channel.VoiceId != 0)
-        {
-            WwisePcmBridge.MarkFinished(channel.VoiceId);
-            WwisePcmBridge.DestroyVoice(channel.VoiceId);
-        }
-
-        channel.PlayingId = AkUnitySoundEngine.AK_INVALID_PLAYING_ID;
-        channel.VoiceId = 0;
-        channel.PcmScratch = null;
-        if (channel.Emitter != null)
-        {
-            Destroy(channel.Emitter);
-            channel.Emitter = null;
-        }
-        channel.Renderer = null;
-        channel.Elapsed = 0f;
-        channel.EnvelopeGain = 0f;
-        channel.ReleaseRequested = false;
-        channel.ReleaseAudioStarted = false;
-        channel.ReleaseElapsed = 0f;
-        channel.ReleaseStartLevel = 0f;
-        channel.ReleaseDuration = 0f;
-    }
-
     private static void UpdateEnvelopeState(
         Channel channel, AudioActionDefinition definition)
     {
@@ -331,48 +342,79 @@ public sealed class WwiseActionDriver : MonoBehaviour
         }
     }
 
-    private DebugSnapshot BuildDebug(Channel channel, string name)
+    private void ReleaseChannel(Channel channel)
     {
-        return new DebugSnapshot
+        if (channel == null) return;
+
+        if (channel.PlayingId != AkUnitySoundEngine.AK_INVALID_PLAYING_ID &&
+            AkUnitySoundEngine.IsInitialized())
         {
-            Active = channel.Renderer != null,
-            Name = name,
-            State = channel.Renderer == null
-                ? "Idle"
-                : channel.ReleaseRequested
-                    ? "Release"
-                    : channel.Renderer.Definition.LoopsWhileHeld &&
-                      channel.Elapsed >= channel.Renderer.IntroSeconds
-                        ? "Sustain"
-                        : "Start",
-            Elapsed = channel.Elapsed,
-            NormalizedSpeed = channel.NormalizedSpeed,
-            EnvelopeGain = channel.EnvelopeGain
-        };
+            AkUnitySoundEngine.StopPlayingID(channel.PlayingId);
+        }
+
+        if (channel.VoiceId != 0)
+        {
+            WwisePcmBridge.MarkFinished(channel.VoiceId);
+            WwisePcmBridge.DestroyVoice(channel.VoiceId);
+        }
+
+        channel.PlayingId = AkUnitySoundEngine.AK_INVALID_PLAYING_ID;
+        channel.VoiceId = 0;
+        channel.PcmScratch = null;
+        if (channel.Emitter != null)
+        {
+            Destroy(channel.Emitter);
+            channel.Emitter = null;
+        }
+        channel.Renderer = null;
+        channel.Elapsed = 0f;
+        channel.EnvelopeGain = 0f;
+        channel.ReleaseRequested = false;
+        channel.ReleaseAudioStarted = false;
+        channel.ReleaseElapsed = 0f;
+        channel.ReleaseStartLevel = 0f;
+        channel.ReleaseDuration = 0f;
     }
 
-    private float NormalizedSpeed()
+    private void RebuildDebugSnapshots()
     {
-        float threshold = _motor.Params != null &&
-                          _motor.Params.GroundSpeedThreshold > 0f
-            ? _motor.Params.GroundSpeedThreshold
-            : 10f;
-        return Mathf.Clamp01(
-            _motor.HorizontalSpeed / Mathf.Max(1f, threshold * 3f));
+        _debugSnapshots.Clear();
+        foreach (KeyValuePair<string, Channel> pair in _channels)
+        {
+            Channel channel = pair.Value;
+            if (channel.Renderer == null) continue;
+            _debugSnapshots.Add(new DebugSnapshot
+            {
+                Active = true,
+                Name = channel.ActionId,
+                State = channel.ReleaseRequested
+                    ? "Release"
+                    : channel.Renderer.LoopEntered
+                        ? "Sustain"
+                        : "Start",
+                Elapsed = channel.Elapsed,
+                NormalizedSpeed = channel.NormalizedSpeed,
+                EnvelopeGain = channel.EnvelopeGain
+            });
+        }
     }
 
     private void OnDisable()
     {
-        ReleaseChannel(_slide);
-        ReleaseChannel(_wallSlide);
-        _slide.LastActive = false;
-        _wallSlide.LastActive = false;
+        foreach (Channel channel in _channels.Values)
+        {
+            ReleaseChannel(channel);
+        }
+        _debugSnapshots.Clear();
     }
 
     private void OnDestroy()
     {
-        ReleaseChannel(_slide);
-        ReleaseChannel(_wallSlide);
+        foreach (Channel channel in _channels.Values)
+        {
+            ReleaseChannel(channel);
+        }
+        _channels.Clear();
         if (_bankLoaded)
         {
             AkBankManager.UnloadBank(DynamicActionBankName);
