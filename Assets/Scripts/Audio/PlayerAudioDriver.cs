@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -13,16 +12,11 @@ public sealed class PlayerAudioDriver : MonoBehaviour
     private PlayerAudioProfile _fallbackProfile;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
-    private PlayerHealth _health;
     private AudioActionHandle _slideHandle;
     private AudioActionHandle _wallHandle;
-    private readonly HashSet<Damageable> _trackedDamageables = new HashSet<Damageable>();
     private float _slideTime;
     private float _wallTime;
     private float _stepDistance;
-    private float _damageScanTimer;
-    private float _lastHitTime = float.NegativeInfinity;
-    private float _lastHealth;
     private bool _lastSliding;
     private bool _lastWallSliding;
     private bool _lastGrounded;
@@ -56,8 +50,6 @@ public sealed class PlayerAudioDriver : MonoBehaviour
     {
         _motor = GetComponent<PlayerMotor>();
         _combat = GetComponent<PlayerCombat>();
-        _health = GetComponent<PlayerHealth>();
-        if (_health != null) _lastHealth = _health.Health;
         if (_motor != null)
         {
             _lastGrounded = _motor.IsGrounded;
@@ -73,9 +65,6 @@ public sealed class PlayerAudioDriver : MonoBehaviour
             _motor.Teleported -= OnTeleported;
             _motor.WallCollision -= OnWallCollision;
         }
-        foreach (Damageable damageable in _trackedDamageables)
-            if (damageable != null) damageable.Damaged -= OnDamageableDamaged;
-        _trackedDamageables.Clear();
         if (_fallbackProfile != null)
         {
             Destroy(_fallbackProfile);
@@ -98,8 +87,6 @@ public sealed class PlayerAudioDriver : MonoBehaviour
         UpdateAttack();
         UpdateHitStopGlitch();
         UpdateFootsteps(dt);
-        UpdateHealth();
-        RefreshDamageables(dt);
     }
 
     private void UpdateSpeed()
@@ -179,7 +166,10 @@ public sealed class PlayerAudioDriver : MonoBehaviour
 
     private void UpdateHitStopGlitch()
     {
-        bool hitStop = TimeManager.InHitStop;
+        // dev 精简 TimeManager 后没有 InHitStop 了。
+        // HitStop() 会把 World + Player 两层一起压到 HitStopRateValue(默认 0.05)，
+        // 普通慢动作是 0.75，时间停止只压 World 层，所以用 PlayerRate 深压作为判据。
+        bool hitStop = TimeManager.PlayerRate <= 0.2f;
         if (hitStop && !_lastHitStop) _audio.TriggerGlitch(transform.position, 0.85f, 0.065f);
         _lastHitStop = hitStop;
     }
@@ -216,41 +206,6 @@ public sealed class PlayerAudioDriver : MonoBehaviour
         if (cue == null || !cue.HasClips) return;
         float volume = landing ? -1.5f : -4f;
         _audio.PlaySfx(cue, transform, volume);
-    }
-
-    private void UpdateHealth()
-    {
-        if (_health == null) return;
-        if (_health.Health + 0.001f < _lastHealth)
-        {
-            _audio.PlaySfx(Profile.Hurt, transform, -2f);
-            _audio.TriggerGlitch(transform.position, 0.55f, 0.06f);
-        }
-        _lastHealth = _health.Health;
-    }
-
-    private void RefreshDamageables(float deltaTime)
-    {
-        _damageScanTimer -= deltaTime;
-        if (_damageScanTimer > 0f) return;
-        _damageScanTimer = 1f;
-        Damageable[] found = FindObjectsOfType<Damageable>(false);
-        for (int i = 0; i < found.Length; i++)
-        {
-            Damageable damageable = found[i];
-            if (damageable == null || _trackedDamageables.Contains(damageable)) continue;
-            _trackedDamageables.Add(damageable);
-            damageable.Damaged += OnDamageableDamaged;
-        }
-    }
-
-    private void OnDamageableDamaged(Damageable damageable, float amount)
-    {
-        if (TimeManager.UnscaledTime - _lastHitTime < 0.045f) return;
-        _lastHitTime = TimeManager.UnscaledTime;
-        Vector3 position = damageable != null ? damageable.transform.position : transform.position;
-            _audio.PlaySfx(Profile.Hit, position, -3f);
-        if (amount >= 20f) _audio.TriggerGlitch(position, 0.75f, 0.08f);
     }
 
     private void OnWallCollision(WallContact contact)
