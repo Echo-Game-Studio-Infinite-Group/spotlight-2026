@@ -707,9 +707,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1549752696}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &529348802
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -835,9 +832,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1883966007}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &623105242
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1307,6 +1301,7 @@ GameObject:
   - component: {fileID: 1057899998}
   - component: {fileID: 1057899997}
   - component: {fileID: 7700110000000000001}
+  - component: {fileID: 8800220000000000001}
   m_Layer: 0
   m_Name: EnemyTest (5)
   m_TagString: Untagged
@@ -1456,9 +1451,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -1468,7 +1461,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 976650858}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -1914,6 +1906,7 @@ GameObject:
   - component: {fileID: 1144092143}
   - component: {fileID: 1144092142}
   - component: {fileID: 7700110000000000002}
+  - component: {fileID: 8800220000000000002}
   m_Layer: 0
   m_Name: EnemyTest (3)
   m_TagString: Untagged
@@ -2063,9 +2056,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -2075,7 +2066,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 1361423359}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -2273,9 +2263,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1383363932}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &1165254797
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2686,6 +2673,7 @@ GameObject:
   - component: {fileID: 1383363929}
   - component: {fileID: 1383363928}
   - component: {fileID: 7700110000000000003}
+  - component: {fileID: 8800220000000000003}
   m_Layer: 0
   m_Name: EnemyTest (4)
   m_TagString: Untagged
@@ -2835,9 +2823,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -2847,7 +2833,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 318055743}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -3105,6 +3090,7 @@ GameObject:
   - component: {fileID: 1522442435}
   - component: {fileID: 1522442436}
   - component: {fileID: 7700110000000000004}
+  - component: {fileID: 8800220000000000004}
   m_Layer: 0
   m_Name: EnemyTest
   m_TagString: Untagged
@@ -3142,9 +3128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 7700110000000000004}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -3154,7 +3138,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 271706128}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -3410,6 +3393,7 @@ GameObject:
   - component: {fileID: 1549752693}
   - component: {fileID: 1549752692}
   - component: {fileID: 7700110000000000005}
+  - component: {fileID: 8800220000000000005}
   m_Layer: 0
   m_Name: EnemyTest (2)
   m_TagString: Untagged
@@ -3559,9 +3543,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -3571,7 +3553,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 1214954861}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -3641,9 +3622,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1057900001}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &1623264404
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -3769,9 +3747,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1144092146}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &1682355864
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4052,6 +4027,7 @@ GameObject:
   - component: {fileID: 1883966004}
   - component: {fileID: 1883966003}
   - component: {fileID: 7700110000000000006}
+  - component: {fileID: 8800220000000000006}
   m_Layer: 0
   m_Name: EnemyTest (1)
   m_TagString: Untagged
@@ -4201,9 +4177,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.1
-  _attackPower: 8
+  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -4213,7 +4187,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _attackCooldown: 1.1
   _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 484677237}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
@@ -4513,9 +4486,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 1522442432}
-  player: {fileID: 0}
-  campType: 1
 --- !u!54 &2017034641
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4742,17 +4712,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: adf3383bb0876c74ea8547424df10f59, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &8869678147187144729 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3277439423563062544, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
-  m_PrefabInstance: {fileID: 6227528867191727369}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cfac1f4fe7eda8141b89ee1c5a7551c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &7700110000000000001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4837,6 +4796,125 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _maxHealth: 100
   _invulnerableTime: 0.1
+--- !u!114 &8800220000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1057899996}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1144092141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1383363927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1522442430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1549752691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1883966002}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8869678147187144729 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3277439423563062544, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+  m_PrefabInstance: {fileID: 6227528867191727369}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfac1f4fe7eda8141b89ee1c5a7551c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

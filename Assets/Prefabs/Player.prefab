@@ -21868,11 +21868,11 @@ GameObject:
   - component: {fileID: 2065041283254902871}
   - component: {fileID: 7914500188541957443}
   - component: {fileID: 4665384076844296193}
-  - component: {fileID: 4834941603897702600}
   - component: {fileID: 2066287590154686313}
   - component: {fileID: 61113850465615520}
   - component: {fileID: 6112233445566778900}
   - component: {fileID: 6112233445566778899}
+  - component: {fileID: 6112233445566778901}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -22131,26 +22131,6 @@ MonoBehaviour:
   m_IgnoreFromBuild: 1
   m_ApplyToChildren: 1
   m_AffectedAgents: ffffffff
---- !u!114 &4834941603897702600
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7e7f2e285bd94f1a9c28cda10ed9b9fa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _target: {fileID: 7588622732077400848}
-  _wallMaterial: {fileID: 2100000, guid: 854a649763aba2c46b5fc737bf27e677, type: 2}
-  _occludedAlpha: 0.2
-  _fadeSpeed: 8
-  _probeRadius: 0.1
-  _wallLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
 --- !u!114 &2066287590154686313
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22518,3 +22498,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _motor: {fileID: 90014127479559784}
   _health: {fileID: 6112233445566778900}
+--- !u!114 &6112233445566778901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 0
+  _damage: 25
+  _cooldown: 0.35
+  _windowSeconds: 1.6
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}

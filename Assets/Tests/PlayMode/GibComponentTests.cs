@@ -162,10 +162,13 @@ public sealed class GibComponentTests
     [UnityTest]
     public IEnumerator DeathGate_OneRoll_AnimatedLower_AndReset()
     {
-        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/AnimTestScene.unity",
+        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/TestScene.unity",
             new LoadSceneParameters(LoadSceneMode.Single));
-        var gib = Object.FindObjectOfType<GibComponent>();
-        var enemy = gib.GetComponent<Enemy>();
+        // 显式挑装配完整的敌人：另一个敌人的 GibComponent 没接腰斩骨骼，随机拿到它就会红。
+        var enemy = PlayModeSceneSupport.FindRiggedEnemy();
+        Assert.NotNull(enemy, "TestScene 里没有挂 humanoid avatar 的敌人，腰斩断言无从谈起");
+        var gib = enemy.GetComponent<GibComponent>();
+        Assert.NotNull(gib, "被挑中的敌人身上必须有 GibComponent");
         enemy.SetChasePlayer(false);
         enemy.SetInvulnerableTime(0f);
         enemy.SetDamagePopup(null);

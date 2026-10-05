@@ -1,11 +1,7 @@
 using GameJam.Actions;
 using UnityEngine;
 
-// 玩家的场景级注册点：只回答「当前场景的玩家在哪」这一个问题，不做任何数值转发。
-// 随场景生灭，刻意不是 DontDestroyOnLoad —— 换场景就该重建，
-// 这也是它不塞进 GameManager 的原因：跨场景对象持有场景对象就是悬空引用。
-// 惰性解析的写法与 TimeManager.Resolve() 一致：Awake 不保证跑过
-// （编辑模式的装配工具与自检用 AddComponent 建实例时不会触发），静态入口必须自己兜底。
+// 最终还是决定将玩家从GameManager拆为单独单列
 [DefaultExecutionOrder(-90)]
 [DisallowMultipleComponent]
 public sealed class Player : MonoBehaviour
@@ -22,10 +18,10 @@ public sealed class Player : MonoBehaviour
         }
     }
 
-    // 序列化字段优先，为空时在同一物体上兜底。玩家根节点上这几个组件是强制的，
-    // 兜底只是不让「忘了拖」变成运行时静默失效。
-    [SerializeField] private PlayerMotor _motor;
-    [SerializeField] private HealthComponent _health;
+    // 引用不进序列化：这两个组件必须在玩家根节点上，GetComponent 就能查到。
+    // 摆进 Inspector 只会给"拖错对象 / 漏拖"留机会，而它们本来也没有第二个合法选择。
+    private PlayerMotor _motor;
+    private HealthComponent _health;
 
     private PlayerActionRunner _runner;
 

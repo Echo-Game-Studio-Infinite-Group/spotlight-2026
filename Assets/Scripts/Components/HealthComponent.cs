@@ -3,8 +3,6 @@ using UnityEngine;
 
 // 可挂到任意实体的血量：玩家和敌人共用同一份规则，无敌帧语义不会各自漂移。
 // 只管「数值 + 无敌帧」；死了之后干什么由持有者决定，本组件不反向认识战斗或动作系统。
-// 敌人的死亡表现与 hitDirection 强绑定（要按方向切 Gib），留在 Enemy.TakeDamage 里更直接；
-// 玩家的死亡通知是真正跨系统的，由订阅 Died / Revived 的一方处理。
 [DisallowMultipleComponent]
 public sealed class HealthComponent : MonoBehaviour
 {
@@ -22,14 +20,17 @@ public sealed class HealthComponent : MonoBehaviour
     public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
     public float InvulnerableTime => _invulnerableTime;
 
-    // 低频事件：血条刷新、死亡表现、音效、任务判定。
+    // 低频事件：血条刷新、伤害跳字、死亡表现、音效、任务判定。
     // 每帧轮询的读路径（HUD、AI 判死）直接读 Health / IsAlive，不要走事件。
-    public event Action<HealthComponent, float> Damaged;   // 参数：自己、实际扣掉的血
+    /// <summary>参数：自己、实际扣掉的血、命中点、命中方向。</summary>
+    public event Action<HealthComponent, float, Vector3, Vector3> Damaged;
     public event Action<HealthComponent> Died;
     public event Action<HealthComponent> Revived;
 
+    public float TakeDamage(float amount) => TakeDamage(amount, Vector3.zero, Vector3.zero);
+
     /// <summary>返回实际扣掉的血；被无敌帧、已死亡或非正伤害挡下时返回 0。</summary>
-    public float TakeDamage(float amount)
+    public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
     {
         EnsureStarted();
         if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
@@ -39,7 +40,8 @@ public sealed class HealthComponent : MonoBehaviour
         // 所有受击入口共享无敌帧，避免同一帧被多个碰撞体重复扣血。
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
 
-        Damaged?.Invoke(this, applied);
+        // 先报 Damaged：订阅者要在这里完成跳字与死亡表现（它需要命中点与方向）。
+        Damaged?.Invoke(this, applied, hitPoint, hitDirection);
         if (!IsAlive) Died?.Invoke(this);
         return applied;
     }

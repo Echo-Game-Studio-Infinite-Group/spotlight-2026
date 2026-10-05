@@ -23,9 +23,9 @@ public sealed class EnemyAnimationTests
     }
 
     [UnityTest]
-    public IEnumerator BothScenes_BakedEnemiesActuallyChase()
+    public IEnumerator BakedEnemiesActuallyChase()
     {
-        foreach (string scene in new[] { "AnimTestScene", "TestScene" })
+        foreach (string scene in new[] { "TestScene" })
         {
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode($"Assets/Scenes/{scene}.unity",
                 new LoadSceneParameters(LoadSceneMode.Single));
@@ -143,8 +143,9 @@ public sealed class EnemyAnimationTests
     [UnityTest]
     public IEnumerator Scene_Locomotion_Thresholds_Chase_Hitbox_Death()
     {
-        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/AnimTestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
-        var enemy = Object.FindObjectOfType<Enemy>();
+        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/TestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
+        var enemy = PlayModeSceneSupport.FindRiggedEnemy();
+        Assert.NotNull(enemy, "TestScene 里没有挂 humanoid avatar 的敌人，动画断言无从谈起");
         var player = Object.FindObjectOfType<PlayerMotor>();
         var playerHealth = player.GetComponent<HealthComponent>();
         var animator = enemy.GetComponentInChildren<Animator>();
@@ -159,8 +160,9 @@ public sealed class EnemyAnimationTests
         yield return new WaitForSeconds(.6f);
         enemy.enabled = false;
         enemy.SetInvulnerableTime(0);
-        Assert.AreEqual(2, enemy.WalkSpeed);
-        Assert.AreEqual(5, enemy.RunSpeed);
+        // 不再断言具体数值：那是场景配置，换了场景就该跟着变。
+        // 这里只锁住「跑得比走得快」这条不变量，阈值断言的数值由场景自己提供。
+        Assert.Greater(enemy.RunSpeed, enemy.WalkSpeed);
         Assert.IsFalse(hitbox.GetComponent<Collider>().enabled);
         var speed = typeof(Enemy).GetField("<Speed>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
         foreach (var test in new[]{(0f,"Idle"),(2f,"Walk"),(5f,"RunFast")})
@@ -170,10 +172,13 @@ public sealed class EnemyAnimationTests
             Assert.AreEqual(test.Item1, animator.GetFloat("Speed"), .05f);
             Assert.IsTrue(animator.GetCurrentAnimatorClipInfo(0).Any(c=>c.clip.name==test.Item2 && c.weight>.95f), test.Item2);
         }
-        enemy.TakeDamage(70, enemy.transform.position, Vector3.zero);
+        // 受伤阈值是按比例的（HealthRatio < 0.3），伤害值不能写死——换场景尺寸就对不上了。
+        // 打到恰好落在阈值上：这一格算健康，再掉 1 点才转受伤。
+        float healthy = enemy.MaxHealth * 0.3f;
+        enemy.TakeDamage(enemy.MaxHealth - healthy, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(.6f);
-        Assert.AreEqual(30, animator.GetFloat("Hp"));
-        Assert.AreEqual(0f, animator.GetFloat("Injured"), "30% is healthy");
+        Assert.AreEqual(healthy, animator.GetFloat("Hp"), .05f);
+        Assert.AreEqual(0f, animator.GetFloat("Injured"), "恰好落在阈值上算健康");
         enemy.TakeDamage(1, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(1.3f);
         foreach (var test in new[]{(0f,"IdleInjured"),(2f,"WalkInjured"),(5f,"RunInjured")})
@@ -206,8 +211,8 @@ public sealed class EnemyAnimationTests
         float deadline=Time.realtimeSinceStartup+5;
         while(!enemy.IsAttacking && Time.realtimeSinceStartup<deadline)
         {
-            ran |= Mathf.Abs(enemy.Speed-5)<.05f;
-            walked |= Mathf.Abs(enemy.Speed-2)<.05f;
+            ran |= Mathf.Abs(enemy.Speed - enemy.RunSpeed)<.05f;
+            walked |= Mathf.Abs(enemy.Speed - enemy.WalkSpeed)<.05f;
             yield return new WaitForFixedUpdate();
         }
         Assert.IsTrue(ran,"far chase runs");

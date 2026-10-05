@@ -988,6 +988,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfac1f4fe7eda8141b89ee1c5a7551c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &363306594 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -3125291821611513299, guid: 9b16682522fd6e4448a923757f5fe5ce, type: 3}
+  m_PrefabInstance: {fileID: 153710331}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &398992679
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1661,6 +1666,7 @@ GameObject:
   - component: {fileID: 1136354515}
   - component: {fileID: 1136354517}
   - component: {fileID: 7700110000000000007}
+  - component: {fileID: 8800220000000000007}
   m_Layer: 0
   m_Name: MikuGandam
   m_TagString: Untagged
@@ -1773,8 +1779,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
   _deathChance: 1
-  _waist: {fileID: 1496993151}
-  _waistOffset: 0.08
+  _waist: {fileID: 363306594}
+  _waistOffset: 0
   _fallbackHeight: 0.55
   _cutColor: {r: 0.4792453, g: 0.4792453, b: 0.4792453, a: 1}
   _edgeWidth: 0.015
@@ -1853,11 +1859,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
---- !u!4 &1496993151 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -6689986086835972215, guid: 9b16682522fd6e4448a923757f5fe5ce, type: 3}
-  m_PrefabInstance: {fileID: 153710331}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1569572957
 GameObject:
   m_ObjectHideFlags: 0
@@ -1873,6 +1874,7 @@ GameObject:
   - component: {fileID: 1569572962}
   - component: {fileID: 1569572963}
   - component: {fileID: 7700110000000000008}
+  - component: {fileID: 8800220000000000008}
   m_Layer: 0
   m_Name: Miku
   m_TagString: Untagged
@@ -2396,6 +2398,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _maxHealth: 120
   _invulnerableTime: 0.1
+--- !u!114 &8800220000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1136354511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
+--- !u!114 &8800220000000000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1569572957}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 1
+  _damage: 8
+  _cooldown: 1.1
+  _windowSeconds: 0
+  _hitbox: {fileID: 0}
+  _self: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
