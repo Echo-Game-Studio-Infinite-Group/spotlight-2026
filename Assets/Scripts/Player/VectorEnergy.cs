@@ -13,7 +13,7 @@ public interface IEnergyAccount
 }
 
 // 矢量转换器能量账户
-// 全 tick 结算走 TimeManager.PlayerDeltaTime：玩家冻结时它退化为 0，积能与耗能自然停止
+// 固定 tick 结算走 TimeManager.PlayerFixedDeltaTime，积能不受渲染帧率影响。
 // 积能时机：本组件自己在 FixedUpdate 里调用 Accrue（执行序 10，排在 PlayerMotor(0) 的移动结算之后），
 //           保证本 tick 读到的是移动结算后的速度；技能/战斗在更早的序上扣费，读到的是 tick 开始时的能量
 // IEnergyAccount：战斗层（PlayerCombat）扣费的唯一入口
@@ -69,11 +69,13 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         if (excess <= 0f) return;
 
         // 策划案公式按 tick 给，先把本帧时长换算成"相当于几个 tick"
-        // tick 时长从引擎读（工程改 Fixed Timestep 时这里自动跟随），PlayerDeltaTime 除以它即 tick 数
+        // 命中可能在 tick 中改变时间倍率；接入角色使用已经实际积分的时长，避免少计本 tick 的能量。
         float tickSeconds = Time.fixedDeltaTime;
         if (tickSeconds <= 0f) return;
 
-        float tickRatio = TimeManager.PlayerDeltaTime / tickSeconds;
+        GameJam.Actions.PlayerActionRunner runner = GetComponent<GameJam.Actions.PlayerActionRunner>();
+        float elapsed = runner != null && runner.IsConnected ? runner.LastSimulatedSeconds : TimeManager.PlayerFixedDeltaTime;
+        float tickRatio = elapsed / tickSeconds;
         AddInternal(excess * _params.EnergyPerTickPerExcessSpeed * tickRatio);
     }
 

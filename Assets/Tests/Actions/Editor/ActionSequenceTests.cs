@@ -75,6 +75,30 @@ public sealed class ActionSequenceTests
         Assert.IsTrue(action.TryResolve(anchor, out int after)); Assert.AreEqual(40, after);
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FloatTailPreservesElapsedTimeWithoutExtraSimulationStep(bool completes)
+    {
+        ActionDefinition action = Make("float_tail", completes ? 1 : 3);
+        if (!completes) action.Timeline[0].Events.Add(new ActionFrameEvent { Frame = 1, EventKey = "boundary" });
+        ActionSequencePlayer player = Player(); player.Queue(action, 0);
+        const double elapsed = 1.00000005;
+        player.Tick(new ActionInputSample(0), elapsed);
+        Assert.That(_host.SimulationSteps, Has.Count.EqualTo(1));
+        Assert.That(_host.SimulationSteps[0], Is.EqualTo(elapsed).Within(0.000000000001));
+        Assert.IsEmpty(_host.IdleSteps);
+        Assert.AreEqual(!completes, player.IsRunning);
+        if (!completes)
+        {
+            Assert.AreEqual(1d, player.State.FrameProgress);
+            CollectionAssert.AreEqual(new[] { "boundary@1" }, _host.Events);
+            player.Tick(new ActionInputSample(1), 0.05);
+            Assert.That(player.State.FrameProgress, Is.EqualTo(1.05d).Within(0.000000000001));
+            Assert.That(_host.SimulationSteps[1], Is.EqualTo(0.05d).Within(0.000000000001));
+            Assert.That(_host.Events, Has.Count.EqualTo(1));
+        }
+    }
+
     [TestCase(2, true)]
     [TestCase(4, false)]
     public void CancelWindow_IsLeftClosedRightOpen(int frame, bool allowed)
