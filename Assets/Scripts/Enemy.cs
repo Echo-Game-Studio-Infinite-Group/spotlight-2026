@@ -1,3 +1,4 @@
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -59,6 +60,8 @@ public sealed class Enemy : MonoBehaviour
     private float _nextAttackTime;
     private Hitbox _attackHitbox;
     private bool _runningChase;
+    // 攻击命中时向玩家相机广播震动。方向取「敌人 → 玩家」，力度按攻击伤害换算，见 PlayAttackImpulse。
+    [SerializeField] private CinemachineImpulseSource _impulseSource;
 
     public float AttackPower => _attackPower;
     public float AttackDamage => _attackPower;
@@ -83,6 +86,7 @@ public sealed class Enemy : MonoBehaviour
     {
         _health = _maxHealth;
         if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
         if (_attackHitbox != null)
@@ -143,6 +147,13 @@ public sealed class Enemy : MonoBehaviour
     public void ConfigureAttackHitbox(Hitbox hitbox)
     {
         _attackHitbox = hitbox;
+    }
+
+    // 攻击命中玩家时由其所在位置触发：抖动方向取「敌人 → 玩家」的世界方向，
+    // 力度按攻击伤害缩放（20 点伤害 → 0.5），两者都交给 CameraShaker 统一裁定。
+    public void PlayAttackImpulse(Vector3 targetPosition)
+    {
+        CameraShaker.Emit(_impulseSource, targetPosition - transform.position, _attackPower);
     }
 
     // 实机联调用：把敌人的决策输入一次性打出来，便于定位「为什么不追/不攻击」。
@@ -234,7 +245,6 @@ public sealed class Enemy : MonoBehaviour
         if (_damagePopup != null)
             _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
                 transform, Camera.main, _numberLifetime, _riseSpeed);
-        CameraShaker.Shake(_shakeAmplitude);
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         if (!IsAlive)
         {
@@ -256,7 +266,6 @@ public sealed class Enemy : MonoBehaviour
     [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);
     [SerializeField] private float _numberLifetime = 1.2f;
     [SerializeField] private float _riseSpeed = 2.2f;
-    [SerializeField] private float _shakeAmplitude = 0.6f;
     public DamagePopup DamagePopupTemplate => _damagePopup;
     public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
 

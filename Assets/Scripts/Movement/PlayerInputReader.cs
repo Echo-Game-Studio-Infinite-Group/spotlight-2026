@@ -26,7 +26,6 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action Cleared;
-    public event Action<bool> GameplayChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
     public bool GameplayEnabled => _gameplayEnabled && _focused;
@@ -72,7 +71,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _runtime.FindActionMap("Debug", true).Enable();
         ApplyGameplay();
     }
-    private void OnDisable() { _runtime?.Disable(); Clear(); }
+    private void OnDisable() { _runtime?.Disable(); Clear(); ApplyCursor(false); }
     private void OnDestroy() { if (_runtime != null) Destroy(_runtime); }
     private void OnApplicationFocus(bool focus) { _focused = focus; ApplyGameplay(); }
     private void OnMove(InputAction.CallbackContext context)
@@ -175,7 +174,15 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         Clear();
         if (_gameplay == null) return;
         if (GameplayEnabled) _gameplay.Enable(); else _gameplay.Disable();
-        GameplayChanged?.Invoke(GameplayEnabled);
+        ApplyCursor(GameplayEnabled);
+    }
+
+    // 光标是输入态的一部分：暂停、失焦、按 Esc 都要交还光标，否则界面点不动。
+    // 这里统一裁决，相机与 HUD 不再各自操作 Cursor。
+    private void ApplyCursor(bool locked)
+    {
+        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !locked;
     }
 
     public PlayerInputFrame ReadFrame()
