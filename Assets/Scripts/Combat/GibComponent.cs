@@ -18,7 +18,7 @@ public sealed class GibComponent : MonoBehaviour
     [SerializeField, Min(0f)] private float _spinSpeed = 110f;
     [Tooltip("躯干和双臂胶囊的半径倍率，用于调整尸块贴地程度")]
     [SerializeField, Range(0.1f, 1.5f)] private float _colliderRadiusScale = 0.85f;
-    [Tooltip("非 Humanoid 模型按左、右顺序指定上臂；这些骨骼及子骨骼所属顶点完整保留在上半身")]
+    [Tooltip("非 Humanoid 模型按左、右顺序指定上臂；子骨骼影响的顶点或挂在其下的零件完整保留在上半身")]
     [SerializeField] private Transform[] _protectedArmRoots = System.Array.Empty<Transform>();
     [Tooltip("尸块保留的世界时间秒数；0 表示不自动回收")]
     [SerializeField, Min(0f)] private float _lifetime = 8f;
@@ -26,7 +26,7 @@ public sealed class GibComponent : MonoBehaviour
     [SerializeField] private LayerMask _groundMask = Physics.DefaultRaycastLayers;
 
     private readonly List<Object> _ownedAssets = new List<Object>();
-    private readonly List<SkinnedMeshRenderer> _hiddenRenderers = new List<SkinnedMeshRenderer>();
+    private readonly List<Renderer> _hiddenRenderers = new List<Renderer>();
     private readonly List<Collider> _disabledColliders = new List<Collider>();
     private readonly List<Piece> _pieces = new List<Piece>();
     private readonly List<AnimatedLower> _animatedLowers = new List<AnimatedLower>();
@@ -45,17 +45,20 @@ public sealed class GibComponent : MonoBehaviour
         public bool Settled;
         public Rigidbody Body;
         public float Rate = 1f;
+        public readonly List<GibMeshBatch> Batches = new List<GibMeshBatch>();
     }
 
     private sealed class AnimatedLower
     {
-        public SkinnedMeshRenderer Source;
-        public Mesh Mesh;
+        public Renderer Source;
+        public Mesh BakedMesh;
         public Transform Root;
-        public GibGenerator Cap;
+        public GibMeshBatch Batch;
+        public int Offset;
+        public Matrix4x4 LastMatrix;
         public readonly List<Vector3> Vertices = new List<Vector3>();
         public readonly List<Vector3> Normals = new List<Vector3>();
-        public readonly List<Vector2> CutDistances = new List<Vector2>();
+        public readonly List<Vector4> Tangents = new List<Vector4>();
     }
 
     public bool TrySlice(Vector3 hitDirection)
@@ -65,12 +68,31 @@ public sealed class GibComponent : MonoBehaviour
         return Random.value < _deathChance && CreatePieces(hitDirection);
     }
 
+    public Renderer[] GetModelRenderers() => System.Array.FindAll(GetComponentsInChildren<Renderer>(),
+        r => r.enabled && GetSourceMesh(r) != null && GetSourceMesh(r).vertexCount > 0 && r.sharedMaterials.Length > 0);
+
+    private static Mesh GetSourceMesh(Renderer source)
+    {
+        if (source is SkinnedMeshRenderer skin) return skin.sharedMesh;
+        return source is MeshRenderer && source.TryGetComponent(out MeshFilter filter) ? filter.sharedMesh : null;
+    }
+
+    public string GetSetupError()
+    {
+        if (_cutoutShader == null || !_cutoutShader.isSupported) return "请指定受支持的 Cutout Shader。";
+        Renderer[] renderers = GetModelRenderers();
+        if (renderers.Length == 0) return "模型中没有可用的 SkinnedMeshRenderer 或 MeshRenderer + MeshFilter。";
+        foreach (Renderer renderer in renderers)
+            if (renderer is MeshRenderer && !GetSourceMesh(renderer).isReadable)
+                return $"零件 {renderer.name} 的网格不可读，请在模型导入设置中开启 Read/Write。";
+        return null;
+    }
+
     private bool CreatePieces(Vector3 hitDirection)
     {
-        if (_cutoutShader == null || !_cutoutShader.isSupported) return false;
-        var visible = new List<SkinnedMeshRenderer>(GetComponentsInChildren<SkinnedMeshRenderer>())
-            .FindAll(r => r.enabled && r.sharedMesh != null && r.sharedMaterials.Length > 0);
-        if (visible.Count == 0) return false;
+        string error = GetSetupError();
+        if (error != null) { Debug.LogWarning("[Gib] " + error, this); return false; }
+        Renderer[] visible = GetModelRenderers();
 
         Bounds bounds = visible[0].bounds;
         foreach (var renderer in visible) bounds.Encapsulate(renderer.bounds);
@@ -87,22 +109,41 @@ public sealed class GibComponent : MonoBehaviour
         var lower = CreatePiece("WaistCut_Lower", pivot, Vector3.zero, Vector3.zero);
         lower.Settled = true;
         var colliderPoints = new[] { new List<Vector3>(), new List<Vector3>(), new List<Vector3>() };
+        var armRoots = new List<Transform>();
+        if (animator != null && animator.isHuman)
+        {
+            armRoots.Add(animator.GetBoneTransform(HumanBodyBones.LeftUpperArm));
+            armRoots.Add(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
+        }
+        armRoots.AddRange(_protectedArmRoots);
+        var materialCache = new Dictionary<Material, Material>();
+        Material capMaterial = null;
+        Material GetMaterial(Material source)
+        {
+            if (source == null) return capMaterial ?? (capMaterial = CreateMaterial(null));
+            if (!materialCache.TryGetValue(source, out Material result))
+                materialCache.Add(source, result = CreateMaterial(source));
+            return result;
+        }
 
         foreach (var source in visible)
         {
-            var mesh = new Mesh { name = source.name + "_DeathPose" };
-            _ownedAssets.Add(mesh);
-            source.BakeMesh(mesh);
+            Mesh sourceMesh = GetSourceMesh(source);
+            var mesh = source is SkinnedMeshRenderer ? new Mesh() : Instantiate(sourceMesh);
+            if (source is SkinnedMeshRenderer skin) skin.BakeMesh(mesh);
             Vector3[] vertices = mesh.vertices;
             Vector3[] normals = mesh.normals;
+            Vector4[] tangents = mesh.tangents;
             Matrix4x4 matrix = source.transform.localToWorldMatrix;
             Matrix4x4 normalMatrix = matrix.inverse.transpose;
-            int[] vertexParts = GetVertexParts(source, animator);
+            float handedness = matrix.determinant < 0f ? -1f : 1f;
+            int[] vertexParts = GetVertexParts(source, armRoots);
             var distances = new List<Vector2>(vertices.Length);
             for (int i = 0; i < vertices.Length; i++)
             {
                 vertices[i] = matrix.MultiplyPoint3x4(vertices[i]) - pivot;
                 if (i < normals.Length) normals[i] = normalMatrix.MultiplyVector(normals[i]).normalized;
+                if (i < tangents.Length) tangents[i] = TransformTangent(tangents[i], matrix, handedness);
                 float distance = vertexParts[i] > 0 ? Mathf.Max(0.1f, Mathf.Abs(vertices[i].y)) : vertices[i].y;
                 distances.Add(new Vector2(distance, 0f));
                 if (distance >= 0f)
@@ -114,30 +155,56 @@ public sealed class GibComponent : MonoBehaviour
             }
             mesh.vertices = vertices;
             mesh.normals = normals;
+            mesh.tangents = tangents;
             mesh.RecalculateBounds();
             mesh.SetUVs(1, distances);
-            Material[] materials = System.Array.ConvertAll(source.sharedMaterials, CreateMaterial);
-            AddRenderer(upper, mesh, materials, 1f, true);
-            var animated = new AnimatedLower { Source = source, Mesh = Instantiate(mesh), Root = lower.Root,
-                Cap = new GibGenerator(mesh) };
-            animated.Mesh.MarkDynamic();
-            _ownedAssets.Add(animated.Mesh);
-            animated.CutDistances.AddRange(distances);
-            animated.Mesh.SetUVs(1, animated.CutDistances);
-            _animatedLowers.Add(animated);
-            AddRenderer(lower, animated.Mesh, materials, -1f, true);
-            if (animated.Cap.Mesh != null)
+            Material[] materials = System.Array.ConvertAll(source.sharedMaterials, GetMaterial);
+            FindBatch(upper, source).Append(mesh, materials, 1f);
+            GibMeshBatch lowerBatch = FindBatch(lower, source);
+            int offset = lowerBatch.Vertices.Count;
+            if (lowerBatch.Append(mesh, materials, -1f))
             {
-                Mesh cap = Instantiate(animated.Cap.Mesh);
-                foreach (Vector3 vertex in cap.vertices) Include(upper, vertex);
-                _ownedAssets.Add(cap);
-                _ownedAssets.Add(animated.Cap.Mesh);
-                var capMaterials = new[] { CreateMaterial(null) };
-                AddRenderer(upper, cap, capMaterials, 0f);
-                AddRenderer(lower, animated.Cap.Mesh, capMaterials, 0f);
+                var animated = new AnimatedLower { Source = source,
+                    BakedMesh = source is SkinnedMeshRenderer ? mesh : null, Root = lower.Root,
+                    Batch = lowerBatch, Offset = offset, LastMatrix = lower.Root.worldToLocalMatrix * matrix };
+                // 普通零件的原始网格不变，只需缓存一次；上半身独占零件完全不参与后续动画更新。
+                if (animated.BakedMesh == null)
+                {
+                    sourceMesh.GetVertices(animated.Vertices);
+                    sourceMesh.GetNormals(animated.Normals);
+                    sourceMesh.GetTangents(animated.Tangents);
+                }
+                _animatedLowers.Add(animated);
+                if (animated.BakedMesh != null) _ownedAssets.Add(mesh);
+                else Release(mesh);
             }
+            else Release(mesh);
             source.enabled = false;
             _hiddenRenderers.Add(source);
+        }
+        foreach (GibMeshBatch batch in lower.Batches)
+        {
+            Mesh mesh = batch.Build("WaistCut_Lower_Mesh");
+            if (mesh == null) continue;
+            _ownedAssets.Add(mesh);
+            batch.GenerateCap();
+            if (batch.Cap.Mesh != null)
+            {
+                _ownedAssets.Add(batch.Cap.Mesh);
+                foreach (Vector3 vertex in batch.Cap.Mesh.vertices) Include(upper, vertex);
+                FindBatch(upper, batch.Source).AddCap(batch.Cap.Mesh, GetMaterial(null));
+                batch.AddCap(batch.Cap.Mesh, GetMaterial(null));
+                batch.Build(mesh.name);
+            }
+            mesh.MarkDynamic();
+            AddRenderer(lower, mesh, batch.Materials.ToArray(), -1f, true, batch.Source);
+        }
+        foreach (GibMeshBatch batch in upper.Batches)
+        {
+            Mesh mesh = batch.Build("WaistCut_Upper_Mesh");
+            if (mesh == null) continue;
+            _ownedAssets.Add(mesh);
+            AddRenderer(upper, mesh, batch.Materials.ToArray(), 1f, true, batch.Source);
         }
         // 尸块仅作表现，避免原来的完整胶囊继续挡住玩家或地面查询。
         foreach (Collider collider in GetComponentsInChildren<Collider>())
@@ -150,7 +217,7 @@ public sealed class GibComponent : MonoBehaviour
         if (Application.isPlaying)
         {
             // 只给脱离的上半身添加碰撞；下半身仍由死亡动画驱动。
-            AddUpperColliders(upper, colliderPoints, animator);
+            AddUpperColliders(upper, colliderPoints, animator, armRoots);
             upper.Body = upper.Root.gameObject.AddComponent<Rigidbody>();
             upper.Body.useGravity = false;
             upper.Body.interpolation = RigidbodyInterpolation.Interpolate;
@@ -162,25 +229,23 @@ public sealed class GibComponent : MonoBehaviour
         return true;
     }
 
-    private int[] GetVertexParts(SkinnedMeshRenderer source, Animator animator)
+    private static int GetTransformPart(Transform bone, List<Transform> roots)
     {
-        var roots = new List<Transform>();
-        if (animator != null && animator.isHuman)
+        int index = roots.FindIndex(root => root != null && bone != null && (bone == root || bone.IsChildOf(root)));
+        return index < 0 ? 0 : 1 + index % 2;
+    }
+
+    private static int[] GetVertexParts(Renderer source, List<Transform> roots)
+    {
+        var result = new int[GetSourceMesh(source).vertexCount];
+        if (!(source is SkinnedMeshRenderer skin))
         {
-            roots.Add(animator.GetBoneTransform(HumanBodyBones.LeftUpperArm));
-            roots.Add(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
+            int part = GetTransformPart(source.transform, roots);
+            for (int i = 0; i < result.Length; i++) result[i] = part;
+            return result;
         }
-        roots.AddRange(_protectedArmRoots);
-        Transform[] bones = source.bones;
-        var boneParts = new int[bones.Length];
-        for (int i = 0; i < bones.Length; i++)
-        {
-            int rootIndex = roots.FindIndex(root => root != null && bones[i] != null
-                && (bones[i] == root || bones[i].IsChildOf(root)));
-            boneParts[i] = rootIndex < 0 ? 0 : 1 + rootIndex % 2;
-        }
-        var result = new int[source.sharedMesh.vertexCount];
-        BoneWeight[] weights = source.sharedMesh.boneWeights;
+        int[] boneParts = System.Array.ConvertAll(skin.bones, bone => GetTransformPart(bone, roots));
+        BoneWeight[] weights = skin.sharedMesh.boneWeights;
         for (int i = 0; i < weights.Length; i++)
         {
             BoneWeight w = weights[i];
@@ -200,7 +265,7 @@ public sealed class GibComponent : MonoBehaviour
         return result;
     }
 
-    private void AddUpperColliders(Piece upper, List<Vector3>[] parts, Animator animator)
+    private void AddUpperColliders(Piece upper, List<Vector3>[] parts, Animator animator, List<Transform> armRoots)
     {
         // 玩家与地面共用 Default，不能禁用整层碰撞；只忽略实际玩家的碰撞体。
         var playerColliders = new List<Collider>();
@@ -213,12 +278,19 @@ public sealed class GibComponent : MonoBehaviour
             List<Vector3> points = parts[part];
             if (points.Count == 0) continue;
             Vector3 axis = transform.up;
-            if (part > 0 && animator != null && animator.isHuman)
+            if (part > 0 && armRoots.Count >= part && armRoots[part - 1] != null)
             {
-                Transform shoulder = animator.GetBoneTransform(part == 1 ? HumanBodyBones.LeftUpperArm : HumanBodyBones.RightUpperArm);
-                Transform hand = animator.GetBoneTransform(part == 1 ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
-                if (shoulder != null && hand != null && (hand.position - shoulder.position).sqrMagnitude > 0.0001f)
-                    axis = (hand.position - shoulder.position).normalized;
+                Vector3 shoulder = armRoots[part - 1].position;
+                Vector3 end = shoulder;
+                foreach (Vector3 point in points)
+                    if ((upper.Root.position + point - shoulder).sqrMagnitude > (end - shoulder).sqrMagnitude)
+                        end = upper.Root.position + point;
+                if (animator != null && animator.isHuman)
+                {
+                    Transform hand = animator.GetBoneTransform(part == 1 ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+                    if (hand != null) end = hand.position;
+                }
+                if ((end - shoulder).sqrMagnitude > 0.0001f) axis = (end - shoulder).normalized;
             }
             Quaternion rotation = Quaternion.FromToRotation(Vector3.up, axis);
             Quaternion inverse = Quaternion.Inverse(rotation);
@@ -255,14 +327,31 @@ public sealed class GibComponent : MonoBehaviour
         else piece.Bounds.Encapsulate(point);
     }
 
-    private void AddRenderer(Piece piece, Mesh mesh, Material[] materials, float side, bool animated = false)
+    private static GibMeshBatch FindBatch(Piece piece, Renderer source)
+    {
+        GibMeshBatch batch = piece.Batches.Find(candidate => candidate.Matches(source));
+        if (batch == null) piece.Batches.Add(batch = new GibMeshBatch(source));
+        return batch;
+    }
+
+    private void AddRenderer(Piece piece, Mesh mesh, Material[] materials, float side, bool animated = false,
+        Renderer source = null)
     {
         var child = new GameObject(mesh.name);
-        child.layer = gameObject.layer;
+        child.layer = source != null ? source.gameObject.layer : gameObject.layer;
         child.transform.SetParent(piece.Root, false);
         child.AddComponent<MeshFilter>().sharedMesh = mesh;
         var renderer = child.AddComponent<MeshRenderer>();
         renderer.sharedMaterials = materials;
+        if (source != null)
+        {
+            renderer.shadowCastingMode = source.shadowCastingMode;
+            renderer.receiveShadows = source.receiveShadows;
+            renderer.lightProbeUsage = source.lightProbeUsage;
+            renderer.reflectionProbeUsage = source.reflectionProbeUsage;
+            renderer.probeAnchor = source.probeAnchor;
+            renderer.renderingLayerMask = source.renderingLayerMask;
+        }
         // 下半身用死亡瞬间的距离裁切，避免倒地时穿过原平面导致身体重新显现。
         var properties = new MaterialPropertyBlock();
         properties.SetFloat("_CutSide", side);
@@ -274,6 +363,9 @@ public sealed class GibComponent : MonoBehaviour
     {
         var material = new Material(_cutoutShader);
         _ownedAssets.Add(material);
+        // 保留 URP Lit 的贴图、HDR 自发光、表面参数和关键字，仅在运行时副本上追加裁切。
+        if (source != null) material.CopyPropertiesFromMaterial(source);
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
         string map = source != null && source.HasProperty("_BaseMap") ? "_BaseMap" : "_MainTex";
         string color = source != null && source.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
         if (source != null && source.HasProperty(map))
@@ -283,10 +375,18 @@ public sealed class GibComponent : MonoBehaviour
             material.SetTextureOffset("_BaseMap", source.GetTextureOffset(map));
         }
         material.SetColor("_BaseColor", source != null && source.HasProperty(color) ? source.GetColor(color) : _cutColor);
+        material.SetFloat("_CutSurface", source == null ? 1f : 0f);
         material.SetColor("_CutColor", _cutColor);
         material.SetVector("_CutPlane", new Vector4(0f, 1f, 0f, 0f));
         material.SetFloat("_CutEdge", _edgeWidth);
         return material;
+    }
+
+    private static Vector4 TransformTangent(Vector4 tangent, Matrix4x4 matrix, float handedness)
+    {
+        // 法线走逆转置，切线走模型矩阵；镜像缩放还会翻转切线空间的手性。
+        Vector3 direction = matrix.MultiplyVector(new Vector3(tangent.x, tangent.y, tangent.z)).normalized;
+        return new Vector4(direction.x, direction.y, direction.z, tangent.w * handedness);
     }
 
     private void FixedUpdate()
@@ -320,23 +420,32 @@ public sealed class GibComponent : MonoBehaviour
         foreach (AnimatedLower lower in _animatedLowers)
         {
             if (lower.Source == null) continue;
-            lower.Source.BakeMesh(lower.Mesh);
-            lower.Mesh.GetVertices(lower.Vertices);
-            lower.Mesh.GetNormals(lower.Normals);
             Matrix4x4 matrix = lower.Root.worldToLocalMatrix * lower.Source.transform.localToWorldMatrix;
+            if (lower.Source is SkinnedMeshRenderer skin)
+            {
+                skin.BakeMesh(lower.BakedMesh);
+                lower.BakedMesh.GetVertices(lower.Vertices);
+                lower.BakedMesh.GetNormals(lower.Normals);
+                lower.BakedMesh.GetTangents(lower.Tangents);
+            }
+            else if (matrix == lower.LastMatrix) continue;
+            lower.LastMatrix = matrix;
             Matrix4x4 normalMatrix = matrix.inverse.transpose;
+            float handedness = matrix.determinant < 0f ? -1f : 1f;
             for (int i = 0; i < lower.Vertices.Count; i++)
             {
-                lower.Vertices[i] = matrix.MultiplyPoint3x4(lower.Vertices[i]);
+                int target = lower.Offset + i;
+                lower.Batch.Vertices[target] = matrix.MultiplyPoint3x4(lower.Vertices[i]);
                 if (i < lower.Normals.Count)
-                    lower.Normals[i] = normalMatrix.MultiplyVector(lower.Normals[i]).normalized;
+                    lower.Batch.Normals[target] = normalMatrix.MultiplyVector(lower.Normals[i]).normalized;
+                if (i < lower.Tangents.Count)
+                    lower.Batch.Tangents[target] = TransformTangent(lower.Tangents[i], matrix, handedness);
             }
-            lower.Mesh.SetVertices(lower.Vertices);
-            lower.Mesh.SetNormals(lower.Normals);
-            lower.Mesh.SetUVs(1, lower.CutDistances);
-            lower.Mesh.RecalculateBounds();
-            lower.Cap.Update(lower.Vertices);
+            lower.Batch.Dirty = true;
         }
+        foreach (Piece piece in _pieces)
+            if (piece.Settled)
+                foreach (GibMeshBatch batch in piece.Batches) batch.UpdateMesh();
     }
 
     private void Simulate(float dt, float? previewFloor = null)
