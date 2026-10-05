@@ -23,6 +23,7 @@ public static class AILiveProbe
     private const string HistoryFile = "history.json";
     private const string CommandFile = "cmd.json";
     private const string EnabledKey = "AILiveProbe.Enabled";   // EditorPrefs 键：记住开关状态
+    private static readonly object ScaleOwner = new object();   // 本探针在世界层登记缩放的来源标识（供 Release 用）
 
     private const float SampleInterval = 0.1f;        // 采样 10Hz：够看清徘徊，又不至于把盘写满
     private const float HistoryWriteInterval = 5f;    // 历史落盘 5s（事件时立即再落一次）
@@ -512,9 +513,14 @@ public static class AILiveProbe
 
             case "worldScale":
                 // 走 TimeManager 而不是散写 Time.timeScale（上下文包 §2.2）
-                TimeManager manager = UnityEngine.Object.FindObjectOfType<TimeManager>();
-                if (manager != null) manager.WorldScale = Mathf.Clamp01(command.value);
-                Debug.Log($"[AILiveProbe] WorldScale = {(manager != null ? manager.WorldScale.ToString("F2") : "场景里没有 TimeManager")}");
+                // 注意：TimeManager 的 API 是"按来源 Apply / Release"，没有 WorldScale 属性
+                //（旧版那种 manager.WorldScale 字段在并入 dev 后已不存在）
+                TimeManager.Release(TimeManager.TimeLayer.World, ScaleOwner);
+                if (command.value > 0.001f && command.value < 0.999f)
+                {
+                    TimeManager.Apply(TimeManager.TimeLayer.World, Mathf.Clamp01(command.value), 0f, ScaleOwner);
+                }
+                Debug.Log($"[AILiveProbe] 世界层速率 = {TimeManager.WorldRate:F2}（1.00 = 正常）");
                 break;
 
             case "teleport":
