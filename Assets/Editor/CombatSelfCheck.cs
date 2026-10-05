@@ -5,18 +5,14 @@ using UnityEngine;
 
 // 编辑期战斗排障工具集。
 //
-// 菜单刻意收进二级子菜单「超高速行者/战斗工具/...」：这些是开发期排障用的，
-// 不该占主菜单顶层 —— 顶层只留「装配战斗与敌人」与「检查战斗装配」两项产品工具。
-// 也可以不开菜单直接用命令行跑：-executeMethod CombatSelfCheck.Run
+// 排障入口不显示在菜单中，仍可用命令行调用：-executeMethod CombatSelfCheck.Run
 //
 // 为什么不做成 PlayMode 测试：MCP 的 run_tests 受 McpUnitySettings.RequestTimeoutSeconds（默认 10s）限制，
 // 整轮测试必然超时；而这个自检不依赖帧循环，能立刻给出「命中/扣血/减速/到点恢复」的结论。
 public static class CombatSelfCheck
 {
-    private const string MenuRoot = "超高速行者/战斗工具/";
-    private const string DiagnoseRoot = "超高速行者/诊断/战斗/";
 
-    [MenuItem(MenuRoot + "自检")]
+    
     public static void Run()
     {
         if (EditorApplication.isPlaying)
@@ -90,7 +86,7 @@ public static class CombatSelfCheck
                 + $"场景对象血量={liveEnemy?.Health} 存活={enemy.IsAlive} 比例={enemy.HealthRatio:0.###} "
                 + $"上限={enemy.MaxHealth} 受到伤害次数={enemy.DamagedCount}");
             Debug.Log($"[CombatSelfCheck] 场景中的敌人共 {allEnemies.Length} 个: {roster}");
-            // 断言用「命中是否造成伤害」，不断言精确数值：Damageable 同时会给所有重叠碰撞体结算，
+            // 断言用「命中是否造成伤害」，不断言精确数值：Enemy 同时会给所有重叠碰撞体结算，
             // 数值可能随碰撞体数量变化；「一次挥砍只扣一次」这条契约由 _hitThisSwing 保证，另有测试覆盖。
             bool damaged = healthAfter < healthBefore;
             // 两段减速里更强的一档会生效（冲击 0.35），因此判定「至少压到了冲击档或尾巴档」，
@@ -151,7 +147,7 @@ public static class CombatSelfCheck
 
     // 实机（Play 模式）状态快照：Play 模式下自检不能跑，但排障时正需要看清运行时状态。
     // 只读，不修改任何东西。
-    [MenuItem(MenuRoot + "实机状态快照")]
+    
     public static void DumpRuntimeState()
     {
         if (!EditorApplication.isPlaying)
@@ -171,16 +167,16 @@ public static class CombatSelfCheck
             Debug.Log($"[CombatSelfCheck] 敌人世界位置={enemy.transform.position}");
         }
 
-        PlayerHealth health = Object.FindObjectOfType<PlayerHealth>();
+        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
         Debug.Log($"[CombatSelfCheck] 玩家血量={(health != null ? health.Health : -1)}/"
-            + $"{(health != null ? health.MaxHealth : -1)} 组件={(health != null)}");
+            + $"{(health != null ? health.MaxHealth : -1)} 玩家数据={(health != null)}");
         Debug.Log($"[CombatSelfCheck] 减速中={TimeManager.InSlowMotion} 倍率={TimeManager.SlowRate} "
             + $"玩家速率={TimeManager.PlayerRate} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
 
         // 无敌帧实测：玩家与敌人两侧都做「前后对比」。
         // 只打印配置时长证明不了它真的在挡伤害，所以连续打两次看数值（期望 首次>0 / 第二次=0）。
         // 直接调 TakeDamage 而不是等敌人来打，是为了不受攻击冷却与 AI 状态影响，结果可复现。
-        PlayerHealth playerHealth = Object.FindObjectOfType<PlayerHealth>();
+        PlayerData playerHealth = Object.FindObjectOfType<GameManager>()?.Player;
         Enemy enemyUnderTest = Object.FindObjectOfType<Enemy>();
 
         if (enemyUnderTest != null)
@@ -210,11 +206,11 @@ public static class CombatSelfCheck
             Debug.Log($"[CombatSelfCheck] 无敌帧实测（玩家）: 首次受击={first:0.#} 紧接着再打={second:0.#} "
                 + $"（期望 7 / 0）无敌中={playerHealth.IsInvulnerable} "
                 + $"血量 {playerBefore:0.#}→{playerHealth.Health:0.#}");
-            playerHealth.ResetHealth();
+            playerHealth.Reset();
         }
         else
         {
-            Debug.LogWarning("[CombatSelfCheck] 场景里没有 PlayerHealth，跳过玩家侧无敌帧实测");
+            Debug.LogWarning("[CombatSelfCheck] 场景里没有 GameManager.Player，跳过玩家侧无敌帧实测");
         }
 
         Debug.Log($"[CombatSelfCheck] 无敌帧配置: 玩家={(playerHealth != null ? playerHealth.InvulnerableTime : -1)}s "
@@ -223,7 +219,7 @@ public static class CombatSelfCheck
 
     // 实机触发一次玩家攻击：用于在没有手柄/键盘输入的环境里验证完整链路。
     // 走的是和真实输入同一条代码路径（BeginAttack，受冷却约束），只是把手柄输入换成了菜单命令。
-    [MenuItem(MenuRoot + "实机触发一次攻击")]
+    
     public static void TriggerPlayerAttack()
     {
         if (!EditorApplication.isPlaying)
@@ -240,19 +236,20 @@ public static class CombatSelfCheck
         }
 
         Debug.Log($"[CombatSelfCheck] 触发攻击前的世界：{DescribeWorld()}");
-        // 走**真实的动画事件链路**：AttackAnimationEventReceiver → PlayerCombat → Hitbox。
+        // 走**真实的动画事件链路**：PlayerAnimation → PlayerCombat → Hitbox。
         // 之前直接调 combat.EnableHitbox() 只证明了 Hitbox 本身能用，
         // 证明不了「动画事件真的投递到了战斗组件」—— 主人反馈实战打不到，问题多半就在这一层。
-        AttackAnimationEventReceiver receiver = combat.GetComponentInChildren<AttackAnimationEventReceiver>(true);
+        PlayerAnimation receiver = combat.GetComponentInChildren<PlayerAnimation>(true);
         if (receiver == null)
         {
-            Debug.LogError("[CombatSelfCheck] 玩家身上找不到 AttackAnimationEventReceiver，"
+            Debug.LogError("[CombatSelfCheck] 玩家身上找不到 PlayerAnimation，"
                 + "动画事件无处投递（真实游玩时判定与特效会全部失效）");
         }
         else
         {
             Debug.Log("[CombatSelfCheck] 通过动画事件接收器触发（真实链路）");
-            receiver.UpdateAttack(1);
+            PlayerVFXManager vfx = receiver.GetComponent<PlayerVFXManager>();
+            if (vfx != null) vfx.UpdateAttack(1);
             receiver.EnableHitbox();
         }
 
@@ -279,7 +276,7 @@ public static class CombatSelfCheck
     private static string DescribeWorld()
     {
         Enemy enemy = Object.FindObjectOfType<Enemy>();
-        PlayerHealth health = Object.FindObjectOfType<PlayerHealth>();
+        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
         return $"敌人血量={(enemy != null ? enemy.Health : -1)} "
             + $"敌人位置={(enemy != null ? enemy.transform.position.ToString() : "无")} "
             + $"玩家血量={(health != null ? health.Health : -1)} "
@@ -287,7 +284,7 @@ public static class CombatSelfCheck
     }
 
     // 实机复查一次「战斗结果」：攻击后隔几帧再点，用来确认扣血与减速确实发生了
-    [MenuItem(MenuRoot + "实机复查战斗结果")]
+    
     public static void ReportRuntimeResult()
     {
         if (!EditorApplication.isPlaying)
@@ -297,7 +294,7 @@ public static class CombatSelfCheck
         }
 
         Enemy enemy = Object.FindObjectOfType<Enemy>();
-        PlayerHealth health = Object.FindObjectOfType<PlayerHealth>();
+        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
         Debug.Log($"[CombatSelfCheck] 实机复查: 敌人血量={(enemy != null ? enemy.Health : -1)}"
             + $"/{(enemy != null ? enemy.MaxHealth : -1)} 已受击次数={(enemy != null ? enemy.DamagedCount : -1)} "
             + $"玩家血量={(health != null ? health.Health : -1)} "
@@ -307,7 +304,7 @@ public static class CombatSelfCheck
     // 伤害跳字专项诊断：把每个跳字的渲染要素全部打出来。
     // 「看不到跳字」可能是字体没建出来、Canvas 缩放太小、位置在相机外、alpha 为 0 等多种原因，
     // 只报数量看不出病根，这里逐项列出来。
-    [MenuItem(DiagnoseRoot + "伤害跳字")]
+    
     public static void DiagnoseDamagePopups()
     {
         if (!EditorApplication.isPlaying)
@@ -348,7 +345,7 @@ public static class CombatSelfCheck
     }
 
     // 动画参数诊断：自己触发一次攻击并立刻采样，否则窗口只有 0.25s，外部读到的永远是「已结束」。
-    [MenuItem(DiagnoseRoot + "攻击动画参数")]
+    
     public static void DiagnoseAttackAnimation()
     {
         if (!EditorApplication.isPlaying)
@@ -405,7 +402,7 @@ public static class CombatSelfCheck
     // 判定专项诊断：复刻 PlayerCombat.Detect 的几何，把搜索结果逐个列出来。
     // 「按了左键但没伤害」可能是朝向不对、距离超出、层级遮罩过滤、碰撞体在子物体等多种原因，
     // 只看最终布尔值定位不了真因，这里把命中列表和参数原样打出来。
-    [MenuItem(DiagnoseRoot + "攻击判定")]
+    
     public static void DiagnoseHitDetection()
     {
         if (!EditorApplication.isPlaying)
@@ -481,7 +478,7 @@ public static class CombatSelfCheck
 
     // 动画状态顺序诊断：MotionState 编号 = states 下标，顺序错了整条移动动画都会错位。
     // 只读，用于确认控制器结构是否与 PlayerAnimation 的常量一致。
-    [MenuItem(DiagnoseRoot + "动画状态顺序")]
+    
     public static void DiagnoseAnimatorStateOrder()
     {
         AnimatorController controller =
@@ -519,7 +516,7 @@ public static class CombatSelfCheck
 
     // 攻击片段时长诊断：动画被打断的常见根因是「攻击窗口比片段短」。
     // 这里把片段时长与当前窗口配置并排列出来，一眼能看出是不是窗口太短。
-    [MenuItem(DiagnoseRoot + "攻击片段时长")]
+    
     public static void DiagnoseAttackClipLength()
     {
         AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx")
@@ -547,9 +544,9 @@ public static class CombatSelfCheck
         }
     }
 
-    // 跳字接线诊断：直接把 Damageable 的运行时状态打出来。
+    // 跳字接线诊断：直接把 Enemy 的运行时状态打出来。
     // 「跳字不显示」的根因可能是引用为空、池为空、实例被销毁，只有把中间状态列出来才能定位。
-    [MenuItem(DiagnoseRoot + "跳字接线")]
+    
     public static void DiagnosePopupWiring()
     {
         if (!EditorApplication.isPlaying)
@@ -578,7 +575,7 @@ public static class CombatSelfCheck
 
     // 无敌帧自检：编辑模式构造两个实体，验证「首次受击生效 / 无敌帧内免疫 / 到期后恢复」。
     // 用两组实测数据说话，比只打印「时长=0.45s」这种配置值可靠。
-    [MenuItem(MenuRoot + "自检无敌帧")]
+    
     public static void SelfCheckInvulnerability()
     {
         if (EditorApplication.isPlaying)
@@ -589,11 +586,9 @@ public static class CombatSelfCheck
 
         GameObject clockHost = new GameObject("SelfCheckTimeManager");
         GameObject enemyHost = new GameObject("SelfCheckEnemy");
-        GameObject playerHost = new GameObject("SelfCheckPlayer");
         // 先禁用再装配：Enemy.Awake 里会 GetComponent<CharacterController>()，
         // 若在组件没加全时就激活，Awake 立刻跑并拿到 null（实测抛 NullReferenceException）。
         enemyHost.SetActive(false);
-        playerHost.SetActive(false);
         try
         {
             clockHost.AddComponent<TimeManager>();
@@ -604,10 +599,8 @@ public static class CombatSelfCheck
             enemyHost.SetActive(true);
             enemy.ResetHealth();
 
-            playerHost.AddComponent<CharacterController>();
-            PlayerHealth health = playerHost.AddComponent<PlayerHealth>();
-            health.Configure(100f);
-            playerHost.SetActive(true);
+            PlayerData health = new PlayerData();
+            health.Reset();
 
             // ===== 敌人侧 =====
             float enemyFirst = enemy.TakeDamage(10f, Vector3.zero, Vector3.forward);
@@ -640,7 +633,6 @@ public static class CombatSelfCheck
         }
         finally
         {
-            Object.DestroyImmediate(playerHost);
             Object.DestroyImmediate(enemyHost);
             Object.DestroyImmediate(clockHost);
         }
@@ -652,7 +644,7 @@ public static class CombatSelfCheck
     // 但 Mixamo 的片段常带长尾（动作结束后还有大段静止/缓慢归位），
     // 若把窗口设成整段长度，玩家就会被多锁住好几秒 —— 表现就是"攻击完卡住一段时间"。
     // 这里对每条曲线求"最后一次显著变化"的时间，作为动作真正的结束点。
-    [MenuItem(DiagnoseRoot + "攻击动作结束点")]
+    
     public static void DiagnoseAttackMotionEnd()
     {
         AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(AttackClipPathForDiagnostics)
@@ -706,72 +698,7 @@ public static class CombatSelfCheck
 
     private const string AttackClipPathForDiagnostics = "Assets/Animations/fbx/Attack.fbx";
 
-    // 受击闪烁的颜色还原诊断：逐个渲染器比对「当前覆盖色」与「共享材质基准色」。
-    // 「Miku 的裙子变红」就是这里出的问题：早先只缓存一个渲染器的基准色，
-    // 闪烁结束后用错基准色还原，导致该部件永久偏色。
-    [MenuItem(DiagnoseRoot + "受击闪烁颜色还原")]
-    public static void DiagnoseHitFlashRestore()
-    {
-        if (!EditorApplication.isPlaying)
-        {
-            Debug.LogWarning("[CombatSelfCheck] 颜色还原诊断要在 Play 模式下执行（闪烁是运行时行为）");
-            return;
-        }
 
-        Damageable[] targets = Object.FindObjectsOfType<Damageable>(true);
-        if (targets.Length == 0)
-        {
-            Debug.LogWarning("[CombatSelfCheck] 场景里没有 Damageable");
-            return;
-        }
-
-        foreach (Damageable target in targets)
-        {
-            target.DebugDumpFlashState();
-            Renderer[] renderers = target.GetComponentsInChildren<Renderer>(false);
-            int mismatched = 0;
-            int checkedCount = 0;
-            MaterialPropertyBlock block = new MaterialPropertyBlock();
-
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                Renderer renderer = renderers[i];
-                Material shared = renderer.sharedMaterial;
-                if (shared == null) continue;
-
-                // 基准色：共享材质上的原始颜色
-                Color baseColor = shared.HasProperty(Shader.PropertyToID("_BaseColor"))
-                    ? shared.GetColor(Shader.PropertyToID("_BaseColor"))
-                    : shared.HasProperty(Shader.PropertyToID("_Color"))
-                        ? shared.GetColor(Shader.PropertyToID("_Color"))
-                        : Color.white;
-
-                // 当前覆盖色：MaterialPropertyBlock 里若写了颜色就说明还压着一层
-                renderer.GetPropertyBlock(block);
-                if (block.isEmpty) continue;
-                checkedCount++;
-                if (block.HasColor(Shader.PropertyToID("_BaseColor")))
-                {
-                    Color current = block.GetColor(Shader.PropertyToID("_BaseColor"));
-                    if (Vector4.Distance(current, baseColor) > 0.01f)
-                    {
-                        mismatched++;
-                        if (mismatched <= 3)
-                        {
-                            Debug.LogWarning($"[FlashDiag] {target.name}/{renderer.name} 仍被压色: "
-                                + $"当前={(Vector4)current} 基准={(Vector4)baseColor}");
-                        }
-                    }
-                }
-            }
-
-            Debug.Log($"[FlashDiag] {target.name}: 渲染器={renderers.Length} 带覆盖的={checkedCount} "
-                + $"与基准不一致={mismatched}（不在闪烁中={!target.IsInvulnerable || true}）"
-                + (mismatched == 0 ? " → 颜色已正确还原" : " → 存在偏色残留！"));
-        }
-    }
-
-    // 第一阶段结束后置位，下一次调用先复查「减速是否已自动结束」
     private static bool _awaitingRecovery;
     private static float _probeClockSnapshot;
 

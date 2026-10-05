@@ -13,7 +13,7 @@ public static class MovementSceneSetup
     public const string ScenePath = "Assets/Scenes/TestScene.unity";
     public const string CharacterPath = "Assets/Prefabs/Player.prefab";
 
-    [MenuItem("超高速行者/装配 character 与 Cinemachine")]
+    
     public static void Rebuild()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -153,8 +153,9 @@ public static class MovementSceneSetup
         motor.SetParams(parameters);
         motor.SetMovementReference(cameraReference);
         motor.enabled = true;
-        if (character.GetComponent<PlayerAnimation>() == null)
-            character.AddComponent<PlayerAnimation>().Configure(character.GetComponentInChildren<Animator>(true));
+        Animator modelAnimator = character.GetComponentInChildren<Animator>(true);
+        if (modelAnimator != null && modelAnimator.GetComponent<PlayerAnimation>() == null)
+            modelAnimator.gameObject.AddComponent<PlayerAnimation>().Configure(modelAnimator);
         GetOrAdd<PlayerRespawn>(character);
         GetOrAdd<DebugHUD>(character);
 
@@ -243,7 +244,7 @@ public static class MovementSceneSetup
 
     private static bool IsPlayerRoot(GameObject root)
     {
-        if (root.GetComponent<PlayerMotor>() != null || root.GetComponent<Player>() != null) return true;
+        if (root.GetComponent<PlayerMotor>() != null) return true;
         // 缺失模型源的旧变体也要清理；它可能已经无法读到任何运行时组件。
         return PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root) == "Assets/Prefabs/character.prefab";
     }

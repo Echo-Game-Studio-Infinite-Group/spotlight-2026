@@ -6,9 +6,9 @@ using UnityEditor.Animations;
 using UnityEngine;
 public static class AnimationDiag
 {
- [MenuItem("超高速行者/诊断/检查动画资产")] public static void Run(){Go();}
+  public static void Run(){Go();}
 
- [MenuItem("超高速行者/诊断/检查相机与根运动")] public static void InspectCameraOnce() { EditorApplication.delayCall += () => {
+  public static void InspectCameraOnce() { EditorApplication.delayCall += () => {
   var sb = new StringBuilder();
   foreach (var a in Resources.FindObjectsOfTypeAll<Animator>()) {
    if (!a.gameObject.scene.IsValid()) continue;

@@ -8,7 +8,7 @@ public static class PlayerDummySetup
 {
     private const string ModelPath = "Assets/Art/Models/PlayerDummy.fbx";
     private const string RunPath = "Assets/Animations/fbx/Running.fbx";
-    [MenuItem("超高速行者/装配 PlayerDummy 与新版 Running")]
+    
     public static void Install()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -81,7 +81,9 @@ public static class PlayerDummySetup
                 PrefabUtility.RecordPrefabInstancePropertyModifications(child.gameObject);
             }
             PrefabUtility.RecordPrefabInstancePropertyModifications(animator);
-            contents.GetComponent<PlayerAnimation>().Configure(animator);
+            var animation = animator.GetComponent<PlayerAnimation>();
+            if (animation == null) animation = animator.gameObject.AddComponent<PlayerAnimation>();
+            animation.Configure(animator);
             PrefabUtility.SaveAsPrefabAsset(contents, MovementSceneSetup.CharacterPath);
         }
         finally { PrefabUtility.UnloadPrefabContents(contents); }

@@ -17,7 +17,7 @@ public static class FollowProbe
     private static Transform cam;
     private static Vector3 lastCameraPosition;
 
-    [MenuItem("超高速行者/探针/相机跟随实测")]
+    
     public static void Run()
     {
         EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
