@@ -1,13 +1,7 @@
 using UnityEngine;
+using GameJam.Actions;
 
-// 玩家攻击：消费输入 → 开攻击窗口 → 由**动画事件**开关 Hitbox → 结算伤害与打击感。
-//
-// 判定方式的演进（重要）：
-//   最初用 SphereCast 每帧扫描，问题是要靠 _hitWindowStart 那类时间参数去「猜」判定时机，
-//   而且会隔墙打到、会把玩家自己的碰撞体扫进来。
-//   现在沿用参考实现 LittleAdventure 的做法：Hitbox 作为子物体挂在手上，默认关闭，
-//   由动画事件 EnableHitbox / DisableHitbox 在挥砍帧精确开关 —— 判定时机完全由动画决定，
-//   前摇不打人、后摇不打人，表现与判定天然一致。
+// 动作序列接入时只有逻辑帧事件能开关判定；旧输入、秒计时和动画事件仅作为未接入角色的兼容路径。
 [RequireComponent(typeof(CharacterController))]
 [DisallowMultipleComponent]
 public sealed class PlayerCombat : MonoBehaviour
@@ -29,16 +23,18 @@ public sealed class PlayerCombat : MonoBehaviour
 
     [Header("引用")]
     [SerializeField] private Hitbox _hitbox;
-    [SerializeField] private PlayerVFXManager _vfx;
     [SerializeField] private bool _logHits;
 
     private PlayerInputReader _input;
     private PlayerMotor _motor;
     private float _windowEnd = float.NegativeInfinity;
     private float _readyAt = float.NegativeInfinity;
+    private long _sequenceInstance;
+    private ActionCombatSettings _sequenceCombat;
+    public bool IsSequenceDriven { get; private set; }
 
     /// <summary>Hitbox 从这里取伤害值，因此攻击力只有一处真值。</summary>
-    public float AttackDamage => _attackDamage;
+    public float AttackDamage => _sequenceCombat != null ? _sequenceCombat.Damage : _attackDamage;
     public float AttackDuration => _attackDuration;
     public float AttackCooldown => _attackCooldown;
     public float HitStopSeconds => _hitStopSeconds;
@@ -61,10 +57,10 @@ public sealed class PlayerCombat : MonoBehaviour
         }
     }
 
-    // 攻击相关的所有计时统一走 UnscaledTime：
+    // 旧攻击兼容路径的计时走 UnscaledTime：
     //   · InputBuffer 内部按 TimeManager.UnscaledTime 记录按下时刻，消费时用同一时钟才不会「刚按下就过期」；
     //   · TimeManager 的减速窗口也是按 UnscaledTime 记的，这样「窗口开着」的判定与写入必然一致。
-    public bool IsAttacking => TimeManager.UnscaledTime < _windowEnd;
+    public bool IsAttacking => IsSequenceDriven ? _sequenceInstance != 0 : TimeManager.UnscaledTime < _windowEnd;
 
     public void Configure(float damage, float duration, float hitStopSeconds, float hitTimeScale)
     {
@@ -75,10 +71,9 @@ public sealed class PlayerCombat : MonoBehaviour
         SyncHitboxDamage();
     }
 
-    public void SetReferences(Hitbox hitbox, PlayerVFXManager vfx)
+    public void SetReferences(Hitbox hitbox)
     {
         _hitbox = hitbox;
-        _vfx = vfx;
         SyncHitboxDamage();
     }
 
@@ -98,7 +93,6 @@ public sealed class PlayerCombat : MonoBehaviour
         if (_motor == null) _motor = GetComponent<PlayerMotor>();
         if (_input == null) _input = GetComponent<PlayerInputReader>();
         if (_hitbox == null) _hitbox = GetComponentInChildren<Hitbox>(true);
-        if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>(true);
     }
 
     private void SyncHitboxDamage()
@@ -116,13 +110,14 @@ public sealed class PlayerCombat : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_input == null || !_input.GameplayEnabled) return;
+        if (IsSequenceDriven || _input == null || !_input.GameplayEnabled) return;
         TickAttack(TimeManager.UnscaledTime);
     }
 
     // 一帧战斗逻辑：消费输入 + 开窗口。判定交给动画事件驱动的 Hitbox，这里不再做物理扫描。
     public void TickAttack(float now)
     {
+        if (IsSequenceDriven) return;
         // 攻击窗口内不重复响应输入：挥砍播完之前按左键无效，动画才不会被新攻击打断。
         // 输入仍留在 InputBuffer 里，窗口结束的那一帧会被消费，形成自然的连击节奏。
         if (IsAttacking) return;
@@ -131,7 +126,7 @@ public sealed class PlayerCombat : MonoBehaviour
 
     public bool BeginAttack(float now)
     {
-        if (!enabled || now < _readyAt) return false;
+        if (IsSequenceDriven || !enabled || now < _readyAt) return false;
         EnsureReferences();
         // 开窗前重新绑定伤害来源，避免初始化顺序问题导致 Hitbox 拿不到攻击力
         SyncHitboxDamage();
@@ -145,6 +140,7 @@ public sealed class PlayerCombat : MonoBehaviour
     /// <summary>挥砍起手：由 Attack 动画的动画事件调用。</summary>
     public void EnableHitbox()
     {
+        if (IsSequenceDriven) return;
         if (!IsAttacking) return;
         EnsureReferences();
         if (_hitbox != null) _hitbox.EnableHitbox();
@@ -154,22 +150,16 @@ public sealed class PlayerCombat : MonoBehaviour
     /// <summary>收招：由 Attack 动画的动画事件调用。</summary>
     public void DisableHitbox()
     {
+        if (IsSequenceDriven) return;
         EnsureReferences();
         if (_hitbox != null) _hitbox.DisableHitbox();
     }
 
     public void FinishAttack()
     {
+        if (IsSequenceDriven) return;
         _windowEnd = float.NegativeInfinity;
         DisableHitbox();
-    }
-
-    /// <summary>攻击特效：第 cnt 段。由动画事件调用，与参考实现 UpdateAttack(int) 同名。</summary>
-    public void UpdateAttack(int cnt = 1)
-    {
-        EnsureReferences();
-        if (_vfx != null) _vfx.UpdateAttack(cnt);
-        else Debug.LogWarning($"[PlayerCombat] 没有配置攻击特效管理器，第 {cnt} 段特效未播放");
     }
 
     // 复位攻击状态：清掉冷却与窗口。
@@ -178,7 +168,42 @@ public sealed class PlayerCombat : MonoBehaviour
     {
         _readyAt = float.NegativeInfinity;
         _windowEnd = float.NegativeInfinity;
-        DisableHitbox();
+        _sequenceInstance = 0;
+        _sequenceCombat = null;
+        EnsureReferences();
+        if (_hitbox != null) { _hitbox.EndSequence(); _hitbox.DisableHitbox(); }
+    }
+
+    public void SetSequenceDriven(bool driven)
+    {
+        ResetAttackState();
+        IsSequenceDriven = driven;
+    }
+    public void BeginSequenceAction(ActionExecutionState state)
+    {
+        if (!IsSequenceDriven || state.Action?.Combat == null || !state.Action.Combat.Enabled) return;
+        EnsureReferences();
+        SyncHitboxDamage();
+        _sequenceInstance = state.InstanceId;
+        _sequenceCombat = state.Action.Combat;
+        if (_hitbox != null) _hitbox.BeginSequence(_sequenceInstance, _sequenceCombat.HitMask);
+    }
+    public void HandleSequenceEvent(ActionExecutionState state, ActionFrameEvent frameEvent)
+    {
+        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _hitbox == null) return;
+        if (frameEvent.EventKey == "combat.hitbox.open") _hitbox.OpenSequenceWindow(frameEvent.HitGroup);
+        else if (frameEvent.EventKey == "combat.hitbox.close") _hitbox.CloseSequenceWindow();
+    }
+    public void SampleSequenceHitbox(long instanceId)
+    {
+        if (IsSequenceDriven && _sequenceInstance == instanceId && _hitbox != null) _hitbox.SampleSequenceWindow();
+    }
+    public void EndSequenceAction(long instanceId)
+    {
+        if (_sequenceInstance != instanceId) return;
+        _sequenceInstance = 0;
+        _sequenceCombat = null;
+        if (_hitbox != null) _hitbox.EndSequence();
     }
 
     // ===== 打击感 =====

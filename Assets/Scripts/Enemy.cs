@@ -1,13 +1,15 @@
+using Cinemachine;
 using UnityEngine;
+using UnityEngine.AI;
 
 // 敌人：自行维护血量与受击反馈，Hitbox 负责碰撞判定。
-// 追击用 Vector3.MoveTowards 的直线靠近，不接 NavMesh：本阶段是灰盒预研，
-// 场景里没有烘焙导航网格，接 NavMeshAgent 只会得到一群原地不动的敌人。
+// 追击与位移全部交给 NavMeshAgent（寻路、绕障、贴地、转向都是它的事），
+// Enemy 只做决策（追不追、打不打）与战斗结算，不碰 Transform、不管重力。
+// 2026-10-04 主程定：旧的直线追击位移系统废弃，原 CharacterController 那套随之移除。
 //
-// 刻意不加 [RequireComponent(typeof(CharacterController))]：
-// 那是追击模式专用的位移载体，而它的胶囊以包围盒为基准体积可观，会改变敌人外观。
-// 加了 RequireComponent 的话，只要挂上 Enemy 就会被强行塞一个 CharacterController，
-// 「只想要一个能被打的靶子」就做不到了。需要追击时由装配工具显式添加。
+// 刻意不加 [RequireComponent(typeof(NavMeshAgent))]：
+// CombatSelfCheck 之类只想要「一个能被打的靶子」的地方不该被强行塞一个 agent，
+// 那种场合没有 agent 也能正常工作（只是不追击）。需要追击时在 Inspector 挂上即可。
 [DisallowMultipleComponent]
 public sealed class Enemy : MonoBehaviour
 {
@@ -25,32 +27,45 @@ public sealed class Enemy : MonoBehaviour
     public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
     [Header("战斗属性")]
     [SerializeField, Min(0f)] private float _attackPower = 8f;
-    [SerializeField, Min(0f)] private float _moveSpeed = 4f;
-    [SerializeField, Min(0f)] private float _gravity = 25f;
+    [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
+    [SerializeField, Min(0f)] private float _walkSpeed = 2f;
+    [SerializeField, Min(0f)] private float _runSpeed = 5f;
+    [SerializeField, Min(0f)] private float _runDistance = 6f;
+    [SerializeField, Min(0f)] private float _runHysteresis = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float _injuredThreshold = 0.3f;
+    public float Speed { get; private set; }
+    public float WalkSpeed => _walkSpeed;
+    public float RunSpeed => _runSpeed;
+    // 比较比例，避免 100 * 0.3f 的舍入把恰好 30 血误判为受伤。
+    public bool IsInjured => HealthRatio < _injuredThreshold;
+    public bool IsAttacking { get; private set; }
+    internal Vector3 PreviousPosition { get; private set; }
+    internal Quaternion PreviousRotation { get; private set; }
+    private EnemyAnimation _animation;
 
     [Header("行为")]
-    // 默认不追击：追击要靠 CharacterController 位移，而它的胶囊以包围盒为基准体积可观，
-    // 不该在「只需要一个能被打的靶子」时强加给敌人。需要时在 Inspector 勾上。
+    // 寻路与位移全部交给 NavMeshAgent（2026-10-04 主程定：旧的直线追击位移系统废弃）
+    // Enemy 只保留决策与攻击判定，不再碰 Transform、不管重力
+    // 刻意不用 [RequireComponent]：CombatSelfCheck 之类只想要"能被打的靶子"的地方
+    // 不该被强行塞一个 agent，所以缺失时只跳过追击，不报错也不禁用
+    [SerializeField] private NavMeshAgent _agent;
+
+    // 默认不追击：需要时在 Inspector 勾上
+    // 朝向由 NavMeshAgent.updateRotation 处理，Enemy 不再自己转
     [SerializeField] private bool _chasePlayer;
     [SerializeField, Min(0f)] private float _sightRange = 14f;
     [SerializeField, Min(0f)] private float _attackRange = 2.2f;
     [SerializeField, Min(0f)] private float _attackCooldown = 1.1f;
-    [SerializeField, Min(0f)] private float _facingResponse = 12f;
 
-    [Header("受击反馈")]
-    [SerializeField, Min(0f)] private float _knockbackSpeed = 6f;
-    [SerializeField, Min(0f)] private float _knockbackDecay = 10f;
-
-    private CharacterController _controller;
-    private Vector3 _knockback;
     private float _nextAttackTime;
-    private float _verticalSpeed;
     private Hitbox _attackHitbox;
-    private PlayerVFXManager _attackVfx;
+    private bool _runningChase;
+    // 攻击命中时向玩家相机广播震动。方向取「敌人 → 玩家」，力度按攻击伤害换算，见 PlayAttackImpulse。
+    [SerializeField] private CinemachineImpulseSource _impulseSource;
 
     public float AttackPower => _attackPower;
     public float AttackDamage => _attackPower;
-    public float MoveSpeed => _moveSpeed;
+    public float MoveSpeed => _walkSpeed;
     public float AttackRange => _attackRange;
     public bool IsChasing => _chasePlayer;
 
@@ -58,42 +73,69 @@ public sealed class Enemy : MonoBehaviour
     {
         SetMaxHealth(maxHealth);
         _attackPower = attackPower;
-        _moveSpeed = moveSpeed;
+        _walkSpeed = Mathf.Max(0f, moveSpeed);
     }
 
     public void SetChasePlayer(bool chase)
     {
         _chasePlayer = chase;
+        if (!chase) StopMoving();
     }
 
     private void Awake()
     {
         _health = _maxHealth;
-        _controller = GetComponent<CharacterController>();
+        if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
+        _animation = GetComponentInChildren<EnemyAnimation>();
+        _attackHitbox = GetComponentInChildren<Hitbox>(true);
+        if (_attackHitbox != null)
+        {
+            _attackHitbox.Configure(CampType.Enemy, this);
+            _attackHitbox.DisableHitbox();
+        }
+        PreviousPosition = transform.position;
+        PreviousRotation = transform.rotation;
+        if (_agent != null)
+        {
+            // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
+            _agent.speed = _walkSpeed;
+            // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
+            _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+        }
         if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        if (!IsAlive)
+        PreviousPosition = transform.position;
+        PreviousRotation = transform.rotation;
+        Speed = 0f;
+        if (!IsAlive) { StopMoving(); return; }
+        float dt = TimeManager.WorldFixedDeltaTime;
+        if (dt <= 0f || !_chasePlayer || IsAttacking || (_animation != null && _animation.IsHurting))
         {
+            StopMoving();
             return;
         }
-
-        float dt = TimeManager.WorldDeltaTime;
-        if (dt <= 0f) return;
-
-        ApplyPhysics(dt);
-        if (_chasePlayer) Chase(dt);
+        Chase();
     }
 
-    // ===== 动画事件入口 =====
-    // 敌人的攻击判定同样走「动画事件开关 Hitbox」这套（与玩家的 Hitbox 同一个组件）。
-    // 敌人当前用的动画控制器里还没有这些事件，缺了它就只靠 TryAttack 的代码结算 ——
-    // 补上事件后会自动切到动画驱动，无需改代码。
+    private void OnDisable()
+    {
+        StopMoving();
+        FinishAttack();
+    }
+
+    public void FinishAttack()
+    {
+        IsAttacking = false;
+        DisableHitbox();
+    }
+
     public void EnableHitbox()
     {
-        if (_attackHitbox != null) _attackHitbox.EnableHitbox();
+        if (IsAlive && IsAttacking && _attackHitbox != null) _attackHitbox.EnableHitbox();
     }
 
     public void DisableHitbox()
@@ -101,17 +143,17 @@ public sealed class Enemy : MonoBehaviour
         if (_attackHitbox != null) _attackHitbox.DisableHitbox();
     }
 
-    // 攻击特效：与玩家 PlayerVFXManager 同名事件，动画事件可直接同时挂
-    public void UpdateAttack(int cnt = 1)
-    {
-        if (_attackVfx != null) _attackVfx.UpdateAttack(cnt);
-    }
-
-    // 供装配工具写入敌人自己的受击盒与特效
-    public void ConfigureAttackHitbox(Hitbox hitbox, PlayerVFXManager vfx)
+    // 供装配工具写入敌人自己的攻击判定盒
+    public void ConfigureAttackHitbox(Hitbox hitbox)
     {
         _attackHitbox = hitbox;
-        _attackVfx = vfx;
+    }
+
+    // 攻击命中玩家时由其所在位置触发：抖动方向取「敌人 → 玩家」的世界方向，
+    // 力度按攻击伤害缩放（20 点伤害 → 0.5），两者都交给 CameraShaker 统一裁定。
+    public void PlayAttackImpulse(Vector3 targetPosition)
+    {
+        CameraShaker.Emit(_impulseSource, targetPosition - transform.position, _attackPower);
     }
 
     // 实机联调用：把敌人的决策输入一次性打出来，便于定位「为什么不追/不攻击」。
@@ -126,84 +168,67 @@ public sealed class Enemy : MonoBehaviour
         Debug.Log($"[Enemy] {name} 状态: 存活={IsAlive} 血量={Health}/{MaxHealth} 追击={_chasePlayer} "
             + $"玩家={(target != null ? target.name : "未找到")} 水平距离={distance:0.##} 攻击距离={_attackRange} "
             + $"视野={_sightRange} 下次攻击={_nextAttackTime:0.##} 当前={TimeManager.UnscaledTime:0.##} "
-            + $"控制器={(_controller != null && _controller.enabled)} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
+            + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
-    private void ApplyPhysics(float dt)
-    {
-        if (_controller == null || !_controller.enabled) return;
-
-        _knockback = Vector3.MoveTowards(_knockback, Vector3.zero, _knockbackDecay * dt);
-
-        if (_controller.isGrounded && _verticalSpeed < 0f) _verticalSpeed = -2f;
-        _verticalSpeed -= _gravity * dt;
-
-        Vector3 motion = _knockback + Vector3.up * _verticalSpeed;
-        _controller.Move(motion * dt);
-    }
-
-    private void Chase(float dt)
+    private void Chase()
     {
         PlayerMotor target = ResolvePlayer();
-        if (target == null) return;
+        if (target == null || !GameManager.Instance.Player.IsAlive) { StopMoving(); return; }
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
-        if (distance > _sightRange) return;
 
-        FaceTowards(toTarget, dt);
+        if (distance > _sightRange) { StopMoving(); return; }
 
-        if (distance > _attackRange)
+        if (distance - _attackRange > 0.001f)
         {
-            Vector3 step = toTarget.normalized * (_moveSpeed * dt);
-            MoveStep(step);
+            // 进跑与退跑分开阈值，避免跟随移动玩家时在边界反复切换。
+            _runningChase = _runningChase
+                ? distance > Mathf.Max(_attackRange, _runDistance - _runHysteresis)
+                : distance >= _runDistance;
+            float desiredSpeed = _runningChase ? _runSpeed : _walkSpeed;
+            if (AgentReady)
+            {
+                float rate = TimeManager.WorldRate;
+                _agent.speed = desiredSpeed * rate;
+                _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+                _agent.isStopped = false;
+                _agent.SetDestination(target.transform.position);
+                Speed = Vector3.ProjectOnPlane(_agent.velocity, Vector3.up).magnitude / rate;
+            }
             return;
         }
 
-        TryAttack(target, distance);
+        StopMoving();
+        TryAttack(target);
     }
 
-    // 位移走 CharacterController.Move，与玩家一致：物理引擎只做碰撞，不接管运动
-    private void MoveStep(Vector3 step)
-    {
-        if (_controller != null && _controller.enabled)
-        {
-            _controller.Move(step);
-            return;
-        }
+    private bool AgentReady => _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
 
-        transform.position += step;
+    private void StopMoving()
+    {
+        Speed = 0f;
+        if (!AgentReady) return;
+        _agent.isStopped = true;
+        _agent.velocity = Vector3.zero;
     }
 
-    // 测试环境可能没有 CharacterController（[RequireComponent] 会在运行时补一个，
-    // 但 Awake 之前拿不到），显式留一个注入点
-    public void SetController(CharacterController controller)
+    private void TryAttack(PlayerMotor target)
     {
-        _controller = controller;
-    }
-
-    private void FaceTowards(Vector3 toTarget, float dt)
-    {
-        if (toTarget.sqrMagnitude < 0.0001f) return;
-        float targetYaw = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
-        float yaw = Mathf.LerpAngle(transform.eulerAngles.y, targetYaw, Mathf.Clamp01(_facingResponse * dt));
-        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-    }
-
-    private void TryAttack(PlayerMotor target, float distance)
-    {
-        if (TimeManager.UnscaledTime < _nextAttackTime) return;
+        if (TimeManager.WorldTime < _nextAttackTime) return;
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
         PlayerData health = GameManager.Instance.Player;
         if (health == null || !health.IsAlive) return;
 
-        _nextAttackTime = TimeManager.UnscaledTime + _attackCooldown;
-        float applied = health.TakeDamage(_attackPower);
-        // 被打中也要有反馈：与玩家命中敌人共用同一套震屏通道
-        if (applied > 0f) CameraShaker.Shake(0.35f);
+        // 没有动画或判定盒就不凭距离直接扣血。
+        if (_animation == null || !_animation.CanAttack || _attackHitbox == null) return;
+        _nextAttackTime = TimeManager.WorldTime + _attackCooldown;
+        IsAttacking = true;
+        _animation.PlayAttack();
     }
 
     private PlayerMotor ResolvePlayer()
@@ -220,12 +245,19 @@ public sealed class Enemy : MonoBehaviour
         if (_damagePopup != null)
             _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
                 transform, Camera.main, _numberLifetime, _riseSpeed);
-        CameraShaker.Shake(_shakeAmplitude);
         _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
         if (!IsAlive)
         {
-            _chasePlayer = false;
-            if (_controller != null) _controller.enabled = false;
+            StopMoving();
+            if (AgentReady) _agent.ResetPath();
+            FinishAttack();
+            GetComponent<GibComponent>()?.TrySlice(hitDirection);
+            if (_animation != null) _animation.PlayDeath();
+        }
+        else if (_animation != null)
+        {
+            StopMoving();
+            _animation.PlayHurt();
         }
         return applied;
     }
@@ -234,17 +266,23 @@ public sealed class Enemy : MonoBehaviour
     [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);
     [SerializeField] private float _numberLifetime = 1.2f;
     [SerializeField] private float _riseSpeed = 2.2f;
-    [SerializeField] private float _shakeAmplitude = 0.6f;
     public DamagePopup DamagePopupTemplate => _damagePopup;
     public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
 
-    public void ResetHealth() { _health = _maxHealth; _invulnerableUntil = float.NegativeInfinity; DamagedCount = 0; }
+    public void ResetHealth()
+    {
+        bool wasDead = !IsAlive;
+        StopMoving();
+        if (AgentReady) _agent.ResetPath();
+        FinishAttack();
+        _runningChase = false;
+        _nextAttackTime = 0f;
+        GetComponent<GibComponent>()?.ResetEffect();
+        _health = _maxHealth;
+        _invulnerableUntil = float.NegativeInfinity;
+        DamagedCount = 0;
+        if (wasDead && _animation != null) _animation.ResetAfterDeath();
+    }
     public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
-
-    public void ApplyKnockback(Vector3 direction, float strength)
-    {
-        Vector3 flat = new Vector3(direction.x, 0f, direction.z).normalized;
-        _knockback = flat * (_knockbackSpeed * Mathf.Max(0f, strength));
-    }
 }

@@ -1,9 +1,10 @@
 using System;
+using GameJam.Actions;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour
+public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -27,6 +28,9 @@ public sealed class PlayerMotor : MonoBehaviour
     private Vector3 _lockedNormal;
     private Vector3 _lockedPoint;
     private float _lastWallJump = float.NegativeInfinity;
+    private object _simulationOwner;
+    private ActionControlPolicy _actionControl;
+    private bool _commandJump;
 
     public MovementParams Params => _params;
     public MovementState State { get; private set; } = MovementState.Airborne;
@@ -36,7 +40,6 @@ public sealed class PlayerMotor : MonoBehaviour
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
     public bool IsSprinting { get; private set; }
-    public float Energy { get; private set; }
     public int JumpCount { get; private set; }
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
@@ -55,6 +58,27 @@ public sealed class PlayerMotor : MonoBehaviour
     }
     public void SetInput(IPlayerInput input) => _input = input;
     public void SetMovementReference(Transform reference) => _movementReference = reference;
+    public bool IsExternallyDriven => _simulationOwner != null;
+    public bool TryAcquireSimulation(object owner)
+    {
+        if (owner == null || _simulationOwner != null && !ReferenceEquals(owner, _simulationOwner)) return false;
+        _simulationOwner = owner;
+        ClearPendingInput();
+        return true;
+    }
+    public void ReleaseSimulation(object owner)
+    {
+        if (!ReferenceEquals(owner, _simulationOwner)) return;
+        _simulationOwner = null;
+        _actionControl = null;
+        _commandJump = false;
+        ClearPendingInput();
+    }
+    public void SetActionControl(ActionControlPolicy policy)
+    {
+        _actionControl = policy;
+        if (policy != null && !policy.AllowJump) ClearPendingInput();
+    }
 
     private void Awake()
     {
@@ -86,6 +110,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (IsExternallyDriven) return;
         PlayerInputFrame frame = _input != null ? _input.ReadFrame() : default;
         Simulate(frame, TimeManager.PlayerFixedDeltaTime, TimeManager.UnscaledTime);
     }
@@ -93,6 +118,13 @@ public sealed class PlayerMotor : MonoBehaviour
     public void Simulate(PlayerInputFrame input, float dt, float inputTime)
     {
         if (_contacts == null || !_controller.enabled || dt < 0f) return;
+        if (_actionControl != null)
+        {
+            if (!_actionControl.AllowMove) input.Move = Vector2.zero;
+            if (!_actionControl.AllowSprint) input.SprintHeld = false;
+            if (!_actionControl.AllowJump) { input.JumpPressed = false; ClearPendingInput(); }
+            if (!_actionControl.AllowSlide) input.SlidePressed = false;
+        }
         if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
         if (dt == 0f) return;
         bool wallJumpFacingLocked = _clock - _lastWallJump < _params.WallJumpFacingLockTime;
@@ -110,7 +142,10 @@ public sealed class PlayerMotor : MonoBehaviour
                 ExitWall();
         }
 
-        UpdateFacing(wish, dt, wallJumpFacingLocked);
+        // 墙面约束仍优先；普通角色转向可以由动作段锁定，相机继续独立转动。
+        if (_actionControl == null || _actionControl.AllowTurn || IsWallSliding)
+            UpdateFacing(wish, dt, wallJumpFacingLocked);
+        else _facingAngularVelocity = 0f;
         Vector3 drive = transform.forward * wish.magnitude;
         // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
         if (wish != Vector3.zero && !IsWallSliding && !wallJumpFacingLocked && !_wallJumpExitProtected &&
@@ -124,7 +159,7 @@ public sealed class PlayerMotor : MonoBehaviour
             SetCapsule(_params.SlideCapsuleHeight, _controller.radius);
         }
 
-        bool jump = inputTime <= _jumpUntil;
+        bool jump = _commandJump || inputTime <= _jumpUntil;
         if (IsSliding)
         {
             SetHorizontal(Vector3.MoveTowards(MovementMath.Horizontal(_velocity), Vector3.zero, _params.SlideDecel * dt));
@@ -151,6 +186,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
+        gravity *= _actionControl != null ? _actionControl.GravityMultiplier : 1f;
         float gravityDt = IsWallSliding ? WallUnprotectedDeltaTime(dt) : dt;
         _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * gravityDt;
         if (IsWallSliding && gravityDt > 0f) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
@@ -188,8 +224,8 @@ public sealed class PlayerMotor : MonoBehaviour
                 if (jump && IsWallSliding) JumpFromWall();
             }
         }
-        Energy = Mathf.Min(_params.EnergyMax, Energy + Mathf.Max(0f, HorizontalSpeed - _params.GroundSpeedThreshold)
-            * _params.EnergyPerSecondPerExcessSpeed * dt);
+        // 能量不在这里结算：唯一账户是 VectorEnergy（执行序 10，在本组件之后自动积能）
+        _commandJump = false;
     }
 
     private void UpdateFreeMovement(float dt, Vector3 wish)
@@ -354,13 +390,63 @@ public sealed class PlayerMotor : MonoBehaviour
         _controller.center = Vector3.up * (_controller.height * 0.5f);
     }
     private void SetHorizontal(Vector3 value) { _velocity.x = value.x; _velocity.z = value.z; }
+    public bool CanExecute(MotorCommandKind command)
+    {
+        if (_contacts == null || _controller == null || !_controller.enabled || _params == null) return false;
+        switch (command)
+        {
+            case MotorCommandKind.Jump: return (IsGrounded || IsWallSliding) && (!IsSliding || _contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius));
+            case MotorCommandKind.EnterSlide: return IsGrounded && !IsSliding && HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio;
+            case MotorCommandKind.ExitSlide: return !IsSliding || _contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius);
+            default: return Enum.IsDefined(typeof(MotorCommandKind), command);
+        }
+    }
+    public bool TryExecute(MotorCommandKind command, float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value) || !CanExecute(command)) return false;
+        switch (command)
+        {
+            case MotorCommandKind.Jump:
+                // 跳跃在运动步内执行，保留原先先结算地面/墙面加速、再起跳的 bhop 顺序。
+                _commandJump = true;
+                break;
+            case MotorCommandKind.EnterSlide: IsSliding = true; SetCapsule(_params.SlideCapsuleHeight, _controller.radius); break;
+            case MotorCommandKind.ExitSlide: return !IsSliding || TryStand();
+            case MotorCommandKind.SetHorizontalSpeed: SetHorizontalSpeed(value); break;
+            case MotorCommandKind.LaunchVertical: LaunchVertical(value); break;
+            case MotorCommandKind.ReverseHorizontal: ReverseHorizontal(); break;
+            case MotorCommandKind.AddForwardImpulse: SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity) + transform.forward * value, _params.MaxSpeed)); break;
+            case MotorCommandKind.ClearHorizontal: SetHorizontal(Vector3.zero); break;
+        }
+        return true;
+    }
+    public void CancelActionCommands() => _commandJump = false;
+    public void SetHorizontalSpeed(float speed)
+    {
+        if (_params == null) return;
+        Vector3 direction = HorizontalSpeed > 0f ? MovementMath.Horizontal(_velocity).normalized : transform.forward;
+        SetHorizontal(direction * Mathf.Clamp(speed, 0f, _params.MaxSpeed));
+    }
+    public void LaunchVertical(float speed)
+    {
+        if (_params == null || IsSliding && !TryStand()) return;
+        Jump(Mathf.Max(0f, speed));
+    }
+    public void ReverseHorizontal()
+    {
+        Vector3 horizontal = -MovementMath.Horizontal(_velocity);
+        SetHorizontal(horizontal);
+        if (IsWallSliding) ExitWall();
+        if (horizontal != Vector3.zero) transform.rotation = Quaternion.LookRotation(horizontal, Vector3.up);
+        _facingAngularVelocity = 0f;
+    }
     private void OnControllerColliderHit(ControllerColliderHit hit) => _contacts?.RecordHit(hit);
 
     public void ResetState()
     {
         _velocity = Vector3.zero;
+        _commandJump = false;
         _facingAngularVelocity = 0f;
-        Energy = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
         IsSliding = IsSprinting = _wallLocked = _wallJumpExitProtected = false;

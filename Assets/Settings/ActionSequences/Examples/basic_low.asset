@@ -1,0 +1,194 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: basic_low
+  m_EditorClassIdentifier: 
+  ActionId: basic_low
+  DisplayName: "\u5E38\u6001\u666E\u653B"
+  Description: "\u793A\u4F8B\u914D\u7F6E\uFF0C\u5E27\u6570\u9700\u901A\u8FC7\u624B\u611F\u6D4B\u8BD5\u8C03\u6574\uFF1B\u5F53\u524D\u4E0D\u9A71\u52A8\u6E38\u620F\u52A8\u4F5C\u3002"
+  Timeline:
+  - SegmentId: startup_a
+    DisplayName: "\u8D77\u52BF"
+    Phase: 0
+    DurationFrames: 4
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: startup_b
+    DisplayName: "\u5F15\u5200 / \u51C6\u5907"
+    Phase: 0
+    DurationFrames: 6
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: active
+    DisplayName: "\u6267\u884C"
+    Phase: 1
+    DurationFrames: 6
+    Events:
+    - Frame: 0
+      EventKey: action.active
+      HitGroup: 1
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  - SegmentId: recovery
+    DisplayName: "\u6062\u590D"
+    Phase: 2
+    DurationFrames: 14
+    Events:
+    - Frame: 0
+      EventKey: action.recovery
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: 
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CancelWindows:
+  - WindowId: ac56ba15dc0e443c87ea0971075dd809
+    DisplayName: "\u975E\u539F\u5730\u8DF3"
+    Start:
+      SegmentId: recovery
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 94cfe69bb45889a42a5a622a1a518ebb, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+  - WindowId: 7f7fd8d4791c4c71a52257ffebacb581
+    DisplayName: "\u95EA\u907F"
+    Start:
+      SegmentId: recovery
+      RelativeTo: 0
+      OffsetFrames: 4
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 08d4435756c679449941635f7e6d12dc, type: 2}
+    - {fileID: 11400000, guid: 0395cffb1dca8494f826e63f51234e51, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+  - WindowId: e81ac621d43e4f1a80b30971b1c99da4
+    DisplayName: "\u8FDE\u65A9\u540E\u6447\u6D3E\u751F"
+    Start:
+      SegmentId: recovery
+      RelativeTo: 0
+      OffsetFrames: 2
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: -2
+    Targets:
+    - {fileID: 11400000, guid: c0b681c25b29d6e4fb3decd27b9a0543, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+  - WindowId: ef3fe4357e5847d9a91cc258a75490e8
+    DisplayName: "\u63A8\u65A9\u8854\u63A5"
+    Start:
+      SegmentId: active
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: fa1a408e8c7abda4f979e271cb30de4a, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+  - WindowId: 728f161eb58e4df1a992c963c898b6d8
+    DisplayName: "parry / \u65AD\u80A2 \u2192 \u95EA\u65A9"
+    Start:
+      SegmentId: active
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: c466b339b5140ed429555a09e371341c, type: 2}
+    RequireAll: []
+    RequireAny:
+    - parry
+    - limb_break
+    Priority: 10
+  Input:
+    Steps:
+    - Button: 1
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 2
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    MaxStepGapFrames: 0
+    PreInputFrames: 8
+    BufferGroup: main
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 0
+    RequireAll:
+    - speed_low
+    RequireAny: []
+  StartConditions: []
+  EnergyCost: 0
+  CooldownFrames: 0

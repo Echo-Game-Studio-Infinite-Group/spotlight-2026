@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: PlayerAttack
+  m_EditorClassIdentifier: 
+  ActionId: player_attack
+  DisplayName: "\u73A9\u5BB6\u5F53\u524D\u653B\u51FB"
+  Description: "\u8FC1\u79FB\u73B0\u6709 Attack \u7D20\u6750\u548C\u4F24\u5BB3\uFF1B\u652F\u6301\u5E38\u6001\u666E\u653B\u7684\u79FB\u52A8\u8DF3\u8DC3\u6536\u62DB\u53D6\u6D88\u3002\u9AD8\u901F\u653B\u51FB\u5DEE\u5206\u53CA\u901F\u5EA6\u4F24\u5BB3\u7531\u540E\u7EED\u52A8\u4F5C\u8868\u6269\u5145\u3002"
+  Timeline:
+  - SegmentId: startup_a
+    DisplayName: "\u8D77\u52BF"
+    Phase: 0
+    DurationFrames: 33
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0
+      NormalizedEnd: 0.33333334
+      BlendFrames: 5
+  - SegmentId: startup_b
+    DisplayName: "\u5F15\u5200"
+    Phase: 0
+    DurationFrames: 6
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: vfx.attack
+      HitGroup: 0
+      Value: 1
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.33333334
+      NormalizedEnd: 0.3939394
+      BlendFrames: 5
+  - SegmentId: active
+    DisplayName: "\u6325\u780D\u547D\u4E2D"
+    Phase: 1
+    DurationFrames: 30
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: combat.hitbox.open
+      HitGroup: 1
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.3939394
+      NormalizedEnd: 0.6969697
+      BlendFrames: 5
+  - SegmentId: recovery
+    DisplayName: "\u6536\u62DB"
+    Phase: 2
+    DurationFrames: 30
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: combat.hitbox.close
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.6969697
+      NormalizedEnd: 1
+      BlendFrames: 5
+  CancelWindows:
+  - WindowId: ac64d5182b4340a4af8907183d2c5b3e
+    DisplayName: "\u6536\u62DB\u63A5\u79FB\u52A8\u8DF3\u8DC3"
+    Start:
+      SegmentId: recovery
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 26b5f44d095014b46a9b5782c2890ace, type: 2}
+    RequireAll:
+    - non_stationary_jump
+    - speed_low
+    RequireAny: []
+    Priority: 0
+  Input:
+    Steps:
+    - Button: 1
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 2
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    MaxStepGapFrames: 0
+    PreInputFrames: 8
+    BufferGroup: main
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 0
+    RequireAll: []
+    RequireAny: []
+  StartConditions: []
+  EnergyCost: 0
+  CooldownFrames: 21
+  Combat:
+    Enabled: 1
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295

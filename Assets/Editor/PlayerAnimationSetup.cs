@@ -77,6 +77,16 @@ public static class PlayerAnimationSetup
     {
         AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
         if (controller == null) throw new InvalidOperationException("找不到 player.controller");
+        if (controller.layers.Length > 0)
+        foreach (ChildAnimatorStateMachine child in controller.layers[0].stateMachine.stateMachines)
+            if (child.stateMachine.name == "Actions")
+            {
+                GameJam.Actions.ActionCatalog catalog = AssetDatabase.LoadAssetAtPath<GameJam.Actions.ActionCatalog>(GameJam.Actions.Editor.ActionPlayerSetup.CatalogPath);
+                if (catalog != null) GameJam.Actions.Editor.ActionPlayerSetup.EnsureAnimator(controller, catalog);
+                EditorUtility.SetDirty(controller); AssetDatabase.SaveAssets();
+                Debug.Log("[PlayerAnimationSetup] 保留已接入的 Actions 子状态机与手工状态，按动作表增量装配");
+                return controller;
+            }
 
         // 清空旧内容：层、状态机、混合树都是挂在控制器资产内的子资源，必须一并销毁，
         // 否则重复执行会不断累积出新的层与状态。
