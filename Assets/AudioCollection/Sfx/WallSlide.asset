@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3bad14e2498ac1d4d8a3dbb4f73dc253, type: 3}
-  m_Name: AudioActionDefinition 4
+  m_Name: WallSlide
   m_EditorClassIdentifier: 
   Id: 
-  Clip: {fileID: 8300000, guid: 58bf81ff6ca55414ebc4158ead065d65, type: 3}
+  Clip: {fileID: 8300000, guid: c5cb0def4d8b9554497de38365cf0f9d, type: 3}
   StartPosition01: 0
-  LoopStart01: 0.1394892
-  LoopEnd01: 0.26719058
+  LoopStart01: 0.04715129
+  LoopEnd01: 0.29872075
   SeekToReleaseRegion: 0
   ReleasePosition01: 0.9
   LoopMode: 4
-  LoopSeamFadeSeconds: 0.069
+  LoopSeamFadeSeconds: 0.027945742
   GrainSeconds: 0.18
   GrainSpacingSeconds: 0.02
   GrainRandomStart01: 1
@@ -29,7 +29,7 @@ MonoBehaviour:
   LoopRegionRandom01: 0.05
   SustainDriftDb: 0.8
   SustainDriftCutoffHz: 600
-  SustainGainDb: -3.9
+  SustainGainDb: -3.3
   Envelope:
     AttackSeconds: 0.01
     DecaySeconds: 0.05
