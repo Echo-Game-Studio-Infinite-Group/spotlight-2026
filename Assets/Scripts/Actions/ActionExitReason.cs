@@ -1,4 +1,4 @@
 namespace GameJam.Actions
 {
-    public enum ActionExitReason { Completed, Cancelled, Reset }
+    public enum ActionExitReason { Completed, Cancelled, Reset, Interrupted }
 }

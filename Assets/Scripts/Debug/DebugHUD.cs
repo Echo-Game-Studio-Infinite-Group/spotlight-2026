@@ -46,8 +46,11 @@ public sealed class DebugHUD : MonoBehaviour
     // 战斗数值单独一段：血量与减速是「打击感是否生效」最直接的两个观察点
     private void DrawCombatLines()
     {
-        PlayerData health = GameManager.Instance.Player;
-        GUILayout.Label($"玩家血量 {health.Health:F0} / {health.MaxHealth:F0}", _style);
+        // 玩家血量走场景级注册点；读不到时明确写出来，避免把"没接上"误看成"血量是 0"
+        HealthComponent playerHealth = Player.Current != null ? Player.Current.Health : null;
+        GUILayout.Label(playerHealth != null
+            ? $"玩家血量 {playerHealth.Health:F0} / {playerHealth.MaxHealth:F0}"
+            : "玩家血量 未接入 HealthComponent", _style);
 
         Enemy enemy = null;
         float nearest = float.PositiveInfinity;

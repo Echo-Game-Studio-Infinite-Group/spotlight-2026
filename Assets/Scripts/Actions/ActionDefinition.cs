@@ -15,6 +15,7 @@ namespace GameJam.Actions
         public List<string> StartConditions = new List<string>();
         [Min(0f)] public float EnergyCost;
         [Min(0)] public int CooldownFrames;
+        public ActionCombatSettings Combat = new ActionCombatSettings();
 
         public string Label => string.IsNullOrEmpty(DisplayName) ? name : DisplayName;
         public int TotalFrames

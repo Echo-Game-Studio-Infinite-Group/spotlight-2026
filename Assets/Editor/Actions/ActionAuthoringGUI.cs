@@ -16,6 +16,9 @@ namespace GameJam.Actions.Editor
             {"Events", "帧事件"}, {"Control", "移动控制接口"}, {"Animation", "动画绑定接口"},
             {"Frame", "段内帧"}, {"EventKey", "事件键"}, {"HitGroup", "命中段编号"}, {"Value", "数值参数"},
             {"AllowMove", "允许移动输入"}, {"AllowTurn", "允许转向输入"}, {"GravityMultiplier", "重力倍率"},
+            {"AllowJump", "允许原始跳跃输入"}, {"AllowSlide", "允许原始滑铲起手"}, {"AllowSprint", "允许冲刺输入"},
+            {"Combat", "攻击判定"}, {"Enabled", "启用攻击上下文"}, {"Damage", "基础伤害"}, {"HitMask", "命中查询层"},
+            {"MotorCommand", "运动命令类型"}, {"Layer", "动画层索引"},
             {"MovementCommand", "移动命令键"}, {"CommandValue", "命令数值"},
             {"AnimatorState", "Animator 状态完整路径"}, {"Clip", "参考动画片段"}, {"NormalizedStart", "片段归一化起点"},
             {"NormalizedEnd", "片段归一化终点"}, {"BlendFrames", "混合（玩家帧）"},
@@ -37,7 +40,9 @@ namespace GameJam.Actions.Editor
             {"Pressed", "按下"}, {"Released", "松开"}, {"Held", "长按"},
             {"LatestInGroup", "保留同组最新"}, {"EarliestInGroup", "保留同组最早"}, {"Queue", "有限队列"},
             {"None", "无"}, {"Attack", "攻击"}, {"Skill", "技能修饰键"}, {"Jump", "跳跃"}, {"Sprint", "冲刺"},
-            {"Slide", "下蹲/滑铲"}, {"Forward", "前"}, {"Backward", "后"}, {"Left", "左"}, {"Right", "右"}
+            {"Slide", "下蹲/滑铲"}, {"Forward", "前"}, {"Backward", "后"}, {"Left", "左"}, {"Right", "右"},
+            {"EnterSlide", "进入滑铲"}, {"ExitSlide", "退出滑铲"}, {"SetHorizontalSpeed", "设置水平速度"},
+            {"LaunchVertical", "设置向上速度"}, {"ReverseHorizontal", "水平反向"}, {"AddForwardImpulse", "叠加向前速度"}, {"ClearHorizontal", "清空水平动量"}
         };
 
         public static string PhaseLabel(ActionPhase phase) => EnumLabels.TryGetValue(phase.ToString(), out string label) ? label : "无效阶段";
@@ -72,6 +77,7 @@ namespace GameJam.Actions.Editor
                 if (!property.isExpanded) return;
                 EditorGUI.indentLevel++;
                 if (property.type == nameof(ActionFrameAnchor)) DrawAnchor(property, action);
+                else if (property.type == nameof(ActionAnimationBinding)) ActionAnimatorAuthoring.DrawBinding(property);
                 else
                 {
                     SerializedProperty child = property.Copy();
@@ -101,6 +107,24 @@ namespace GameJam.Actions.Editor
                 var options = new string[names.Length];
                 for (int i = 0; i < names.Length; i++) options[i] = EnumLabels.TryGetValue(names[i], out string value) ? value : names[i];
                 property.enumValueIndex = EditorGUILayout.Popup(label, property.enumValueIndex, options);
+            }
+            else if (property.name == "EventKey")
+            {
+                EditorGUILayout.BeginHorizontal();
+                property.stringValue = EditorGUILayout.TextField(label, property.stringValue);
+                if (GUILayout.Button("选择", GUILayout.Width(45)))
+                {
+                    var menu = new GenericMenu();
+                    SerializedObject owner = property.serializedObject; string path = property.propertyPath;
+                    foreach (string key in new[] { "combat.hitbox.open", "combat.hitbox.close", "vfx.attack", "motor.command" })
+                    {
+                        string captured = key;
+                        menu.AddItem(new GUIContent(key), property.stringValue == key, () =>
+                        { owner.Update(); owner.FindProperty(path).stringValue = captured; owner.ApplyModifiedProperties(); EditorUtility.SetDirty(owner.targetObject); });
+                    }
+                    menu.ShowAsContext();
+                }
+                EditorGUILayout.EndHorizontal();
             }
             else EditorGUILayout.PropertyField(property, new GUIContent(label), true);
         }
@@ -200,6 +224,9 @@ namespace GameJam.Actions.Editor
             {
                 control.FindPropertyRelative("AllowMove").boolValue = true;
                 control.FindPropertyRelative("AllowTurn").boolValue = true;
+                control.FindPropertyRelative("AllowJump").boolValue = true;
+                control.FindPropertyRelative("AllowSlide").boolValue = true;
+                control.FindPropertyRelative("AllowSprint").boolValue = true;
                 control.FindPropertyRelative("GravityMultiplier").floatValue = 1;
             }
             SerializedProperty animation = property.FindPropertyRelative("Animation");

@@ -44,6 +44,7 @@ namespace GameJam.Actions
         {
             if (action == null) return;
             if (action.EnergyCost < 0 || !Finite(action.EnergyCost) || action.CooldownFrames < 0) Error(issues, action, "耗能和冷却必须为非负有限值");
+            if (action.Combat != null && (!Finite(action.Combat.Damage) || action.Combat.Damage < 0)) Error(issues, action, "伤害必须为非负有限值");
             if (action.Timeline == null || action.Timeline.Count == 0) Error(issues, action, "至少配置一个子段；零时长阶段可直接省略");
             var segmentIds = new HashSet<string>(StringComparer.Ordinal);
             long total = 0;
@@ -59,12 +60,12 @@ namespace GameJam.Actions
                         Error(issues, action, "子段控制参数无效：" + segment.DisplayName);
                     ActionAnimationBinding animation = segment.Animation;
                     if (animation == null || !Finite(animation.NormalizedStart) || !Finite(animation.NormalizedEnd) ||
-                        animation.NormalizedStart < 0 || animation.NormalizedEnd > 1 || animation.NormalizedStart >= animation.NormalizedEnd || animation.BlendFrames < 0)
+                        animation.NormalizedStart < 0 || animation.NormalizedEnd > 1 || animation.NormalizedStart >= animation.NormalizedEnd || animation.BlendFrames < 0 || animation.Layer < 0)
                         Error(issues, action, "动画区间需满足 0 ≤ 起点 < 终点 ≤ 1，混合帧非负：" + segment.DisplayName);
                     if (segment.Events == null) continue;
                     foreach (ActionFrameEvent frameEvent in segment.Events)
                         if (frameEvent == null || frameEvent.Frame < 0 || frameEvent.Frame >= segment.DurationFrames ||
-                            string.IsNullOrWhiteSpace(frameEvent.EventKey) || !Finite(frameEvent.Value) || frameEvent.HitGroup < 0)
+                            string.IsNullOrWhiteSpace(frameEvent.EventKey) || !Finite(frameEvent.Value) || frameEvent.HitGroup < 0 || !Enum.IsDefined(typeof(MotorCommandKind), frameEvent.MotorCommand))
                             Error(issues, action, "帧事件需位于子段 [0, 时长)，且事件键非空：" + segment.DisplayName);
                 }
             if (total >= int.MaxValue) Error(issues, action, "动作总帧数溢出");
