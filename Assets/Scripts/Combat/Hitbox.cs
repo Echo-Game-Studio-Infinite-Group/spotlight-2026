@@ -58,9 +58,13 @@ public sealed class Hitbox : MonoBehaviour
             float applied = target.TakeDamage(player.AttackDamage, point, direction);
             if (applied > 0f) player.OnLandedHit(target, point, direction, applied);
         }
-        else if (enemyBase != null && other.GetComponentInParent<PlayerMotor>() != null)
+        else if (enemyBase != null)
         {
+            PlayerMotor victim = other.GetComponentInParent<PlayerMotor>();
+            if (victim == null) return;
             GameManager.Instance.Player.TakeDamage(enemyBase.AttackDamage);
+            // 结算与表现分开：伤害照旧走 GameManager，震屏方向由命中位置决定。
+            enemyBase.PlayAttackImpulse(victim.transform.position);
         }
     }
 

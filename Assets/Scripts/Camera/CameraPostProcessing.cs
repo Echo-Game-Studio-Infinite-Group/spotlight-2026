@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 [DefaultExecutionOrder(-10)]
-public sealed class SpeedCameraFeedback : MonoBehaviour
+public sealed class CameraPostProcessing : MonoBehaviour
 {
     [SerializeField] private PlayerMotor _motor;
     [SerializeField] private CinemachineVirtualCamera _virtualCamera;

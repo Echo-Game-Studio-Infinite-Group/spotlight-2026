@@ -2,6 +2,7 @@ using Cinemachine;
 using UnityEngine;
 
 // 独立控制视角目标，真实相机的位置、阻尼和避障交给 Cinemachine。
+// 光标锁定属于输入态策略，由 PlayerInputReader 统一负责，这里不碰 Cursor。
 [DefaultExecutionOrder(-20)]
 public sealed class PlayerCameraRig : MonoBehaviour
 {
@@ -14,23 +15,18 @@ public sealed class PlayerCameraRig : MonoBehaviour
     [SerializeField] private float _standHeight = 1.2f;
     [SerializeField] private float _slideHeight = 0.6f;
     [SerializeField] private float _heightResponse = 12f;
-    [SerializeField] private bool _lockCursor = true;
     private float _yaw, _pitch;
 
     public void Configure(PlayerMotor motor, PlayerInputReader input, Transform target, CinemachineVirtualCamera camera)
     { _motor = motor; _input = input; _target = target; _virtualCamera = camera; }
     private void OnEnable()
     {
-        if (_input != null) _input.GameplayChanged += SetCursor;
         if (_motor != null) _motor.Teleported += OnTeleport;
         if (_target != null) { _yaw = _target.eulerAngles.y; _pitch = Mathf.DeltaAngle(0f, _target.eulerAngles.x); }
-        SetCursor(_input != null && _input.GameplayEnabled);
     }
     private void OnDisable()
     {
-        if (_input != null) _input.GameplayChanged -= SetCursor;
         if (_motor != null) _motor.Teleported -= OnTeleport;
-        if (_lockCursor) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
     }
     private void Update()
     {
@@ -42,12 +38,6 @@ public sealed class PlayerCameraRig : MonoBehaviour
         float height = _motor.IsSliding ? _slideHeight : _standHeight;
         _target.localPosition = Vector3.Lerp(_target.localPosition, Vector3.up * height,
             1f - Mathf.Exp(-_heightResponse * TimeManager.UnscaledDeltaTime));
-    }
-    private void SetCursor(bool gameplay)
-    {
-        if (!_lockCursor) return;
-        Cursor.lockState = gameplay ? CursorLockMode.Locked : CursorLockMode.None;
-        Cursor.visible = !gameplay;
     }
     private void LateUpdate()
     {
