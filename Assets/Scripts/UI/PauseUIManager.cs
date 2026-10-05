@@ -12,7 +12,7 @@ public class PauseUIManager : MonoBehaviour
     public Button btnRetry;
     public Button btnReturn;
 
-    public CameraController mouseScript;
+    public PlayerCameraRig mouseScript;
 
     private void Awake()
     {
