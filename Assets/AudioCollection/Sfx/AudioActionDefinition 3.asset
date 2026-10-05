@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bad14e2498ac1d4d8a3dbb4f73dc253, type: 3}
+  m_Name: AudioActionDefinition 3
+  m_EditorClassIdentifier: 
+  Id: 
+  Clip: {fileID: 8300000, guid: c5cb0def4d8b9554497de38365cf0f9d, type: 3}
+  StartPosition01: 0
+  LoopStart01: 0.04715129
+  LoopEnd01: 0.29872075
+  SeekToReleaseRegion: 0
+  ReleasePosition01: 0.9
+  LoopMode: 4
+  LoopSeamFadeSeconds: 0.027945742
+  GrainSeconds: 0.18
+  GrainSpacingSeconds: 0.02
+  GrainRandomStart01: 1
+  GrainTuneCents: 341
+  GrainFadeCurve: 3
+  LoopRegionRandom01: 0.05
+  SustainDriftDb: 0.8
+  SustainDriftCutoffHz: 600
+  SustainGainDb: -3.3
+  Envelope:
+    AttackSeconds: 0.01
+    DecaySeconds: 0.05
+    SustainLevel: 1
+    AttackCurve: 3
+    DecayCurve: 2
+    ReleaseCurve: 2
+  IntroReleaseMode: 0
+  PitchFollow:
+    Keys:
+    - Time: 0
+      Value: 0
+      CurveToNext: 0
+    - Time: 1
+      Value: 1
+      CurveToNext: 0
+  LowpassFollow:
+    Keys:
+    - Time: 0
+      Value: 0
+      CurveToNext: 0
+    - Time: 1
+      Value: 1
+      CurveToNext: 0
+  StartPitchSemitones:
+    Min: -0.35
+    Max: 0.35
+  SustainPitchSemitones:
+    Min: -0.2
+    Max: 0.2
+  ReleasePitchSemitones:
+    Min: -1.2
+    Max: 1.2
+  GainDbVariation:
+    Min: -2
+    Max: 1.5
+  LowpassVariation:
+    Min: -1800
+    Max: 1800
+  PitchFollowMaxSemitones: 0.9
+  LowpassIdleHz: 18000
+  LowpassFastHz: 8500
+  DirectionPan: 0.35
+  SpatialBlend: 1
+  MinDistance: 1.5
+  MaxDistance: 55
+  Priority: 128
