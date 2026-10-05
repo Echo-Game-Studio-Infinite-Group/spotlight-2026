@@ -1110,3 +1110,57 @@ AudioSystem 无 Profile 时，兜底 Profile 的 SlideAction 绑定正确=True
 
 注意：这仍然只是"把每次渲染变便宜"，**没有做预热**。如果要彻底消除前几次滑铲的
 一次性卡顿（每个定义前 8 次），需要按定义分帧预热 —— 这一项按你的要求暂不做。
+
+### 清理：只保留动态连续动作音效（2026-10-06）
+
+目标：这一套只负责"动态连续动作音效"，其余（一次性音效、脚步材质、战斗音效、
+主题曲、风声、故障效果）后续用 FMOD 重做。
+
+**删除的代码（9 个文件，含 meta）**
+
+```
+Assets/Scripts/Audio/AudioSfxVoice.cs        一次性音效播放器 / 对象池成员
+Assets/Scripts/Audio/AudioGlitchFilters.cs   Stutter / Bitcrush，只服务 SFX 故障效果
+Assets/Scripts/Audio/MusicDirector.cs        主题曲交叉淡化
+Assets/Scripts/Audio/AudioCueDefinition.cs   一次性音效资产定义
+Assets/Scripts/Audio/AudioSurface.cs         脚步材质路由
+Assets/Scripts/Audio/GameAudioCatalog.cs     语义 Id 库 + Music/SpeedLayer
+Assets/Scripts/Audio/GameAudioInstaller.cs   把 Catalog/Profile 注入 AudioSystem
+Assets/Scripts/Audio/PlayerAudioProfile.cs   玩家音效映射（改为只用直连字段）
+Assets/Editor/AudioCatalogWizard.cs          生成 Catalog/Profile 的菜单
+```
+
+**保留并瘦身**
+
+- `AudioSystem.cs`：258 → 145 行。去掉 SFX 池、音乐、风声、glitch、`Configure`；
+  只留动作声源池、`PlayAction`、`TickActions`、`FindPlayer`（自动挂
+  `PlayerAudioDriver`）、`ToggleDebug`。
+- `PlayerAudioDriver.cs`：230 → 122 行。只留滑铲 / 墙滑；
+  去掉攻击、脚步、跳跃、命中、hitstop glitch、传送 glitch、地面材质射线。
+  `ComputeFrame` 不再需要 `AudioCueDefinition` 参数（`SurfaceId` 暂时留空字符串，
+  给后续 FMOD 材质路由留位置）。
+- `GameAudio.cs`：只剩 `IsReady` 和 `PlayAction`。
+- `AudioDebugOverlay.cs`：去掉 Music / Active SFX / Speed ratio 三行，
+  保留 "Continuous actions" 整块（状态、动作时间、速度、低通、以及 Gain /
+  Pitch Follow / Lowpass Follow 三条实时条形）。
+- `Assets/Tests/PlayMode/AudioSystemTests.cs`：删掉 `AudioCueDefinition` 用例，
+  以及 `AudioSystem_StartsAndStopsSingleClipAction` 里对
+  `PlayerAudioProfile` / `GameAudioCatalog` / `Configure` 的依赖。
+
+**完全没动**
+
+- 连续动作核心：`AudioActionDefinition`、`AdsrEnvelope`、`AudioEnvelope`、
+  `AudioActionTypes`、`ActionClipRenderer`、`AudioActionVoice`、`AudioActionHandle`。
+- 编辑器工具：`AudioActionDefinitionEditor`、`AudioActionPreviewPlayer`、
+  `AudioActionClipAnalysis`。
+- **所有音频素材**（`Assets/AudioCollection/` 一个文件都没删），
+  FMOD 阶段继续复用。
+- `PlayerAudioDriver` 的字段名 `_slideAction` / `_wallSlideAction` 保持原样，
+  所以 `Player.prefab` 上已绑定的 `Slide.asset` / `WallSlide.asset` 不受影响。
+
+**验证**
+
+- 全仓库已无对上述 9 个类型的引用；场景 / prefab / 资产里也没有指向它们 GUID 的
+  悬空引用（逐个 GUID 搜过）。
+- 批量模式编译：无 CS 错误。`GameJam.Runtime.dll` 重建后 185344 → 172032 字节，
+  用二进制检索确认 9 个类型已从程序集消失，5 个核心类型仍在。

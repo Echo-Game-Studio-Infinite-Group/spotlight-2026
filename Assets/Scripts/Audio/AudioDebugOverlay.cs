@@ -35,10 +35,6 @@ public sealed class AudioDebugOverlay : MonoBehaviour
         EnsureStyles();
         GUILayout.BeginArea(new Rect(Screen.width - 350f, 12f, 338f, 520f), GUI.skin.box);
         GUILayout.Label("Audio System · F3", _title);
-        GUILayout.Label($"Speed ratio        {_audio.SpeedRatio:0.00}", _label);
-        GUILayout.Label($"Music              {(_audio.CurrentMusic != null ? _audio.CurrentMusic.name : "none")}", _label);
-        GUILayout.Label($"Active SFX         {_audio.ActiveSfxCount}", _label);
-        GUILayout.Space(6f);
         GUILayout.Label("Continuous actions", _title);
 
         int visible = 0;

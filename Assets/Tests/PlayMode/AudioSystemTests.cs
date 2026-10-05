@@ -63,29 +63,12 @@ public sealed class AudioSystemTests
         Assert.That(range.Value(first), Is.EqualTo(range.Value(second)).Within(1e-6f));
     }
 
-    [Test]
-    public void AudioCueDefinition_WithoutClipsDoesNotThrow()
-    {
-        AudioCueDefinition cue = ScriptableObject.CreateInstance<AudioCueDefinition>();
-        try
-        {
-            Assert.That(cue.HasClips, Is.False);
-            Assert.That(cue.PickClip(new System.Random(1)), Is.Null);
-        }
-        finally
-        {
-            Object.DestroyImmediate(cue);
-        }
-    }
-
     [UnityTest]
     public IEnumerator AudioSystem_StartsAndStopsSingleClipAction()
     {
         GameObject follow = new GameObject("AudioFollowProbe");
         AudioClip clip = AudioClip.Create("ActionTone", 4800, 1, 48000, false);
         AudioActionDefinition action = ScriptableObject.CreateInstance<AudioActionDefinition>();
-        PlayerAudioProfile profile = ScriptableObject.CreateInstance<PlayerAudioProfile>();
-        GameAudioCatalog catalog = ScriptableObject.CreateInstance<GameAudioCatalog>();
         try
         {
             float[] samples = new float[clip.samples];
@@ -98,11 +81,9 @@ public sealed class AudioSystemTests
             action.LoopStart01 = 0.1f;
             action.LoopEnd01 = 0.9f;
             action.EnsureDefaults();
-            profile.SlideAction = action;
 
             AudioSystem system = AudioSystem.Instance;
             Assert.That(system, Is.Not.Null, "RuntimeInitializeOnLoadMethod 应创建音频系统");
-            system.Configure(catalog, profile);
 
             AudioActionHandle handle = system.PlayAction(action, follow.transform, "test.instance");
             Assert.That(handle, Is.Not.Null);
@@ -118,8 +99,6 @@ public sealed class AudioSystemTests
             Object.DestroyImmediate(follow);
             Object.DestroyImmediate(clip);
             Object.DestroyImmediate(action);
-            Object.DestroyImmediate(profile);
-            Object.DestroyImmediate(catalog);
         }
     }
 }
