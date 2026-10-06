@@ -45,7 +45,7 @@ public sealed class PlayerVFXManager : MonoBehaviour
         PlayShake();
         Transform origin = _origin != null ? _origin : transform;
         effect.transform.SetPositionAndRotation(origin.position, origin.rotation * Quaternion.Euler(0f, 180f, 0f));
-        effect.transform.SetParent(null, true);
+        //effect.transform.SetParent(null, true);
         effect.Play();
     }
 
