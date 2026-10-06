@@ -71,6 +71,10 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     // 只报告不合格的新墙接触；反弹、伤害等撞墙反馈留给后续系统。
     public event Action<WallContact> WallCollision;
 
+    // 场景里玩家是唯一的，表现层（相机、音频）不必各自找一遍引用。
+    // 不进 Inspector 手填：预制体实例换位置后手填的引用最容易悄悄指错。
+    public static PlayerMotor Active { get; private set; }
+
     public void SetParams(MovementParams parameters)
     {
         _params = parameters;
@@ -102,6 +106,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void Awake()
     {
+        if (Active == null) Active = this;
         _controller = GetComponent<CharacterController>();
         _initialMovementRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
         _groundStepOffset = _controller.stepOffset;
@@ -506,6 +511,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void OnDisable()
     {
+        if (Active == this) Active = null;
         if (_input is PlayerInputReader reader) reader.Cleared -= ClearPendingInput;
         if (_controller != null) _controller.stepOffset = _groundStepOffset;
         if (_params != null) ResetState();

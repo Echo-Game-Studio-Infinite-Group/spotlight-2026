@@ -6,14 +6,17 @@ using UnityEngine.Rendering.Universal;
 [DefaultExecutionOrder(-10)]
 public sealed class CameraPostProcessing : MonoBehaviour
 {
-    [SerializeField] private PlayerMotor _motor;
+    // 玩家在场景里唯一，从 PlayerMotor.Active 现取，不进 Inspector。
+    [HideInInspector, SerializeField] private PlayerMotor _motor;
+    // 必须留：FOV 与 Dutch 是每帧直接写进 vcam 的 LensSettings 的，
+    // 效果挂在主相机上但作用对象是这台 vcam——两者缺一不可。
     [SerializeField] private CinemachineVirtualCamera _virtualCamera;
     [SerializeField] private Volume _volume;
     [SerializeField] private float _normalFov = 60f;
     [SerializeField] private float _fastFov = 85f;
     [SerializeField] private float _fullEffectSpeed = 25f;
     [SerializeField] private float _response = 5f;
-    [SerializeField] private float _wallRoll = 70f;
+    [SerializeField] private float _wallRoll = 20f;
     [SerializeField, Range(0f, 1f)] private float _chromaticIntensity = 0.5f;
     [SerializeField, Range(0f, 1f)] private float _motionBlurIntensity = 0.5f;
     [SerializeField] private float _customMotionBlur = 2.5f;
@@ -39,6 +42,7 @@ public sealed class CameraPostProcessing : MonoBehaviour
     }
     private void Update()
     {
+        if (_motor == null) _motor = PlayerMotor.Active;
         if (_motor == null || _virtualCamera == null) return;
         float blend = 1f - Mathf.Exp(-_response * TimeManager.UnscaledDeltaTime);
         float target = Mathf.InverseLerp(_motor.Params.WalkSpeed, _fullEffectSpeed, _motor.HorizontalSpeed);

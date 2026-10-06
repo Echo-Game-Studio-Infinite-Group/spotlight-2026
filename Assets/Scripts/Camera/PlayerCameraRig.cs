@@ -6,8 +6,10 @@ using UnityEngine;
 [DefaultExecutionOrder(-20)]
 public sealed class PlayerCameraRig : MonoBehaviour
 {
-    [SerializeField] private PlayerMotor _motor;
-    [SerializeField] private PlayerInputReader _input;
+    // 玩家在场景里唯一，Motor / InputReader 都从玩家身上现取，不进 Inspector——
+    // 手填引用是跨场景复制后最容易指错、且错了只表现为「视角不动」的坏法。
+    [HideInInspector, SerializeField] private PlayerMotor _motor;
+    [HideInInspector, SerializeField] private PlayerInputReader _input;
     [SerializeField] private Transform _target;
     [SerializeField] private CinemachineVirtualCamera _virtualCamera;
     [SerializeField] private float _mouseSensitivity = 0.15f;
@@ -21,6 +23,7 @@ public sealed class PlayerCameraRig : MonoBehaviour
     { _motor = motor; _input = input; _target = target; _virtualCamera = camera; }
     private void OnEnable()
     {
+        ResolvePlayer();
         if (_motor != null) _motor.Teleported += OnTeleport;
         if (_target != null) { _yaw = _target.eulerAngles.y; _pitch = Mathf.DeltaAngle(0f, _target.eulerAngles.x); }
     }
@@ -28,8 +31,16 @@ public sealed class PlayerCameraRig : MonoBehaviour
     {
         if (_motor != null) _motor.Teleported -= OnTeleport;
     }
+    // 场景刚加载时 Awake 顺序不保证，玩家可能还没注册；这里每帧兜一次，拿到即止。
+    private void ResolvePlayer()
+    {
+        if (_motor == null) _motor = PlayerMotor.Active;
+        if (_motor == null) return;
+        if (_input == null) _input = _motor.GetComponent<PlayerInputReader>();
+    }
     private void Update()
     {
+        ResolvePlayer();
         if (_target == null || _input == null || _motor == null) return;
         Vector2 look = _input.LookDelta;
         _yaw += look.x * _mouseSensitivity;
