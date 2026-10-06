@@ -29,8 +29,12 @@ public sealed class MovementParams : ScriptableObject
     [Header("划墙与墙面 bhop")]
     [Range(0f, 90f)] public float WallMaxApproachAngle = 45f;
     [Range(0f, 0.7f)] public float WallNormalMaxUpDot = 0.3f;
-    [Tooltip("入墙后免重力、免摩擦并保留速度的玩家时间窗口")]
+    [Tooltip("入墙后免重力与水平摩擦的玩家时间窗口，竖直速度仍受独立阻尼影响")]
     [Min(0f)] public float WallGraceTime = 0.5f;
+    [Tooltip("仅在上墙保护窗口内衰减竖直速度，单位为每秒；设为 0 关闭阻尼")]
+    [Min(0f)] public float WallVerticalFriction = 3f;
+    [Tooltip("保护窗口内启用竖直阻尼时，低于此速度的上升或下落惯性归零")]
+    [Min(0f)] public float WallVerticalStopSpeed = 0.01f;
     [Min(0f)] public float WallFriction = 3f;
     [Tooltip("滑墙减速到该水平速度时视为停止，避免指数摩擦永远无法归零")]
     [Min(0f)] public float WallStopSpeed = 0.01f;

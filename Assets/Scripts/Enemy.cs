@@ -10,7 +10,7 @@ using UnityEngine.AI;
 // CombatSelfCheck 之类只想要「一个能被打的靶子」的地方不该被强行塞一个 agent，
 // 那种场合没有 agent 也能正常工作（只是不追击）。需要追击时在 Inspector 挂上即可。
 [DisallowMultipleComponent]
-public sealed class Enemy : MonoBehaviour
+public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
 {
     [Header("生命")]
     [SerializeField, Min(1f)] private float _maxHealth = 100f;
@@ -250,6 +250,11 @@ public sealed class Enemy : MonoBehaviour
             _animation.PlayHurt();
         }
         return applied;
+    }
+    public AttackDamageResult ReceiveAttack(AttackDamageRequest request)
+    {
+        float applied = TakeDamage(request.Damage, request.Point, request.Direction);
+        return new AttackDamageResult(applied, applied > 0f && !IsAlive);
     }
 
     [SerializeField] private DamagePopup _damagePopup;

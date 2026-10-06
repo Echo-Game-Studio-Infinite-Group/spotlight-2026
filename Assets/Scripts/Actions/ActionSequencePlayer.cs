@@ -16,7 +16,8 @@ namespace GameJam.Actions
         private readonly ActionInputRecognizer _recognizer;
         private readonly ActionRequestBuffer _buffer;
         private readonly List<ActionInputRequest> _recognized = new List<ActionInputRequest>();
-        private readonly Dictionary<ActionDefinition, double> _readyAt = new Dictionary<ActionDefinition, double>();
+        private readonly Dictionary<object, double> _readyAt = new Dictionary<object, double>();
+        private readonly Dictionary<ActionDefinition, ActionDefinition> _lastVariants = new Dictionary<ActionDefinition, ActionDefinition>();
         private ActionDefinition _action;
         private ActionInputRequest _currentInput;
         private long _instanceId;
@@ -76,17 +77,19 @@ namespace GameJam.Actions
             int bestIndex = -1;
             int bestWindowPriority = int.MinValue;
             int bestInputPriority = int.MinValue;
+            ActionInputRequest bestRequest = default;
             for (int i = 0; i < _buffer.Count; i++)
             {
-                ActionInputRequest request = _buffer[i];
+                ActionInputRequest request = ResolveRequest(_buffer[i]);
                 ActionDefinition target = request.Target;
                 if (request.CreatedTick > tick || target == null) continue;
                 if (request.SourceInstanceId != 0 && IsRunning && request.SourceInstanceId != _instanceId && !target.Input.KeepOnSourceCancel) continue;
                 if (!HasExecutableTimeline(target)) { LastRejection = target.Label + "：时间轴无效"; continue; }
-                if (_readyAt.TryGetValue(target, out double ready) && _actorFrame + FrameTolerance < ready) { LastRejection = target.Label + "：冷却中"; continue; }
                 if (!ActionConditionEvaluator.Matches(target.StartConditions, null, _host, State, request)) { LastRejection = target.Label + "：进入条件不满足"; continue; }
                 int windowPriority = 0;
                 if (IsRunning && !TryCancelPermission(request, out windowPriority)) { LastRejection = target.Label + "：取消窗口未开放或条件不满足"; continue; }
+                if (_readyAt.TryGetValue(CooldownKey(target), out double ready) && _actorFrame + FrameTolerance < ready &&
+                    !CanIgnoreCooldown(request)) { LastRejection = target.Label + "：冷却中"; continue; }
                 if (!_host.CanStart(State, request, out string reason)) { LastRejection = reason; continue; }
                 int inputPriority = target.Input.Priority;
                 if (bestIndex >= 0 && (bestWindowPriority > windowPriority ||
@@ -94,23 +97,55 @@ namespace GameJam.Actions
                 bestIndex = i;
                 bestWindowPriority = windowPriority;
                 bestInputPriority = inputPriority;
+                bestRequest = request;
             }
             if (bestIndex < 0) return false;
-            ActionInputRequest chosen = _buffer[bestIndex];
+            ActionInputRequest chosen = bestRequest;
             if (!_host.TryCommit(State, chosen)) { LastRejection = chosen.Target.Label + "：提交失败，保留原动作与请求"; return false; }
+            ActionDefinition intent = _buffer[bestIndex].Target;
             _buffer.RemoveAt(bestIndex);
+            _lastVariants[intent] = chosen.Target;
             if (IsRunning) End(ActionExitReason.Cancelled);
             _action = chosen.Target;
             _currentInput = chosen;
             _instanceId = ++_nextInstanceId;
             _segmentIndex = _segmentStart = 0;
             _progress = 0;
-            _readyAt[_action] = _actorFrame + _action.CooldownFrames;
+            _readyAt[CooldownKey(_action)] = _actorFrame + _action.CooldownFrames;
             LastRejection = null;
             _sink?.OnActionStarted(State);
             _sink?.OnSegmentEntered(State);
             EmitCurrentFrame();
             return true;
+        }
+
+        private static object CooldownKey(ActionDefinition action)
+            => string.IsNullOrEmpty(action.CooldownGroup) ? (object)action : action.CooldownGroup;
+
+        private ActionInputRequest ResolveRequest(ActionInputRequest request)
+        {
+            List<ActionDefinition> variants = request.Target?.RequestVariants;
+            if (variants == null || variants.Count == 0) return request;
+            _lastVariants.TryGetValue(request.Target, out ActionDefinition last);
+            int first = (variants.IndexOf(last) + 1) % variants.Count;
+            for (int i = 0; i < variants.Count; i++)
+            {
+                ActionDefinition candidate = variants[(first + i) % variants.Count];
+                if (candidate == null || candidate == _action || !_catalog.Actions.Contains(candidate)) continue;
+                var resolved = new ActionInputRequest(candidate, request.TriggerId, request.CreatedTick, request.SourceInstanceId, request.Direction);
+                if (ActionConditionEvaluator.Matches(candidate.StartConditions, null, _host, State, resolved)) return resolved;
+            }
+            return new ActionInputRequest(null, request.TriggerId, request.CreatedTick, request.SourceInstanceId, request.Direction);
+        }
+
+        private bool CanIgnoreCooldown(ActionInputRequest request)
+        {
+            if (!IsRunning) return false;
+            foreach (ActionCancelWindow window in _action.CancelWindows)
+                if (window.IgnoreCooldown && window.Targets.Contains(request.Target) &&
+                    _action.TryGetWindowRange(window, out int start, out int end) && _progress >= start && _progress < end &&
+                    ActionConditionEvaluator.Matches(window.RequireAll, window.RequireAny, _host, State, request)) return true;
+            return false;
         }
 
         public bool TryCancelPermission(ActionInputRequest request, out int priority)
@@ -199,6 +234,7 @@ namespace GameJam.Actions
             _buffer.Clear();
             _recognizer.Clear();
             _readyAt.Clear();
+            _lastVariants.Clear();
             _lastTick = -1;
             _actorFrame = 0;
             _progress = 0;

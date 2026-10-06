@@ -31,6 +31,7 @@ public sealed class PlayerCombat : MonoBehaviour
     private float _readyAt = float.NegativeInfinity;
     private long _sequenceInstance;
     private ActionCombatSettings _sequenceCombat;
+    private readonly System.Collections.Generic.Dictionary<int, float> _groupDamage = new System.Collections.Generic.Dictionary<int, float>();
     public bool IsSequenceDriven { get; private set; }
 
     /// <summary>Hitbox 从这里取伤害值，因此攻击力只有一处真值。</summary>
@@ -42,6 +43,7 @@ public sealed class PlayerCombat : MonoBehaviour
     public float ImpactSeconds => _impactSeconds;
     public float ImpactTimeScale => _impactTimeScale;
     public Hitbox Hitbox => _hitbox;
+    public event System.Action<IAttackDamageReceiver, AttackDamageRequest, AttackDamageResult> SequenceHitLanded;
 
     // 判定射程由 Hitbox 的 Trigger Collider 决定，这里从它反推出来供诊断显示。
     // 用通用 Collider.bounds：判定盒是球还是盒都不影响这段计算。
@@ -186,11 +188,13 @@ public sealed class PlayerCombat : MonoBehaviour
         SyncHitboxDamage();
         _sequenceInstance = state.InstanceId;
         _sequenceCombat = state.Action.Combat;
+        _groupDamage.Clear();
         if (_hitbox != null) _hitbox.BeginSequence(_sequenceInstance, _sequenceCombat.HitMask);
     }
     public void HandleSequenceEvent(ActionExecutionState state, ActionFrameEvent frameEvent)
     {
         if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _hitbox == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) return;
         if (frameEvent.EventKey == "combat.hitbox.open") _hitbox.OpenSequenceWindow(frameEvent.HitGroup);
         else if (frameEvent.EventKey == "combat.hitbox.close") _hitbox.CloseSequenceWindow();
     }
@@ -198,20 +202,50 @@ public sealed class PlayerCombat : MonoBehaviour
     {
         if (IsSequenceDriven && _sequenceInstance == instanceId && _hitbox != null) _hitbox.SampleSequenceWindow();
     }
+    public float SequenceDamage(int group)
+    {
+        if (_sequenceCombat == null) return _attackDamage;
+        if (_groupDamage.TryGetValue(group, out float value)) return value;
+        float ratio = _motor != null && _motor.Params != null && _motor.Params.GroundSpeedThreshold > 0f
+            ? _motor.HorizontalSpeed / _motor.Params.GroundSpeedThreshold : 0f;
+        value = _sequenceCombat.Damage * (_sequenceCombat.ScaleDamageWithSpeed
+            ? Mathf.Max(0f, _sequenceCombat.SpeedDamage.Evaluate(ratio)) : 1f);
+        _groupDamage.Add(group, value);
+        return value;
+    }
+    public void SampleSequenceHitbox(ActionExecutionState from, ActionExecutionState to, System.Collections.Generic.IReadOnlyList<Vector3> path)
+    {
+        if (!IsSequenceDriven || _sequenceInstance != to.InstanceId || _hitbox == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) _hitbox.SampleConfiguredVolumes(to.Action, from.FrameProgress, to.FrameProgress, path);
+        else if (System.Math.Abs(to.FrameProgress - System.Math.Round(to.FrameProgress)) > 0.000001)
+            _hitbox.SampleSequenceWindow();
+    }
+    public void SampleSequenceBoundary(ActionExecutionState state)
+    {
+        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _hitbox == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) _hitbox.SampleConfiguredVolumes(state.Action, state.FrameProgress, state.FrameProgress, null);
+        else _hitbox.SampleSequenceWindow();
+    }
     public void EndSequenceAction(long instanceId)
     {
         if (_sequenceInstance != instanceId) return;
         _sequenceInstance = 0;
         _sequenceCombat = null;
+        _groupDamage.Clear();
         if (_hitbox != null) _hitbox.EndSequence();
     }
 
     // ===== 打击感 =====
+    public void OnSequenceHit(IAttackDamageReceiver target, AttackDamageRequest request, AttackDamageResult result)
+    {
+        SequenceHitLanded?.Invoke(target, request, result);
+        OnLandedHit(target as Enemy, request.Point, request.Direction, result.AppliedDamage);
+    }
     // 由 Hitbox 在成功造成伤害后回调（伤害被无敌帧挡下时不会走到这里）
     public void OnLandedHit(Enemy target, Vector3 point, Vector3 direction, float applied)
     {
         if (applied <= 0f) return;
-        if (_logHits)
+        if (_logHits && target != null)
         {
             Debug.Log($"[PlayerCombat] 命中 {target.name} 伤害 {applied:0.#}，剩余 {target.Health:0.#}/{target.MaxHealth:0.#}");
         }
