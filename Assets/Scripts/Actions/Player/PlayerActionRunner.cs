@@ -170,6 +170,13 @@ namespace GameJam.Actions
             if (frameEvent.EventKey == "vfx.attack") { _animation.Sample(state, 0f); _animation.PlayAttackEffect(Mathf.RoundToInt(frameEvent.Value)); }
             else if (frameEvent.EventKey == "motor.command" && !_motor.TryExecute(frameEvent.MotorCommand, frameEvent.Value))
                 Debug.LogWarning("[PlayerActionRunner] 运动命令被物理条件拒绝：" + frameEvent.MotorCommand, this);
+            else if (frameEvent.EventKey != null &&
+                     frameEvent.EventKey.StartsWith("audio.", StringComparison.Ordinal))
+            {
+                WwiseEventBridge.Play(
+                    frameEvent.EventKey.Substring("audio.".Length),
+                    gameObject);
+            }
             FrameEvent?.Invoke(state, frameEvent);
         }
         public void OnActionEnded(ActionExecutionState state, ActionExitReason reason)

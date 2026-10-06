@@ -1066,3 +1066,784 @@ AudioSystem 无 Profile 时，兜底 Profile 的 SlideAction 绑定正确=True
 以后要接完整音效（脚步材质、战斗、音乐）时，再走
 `超高速行者/音频/创建音频库和玩家映射` 生成 Catalog + Profile，
 并在场景里放一个 `GameAudioInstaller`；有 Profile 时直连字段会被 Profile 覆盖。
+
+---
+
+## 2026-10-06
+
+### 修 bug：颗粒模式缓存爆炸（每次滑铲重渲染 27ms）
+
+现象：颗粒模式下几乎每次触发都要重新渲染循环 buffer（约 25~27ms，等于 1.6 帧卡顿）。
+
+根因：`ActionClipRenderer` 的缓存键包含 `(素材, LoopStart, LoopEnd, 交叠, 颗粒长度,
+间隔, 随机起点, 失谐, 曲线, seed)`，其中 seed 量化成 8 档。而
+`ApplyLoopRegionJitter()`（`LoopRegionRandom01`，默认 0.05）会**每次触发**把整个
+循环窗口平移，量化成约 17 档。于是单个定义最多
+`17 档区域 × 8 seed = 136` 条缓存，超过 64 条上限后 `Cache.Clear()` 被反复触发，
+缓存基本失效。
+
+修复：**颗粒模式不再做区域抖动**（`ActionAudioVoice.ApplyLoopRegionJitter` 与
+`AudioActionPreviewPlayer.ApplyLoopRegionJitter` 各加一行早退）。
+
+理由：颗粒渲染本身已经在循环区内随机取每颗的读取起点（`GrainRandomStart01`），
+再平移整个窗口几乎不增加听感差异，却把缓存键炸了 17 倍。
+
+实测（24 次触发，8 个 seed 变体）：
+
+```
+循环窗口固定：loopStart=66048 loopEnd=93568
+24 次触发 → 渲染 7 次（共 172ms，平均 24.5ms），缓存命中 17 次
+```
+
+即每个定义最多渲染 8 次，之后永久命中；开销不再随触发次数增长。
+
+### 顺带：颗粒渲染本身的性能优化（已改，未单独提交）
+
+首次渲染 91ms → 27ms（约 3.4 倍），改了三处：
+
+1. **颗粒窗预计算成表** —— 原来每个采样都调一次 `AudioCurveUtility.Map`，
+   SCurve 内含 `Mathf.Sin`，一轮 100 多万次。
+2. **去掉逐采样的整数取模与 `WrapIntoLoop()` 调用** —— 读指针改增量、
+   写指针越界归零、源帧越界只减一次（`tuneRatio` 恒在 1 附近，不会跨多圈）。
+3. **素材采样解码缓存**（`SourceCache`）—— 不再每次渲染都 `GetData` 整条素材；
+   与渲染缓存一起在超过上限时清空，避免长期占内存。
+
+注意：这仍然只是"把每次渲染变便宜"，**没有做预热**。如果要彻底消除前几次滑铲的
+一次性卡顿（每个定义前 8 次），需要按定义分帧预热 —— 这一项按你的要求暂不做。
+
+### 清理：只保留动态连续动作音效（2026-10-06）
+
+目标：这一套只负责"动态连续动作音效"，其余（一次性音效、脚步材质、战斗音效、
+主题曲、风声、故障效果）后续用 Wwise 重做。
+
+**删除的代码（9 个文件，含 meta）**
+
+```
+Assets/Scripts/Audio/AudioSfxVoice.cs        一次性音效播放器 / 对象池成员
+Assets/Scripts/Audio/AudioGlitchFilters.cs   Stutter / Bitcrush，只服务 SFX 故障效果
+Assets/Scripts/Audio/MusicDirector.cs        主题曲交叉淡化
+Assets/Scripts/Audio/AudioCueDefinition.cs   一次性音效资产定义
+Assets/Scripts/Audio/AudioSurface.cs         脚步材质路由
+Assets/Scripts/Audio/GameAudioCatalog.cs     语义 Id 库 + Music/SpeedLayer
+Assets/Scripts/Audio/GameAudioInstaller.cs   把 Catalog/Profile 注入 AudioSystem
+Assets/Scripts/Audio/PlayerAudioProfile.cs   玩家音效映射（改为只用直连字段）
+Assets/Editor/AudioCatalogWizard.cs          生成 Catalog/Profile 的菜单
+```
+
+**保留并瘦身**
+
+- `AudioSystem.cs`：258 → 145 行。去掉 SFX 池、音乐、风声、glitch、`Configure`；
+  只留动作声源池、`PlayAction`、`TickActions`、`FindPlayer`（自动挂
+  `PlayerAudioDriver`）、`ToggleDebug`。
+- `PlayerAudioDriver.cs`：230 → 122 行。只留滑铲 / 墙滑；
+  去掉攻击、脚步、跳跃、命中、hitstop glitch、传送 glitch、地面材质射线。
+  `ComputeFrame` 不再需要 `AudioCueDefinition` 参数（`SurfaceId` 暂时留空字符串，
+  给后续 Wwise 材质路由留位置）。
+- `GameAudio.cs`：只剩 `IsReady` 和 `PlayAction`。
+- `AudioDebugOverlay.cs`：去掉 Music / Active SFX / Speed ratio 三行，
+  保留 "Continuous actions" 整块（状态、动作时间、速度、低通、以及 Gain /
+  Pitch Follow / Lowpass Follow 三条实时条形）。
+- `Assets/Tests/PlayMode/AudioSystemTests.cs`：删掉 `AudioCueDefinition` 用例，
+  以及 `AudioSystem_StartsAndStopsSingleClipAction` 里对
+  `PlayerAudioProfile` / `GameAudioCatalog` / `Configure` 的依赖。
+
+**完全没动**
+
+- 连续动作核心：`AudioActionDefinition`、`AdsrEnvelope`、`AudioEnvelope`、
+  `AudioActionTypes`、`ActionClipRenderer`、`AudioActionVoice`、`AudioActionHandle`。
+- 编辑器工具：`AudioActionDefinitionEditor`、`AudioActionPreviewPlayer`、
+  `AudioActionClipAnalysis`。
+- **所有音频素材**（`Assets/AudioCollection/` 一个文件都没删），
+  Wwise 阶段继续复用。
+- `PlayerAudioDriver` 的字段名 `_slideAction` / `_wallSlideAction` 保持原样，
+  所以 `Player.prefab` 上已绑定的 `Slide.asset` / `WallSlide.asset` 不受影响。
+
+**验证**
+
+- 全仓库已无对上述 9 个类型的引用；场景 / prefab / 资产里也没有指向它们 GUID 的
+  悬空引用（逐个 GUID 搜过）。
+- 批量模式编译：无 CS 错误。`GameJam.Runtime.dll` 重建后 185344 → 172032 字节，
+  用二进制检索确认 9 个类型已从程序集消失，5 个核心类型仍在。
+
+## 2026-10-06：Wwise 原生 Source Plugin 纵向切片
+
+环境：
+
+```text
+Wwise Authoring / SDK / Unity Integration: 2024.1.17.9170
+Unity: 2022.3.33f1
+Visual Studio Build Tools 2022: MSVC v143
+```
+
+项目内新增原生插件工程：
+
+```text
+spotlight-2026_WwiseProject/Plugins/SpotlightActionSource/
+  Runtime/                          Sound Engine 源插件
+  Authoring/                        Wwise Authoring 插件和 XML
+  Dynamic/                          动态插件 DLL 注册
+  Tests/                            离线 DSP 对比程序
+  CMakeLists.txt
+```
+
+插件身份：
+
+```text
+CompanyID: 0
+PluginID: 4242
+ClassID: 278003714
+容器名: SpotlightActionSource
+Wwise 名称: Wwise Spotlight Action Source
+```
+
+### 最小 Source Plugin
+
+- 已实现 `IAkSourcePlugin` 和 `IAkPluginParam`。
+- 初始验证版输出正弦 PCM，现已替换成真实 WAV 采样读取和动作状态机。
+- 插件不依赖 MFC，Authoring DLL 和 Runtime DLL 都只依赖 `KERNEL32.dll`。
+- 已通过 `ak.wwise.core.object.create` 和 `pluginInfo.json` 验证注册、Bank
+  引用与 Bus 路由。
+
+踩坑：
+
+- Wwise XML 中的空 `UserInterface` 元素必须写成 `<UserInterface ... />`。
+  截图中的 `<UserInterface ...></UserInterface>` 会让 WwiseConsole 在加载插件时卡住。
+- 自定义 Source 插件需要同时安装 Authoring DLL/XML 和 Runtime DLL，缺一不可。
+
+### 离线 DSP 核心
+
+新增 `Runtime/Dsp/SpotlightActionDsp.*`：
+
+- 标准 ADSR：A/D/R 为时间，S 为电平。
+- 启动段、保持段、尾音的采样区间模型。
+- 交叠淡化循环。
+- 颗粒循环、随机起点、随机失谐、颗粒窗、RMS 响度对齐、峰值保护。
+- 与 C# 相同公式的对比测试程序。
+
+自动对比脚本：
+
+```text
+Tools/audio/build_spotlight_action_source.ps1
+Tools/audio/run_dsp_parity.ps1
+```
+
+实测对比结果：
+
+```text
+adsr_hold_diff    max_abs=1.19209e-07  rms_diff=7.45389e-09
+adsr_release_diff max_abs=0            rms_diff=0
+crossfade_diff    max_abs=0.000107378  rms_diff=8.8363e-07
+
+granular native    frames=120960 rms=0.365207 peak=0.95 seam=0.0137348
+granular reference frames=120960 rms=0.355503 peak=0.95 seam=0.0158321
+granular delta     frames=0 rms=0.00970472 peak=5.96046e-08 seam=-0.00209731
+```
+
+### Wwise 工程对象
+
+已创建：
+
+```text
+Bus:        Master Audio Bus/DynamicAction
+ActorMixer: DynamicAction
+Sound:      SlideSinePlugin
+Source:     SpotlightActionSource
+Event:      Play_SlideSinePlugin
+Event:      Stop_SlideSinePlugin
+GameParam:  ActionSpeed
+RTPC:       ActionSpeed -> SpotlightActionSource.PitchSemitones (0..+2 st)
+Bank:       DynamicAction
+```
+
+生成结果：
+
+```text
+Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/DynamicAction.bnk
+Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/Init.bnk
+Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/PluginInfo.json
+```
+
+### Unity 绑定
+
+- `WwiseActionBindings`：把 `AudioActionDefinition` 映射到 Wwise Event / RTPC。
+- `WwiseActionDriver`：由 `AudioSystem` 自动挂到玩家，不修改预制体字段。
+- 自动加载 `DynamicAction` Bank。
+- 滑铲上升沿发送 `Play_SlideSinePlugin`。
+- 滑铲持续期间给 `ActionSpeed` 写速度。
+- 滑铲下降沿发送 `Stop_SlideSinePlugin`。
+- 发送 Play Event 前，通过 `SendPluginCustomGameData` 把真实 WAV 字节发给插件。
+
+这次只给 `PlayerAudioDriver` 增加了公开只读属性 `SlideAction`，
+没有改动战斗、动画、Character、模型或现有 `_slideAction` 字段名。
+
+### 验证
+
+PlayMode 烟测日志：
+
+```text
+WwiseSourcePluginTests: engine initialized
+WwiseSourcePluginTests: DynamicAction loaded, pluginRegistered=True
+WwiseSourcePluginTests: custom WAV bytes 1587880
+WwiseSourcePluginTests: play posted 1
+WwiseSourcePluginTests: stop posted 2
+```
+
+说明：
+
+- Wwise 初始化成功。
+- `DynamicAction` Bank 加载成功。
+- 自定义 Source 插件已注册。
+- Unity 发送的真实 `slide_tackle_2.wav` 媒体字节数为 1,587,880，插件成功接收。
+- Play / Stop Event 都已成功返回 playing ID。
+
+### 真实采样和动作状态机
+
+- Runtime 插件通过 `GetPluginCustomGameData` 接收 WAV，不要求把媒体嵌入 Bank。
+- 支持 Wave PCM 8/16/24/32-bit 和 IEEE float 32/64-bit。
+- 立体声素材在插件内下混为单声道，再交给 Wwise Bus、效果器和空间化。
+- 播放状态机：
+  ```text
+  StartPosition01 -> LoopStart01
+  LoopStart01     -> LoopEnd01
+  LoopEnd01       -> 文件结尾
+  ```
+- 保持段支持 Sustain Loop、Continuous Loop 和 Granular。
+- 包络使用标准 ADSR，Release 时长等于尾音区间长度。
+- Slide 资产的参数已写入插件 XML 默认值：
+  ```text
+  StartPosition01=0
+  LoopStart01=0.1394892
+  LoopEnd01=0.26719058
+  LoopMode=Granular
+  GrainSeconds=0.18
+  GrainSpacingSeconds=0.02
+  GrainRandomStart01=1
+  GrainTuneCents=341
+  SustainGainDb=-3.9
+  ADSR=(0.01, 0.05, 1.0)
+  ```
+
+当前保留：
+
+- Unity Inspector 仍是参数创作入口；当前滑铲参数通过插件 XML 默认值和绑定资产同步。
+  后续可以继续做 `AudioActionDefinition -> Wwise preset` 的自动导出。
+- Wwise 插件媒体导入能力也已实现，但当前运行路径优先使用 Unity
+  `SendPluginCustomGameData` 发送的 WAV 字节。
+- `SendPluginCustomGameData` 按 game object + plugin ID 存储。当前只有一个滑铲实例时
+  没问题；后续同角色同时存在多个同类动态音效时，应拆分 plugin ID/事件，或切回插件媒体。
+- 本轮未 commit，未修改 `README.md`、战斗、Character、动画和模型。
+- 新增忽略规则：Wwise Launcher 的临时 zip / `logRunSetup.txt`，以及 Wwise 工程内的
+  `GeneratedSoundBanks/`。Unity 实际运行时使用的 Bank 仍提交在
+  `Assets/StreamingAssets/Audio/GeneratedSoundBanks/`。
+- Unity 集成自动把 `WwiseGlobal` / `AkAudioListener` 写入 `TestScene`，替换了原来的
+  Unity `AudioListener`；这是 Wwise 运行初始化所必需。
+
+## 2026-10-06：远程干净副本上的 PCM 搬运重构
+
+这次不再在旧脏工作区上继续叠加，而是重新从远程分支建立独立副本：
+
+```text
+远程分支: origin/feat/audio_wwise
+基线提交: a5b1d23
+工作副本: D:\TapTapGameJam26\spotlight-2026-remote
+```
+
+原工作区 `D:\TapTapGameJam26\spotlight-2026` 保留不动；新副本没有 commit，
+并继续遵守不修改 `README.md`、战斗、Character、动画和模型的约束。
+
+### 职责重新拆分
+
+```text
+Unity：
+- 动作状态机输入
+- AudioActionDefinition 参数
+- ADSR
+- 启动段 / 循环 / 颗粒 / 随机差分
+- 全部 DSP 和 PCM 渲染
+
+Wwise Source Plugin：
+- 只从 ring buffer 读取 PCM
+- 只把 PCM 交给 Wwise Bus / 效果器 / Master
+- 不解析 WAV、不实现 ADSR、不实现循环和颗粒
+```
+
+### 不依赖 Unity 音频解码
+
+工程启用了 Wwise 后，Unity 音频输出被关闭：
+
+```text
+ProjectSettings/AudioManager.asset
+m_DisableAudio: 1
+```
+
+在这个状态下，`AudioClip.GetData()` 也会失败。因此新增：
+
+```text
+Assets/Scripts/Audio/WwiseActionPcmSource.cs
+```
+
+它直接解析 `StreamingAssets` 下的 WAV（PCM 8/16/24/32-bit、IEEE float
+32/64-bit），并把采样交给 `WwiseActionPcmRenderer`。素材路径来自
+`WwiseActionBindings.Entry.SourceRelativePath`，驱动逻辑里没有硬编码
+具体音效库或材质分类。
+
+同时，`ActionClipRenderer` 增加纯 `float[]` 接口：
+
+```text
+GetCrossfadeLoopPcm(...)
+GetGranularLoopPcm(...)
+```
+
+AudioClip 预览路径继续保留原有接口；Wwise 路径不再创建 `AudioClip`。
+
+### 验证结果
+
+真实 `Slide.asset` + `slide_tackle_2.wav` 的批处理烟测通过：
+
+```text
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+测试使用：
+
+```powershell
+Unity.exe -batchmode -nographics `
+  -projectPath "D:\TapTapGameJam26\spotlight-2026-remote" `
+  -wwiseEnableWithNoGraphics `
+  -executeMethod WwisePcmBridgeSmokeTest.Run `
+  -quit `
+  -logFile "...\Logs\pcm-bridge-slide-smoke-3.log"
+```
+
+本次仍未 commit。
+
+## 2026-10-06：动态动作源显式注册
+
+- 新增 `WwiseAudioRegistry`。
+- `PlayerDynamicAudioActionSource` 在 `OnEnable/OnDisable` 注册和注销。
+- `WwiseActionDriver` 不再扫描全部 MonoBehaviour。
+- Driver 只在 registry version 变化时刷新 source，并按层级过滤：
+  ```text
+  当前 Player GameObject
+  或它的子物体
+  ```
+- 支持多 Player，以及运行时动态挂载新的动态动作源。
+
+文档：
+
+```text
+Docs/Audio/DynamicAudioActionInterface.md
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Wwise Bootstrap 与原生 DSP 清理
+
+- 新增 `WwiseAudioBootstrap`，只负责：
+  - 给 Player 自动挂载 `WwiseActionDriver`
+  - 创建 F3 `AudioDebugOverlay`
+  - 绑定 `PlayerInputReader.ToggleHUD`
+- 删除旧的 `AudioSystemBootstrap`，旧 `AudioSystem` 不再被运行时自动创建。
+- `AudioDebugOverlay` 删除旧 `ActionAudioVoice` 展示，只显示 Wwise 动态通道。
+- 删除原生 `SpotlightActionDsp` 静态库和测试 target。
+- 删除：
+  ```text
+  Runtime/Dsp/SpotlightActionDsp.h
+  Runtime/Dsp/SpotlightActionDsp.cpp
+  Tests/SpotlightActionDspTests.cpp
+  Assets/Editor/Audio/SpotlightActionDspReferenceExporter.cs
+  Tools/audio/run_dsp_parity.ps1
+  ```
+- Runtime / Authoring 插件继续只使用 `PcmVoiceBridge`。
+
+验证：
+
+```text
+Unity recompile: 0 error, 0 warning
+SpotlightActionSource / Authoring / Runtime CMake build: success
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Wwise 一次性事件桥接
+
+新增：
+
+```text
+Assets/Scripts/Audio/WwiseEventBindings.cs
+Assets/Scripts/Audio/WwiseEventBridge.cs
+Assets/Editor/Audio/WwiseEventBindingSetup.cs
+```
+
+用途：
+
+- 一次性动作不进入动态 PCM 系统。
+- gameplay 只调用逻辑 `EventId`。
+- `WwiseEventBindings.asset` 负责映射 `AK.Wwise.Event`。
+- 提供 Play / Stop / SetSwitch / SetRTPC 薄封装。
+
+使用示例：
+
+```csharp
+WwiseEventBridge.Play("player_land", gameObject);
+WwiseEventBridge.Play("hit_metal", gameObject);
+WwiseEventBridge.SetSwitch("Surface", "grass", gameObject);
+WwiseEventBridge.SetRTPC("ActionSpeed", speed01, gameObject);
+```
+
+绑定资产创建入口：
+
+```text
+超高速行者/音频/创建 Wwise 事件绑定资产
+```
+
+文档：
+
+```text
+Docs/Audio/WwiseEventBridge.md
+```
+
+本次仍未 commit。
+
+## 2026-10-06：通用 Wwise 动作绑定管理器
+
+新增 EditorWindow：
+
+```text
+超高速行者/音频/Wwise 动作绑定管理器
+```
+
+功能：
+
+- 选择任意 `AudioActionDefinition`。
+- 配置 `ActionId`、`Play Event`、`Stop Event`。
+- 从 Clip 自动复制 WAV 到 `StreamingAssets/Audio/Source/Generated/`。
+- 创建或更新 `WwiseActionBindings.Entry`。
+- 检查重复 `ActionId`。
+- 查看、选择和删除已有绑定。
+- `AudioActionDefinition` Inspector 增加直接打开绑定窗口的入口。
+
+旧的 `WwiseActionBindingSetup` 菜单不再写死 Slide / WallSlide，只打开通用窗口。
+
+本次仍未 commit。
+
+## 2026-10-06：移除 PlayerAudioDriver，动作源改为手动挂载
+
+- 删除旧 Unity AudioSource 路径的 `PlayerAudioDriver`。
+- `AudioSystem` 不再自动创建动作适配器，只负责自动挂载 `WwiseActionDriver`。
+- `PlayerDynamicAudioActionSource` 改为由使用者手动挂到 Player。
+- 新链路依赖：
+  ```text
+  PlayerMotor
+  -> PlayerDynamicAudioActionSource
+  -> IDynamicAudioActionSource
+  -> WwiseActionDriver
+  -> Wwise
+  ```
+- Player prefab 需要由使用者移除旧组件引用，并添加
+  `PlayerDynamicAudioActionSource`。
+
+本次仍未 commit。
+
+## 2026-10-06：动态动作快速重触发与规则化 Adapter
+
+问题：
+
+- 新 driver 用 `ActionId` 复用 channel，动作停止进入 Release 后，新的 Start
+  会被旧的 Release renderer 挡住，必须等尾音播完。
+- `PlayerDynamicAudioActionSource` 仍然写死 slide / wall_slide。
+
+修复：
+
+- `DynamicAudioActionRequest` 增加 `InstanceId`。
+- channel key 改为 `ActionId + InstanceId`。
+- 同一实例新的 `Start` 会立即释放旧 renderer 并重新创建 voice。
+- 快速连续触发可以使用不同 `InstanceId` 并存，不再等待旧 Release。
+- `PlayerDynamicAudioActionSource` 改成规则表：
+  ```text
+  ActionId + ConditionKey + ContactIntensity
+  ```
+- 默认规则仍映射：
+  ```text
+  slide      <- sliding
+  wall_slide <- wall_sliding
+  ```
+- ConditionKey 交给现有 `PlayerActionRunner.CheckCondition` 判断；新增条件
+  不需要改 `WwiseActionDriver`。
+
+日志：
+
+```text
+Logs/wwise-adapter-interface-2.log
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Slide / WallSlide Adapter 接入
+
+- `WwiseActionDriver` 已改为按 `ActionId` 管理通用 channel 池。
+- 新增 `PlayerDynamicAudioActionSource`，读取现有 `PlayerMotor` 状态并上报：
+  ```text
+  slide
+  wall_slide
+  ```
+- `PlayerMotor`、战斗、Character、动画和模型无需新增音频依赖。
+- `WwiseActionBindings` 通过 `ActionId` 查找 definition、Event 和源文件。
+- `WwiseActionPcmRenderer` 增加 `RequestStop(...)`，支持：
+  ```text
+  Release
+  Immediate
+  FinishCurrentLoop
+  PlayFullOnce
+  ```
+- 接口规范文档：
+  ```text
+  Docs/Audio/DynamicAudioActionInterface.md
+  ```
+
+烟测通过：
+
+```text
+Wwise action preview passed: Slide
+Wwise action preview passed: WallSlide
+Wwise action preview passed: UnboundAutoSource
+Wwise action preview passed: AfterEngineReset
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+日志：
+
+```text
+Logs/wwise-adapter-interface-2.log
+```
+
+本次仍未 commit。
+
+## 2026-10-06：动态动作接口与曲线清理
+
+新增动态动作上报契约：
+
+```text
+DynamicAudioActionPhase
+DynamicAudioActionStopMode
+DynamicAudioActionRequest
+IDynamicAudioActionSource
+```
+
+动作代码只需上报：
+
+```text
+ActionId
+Start / Update / Stop
+StopMode
+NormalizedSpeed
+ContactIntensity
+Direction
+SurfaceId
+Seed
+```
+
+音频侧不再需要理解具体动作枚举。`WwiseActionBindings` 增加 `ActionId` 和按
+字符串查找，后续 `WwiseActionDriver` 可以切换成通用 channel 池。
+
+同时删除没有进入 Wwise 输出链路的 `Pitch Follow`、`Lowpass Follow` 及其
+配套参数、Inspector 标签页、调试表和旧的 `AudioEnvelope` 曲线类型。动作驱动
+的 Pitch、Lowpass、Volume、Pan 后续统一在 Wwise RTPC / Bus 中处理。
+
+本次仍未 commit。
+
+## 2026-10-06：Play 模式后试听的最终清理
+
+真实 Enter Play / Exit Play 回归确认：
+
+- 退出 Play 后旧 Wwise 初始化器、监听器、编辑器 LateUpdate 和银行句柄可能残留。
+- 仅复用初始化器不足以恢复音频线程渲染。
+
+最终处理：
+
+- 退出 Play 后第一次试听先执行一次
+  `AkUnitySoundEngineInitialization.ResetSoundEngine()`。
+- 重置后重新初始化 `AkInitializer`，强制启用编辑器 LateUpdate。
+- 如果引擎被 suspend，调用 `WakeupFromSuspend()`。
+- 预览不再依赖 `AkBankManager` 的旧引用计数，直接调用
+  `AkUnitySoundEngine.LoadBank("DynamicAction")`。
+- 试听 host 固定带自己的 `AkAudioListener`。
+- 新增菜单 `超高速行者/音频/重置编辑器试听`，用于任何情况下手动重建
+  Wwise 编辑器音频链路。
+- 临时 PlayMode 回归脚本已删除，不留在工程菜单中。
+
+最终烟测：
+
+```text
+Wwise action preview passed: Slide
+Wwise action preview passed: WallSlide
+Wwise action preview passed: UnboundAutoSource
+Wwise action preview passed: AfterEngineReset
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+日志：
+
+```text
+Logs/wwise-final-after-cleanup-2.log
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Play 模式后试听失效与 Release 变调修复
+
+### Play 模式后试听失效
+
+复现方式：
+
+```text
+先正常试听
+-> 模拟进入 / 退出 Play 模式时 Wwise 强制重置
+-> 再试听
+```
+
+复现结果：
+
+```text
+NullReferenceException
+WwiseActionPreviewPlayer.EnsureEngine
+```
+
+原因：
+
+- `AkInitializer` 仍保留旧的单例对象。
+- 预览层没有复用该初始化器，而是新建 `AkInitializer`。
+- Wwise 在 `Awake` 中立刻销毁重复组件，随后访问它导致空引用；银行和监听器状态也
+  留在上一次 Play 模式。
+
+修复：
+
+- 预览优先复用 `AkInitializer.GetAkInitializerGameObject()`。
+- 每次试听前重新执行 Wwise 初始化和编辑器监听器注册。
+- Play 模式状态切换时主动停止旧预览。
+- Tick 绑定改为无状态重绑，避免 Play 模式后残留 delegate 状态。
+- 回归烟测加入 `AfterEngineReset`。
+
+### Release 异常变调
+
+原因：
+
+- Wwise 工程仍残留旧 `ActionSpeed -> PitchSemitones` RTPC 和
+  `PluginMediaSource`。
+- 新 Source Plugin 已不包含 `PitchSemitones` 参数，因此这是无效旧结构。
+- C# 端 `ReleasePitchSemitones` 默认范围为 `-1.2..1.2`，松手进尾音时会产生
+  明显随机移调。
+
+修复：
+
+- Wwise 工程删除旧 `PluginMediaSource`、旧 RTPC 和 `ActionSpeed` Game Parameter。
+- 重新生成并复制 `Init.bnk` / `DynamicAction.bnk`。
+- `ReleasePitchSemitones` 默认改为 `0..0`，现有示例资产同步归零。
+- 保留字段供特殊效果手动开启；普通动作不再在 Release 瞬间随机移调。
+- `WwiseActionPcmRenderer` 增加 15 ms 播放速率平滑，避免状态切换时出现音高突跳。
+- 删除旧的 `AudioActionPreviewPlayer` AudioSource 实现，Inspector 试听只保留
+  Wwise PCM 路径，避免两套状态机并存。
+
+回归烟测：
+
+```text
+Wwise action preview passed: Slide
+Wwise action preview passed: WallSlide
+Wwise action preview passed: UnboundAutoSource
+Wwise action preview passed: AfterEngineReset
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+日志：
+
+```text
+Logs/wwise-clean-final-2.log
+```
+
+本次仍未 commit。
+
+## 2026-10-06：所有 AudioActionDefinition 自动波形与试听
+
+新增：
+
+```text
+Assets/Editor/Audio/AudioActionSourceLocator.cs
+```
+
+现在 Inspector 不再要求每条资产先写进 `WwiseActionBindings`：
+
+- 绑定表里的 `SourceRelativePath` 仍然可以作为显式覆盖。
+- 没有绑定的定义会根据 `AudioClip` 的资产路径和 GUID，自动把 WAV 复制到：
+  ```text
+  Assets/StreamingAssets/Audio/Source/Generated/<GUID>_<文件名>.wav
+  ```
+- 路径稳定，同名素材不会互相覆盖。
+- 波形分析和 Inspector 试听都通过该定位器工作。
+- 试听没有绑定 Event 时使用通用的
+  `Play_SlideSinePlugin`，只负责 PCM 搬运和试听，不代表运行时动作路由。
+
+实时试听还补上了 Wwise 监听器：编辑器里没有 `AkAudioListener` 时，试听
+host 会临时添加一个默认监听器，避免 Source Plugin 有 PCM 但没有监听输出。
+
+自动验证新增了未绑定资产：
+
+```text
+Wwise action analysis passed: UnboundAutoSource (0.00..0.97)
+Wwise action preview passed: UnboundAutoSource
+```
+
+日志：
+
+```text
+Logs/wwise-generic-preview-final-2.log
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Inspector 试听与 F3 面板接入 Wwise PCM 路径
+
+问题现象：
+
+```text
+Inspector：当前导入设置不允许读取采样数据
+Audition：无法播放
+F3 Audio System：no active action voice
+```
+
+原因是 Wwise 接管输出后 `m_DisableAudio: 1`，旧的
+`AudioClip.GetData()` / `AudioSource` 预览链路全部失效；运行期 F3 面板也仍然
+只读取旧的 `ActionAudioVoice` 池，而实际声音已经由 `WwiseActionDriver` 播放。
+
+本次修改：
+
+- `AudioActionClipAnalysis` 支持直接分析交错 PCM。
+- `AudioActionDefinitionEditor` 优先通过绑定资产的 `SourceRelativePath`
+  读取 `StreamingAssets` WAV 进行波形和循环区分析。
+- 新增 `WwiseActionPreviewPlayer`：Inspector 试听直接创建 Wwise PCM voice、
+  推送 Unity 渲染的 PCM，再走 Wwise Event/Bus。
+- `WwiseActionDriver` 改为滑铲与墙滑两个独立通道，各自使用独立 emitter，
+  避免两个动作同时释放时互相覆盖 `SendPluginCustomGameData` 的 voice 信息。
+- `AudioDebugOverlay` 现在同时显示 Wwise 通道的状态、动作时间、速度、
+  Gain、Pitch Follow 和 Lowpass Follow。
+- `PlayerAudioDriver` 暴露 `WallSlideAction`；Wwise 驱动存在时不再启动
+  旧 AudioSource 动作池。
+- `WwiseActionBindings` 增加 `WallSlide` 条目，源文件为
+  `Audio/Source/hand_slide_very_short.wav`。
+
+自动烟测结果：
+
+```text
+Wwise action analysis passed: Slide (0.00..0.51)
+Wwise action preview passed: Slide
+Wwise action analysis passed: WallSlide (0.00..0.69)
+Wwise action preview passed: WallSlide
+Wwise PCM bridge smoke test passed: playingId=1
+```
+
+日志：
+
+```text
+Logs/wwise-preview-debug-final-3.log
+```
+
+本次仍未 commit。

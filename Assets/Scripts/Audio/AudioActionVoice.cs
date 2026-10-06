@@ -19,8 +19,6 @@ public sealed class ActionAudioVoice : MonoBehaviour
 
     private AudioSource _sourceA;
     private AudioSource _sourceB;
-    private AudioLowPassFilter _lowpass;
-    private AudioHighPassFilter _highpass;
     private AudioActionDefinition _definition;
     private ActionControlFrame _control;
     private System.Random _random;
@@ -53,22 +51,14 @@ public sealed class ActionAudioVoice : MonoBehaviour
     private float _startPitch = 1f;
     private float _sustainPitch = 1f;
     private float _releasePitch = 1f;
-    private float _lowpassOffset;
-    private float _lowpassHz;
     private float _contactGain = 1f;
-    private float _speedPitch = 1f;
     private float _driftTimer;
     private float _driftGainValue;
     private float _driftGainTarget;
-    private float _driftCutoffValue;
-    private float _driftCutoffTarget;
 
     public AudioActionState State => _state;
     public ActionControlFrame Control => _control;
-    public float LowpassHz => _lowpassHz;
     public float EnvelopeGain { get; private set; }
-    public float PitchEnvelopeValue { get; private set; }
-    public float LowpassEnvelopeValue { get; private set; }
     public bool LoopEntered => _loopEntered;
     public bool UsesRenderedLoop => _loopClip != null;
     public bool IsActive => _state != AudioActionState.Idle && _state != AudioActionState.Finished;
@@ -112,7 +102,6 @@ public sealed class ActionAudioVoice : MonoBehaviour
         _startPitch = AudioCurveUtility.SemitoneToRatio(_definition.StartPitchSemitones.Value(_random));
         _sustainPitch = AudioCurveUtility.SemitoneToRatio(_definition.SustainPitchSemitones.Value(_random));
         _releasePitch = AudioCurveUtility.SemitoneToRatio(_definition.ReleasePitchSemitones.Value(_random));
-        _lowpassOffset = _definition.LowpassVariation.Value(_random);
         _startSample = ToSample(_definition.StartPosition01);
         _loopStartSample = ToSample(_definition.LoopStart01);
         _loopEndSample = Mathf.Max(_loopStartSample + 2, ToSample(_definition.LoopEnd01));
@@ -144,8 +133,6 @@ public sealed class ActionAudioVoice : MonoBehaviour
         _driftTimer = 0f;
         _driftGainValue = 0f;
         _driftGainTarget = 0f;
-        _driftCutoffValue = 0f;
-        _driftCutoffTarget = 0f;
         EnvelopeGain = 0f;
 
         _sourceA.Stop();
@@ -294,18 +281,7 @@ public sealed class ActionAudioVoice : MonoBehaviour
 
     private void UpdateTone(float deltaTime)
     {
-        float speed = Mathf.Clamp01(_control.NormalizedSpeed);
-        PitchEnvelopeValue = _definition.PitchFollow.Evaluate(speed);
-        LowpassEnvelopeValue = _definition.LowpassFollow.Evaluate(speed);
-        _speedPitch = AudioCurveUtility.SemitoneToRatio(
-            _definition.PitchFollowMaxSemitones * PitchEnvelopeValue);
-        float cutoff = AudioCurveUtility.LerpFrequency(
-            _definition.LowpassIdleHz, _definition.LowpassFastHz, LowpassEnvelopeValue);
-        cutoff = Mathf.Lerp(cutoff, _definition.LowpassIdleHz,
-            Mathf.Clamp01(_control.ContactIntensity) * 0.25f);
         UpdateDrift(deltaTime);
-        SetLowpass(cutoff + _lowpassOffset + _driftCutoffValue * _definition.SustainDriftCutoffHz);
-        SetDirectionPan(_control.Direction);
 
         float contactTarget = Mathf.Lerp(0.82f, 1f, Mathf.Clamp01(_control.ContactIntensity));
         _contactGain = AudioCurveUtility.SmoothTowards(
@@ -323,17 +299,20 @@ public sealed class ActionAudioVoice : MonoBehaviour
         {
             _driftTimer = 0.3f;
             _driftGainTarget = (float)(_random.NextDouble() * 2.0 - 1.0);
-            _driftCutoffTarget = (float)(_random.NextDouble() * 2.0 - 1.0);
         }
         _driftGainValue = AudioCurveUtility.SmoothTowards(
             _driftGainValue, _driftGainTarget, 3f, deltaTime);
-        _driftCutoffValue = AudioCurveUtility.SmoothTowards(
-            _driftCutoffValue, _driftCutoffTarget, 3f, deltaTime);
     }
 
     /// <summary>每次触发把循环窗口整体挪一点点（长度不变），避免每遍滑铲完全一样。</summary>
     private void ApplyLoopRegionJitter()
     {
+        // 颗粒模式不做区域抖动。
+        // 颗粒渲染本身已经在循环区内随机取每颗的读取起点（GrainRandomStart01），
+        // 再把整个窗口平移几乎不增加听感差异，却会把缓存键从 8 个（seed 变体）
+        // 炸成 136 个（17 档区域 × 8 seed），超过 64 条缓存上限后反复清空，
+        // 结果每次滑铲都要重新渲染一遍循环 buffer。
+        if (_definition.IsGranular) return;
         int loopLength = _loopEndSample - _loopStartSample;
         int range = Mathf.RoundToInt(loopLength * _definition.LoopRegionRandom01);
         if (range <= 0) return;
@@ -413,7 +392,7 @@ public sealed class ActionAudioVoice : MonoBehaviour
         {
             master *= AudioCurveUtility.DbToLinear(_definition.SustainGainDb);
         }
-        float pitch = Mathf.Clamp(basePitch * _speedPitch, 0.35f, 2.5f);
+        float pitch = Mathf.Clamp(basePitch, 0.35f, 2.5f);
         if (_sourceA != null)
         {
             _sourceA.pitch = pitch;
@@ -444,19 +423,6 @@ public sealed class ActionAudioVoice : MonoBehaviour
             Mathf.RoundToInt(_clip.samples * Mathf.Clamp01(normalized)), 0, _clip.samples - 1);
     }
 
-    private void SetLowpass(float hertz)
-    {
-        _lowpassHz = Mathf.Clamp(hertz, 120f, 22000f);
-        if (_lowpass != null) _lowpass.cutoffFrequency = _lowpassHz;
-    }
-
-    private void SetDirectionPan(float direction)
-    {
-        float pan = Mathf.Clamp(direction, -1f, 1f) * _definition.DirectionPan;
-        if (_sourceA != null) _sourceA.panStereo = pan;
-        if (_sourceB != null) _sourceB.panStereo = pan;
-    }
-
     private void ApplySpatial(AudioSource source)
     {
         if (source == null) return;
@@ -479,11 +445,6 @@ public sealed class ActionAudioVoice : MonoBehaviour
             source.dopplerLevel = 0f;
             source.rolloffMode = AudioRolloffMode.Linear;
         }
-        // 滤镜挂在同一个 GameObject 上，两个 AudioSource 共用同一条滤镜链。
-        _lowpass = gameObject.AddComponent<AudioLowPassFilter>();
-        _lowpass.cutoffFrequency = 22000f;
-        _highpass = gameObject.AddComponent<AudioHighPassFilter>();
-        _highpass.cutoffFrequency = 20f;
     }
 
     private void OnDisable()

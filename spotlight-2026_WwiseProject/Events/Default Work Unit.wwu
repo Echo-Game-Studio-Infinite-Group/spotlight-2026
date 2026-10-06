@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" SchemaVersion="123">
+	<Events>
+		<WorkUnit Name="Default Work Unit" ID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" PersistMode="Standalone">
+			<ChildrenList>
+				<Event Name="Play_SlideSinePlugin" ID="{C61B2BB5-4D3F-4B92-964E-A24B1BF770A4}">
+					<ChildrenList>
+						<Action Name="" ID="{90341DA9-112F-486E-B2CB-6434EA17BB14}" ShortID="91592280">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="SlideSinePlugin" ID="{738DE4BB-31FB-4A1E-B330-69D390FDC467}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Stop_SlideSinePlugin" ID="{5A958022-34A3-4769-89CB-53F5F4DD35C0}">
+					<ChildrenList>
+						<Action Name="" ID="{AAE3BD69-39CD-4267-99C4-444B2DB2EE87}" ShortID="141243502">
+							<PropertyList>
+								<Property Name="ActionType" Type="int16" Value="2"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="SlideSinePlugin" ID="{738DE4BB-31FB-4A1E-B330-69D390FDC467}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Folder Name="OneTimeEvent" ID="{AB640C48-5155-4D79-9160-D9E50F2CAB6B}" ShortID="425726620">
+					<ChildrenList>
+						<Event Name="Jump_Normal" ID="{304CC152-DB75-4FE2-8385-3C1513AC44D9}">
+							<ChildrenList>
+								<Action Name="" ID="{931505F6-9013-4AF6-A455-E78BD4FF5CB3}" ShortID="301344738">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="JumpNormal" ID="{EFE4DA3A-1D2C-4CFA-95E9-AE82377FB17A}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Land_Normal" ID="{624F0B3F-D241-402C-B30E-898433EA07C9}">
+							<ChildrenList>
+								<Action Name="" ID="{E3F786EE-FF09-4EE7-9877-880AA8EE3023}" ShortID="47493707">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="LandNormal" ID="{262FEEF8-FC75-4187-8D76-5C119AD11AB3}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+					</ChildrenList>
+				</Folder>
+			</ChildrenList>
+		</WorkUnit>
+	</Events>
+</WwiseDocument>
