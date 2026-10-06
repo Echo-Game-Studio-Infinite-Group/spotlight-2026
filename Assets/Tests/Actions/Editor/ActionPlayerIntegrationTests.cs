@@ -36,6 +36,7 @@ public sealed class ActionPlayerIntegrationTests
         Invoke(_motor, "Awake");
         _combat = _root.GetComponent<PlayerCombat>();
         Invoke(_combat, "Awake");
+        Invoke(_combat, "OnEnable");
         _bridge = _root.GetComponent<ActionAnimatorBridge>();
         _runner = _root.GetComponent<PlayerActionRunner>();
         Assert.NotNull(_runner, "先运行 ActionPlayerSetup.Install，再执行接入测试");
@@ -74,6 +75,7 @@ public sealed class ActionPlayerIntegrationTests
             child.AddComponent<BoxCollider>().size = Vector3.one * 20f;
         }
         Enemy target = host.AddComponent<Enemy>(); target.ConfigureStats(1000f, 0f, 0f); target.SetInvulnerableTime(0f);
+        Invoke(target, "OnEnable");
         return target;
     }
     private void ShortAttack()
@@ -97,6 +99,76 @@ public sealed class ActionPlayerIntegrationTests
         ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
         Physics.SyncTransforms(); Tick(); Tick();
         Assert.IsTrue(_motor.IsGrounded);
+    }
+
+    [Test]
+    public void ConfiguredVolumesDoNotHitThroughWallAndCanRetryAfterWallRemoved()
+    {
+        Enemy target = Target();
+        target.transform.position = _root.transform.position + new Vector3(0f, 1f, 2f);
+        target.GetComponent<BoxCollider>().size = Vector3.one * .2f;
+        _attack.Combat.HitVolumes.Add(new ActionHitVolume { Center = new Vector3(0f, 1f, 2f), Size = Vector3.one,
+            Start = new ActionFrameAnchor { RelativeTo = ActionFrameAnchor.Boundary.ActionStart } });
+        var wall = new GameObject("AttackObstruction"); _created.Add(wall);
+        wall.transform.position = _root.transform.position + new Vector3(0f, 1f, 1f);
+        wall.AddComponent<BoxCollider>().size = new Vector3(10f, 10f, .2f);
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state); _combat.SampleSequenceBoundary(state);
+        Assert.AreEqual(0, target.DamagedCount);
+        Object.DestroyImmediate(wall); _combat.SampleSequenceBoundary(state);
+        Assert.AreEqual(1, target.DamagedCount);
+    }
+
+    [Test]
+    public void HealthOnlyTargetUsesUnifiedSettlementAndSingleFeedbackEvent()
+    {
+        var host = new GameObject("HealthOnlyTarget"); _created.Add(host);
+        host.transform.position = _root.transform.position + Vector3.up;
+        host.AddComponent<BoxCollider>().size = Vector3.one * 20f;
+        HealthComponent health = host.AddComponent<HealthComponent>(); health.SetMaxHealth(1000f); health.SetInvulnerableTime(0f);
+        int landed = 0, sequence = 0, notifications = 0;
+        _root.GetComponent<CombatComponent>().Landed += (target, point, direction, damage) => landed++;
+        _combat.SequenceHitLanded += (target, request, result) => { Assert.AreSame(health, target); sequence++; };
+        _combat.Hitbox.Hit += (box, collider, target) => notifications++;
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state);
+        _combat.HandleSequenceEvent(state, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); _combat.SampleSequenceHitbox(100);
+        Assert.That(health.Health, Is.EqualTo(1000f - _attack.Combat.Damage));
+        Assert.AreEqual(1, landed); Assert.AreEqual(1, sequence); Assert.AreEqual(1, notifications);
+    }
+
+    [Test]
+    public void InvulnerableTargetIsNotMarkedHitUntilDamageSucceeds()
+    {
+        Enemy target = Target(true);
+        HealthComponent health = target.GetComponent<HealthComponent>(); health.SetInvulnerableTime(100f);
+        health.TakeDamage(1f); int initial = target.DamagedCount;
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state);
+        _combat.HandleSequenceEvent(state, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); Assert.AreEqual(initial, target.DamagedCount);
+        health.Reset(); health.SetInvulnerableTime(0f);
+        _combat.SampleSequenceHitbox(100); _combat.SampleSequenceHitbox(100);
+        Assert.AreEqual(initial + 1, target.DamagedCount);
+    }
+
+    [Test]
+    public void SameCampIsFilteredAndStaleSamplesCannotAffectNewInstance()
+    {
+        Enemy target = Target(true);
+        CombatComponent targetCombat = target.GetComponent<CombatComponent>(); targetCombat.Camp = CampType.Player;
+        var old = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(old);
+        _combat.HandleSequenceEvent(old, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); Assert.AreEqual(0, target.DamagedCount);
+        var next = new ActionExecutionState(_attack, 101, 0, 0, 0, default);
+        _combat.BeginSequenceAction(next); targetCombat.Camp = CampType.Enemy;
+        _combat.HandleSequenceEvent(next, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.HandleSequenceEvent(old, new ActionFrameEvent { EventKey = "combat.hitbox.close" });
+        _combat.EndSequenceAction(100); _combat.SampleSequenceHitbox(100);
+        Assert.AreEqual(0, target.DamagedCount); Assert.IsTrue(_combat.Hitbox.SequenceWindowOpen);
+        _combat.SampleSequenceHitbox(101); Assert.AreEqual(1, target.DamagedCount);
     }
 
     [Test]

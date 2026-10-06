@@ -114,14 +114,18 @@ public static class EnemyWaistCutoutValidation
     private sealed class Results : ICallbacks
     {
         public void RunStarted(ITestAdaptor testsToRun) { }
-        public void TestStarted(ITestAdaptor test) { }
+        public void TestStarted(ITestAdaptor test)
+        {
+            if (test.FullName.StartsWith("GibComponentTests.") || test.FullName.StartsWith("GibMaterialTests."))
+                SessionState.SetBool("EnemyWaistCutoutValidation.Running", true);
+        }
         public void TestFinished(ITestResultAdaptor result) { }
         public void RunFinished(ITestResultAdaptor result)
         {
             if (!SessionState.GetBool("EnemyWaistCutoutValidation.Running", false)) return;
             SessionState.SetBool("EnemyWaistCutoutValidation.Running", false);
-            Directory.CreateDirectory("Temp/WaistCutValidation");
-            File.WriteAllText("Temp/WaistCutValidation/results.xml", result.ToXml().OuterXml);
+            Directory.CreateDirectory("Logs/GibMaterialValidation");
+            File.WriteAllText("Logs/GibMaterialValidation/results.xml", result.ToXml().OuterXml);
             Debug.Log($"[WaistCutValidation] 通过={result.PassCount} 失败={result.FailCount} 跳过={result.SkipCount}");
         }
     }

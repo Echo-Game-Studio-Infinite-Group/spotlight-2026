@@ -118,7 +118,10 @@ namespace GameJam.Actions
             int hash = Animator.StringToHash("Base Layer." + BaseStates[index]);
             if (_animator.HasState(0, hash)) _animator.CrossFadeInFixedTime(hash, _returnBlendFrames / (float)ActionSequencePlayer.FramesPerSecond, 0);
             if (stopEffects) _vfx?.StopAttacks();
-            _animator.Update(0f);
+            // 物体已经失活（场景卸载 / 退出播放 / 被禁用）时再驱一次 Animator 会报
+            // "Can't call Animator.Update on inactive object"。Release 是从 OnDisable 调的，
+            // 那条路径必然踩到这里；禁用但激活的 Animator 仍然允许手动驱（本类就靠这个跑序列）。
+            if (_animator != null && _animator.gameObject.activeInHierarchy) _animator.Update(0f);
         }
         public void PlayAttackEffect(int index) => _vfx?.PlayAttack(index);
         public void Release(object owner)

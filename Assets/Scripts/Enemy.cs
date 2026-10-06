@@ -1,3 +1,4 @@
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -10,22 +11,25 @@ using UnityEngine.AI;
 // CombatSelfCheck 之类只想要「一个能被打的靶子」的地方不该被强行塞一个 agent，
 // 那种场合没有 agent 也能正常工作（只是不追击）。需要追击时在 Inspector 挂上即可。
 [DisallowMultipleComponent]
-public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
+public sealed class Enemy : MonoBehaviour
 {
     [Header("生命")]
-    [SerializeField, Min(1f)] private float _maxHealth = 100f;
-    [SerializeField, Min(0f)] private float _invulnerableTime = 0.45f;
-    private float _health;
-    private float _invulnerableUntil = float.NegativeInfinity;
-    public float MaxHealth => _maxHealth;
-    public float Health => _health;
-    public bool IsAlive => _health > 0f;
-    public float HealthRatio => _maxHealth > 0f ? _health / _maxHealth : 0f;
+    // 血量完全交给 HealthComponent：与玩家共用同一份规则，数值也只有一处真值。
+    // 引用不进序列化：同物体上找不到时 EnsureHealth 会补一个，摆个手拖槽只会多一个拖漏的机会。
+    private HealthComponent _health;
     public int DamagedCount { get; private set; }
-    public float InvulnerableTime => _invulnerableTime;
-    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
-    [Header("战斗属性")]
-    [SerializeField, Min(0f)] private float _attackPower = 8f;
+    public float MaxHealth => _health != null ? _health.MaxHealth : 0f;
+    public float Health => _health != null ? _health.Health : 0f;
+    public bool IsAlive => _health != null && _health.IsAlive;
+    public float HealthRatio => _health != null ? _health.HealthRatio : 0f;
+    public float InvulnerableTime => _health != null ? _health.InvulnerableTime : 0f;
+    public bool IsInvulnerable => _health != null && _health.IsInvulnerable;
+    // 伤害与冷却归 CombatComponent；这里只留 AI 决策与移动相关的调参。
+    // 没有落盘战斗层的宿主（测试、自检用 AddComponent 搭的临时敌人）按这套默认值补一个。
+    private const float DefaultDamage = 8f;
+    private const float DefaultCooldown = 1.1f;
+
+    [Header("移动与受伤")]
     [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
     [SerializeField, Min(0f)] private float _walkSpeed = 2f;
     [SerializeField, Min(0f)] private float _runSpeed = 5f;
@@ -37,7 +41,8 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
     public float RunSpeed => _runSpeed;
     // 比较比例，避免 100 * 0.3f 的舍入把恰好 30 血误判为受伤。
     public bool IsInjured => HealthRatio < _injuredThreshold;
-    public bool IsAttacking { get; private set; }
+    /// <summary>攻击窗口开着没。状态由 CombatComponent 管，这里只转发给 EnemyAnimation 与诊断。</summary>
+    public bool IsAttacking => _combat != null && _combat.IsAttacking(TimeManager.WorldTime);
     internal Vector3 PreviousPosition { get; private set; }
     internal Quaternion PreviousRotation { get; private set; }
     private EnemyAnimation _animation;
@@ -54,14 +59,17 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
     [SerializeField] private bool _chasePlayer;
     [SerializeField, Min(0f)] private float _sightRange = 14f;
     [SerializeField, Min(0f)] private float _attackRange = 2.2f;
-    [SerializeField, Min(0f)] private float _attackCooldown = 1.1f;
 
-    private float _nextAttackTime;
     private Hitbox _attackHitbox;
+    private CombatComponent _combat;
     private bool _runningChase;
+    // 攻击命中时向玩家相机广播震动。方向取「敌人 → 玩家」，力度按攻击伤害换算，见 OnLandedHit。
+    // 同样不进序列化：ImpulseSource 挂在自己身上，Awake 里 GetComponent 取。
+    private CinemachineImpulseSource _impulseSource;
 
-    public float AttackPower => _attackPower;
-    public float AttackDamage => _attackPower;
+    private CombatComponent Combat { get { EnsureCombat(); return _combat; } }
+    public float AttackPower => Combat != null ? Combat.Damage : 0f;
+    public float AttackDamage => AttackPower;
     public float MoveSpeed => _walkSpeed;
     public float AttackRange => _attackRange;
     public bool IsChasing => _chasePlayer;
@@ -69,7 +77,7 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
     public void ConfigureStats(float maxHealth, float attackPower, float moveSpeed)
     {
         SetMaxHealth(maxHealth);
-        _attackPower = attackPower;
+        if (Combat != null) Combat.Damage = attackPower;
         _walkSpeed = Mathf.Max(0f, moveSpeed);
     }
 
@@ -81,15 +89,14 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
 
     private void Awake()
     {
-        _health = _maxHealth;
+        EnsureHealth();
         if (_agent == null) _agent = GetComponent<NavMeshAgent>();
+        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
-        if (_attackHitbox != null)
-        {
-            _attackHitbox.Configure(CampType.Enemy, this);
-            _attackHitbox.DisableHitbox();
-        }
+        // 判定盒先解析再装配结算层，否则 Configure 拿到的是 null。
+        EnsureCombat();
+        DisableHitbox();
         PreviousPosition = transform.position;
         PreviousRotation = transform.rotation;
         if (_agent != null)
@@ -119,30 +126,96 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
 
     private void OnDisable()
     {
+        if (_combat != null) _combat.Landed -= OnLandedHit;
+        if (_health != null) _health.Damaged -= OnDamaged;
         StopMoving();
         FinishAttack();
     }
 
+    // 血量走 HealthComponent；同物体找不到就补一个，
+    // 免得重构后老场景/预制体上的敌人静默变成打不死。
+    private void EnsureHealth()
+    {
+        if (_health != null) return;
+        _health = GetComponent<HealthComponent>();
+        if (_health == null) _health = gameObject.AddComponent<HealthComponent>();
+    }
+
+    // 结算与战斗数值都在 CombatComponent 上；同物体找不到就补一个，
+    // 否则判定盒没有持有者、敌人永远打不中玩家。
+    private void EnsureCombat()
+    {
+        if (_combat == null) _combat = GetComponent<CombatComponent>();
+        if (_combat == null)
+        {
+            // 没有落盘战斗层的宿主（测试、自检用 AddComponent 搭的临时敌人）：
+            // 补一个并按敌人的默认值配好，否则会套用组件那套给玩家用的默认值。
+            _combat = gameObject.AddComponent<CombatComponent>();
+            _combat.Damage = DefaultDamage;
+            _combat.Cooldown = DefaultCooldown;
+            // 敌人的窗口由动画状态机关（EnemyAnimation 退出 Attack 状态时调 FinishAttack）。
+            _combat.WindowSeconds = 0f;
+        }
+        _combat.SetOwner(CampType.Enemy, _attackHitbox, _health);
+    }
+
+    // 订阅结算层的两个播报：挨打（跳字 / 受伤或死亡表现）与命中玩家（震屏）。
+    private void OnEnable()
+    {
+        EnsureHealth();
+        EnsureCombat();
+        _health.Damaged += OnDamaged;
+        if (_combat != null) _combat.Landed += OnLandedHit;
+    }
+
+    // 实体特有的受击反应：跳字、断肢方向、受伤/死亡动画。血量数值不在这里改。
+    private void OnDamaged(HealthComponent source, float applied, Vector3 hitPoint, Vector3 hitDirection)
+    {
+        DamagedCount++;
+        if (_damagePopup != null)
+            _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
+                transform, Camera.main, _numberLifetime, _riseSpeed);
+
+        if (source.IsAlive)
+        {
+            if (_animation != null) { StopMoving(); _animation.PlayHurt(); }
+            return;
+        }
+
+        StopMoving();
+        if (AgentReady) _agent.ResetPath();
+        FinishAttack();
+        GetComponent<GibComponent>()?.TrySlice(hitDirection);
+        if (_animation != null) _animation.PlayDeath();
+    }
+
+    // 命中玩家：震动方向取「敌人 → 玩家」的世界方向，力度走 CameraShaker 的统一换算。
+    private void OnLandedHit(HealthComponent target, Vector3 point, Vector3 direction, float applied)
+    {
+        CameraShaker.Emit(_impulseSource, direction, AttackDamage);
+    }
+
     public void FinishAttack()
     {
-        IsAttacking = false;
-        DisableHitbox();
+        if (_combat != null) _combat.FinishAttack();
+        else DisableHitbox();
     }
 
     public void EnableHitbox()
     {
-        if (IsAlive && IsAttacking && _attackHitbox != null) _attackHitbox.EnableHitbox();
+        if (IsAlive && IsAttacking) _combat?.EnableHitbox();
     }
 
     public void DisableHitbox()
     {
-        if (_attackHitbox != null) _attackHitbox.DisableHitbox();
+        _combat?.DisableHitbox();
     }
 
     // 供装配工具写入敌人自己的攻击判定盒
     public void ConfigureAttackHitbox(Hitbox hitbox)
     {
         _attackHitbox = hitbox;
+        if (_combat != null) _combat.SetOwner(CampType.Enemy, _attackHitbox, _health);
     }
 
     // 实机联调用：把敌人的决策输入一次性打出来，便于定位「为什么不追/不攻击」。
@@ -156,14 +229,16 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
             : -1f;
         Debug.Log($"[Enemy] {name} 状态: 存活={IsAlive} 血量={Health}/{MaxHealth} 追击={_chasePlayer} "
             + $"玩家={(target != null ? target.name : "未找到")} 水平距离={distance:0.##} 攻击距离={_attackRange} "
-            + $"视野={_sightRange} 下次攻击={_nextAttackTime:0.##} 当前={TimeManager.UnscaledTime:0.##} "
+            + $"视野={_sightRange} 攻击中={IsAttacking} 世界时间={TimeManager.WorldTime:0.##} "
             + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
     private void Chase()
     {
-        PlayerMotor target = ResolvePlayer();
-        if (target == null || !GameManager.Instance.Player.IsAlive) { StopMoving(); return; }
+        Player player = Player.Current;
+        PlayerMotor target = player != null ? player.Motor : null;
+        HealthComponent health = player != null ? player.Health : null;
+        if (target == null || health == null || !health.IsAlive) { StopMoving(); return; }
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
@@ -206,62 +281,47 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
 
     private void TryAttack(PlayerMotor target)
     {
-        if (TimeManager.WorldTime < _nextAttackTime) return;
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;
 
-        PlayerData health = GameManager.Instance.Player;
+        HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         if (health == null || !health.IsAlive) return;
 
         // 没有动画或判定盒就不凭距离直接扣血。
         if (_animation == null || !_animation.CanAttack || _attackHitbox == null) return;
-        _nextAttackTime = TimeManager.WorldTime + _attackCooldown;
-        IsAttacking = true;
+
+        // 冷却与窗口由 CombatComponent 管。放在所有前置检查之后调，
+        // 免得"够不着 / 播不了动画"也把冷却吃掉。
+        EnsureCombat();
+        if (_combat == null || !_combat.TryBeginAttack(TimeManager.WorldTime)) return;
         _animation.PlayAttack();
     }
 
+    // 玩家从场景级注册点取，不再经 GameManager —— 没有 GameManager 的场景里敌人 AI 照样工作。
     private PlayerMotor ResolvePlayer()
     {
-        return GameManager.Instance.Player.Target;
+        Player player = Player.Current;
+        return player != null ? player.Motor : null;
     }
 
+    // 对外保留原来的三参数签名：受击反应由 HealthComponent.Damaged 事件驱动，
+    // 这里只把数值与命中信息转交过去。
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
     {
-        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
-        float applied = Mathf.Min(amount, _health);
-        _health -= applied;
-        DamagedCount++;
-        if (_damagePopup != null)
-            _damagePopup.Show(applied, _damageTextColor, hitPoint + Vector3.up * 0.5f,
-                transform, Camera.main, _numberLifetime, _riseSpeed);
-        CameraShaker.Shake(_shakeAmplitude);
-        _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
-        if (!IsAlive)
-        {
-            StopMoving();
-            if (AgentReady) _agent.ResetPath();
-            FinishAttack();
-            GetComponent<GibComponent>()?.TrySlice(hitDirection);
-            if (_animation != null) _animation.PlayDeath();
-        }
-        else if (_animation != null)
-        {
-            StopMoving();
-            _animation.PlayHurt();
-        }
-        return applied;
+        EnsureHealth();
+        if (_health == null) return 0f;
+        return _health.TakeDamage(amount, hitPoint, hitDirection);
     }
     public AttackDamageResult ReceiveAttack(AttackDamageRequest request)
     {
-        float applied = TakeDamage(request.Damage, request.Point, request.Direction);
-        return new AttackDamageResult(applied, applied > 0f && !IsAlive);
+        EnsureHealth();
+        return _health.ReceiveAttack(request);
     }
 
     [SerializeField] private DamagePopup _damagePopup;
     [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);
     [SerializeField] private float _numberLifetime = 1.2f;
     [SerializeField] private float _riseSpeed = 2.2f;
-    [SerializeField] private float _shakeAmplitude = 0.6f;
     public DamagePopup DamagePopupTemplate => _damagePopup;
     public void SetDamagePopup(DamagePopup popup) => _damagePopup = popup;
 
@@ -272,13 +332,23 @@ public sealed class Enemy : MonoBehaviour, IAttackDamageReceiver
         if (AgentReady) _agent.ResetPath();
         FinishAttack();
         _runningChase = false;
-        _nextAttackTime = 0f;
+        if (_combat != null) _combat.ResetAttackState();
         GetComponent<GibComponent>()?.ResetEffect();
-        _health = _maxHealth;
-        _invulnerableUntil = float.NegativeInfinity;
+        if (_health != null) _health.Reset();
         DamagedCount = 0;
         if (wasDead && _animation != null) _animation.ResetAfterDeath();
     }
-    public void SetMaxHealth(float value) { _maxHealth = Mathf.Max(1f, value); ResetHealth(); }
-    public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);
+    public void SetMaxHealth(float value)
+    {
+        EnsureHealth();
+        if (_health != null) _health.SetMaxHealth(value);
+        ResetHealth();
+    }
+
+    public void SetInvulnerableTime(float seconds)
+    {
+        EnsureHealth();
+        // 只推无敌帧，不碰血量：自检会在半途改这个值，不该顺手把血补满。
+        if (_health != null) _health.SetInvulnerableTime(seconds);
+    }
 }
