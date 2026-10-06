@@ -33,6 +33,61 @@
 						</Sound>
 					</ChildrenList>
 				</ActorMixer>
+				<Folder Name="OneTimeAction" ID="{B49A2952-72F5-4772-BD8E-FB76BCA70E2A}" ShortID="983928174">
+					<ChildrenList>
+						<Sound Name="JumpNormal" ID="{EFE4DA3A-1D2C-4CFA-95E9-AE82377FB17A}" ShortID="819779252">
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{05551753-E682-41C2-B5B1-7D8F9144B8DE}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{AE0FFFE9-CB32-450C-8977-2C4122595285}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="jump_long" ID="{E98D4A39-8266-401F-B8C2-0C5CCCB25978}">
+									<Language>SFX</Language>
+									<AudioFile>Jump\jump_long.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="1034112011"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="jump_long" ID="{E98D4A39-8266-401F-B8C2-0C5CCCB25978}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="LandNormal" ID="{262FEEF8-FC75-4187-8D76-5C119AD11AB3}" ShortID="474445389">
+							<PropertyList>
+								<Property Name="Lowpass" Type="int16">
+									<ValueList>
+										<Value>11</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{05551753-E682-41C2-B5B1-7D8F9144B8DE}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{AE0FFFE9-CB32-450C-8977-2C4122595285}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="land_1" ID="{C602371A-7E05-401C-BCF4-3E2A6A93F665}">
+									<Language>SFX</Language>
+									<AudioFile>Land\land_1.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="1046760588"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="land_1" ID="{C602371A-7E05-401C-BCF4-3E2A6A93F665}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</AudioObjects>

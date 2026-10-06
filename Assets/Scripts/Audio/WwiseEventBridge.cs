@@ -23,14 +23,14 @@ public static class WwiseEventBridge
             return AkUnitySoundEngine.AK_INVALID_PLAYING_ID;
         }
 
-        if (!string.IsNullOrEmpty(entry.Bank))
+        string bank = entry.Bank?.Trim();
+        if (!string.IsNullOrEmpty(bank))
         {
-            AkBankManager.LoadBank(entry.Bank, false, false);
+            AkBankManager.LoadBank(bank, false, false);
         }
 
-        return AkUnitySoundEngine.PostEvent(
-            entry.WwiseEventName,
-            emitter);
+        string eventName = entry.WwiseEventName?.Trim();
+        return AkUnitySoundEngine.PostEvent(eventName, emitter);
     }
 
     public static void Stop(
@@ -46,7 +46,7 @@ public static class WwiseEventBridge
         }
 
         AkUnitySoundEngine.ExecuteActionOnEvent(
-            entry.WwiseEventName,
+            entry.WwiseEventName?.Trim(),
             AkActionOnEventType.AkActionOnEventType_Stop,
             emitter,
             transitionDurationMs);
@@ -56,7 +56,7 @@ public static class WwiseEventBridge
     {
         WwiseEventBindings.Entry entry = Find(eventId);
         return entry != null &&
-               !string.IsNullOrEmpty(entry.WwiseEventName);
+               !string.IsNullOrEmpty(entry.WwiseEventName?.Trim());
     }
 
     public static void Reload()

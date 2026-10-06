@@ -42,6 +42,23 @@ public interface IDynamicAudioActionSource
 
 接口在主线程调用。不要在这里解析音频文件、创建 Wwise 对象或执行重 DSP。
 
+动作源必须在启用时显式注册：
+
+```csharp
+private void OnEnable()
+{
+    WwiseAudioRegistry.Register(this);
+}
+
+private void OnDisable()
+{
+    WwiseAudioRegistry.Unregister(this);
+}
+```
+
+`WwiseActionDriver` 只在 registry version 变化时刷新 source 列表，并且只消费与
+当前 Player 同一 GameObject 或子物体上的 source。这样支持多个 Player 和运行时动态添加的动作源。
+
 ## 3. 请求结构
 
 ```csharp

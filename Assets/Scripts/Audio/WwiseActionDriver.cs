@@ -63,6 +63,7 @@ public sealed class WwiseActionDriver : MonoBehaviour
 
     private WwiseActionBindings _bindings;
     private bool _bankLoaded;
+    private int _sourceRegistryVersion = -1;
 
     public IReadOnlyList<DebugSnapshot> DebugSnapshots =>
         _debugSnapshots;
@@ -76,7 +77,6 @@ public sealed class WwiseActionDriver : MonoBehaviour
             gameObject.AddComponent<AkGameObj>();
         }
 
-        DiscoverSources();
         StartCoroutine(EnsureBankLoaded());
     }
 
@@ -87,9 +87,9 @@ public sealed class WwiseActionDriver : MonoBehaviour
             return;
         }
 
-        if (_sources.Count == 0)
+        if (_sourceRegistryVersion != WwiseAudioRegistry.Version)
         {
-            DiscoverSources();
+            RefreshSources();
         }
 
         CollectRequests();
@@ -107,18 +107,25 @@ public sealed class WwiseActionDriver : MonoBehaviour
         RebuildDebugSnapshots();
     }
 
-    private void DiscoverSources()
+    private void RefreshSources()
     {
         _sources.Clear();
-        MonoBehaviour[] behaviours =
-            GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        WwiseAudioRegistry.CopyTo(_sources);
+        for (int i = _sources.Count - 1; i >= 0; i--)
         {
-            if (behaviours[i] is IDynamicAudioActionSource source)
+            if (!BelongsToThisDriver(_sources[i]))
             {
-                _sources.Add(source);
+                _sources.RemoveAt(i);
             }
         }
+        _sourceRegistryVersion = WwiseAudioRegistry.Version;
+    }
+
+    private bool BelongsToThisDriver(IDynamicAudioActionSource source)
+    {
+        if (source is not Component component) return false;
+        return component.transform == transform ||
+               component.transform.IsChildOf(transform);
     }
 
     private void CollectRequests()

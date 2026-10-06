@@ -49,6 +49,16 @@ public sealed class PlayerDynamicAudioActionSource :
         _lastActive = new bool[_rules != null ? _rules.Length : 0];
     }
 
+    private void OnEnable()
+    {
+        WwiseAudioRegistry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        WwiseAudioRegistry.Unregister(this);
+    }
+
     public void CollectDynamicAudioActions(
         List<DynamicAudioActionRequest> output)
     {

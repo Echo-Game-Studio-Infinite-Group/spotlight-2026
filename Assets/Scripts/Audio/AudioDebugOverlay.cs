@@ -5,14 +5,8 @@ public sealed class AudioDebugOverlay : MonoBehaviour
 {
     public bool Visible { get; set; } = true;
 
-    private AudioSystem _audio;
     private GUIStyle _title;
     private GUIStyle _label;
-
-    private void Awake()
-    {
-        _audio = GetComponent<AudioSystem>();
-    }
 
     private void EnsureStyles()
     {
@@ -32,26 +26,13 @@ public sealed class AudioDebugOverlay : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!Visible || _audio == null) return;
+        if (!Visible) return;
         EnsureStyles();
         GUILayout.BeginArea(new Rect(Screen.width - 350f, 12f, 338f, 520f), GUI.skin.box);
         GUILayout.Label("Audio System · F3", _title);
         GUILayout.Label("Continuous actions", _title);
 
         int visible = 0;
-        var voices = _audio.ActionVoices;
-        for (int i = 0; i < voices.Count; i++)
-        {
-            ActionAudioVoice voice = voices[i];
-            if (voice == null || !voice.IsActive) continue;
-            visible++;
-            ActionControlFrame frame = voice.Control;
-            GUILayout.Label(
-                $"[{voice.name}] {voice.State}  t={frame.ActionElapsed:0.00}  v={frame.NormalizedSpeed:0.00}",
-                _label);
-            DrawMeter("Gain", voice.EnvelopeGain, new Color(0.3f, 0.9f, 0.45f));
-        }
-
         WwiseActionDriver[] wwiseDrivers =
             FindObjectsOfType<WwiseActionDriver>();
         for (int i = 0; i < wwiseDrivers.Length; i++)

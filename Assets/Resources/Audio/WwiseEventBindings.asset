@@ -12,4 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddbbc92fa7e403943a71d3a5abc26de3, type: 3}
   m_Name: WwiseEventBindings
   m_EditorClassIdentifier: 
-  Entries: []
+  Entries:
+  - EventId: player_jump
+    WwiseEventName: Jump_Normal
+    Bank: OneTimeAction

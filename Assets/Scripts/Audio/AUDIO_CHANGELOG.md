@@ -1417,6 +1417,54 @@ Unity.exe -batchmode -nographics `
 
 本次仍未 commit。
 
+## 2026-10-06：动态动作源显式注册
+
+- 新增 `WwiseAudioRegistry`。
+- `PlayerDynamicAudioActionSource` 在 `OnEnable/OnDisable` 注册和注销。
+- `WwiseActionDriver` 不再扫描全部 MonoBehaviour。
+- Driver 只在 registry version 变化时刷新 source，并按层级过滤：
+  ```text
+  当前 Player GameObject
+  或它的子物体
+  ```
+- 支持多 Player，以及运行时动态挂载新的动态动作源。
+
+文档：
+
+```text
+Docs/Audio/DynamicAudioActionInterface.md
+```
+
+本次仍未 commit。
+
+## 2026-10-06：Wwise Bootstrap 与原生 DSP 清理
+
+- 新增 `WwiseAudioBootstrap`，只负责：
+  - 给 Player 自动挂载 `WwiseActionDriver`
+  - 创建 F3 `AudioDebugOverlay`
+  - 绑定 `PlayerInputReader.ToggleHUD`
+- 删除旧的 `AudioSystemBootstrap`，旧 `AudioSystem` 不再被运行时自动创建。
+- `AudioDebugOverlay` 删除旧 `ActionAudioVoice` 展示，只显示 Wwise 动态通道。
+- 删除原生 `SpotlightActionDsp` 静态库和测试 target。
+- 删除：
+  ```text
+  Runtime/Dsp/SpotlightActionDsp.h
+  Runtime/Dsp/SpotlightActionDsp.cpp
+  Tests/SpotlightActionDspTests.cpp
+  Assets/Editor/Audio/SpotlightActionDspReferenceExporter.cs
+  Tools/audio/run_dsp_parity.ps1
+  ```
+- Runtime / Authoring 插件继续只使用 `PcmVoiceBridge`。
+
+验证：
+
+```text
+Unity recompile: 0 error, 0 warning
+SpotlightActionSource / Authoring / Runtime CMake build: success
+```
+
+本次仍未 commit。
+
 ## 2026-10-06：Wwise 一次性事件桥接
 
 新增：

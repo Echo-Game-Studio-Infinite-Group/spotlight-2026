@@ -45,20 +45,6 @@ set_target_properties(SpotlightActionSource PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/$<CONFIG>/static"
 )
 
-add_library(SpotlightActionDsp STATIC
-    Runtime/Dsp/SpotlightActionDsp.cpp
-)
-
-target_include_directories(SpotlightActionDsp
-    PUBLIC "${WWISE_SDK}/include"
-)
-
-target_compile_definitions(SpotlightActionDsp PRIVATE ${COMMON_DEFINITIONS})
-target_compile_options(SpotlightActionDsp PRIVATE ${COMMON_OPTIONS})
-set_target_properties(SpotlightActionDsp PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/$<CONFIG>/dsp"
-)
-
 add_library(SpotlightActionSourcePlugin SHARED
     Dynamic/InitPlugins.cpp
 )
@@ -101,15 +87,4 @@ add_custom_command(TARGET SpotlightActionSourceAuthoring POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/Authoring/SpotlightActionSource.xml"
         "$<TARGET_FILE_DIR:SpotlightActionSourceAuthoring>/SpotlightActionSource.xml"
-)
-
-add_executable(SpotlightActionDspTests
-    Tests/SpotlightActionDspTests.cpp
-)
-
-target_link_libraries(SpotlightActionDspTests PRIVATE SpotlightActionDsp)
-target_compile_definitions(SpotlightActionDspTests PRIVATE ${COMMON_DEFINITIONS})
-target_compile_options(SpotlightActionDspTests PRIVATE ${COMMON_OPTIONS})
-set_target_properties(SpotlightActionDspTests PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/tests"
 )

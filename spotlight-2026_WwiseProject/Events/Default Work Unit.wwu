@@ -28,6 +28,32 @@
 						</Action>
 					</ChildrenList>
 				</Event>
+				<Folder Name="OneTimeEvent" ID="{AB640C48-5155-4D79-9160-D9E50F2CAB6B}" ShortID="425726620">
+					<ChildrenList>
+						<Event Name="Jump_Normal" ID="{304CC152-DB75-4FE2-8385-3C1513AC44D9}">
+							<ChildrenList>
+								<Action Name="" ID="{931505F6-9013-4AF6-A455-E78BD4FF5CB3}" ShortID="301344738">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="JumpNormal" ID="{EFE4DA3A-1D2C-4CFA-95E9-AE82377FB17A}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Land_Normal" ID="{624F0B3F-D241-402C-B30E-898433EA07C9}">
+							<ChildrenList>
+								<Action Name="" ID="{E3F786EE-FF09-4EE7-9877-880AA8EE3023}" ShortID="47493707">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="LandNormal" ID="{262FEEF8-FC75-4187-8D76-5C119AD11AB3}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</Events>

@@ -32,8 +32,8 @@ public sealed class WwiseEventBindings : ScriptableObject
             Entry entry = Entries[i];
             if (entry != null &&
                 string.Equals(
-                    entry.EventId,
-                    eventId,
+                    entry.EventId?.Trim(),
+                    eventId.Trim(),
                     StringComparison.Ordinal))
             {
                 return entry;
