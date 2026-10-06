@@ -1,13 +1,39 @@
 # 音频系统改动记录
 
-## 基线和约束
+> 状态说明：本文件按时间追加，保留每次改动当时的状态。正文中的“未 commit”
+> 或“本次仍未 commit”只表示该条记录写入时的情况，不代表当前分支状态。
+
+## 当前状态
+
+- 当前分支：`feat/audio_wwise`
+- 已合并：`7c688a1 Merge remote-tracking branch 'origin/dev' into feat/audio_wwise`
+- 最近提交：`4db89fd chore(audio): update Wwise project and soundbank assets`
+- 当前动态链路：
+  ```text
+  IDynamicAudioActionSource
+  -> WwiseAudioRegistry
+  -> WwiseActionDriver
+  -> WwiseActionPcmRenderer
+  -> Wwise Source Plugin
+  -> DynamicAction Bus
+  ```
+- 一次性动作链路：
+  ```text
+  audio.<EventId> 帧事件
+  -> PlayerActionRunner
+  -> WwiseEventBridge
+  -> WwiseEventBindings
+  -> Wwise Event
+  ```
+
+## 历史基线和约束（初始阶段）
 
 - 仓库：`spotlight-2026`
-- 分支：`feat/audio`
+- 初始分支：`feat/audio`
 - 基线提交：`11a460d246766561890e82e12ffb4a38e55d5f27`
-- 未 commit。
-- 未修改 `README.md`、`Scripts/Combat`、`Character`、动画、模型和美术资源。
-- 未为动作系统新增时间字段；音频驱动自行记录动作时间。
+- 初始阶段尚未 commit。
+- 初始约束是不修改 `README.md`、`Scripts/Combat`、`Character`、动画、模型和美术资源。
+- 初始版本未为动作系统新增时间字段；音频驱动自行记录动作时间。
 
 ## 架构修正
 
