@@ -330,4 +330,62 @@ public sealed class ActionSequenceTests
         Assert.IsTrue(issues.Exists(issue => issue.Message.Contains("锚点")));
         Assert.IsTrue(issues.Exists(issue => issue.Message.Contains("不在当前动作集")));
     }
+
+    [Test]
+    public void BufferedIntentChoosesSpeedVariantAtCommitAndAlternatesOnlyOnSuccess()
+    {
+        ActionDefinition normal = Make("normal"), a = Make("A"), b = Make("B");
+        normal.RequestVariants.AddRange(new[] { a, b, normal });
+        normal.StartConditions.Add("low"); a.StartConditions.Add("high"); b.StartConditions.Add("high");
+        Allow(a, b, 3, 30).RequireAll.Add("high"); Allow(b, a, 3, 30).RequireAll.Add("high");
+        ActionSequencePlayer player = Player();
+        player.Queue(normal, 0); player.Tick(new ActionInputSample(0), 0);
+        _host.Conditions.Add("high"); player.Tick(new ActionInputSample(1), 1);
+        Assert.AreSame(a, player.State.Action);
+        player.Queue(normal, 2); _host.CommitSucceeds = false;
+        player.Tick(new ActionInputSample(2), 3); Assert.AreSame(a, player.State.Action);
+        _host.CommitSucceeds = true; player.Tick(new ActionInputSample(3), 1);
+        Assert.AreSame(b, player.State.Action);
+        player.Queue(normal, 4); player.Tick(new ActionInputSample(4), 3);
+        Assert.AreSame(a, player.State.Action);
+    }
+
+    [Test]
+    public void LosingHighSpeedBeforeCancelRejectsBufferedNextVariant()
+    {
+        ActionDefinition intent = Make("intent"), a = Make("A"), b = Make("B");
+        intent.RequestVariants.AddRange(new[] { a, b }); a.StartConditions.Add("high"); b.StartConditions.Add("high");
+        Allow(a, b, 3, 30).RequireAll.Add("high"); _host.Conditions.Add("high");
+        ActionSequencePlayer player = Player(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), 1);
+        player.Queue(intent, 1); _host.Conditions.Clear(); player.Tick(new ActionInputSample(1), 4);
+        Assert.AreSame(a, player.State.Action); Assert.AreEqual(1, player.PendingCount);
+        _host.Conditions.Add("high"); player.Tick(new ActionInputSample(2), 1);
+        Assert.AreSame(b, player.State.Action);
+    }
+
+    [Test]
+    public void SharedCooldownCanOnlyBeBypassedByExplicitCancelWindow()
+    {
+        ActionDefinition a = Make("A", 2), b = Make("B", 2);
+        a.CooldownGroup = b.CooldownGroup = "attack"; a.CooldownFrames = b.CooldownFrames = 100;
+        ActionCancelWindow window = Allow(a, b, 0, 2);
+        ActionSequencePlayer player = Player(); player.Queue(a, 0); player.Tick(new ActionInputSample(0), .25);
+        player.Queue(b, 1); player.Tick(new ActionInputSample(1), .25); Assert.AreSame(a, player.State.Action);
+        window.IgnoreCooldown = true; player.Tick(new ActionInputSample(2), .25); Assert.AreSame(b, player.State.Action);
+        player.Tick(new ActionInputSample(3), 2); Assert.IsFalse(player.IsRunning);
+        player.Queue(a, 4); player.Tick(new ActionInputSample(4), 1); Assert.IsFalse(player.IsRunning);
+    }
+
+    [Test]
+    public void ResetRestartsVariantAlternationAndDoesNotConsumeHeldInputTwice()
+    {
+        ActionDefinition intent = Make("intent"), a = Make("A", 1), b = Make("B", 1);
+        intent.RequestVariants.AddRange(new[] { a, b });
+        ActionSequencePlayer player = Player(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), .25);
+        Assert.AreSame(a, player.State.Action);
+        player.Tick(new ActionInputSample(1), 1); player.Queue(intent, 2); player.Tick(new ActionInputSample(2), .25);
+        Assert.AreSame(b, player.State.Action);
+        player.Reset(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), .25);
+        Assert.AreSame(a, player.State.Action);
+    }
 }

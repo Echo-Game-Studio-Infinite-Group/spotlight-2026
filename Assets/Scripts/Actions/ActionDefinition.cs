@@ -15,6 +15,10 @@ namespace GameJam.Actions
         public List<string> StartConditions = new List<string>();
         [Min(0f)] public float EnergyCost;
         [Min(0)] public int CooldownFrames;
+        public string CooldownGroup;
+        // 输入缓存保存意图；速度条件与差分在实际提交时才选择，避免预输入锁死旧速度档。
+        public List<ActionDefinition> RequestVariants = new List<ActionDefinition>();
+        public ActionMotionSettings Motion = new ActionMotionSettings();
         public ActionCombatSettings Combat = new ActionCombatSettings();
 
         public string Label => string.IsNullOrEmpty(DisplayName) ? name : DisplayName;

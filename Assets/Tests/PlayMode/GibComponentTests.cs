@@ -165,8 +165,8 @@ public sealed class GibComponentTests
         yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/TestScene.unity",
             new LoadSceneParameters(LoadSceneMode.Single));
         // 显式挑装配完整的敌人：另一个敌人的 GibComponent 没接腰斩骨骼，随机拿到它就会红。
-        var enemy = PlayModeSceneSupport.FindRiggedEnemy();
-        Assert.NotNull(enemy, "TestScene 里没有挂 humanoid avatar 的敌人，腰斩断言无从谈起");
+        var enemy = PlayModeSceneSupport.CreateHumanoidEnemyFixture();
+        Assert.NotNull(enemy, "必须建立 Humanoid 断肢测试靶子");
         var gib = enemy.GetComponent<GibComponent>();
         Assert.NotNull(gib, "被挑中的敌人身上必须有 GibComponent");
         enemy.SetChasePlayer(false);

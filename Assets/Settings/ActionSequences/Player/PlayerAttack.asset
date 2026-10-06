@@ -133,6 +133,7 @@ MonoBehaviour:
     - speed_low
     RequireAny: []
     Priority: 0
+    IgnoreCooldown: 0
   Input:
     Steps:
     - Button: 1
@@ -150,12 +151,61 @@ MonoBehaviour:
     Priority: 0
     RequireAll: []
     RequireAny: []
-  StartConditions: []
+  StartConditions:
+  - speed_low
   EnergyCost: 0
   CooldownFrames: 21
+  CooldownGroup: player_basic_attack
+  RequestVariants:
+  - {fileID: 11400000, guid: 044d0c829662f594490b299bde1fc2db, type: 2}
+  - {fileID: 11400000, guid: 530332b0c25b4fa4d962f37ea2d007c2, type: 2}
+  - {fileID: 11400000}
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
   Combat:
     Enabled: 1
     Damage: 25
     HitMask:
       serializedVersion: 2
       m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

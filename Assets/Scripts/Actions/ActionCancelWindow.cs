@@ -14,5 +14,6 @@ namespace GameJam.Actions
         public List<string> RequireAll = new List<string>();
         public List<string> RequireAny = new List<string>();
         public int Priority;
+        public bool IgnoreCooldown;
     }
 }

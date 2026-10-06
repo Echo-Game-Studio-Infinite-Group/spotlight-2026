@@ -23,6 +23,9 @@ namespace GameJam.Actions
             }
             foreach (ActionDefinition action in members)
             {
+                if (action.RequestVariants != null)
+                    foreach (ActionDefinition variant in action.RequestVariants)
+                        if (variant == null || !members.Contains(variant)) Error(issues, action, "输入差分必须属于当前动作集");
                 if (action.CancelWindows == null) continue;
                 for (int i = 0; i < action.CancelWindows.Count; i++)
                 {
@@ -69,6 +72,25 @@ namespace GameJam.Actions
                             Error(issues, action, "帧事件需位于子段 [0, 时长)，且事件键非空：" + segment.DisplayName);
                 }
             if (total >= int.MaxValue) Error(issues, action, "动作总帧数溢出");
+            ActionMotionSettings motion = action.Motion;
+            if (motion == null) Error(issues, action, "缺少动作运动配置");
+            else if (motion.Enabled && (!ValidRange(action, motion.Start, motion.End) || !Finite(motion.ForwardImpulse) || motion.ForwardImpulse < 0f ||
+                !Finite(motion.BoostSpeedLimit) || motion.BoostSpeedLimit < 0f || !Finite(motion.DiveAngle) || motion.DiveAngle < 0f || motion.DiveAngle > 85f ||
+                !Finite(motion.MaxDiveSpeed) || motion.MaxDiveSpeed < 0f || !Finite(motion.DiveResponse) || motion.DiveResponse < 0f))
+                Error(issues, action, "前移窗口或运动参数无效");
+            if (action.Combat != null)
+            {
+                if (action.Combat.ScaleDamageWithSpeed && (action.Combat.SpeedDamage == null || action.Combat.SpeedDamage.length == 0))
+                    Error(issues, action, "速度伤害需要非空曲线");
+                if (action.Combat.SpeedDamage != null)
+                    foreach (UnityEngine.Keyframe key in action.Combat.SpeedDamage.keys)
+                        if (!Finite(key.time) || !Finite(key.value) || key.value < 0f) Error(issues, action, "伤害曲线的速度和倍率必须有限，倍率非负");
+                if (action.Combat.HitVolumes != null)
+                    foreach (ActionHitVolume volume in action.Combat.HitVolumes)
+                        if (volume == null || !ValidRange(action, volume.Start, volume.End) || volume.HitGroup < 0 || !Finite(volume.SweepSpacing) || volume.SweepSpacing < 0.01f ||
+                            !FiniteVector(volume.Size) || volume.Size.x <= 0f || volume.Size.y <= 0f || volume.Size.z <= 0f || !FiniteVector(volume.Center) || !FiniteVector(volume.Rotation))
+                            Error(issues, action, "判定框需有效窗口、正尺寸和非负命中段编号");
+            }
             var windowIds = new HashSet<string>(StringComparer.Ordinal);
             if (action.CancelWindows != null)
                 for (int i = 0; i < action.CancelWindows.Count; i++)
@@ -109,6 +131,9 @@ namespace GameJam.Actions
                 else if (!seen.Add(key)) Warn(issues, action, label + "重复：" + key, window);
         }
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool FiniteVector(UnityEngine.Vector3 value) => Finite(value.x) && Finite(value.y) && Finite(value.z);
+        private static bool ValidRange(ActionDefinition action, ActionFrameAnchor start, ActionFrameAnchor end)
+            => action.TryResolve(start, out int a) && action.TryResolve(end, out int b) && a < b;
         private static void Error(List<ActionValidationIssue> issues, ActionDefinition action, string message, int window = -1)
             => issues.Add(new ActionValidationIssue(ActionValidationIssue.Severity.Error, message, action, window));
         private static void Warn(List<ActionValidationIssue> issues, ActionDefinition action, string message, int window = -1)

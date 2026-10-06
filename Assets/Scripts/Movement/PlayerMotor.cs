@@ -4,7 +4,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CharacterController))]
-public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
+public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMotion
 {
     [SerializeField] private MovementParams _params;
     [SerializeField] private Transform _movementReference;
@@ -31,6 +31,26 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
     private object _simulationOwner;
     private ActionControlPolicy _actionControl;
     private bool _commandJump;
+    private ActionMotionSettings _actionMotion;
+    private long _motionInstance;
+    public event Action<Vector3> MotionPathPoint;
+
+    public void BeginMotion(ActionMotionSettings settings, long instanceId)
+    {
+        if (_motionInstance == instanceId && _actionMotion == settings) return;
+        _actionMotion = settings; _motionInstance = instanceId;
+        if (settings == null) return;
+        if (settings.DiveInAir && IsWallSliding) ExitWall();
+        float speed = HorizontalSpeed;
+        // 高速惯性可以高于增速上限，但连段不能把冲量无限叠高，也不能截断已有速度。
+        float boosted = Mathf.Max(speed, Mathf.Min(speed + settings.ForwardImpulse, settings.BoostSpeedLimit));
+        SetHorizontal(transform.forward * Mathf.Min(boosted, _params.MaxSpeed));
+    }
+    public void EndMotion(long instanceId)
+    {
+        if (_motionInstance != instanceId) return;
+        _actionMotion = null; _motionInstance = 0;
+    }
 
     public MovementParams Params => _params;
     public MovementState State { get; private set; } = MovementState.Airborne;
@@ -195,7 +215,14 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
 
         bool wasGrounded = IsGrounded;
         bool wasWallSliding = IsWallSliding;
-        _contacts.Move(ref _velocity, dt);
+        if (_actionMotion != null && _actionMotion.DiveInAir && !IsGrounded)
+        {
+            if (IsWallSliding) ExitWall();
+            float targetY = -Mathf.Min(_actionMotion.MaxDiveSpeed, HorizontalSpeed * Mathf.Tan(_actionMotion.DiveAngle * Mathf.Deg2Rad));
+            _velocity.y = Mathf.Max(-_actionMotion.MaxDiveSpeed,
+                Mathf.Lerp(_velocity.y, targetY, 1f - Mathf.Exp(-_actionMotion.DiveResponse * dt)));
+        }
+        _contacts.Move(ref _velocity, dt, point => MotionPathPoint?.Invoke(point));
         if (IsWallSliding && _contacts.HasWall &&
             Vector3.Angle(_wallNormal, _contacts.WallNormal) <= _params.WallSeamAngle)
             _wallLastContactTime = _clock;
@@ -218,7 +245,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
                     ExitWall();
                 }
             }
-            if (!IsSliding && !IsWallSliding && !wasWallSliding)
+            if (!IsSliding && !IsWallSliding && !wasWallSliding && !(_actionMotion?.DiveInAir == true))
             {
                 TryEnterWall(wish);
                 if (jump && IsWallSliding) JumpFromWall();
@@ -297,6 +324,13 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
     {
         if (_wallTangent != Vector3.zero) _wallSpeed = Mathf.Min(_wallSpeed, HorizontalSpeed);
         float frictionDt = WallUnprotectedDeltaTime(dt);
+        float protectedDt = dt - frictionDt;
+        if (protectedDt > 0f && _params.WallVerticalFriction > 0f)
+        {
+            // 跨窗口的运动步只衰减受保护部分；蹬墙起跳随后覆盖竖直速度，保留完整起跳冲量。
+            _velocity.y *= Mathf.Exp(-_params.WallVerticalFriction * protectedDt);
+            if (Mathf.Abs(_velocity.y) <= _params.WallVerticalStopSpeed) _velocity.y = 0f;
+        }
         if (frictionDt > 0f)
         {
             if (_wallTangent == Vector3.zero) _wallSpeed = 0f;
@@ -445,6 +479,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand
     public void ResetState()
     {
         _velocity = Vector3.zero;
+        _actionMotion = null; _motionInstance = 0;
         _commandJump = false;
         _facingAngularVelocity = 0f;
         JumpCount = WallJumpCount = 0;

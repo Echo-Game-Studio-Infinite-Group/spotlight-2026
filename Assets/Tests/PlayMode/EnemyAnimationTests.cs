@@ -144,8 +144,8 @@ public sealed class EnemyAnimationTests
     public IEnumerator Scene_Locomotion_Thresholds_Chase_Hitbox_Death()
     {
         yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/TestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
-        var enemy = PlayModeSceneSupport.FindRiggedEnemy();
-        Assert.NotNull(enemy, "TestScene 里没有挂 humanoid avatar 的敌人，动画断言无从谈起");
+        var enemy = PlayModeSceneSupport.CreateHumanoidEnemyFixture();
+        Assert.NotNull(enemy, "必须建立 Humanoid 动画测试靶子");
         var player = Object.FindObjectOfType<PlayerMotor>();
         var playerHealth = player.GetComponent<HealthComponent>();
         var animator = enemy.GetComponentInChildren<Animator>();
@@ -175,12 +175,14 @@ public sealed class EnemyAnimationTests
         // 受伤阈值是按比例的（HealthRatio < 0.3），伤害值不能写死——换场景尺寸就对不上了。
         // 打到恰好落在阈值上：这一格算健康，再掉 1 点才转受伤。
         float healthy = enemy.MaxHealth * 0.3f;
+        enemy.enabled = true;
         enemy.TakeDamage(enemy.MaxHealth - healthy, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(.6f);
         Assert.AreEqual(healthy, animator.GetFloat("Hp"), .05f);
         Assert.AreEqual(0f, animator.GetFloat("Injured"), "恰好落在阈值上算健康");
         enemy.TakeDamage(1, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(1.3f);
+        enemy.enabled = false;
         foreach (var test in new[]{(0f,"IdleInjured"),(2f,"WalkInjured"),(5f,"RunInjured")})
         {
             speed.SetValue(enemy, test.Item1);
@@ -188,6 +190,7 @@ public sealed class EnemyAnimationTests
             Assert.AreEqual(1f, animator.GetFloat("Injured"));
             Assert.IsTrue(animator.GetCurrentAnimatorClipInfo(0).Any(c=>c.clip.name==test.Item2 && c.weight>.95f), test.Item2);
         }
+        enemy.enabled = true;
         enemy.SetMaxHealth(200);
         enemy.TakeDamage(140, enemy.transform.position, Vector3.zero);
         Assert.IsFalse(enemy.IsInjured);

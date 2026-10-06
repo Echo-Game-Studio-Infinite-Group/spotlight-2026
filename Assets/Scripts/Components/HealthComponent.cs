@@ -4,7 +4,7 @@ using UnityEngine;
 // 可挂到任意实体的血量：玩家和敌人共用同一份规则，无敌帧语义不会各自漂移。
 // 只管「数值 + 无敌帧」；死了之后干什么由持有者决定，本组件不反向认识战斗或动作系统。
 [DisallowMultipleComponent]
-public sealed class HealthComponent : MonoBehaviour
+public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
 {
     [SerializeField, Min(1f)] private float _maxHealth = 100f;
     [SerializeField, Min(0f)] private float _invulnerableTime = 0.6f;
@@ -28,6 +28,12 @@ public sealed class HealthComponent : MonoBehaviour
     public event Action<HealthComponent> Revived;
 
     public float TakeDamage(float amount) => TakeDamage(amount, Vector3.zero, Vector3.zero);
+
+    public AttackDamageResult ReceiveAttack(AttackDamageRequest request)
+    {
+        float applied = TakeDamage(request.Damage, request.Point, request.Direction);
+        return new AttackDamageResult(applied, applied > 0f && !IsAlive);
+    }
 
     /// <summary>返回实际扣掉的血；被无敌帧、已死亡或非正伤害挡下时返回 0。</summary>
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
