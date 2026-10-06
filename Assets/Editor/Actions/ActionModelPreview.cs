@@ -16,6 +16,10 @@ namespace GameJam.Actions.Editor
         private Vector3 _center;
         private float _distance = 4f;
         private string _error;
+        private double _frame;
+        private readonly System.Collections.Generic.List<GameObject> _volumeObjects = new System.Collections.Generic.List<GameObject>();
+        private Mesh _wireBox;
+        private Material _wireMaterial;
         public bool Loaded => _model != null;
         public Animator Animator => _bridge != null ? _bridge.Animator : null;
 
@@ -65,6 +69,7 @@ namespace GameJam.Actions.Editor
             if (!_bridge.CanPlay(state.Segment.Animation)) { _error = "预览 Controller 中不存在状态：" + state.Segment.Animation.AnimatorState; return; }
             if (entered || _action != state.Action) _bridge.EnterSegment(state);
             _action = state.Action;
+            _frame = state.FrameProgress;
             _instance = state.InstanceId;
             _bridge.Sample(state, (float)(frames / ActionSequencePlayer.FramesPerSecond));
         }
@@ -80,6 +85,7 @@ namespace GameJam.Actions.Editor
             // 拖帧没有经过时间，应直接定位姿态，不能停在混合权重为零的起点。
             _bridge.EnterSegment(state, true);
             _action = action; _instance = 1;
+            _frame = progress;
             _bridge.Sample(state, 0f);
         }
         public void Draw()
@@ -91,6 +97,7 @@ namespace GameJam.Actions.Editor
             if (current.type == EventType.MouseDrag && rect.Contains(current.mousePosition))
             { _orbit += current.delta * 0.5f; _orbit.y = Mathf.Clamp(_orbit.y, -70f, 70f); current.Use(); }
             if (current.type != EventType.Repaint) return;
+            UpdateVolumes();
             Quaternion rotation = Quaternion.Euler(_orbit.y, _orbit.x, 0f);
             _preview.camera.transform.SetPositionAndRotation(_center - rotation * Vector3.forward * _distance, rotation);
             _preview.BeginPreview(rect, GUIStyle.none);
@@ -99,6 +106,9 @@ namespace GameJam.Actions.Editor
         }
         public void Dispose()
         {
+            _volumeObjects.Clear();
+            if (_wireBox != null) UnityEngine.Object.DestroyImmediate(_wireBox);
+            if (_wireMaterial != null) UnityEngine.Object.DestroyImmediate(_wireMaterial);
             _bridge?.Release(this);
             _bridge = null;
             _action = null;
@@ -106,6 +116,41 @@ namespace GameJam.Actions.Editor
             _preview = null;
             if (_model != null) UnityEngine.Object.DestroyImmediate(_model);
             _model = null;
+        }
+        private void UpdateVolumes()
+        {
+            int count = _action?.Combat?.HitVolumes?.Count ?? 0;
+            if (count > 0 && _wireBox == null)
+            {
+                _wireBox = new Mesh { hideFlags = HideFlags.HideAndDontSave };
+                _wireBox.vertices = new[] { new Vector3(-.5f,-.5f,-.5f), new Vector3(.5f,-.5f,-.5f), new Vector3(.5f,.5f,-.5f), new Vector3(-.5f,.5f,-.5f),
+                    new Vector3(-.5f,-.5f,.5f), new Vector3(.5f,-.5f,.5f), new Vector3(.5f,.5f,.5f), new Vector3(-.5f,.5f,.5f) };
+                _wireBox.SetIndices(new[] {0,1,1,2,2,3,3,0,4,5,5,6,6,7,7,4,0,4,1,5,2,6,3,7}, MeshTopology.Lines, 0);
+                _wireMaterial = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
+                _wireMaterial.SetInt("_ZWrite", 0);
+            }
+            while (_volumeObjects.Count < count)
+            {
+                var box = new GameObject("判定框预览", typeof(MeshFilter), typeof(MeshRenderer)) { hideFlags = HideFlags.HideAndDontSave };
+                box.transform.SetParent(_model.transform, false);
+                box.GetComponent<MeshFilter>().sharedMesh = _wireBox;
+                box.GetComponent<MeshRenderer>().sharedMaterial = _wireMaterial;
+                _volumeObjects.Add(box);
+            }
+            for (int i = 0; i < _volumeObjects.Count; i++)
+            {
+                GameObject box = _volumeObjects[i];
+                bool valid = i < count;
+                ActionHitVolume volume = valid ? _action.Combat.HitVolumes[i] : null;
+                Vector3 center = default, extents = default; Quaternion rotation = Quaternion.identity;
+                valid = valid && volume.TryGetPose(_model.transform, out center, out extents, out rotation);
+                box.SetActive(valid);
+                if (!valid) continue;
+                box.transform.SetPositionAndRotation(center, rotation); box.transform.localScale = extents * 2f;
+                var properties = new MaterialPropertyBlock();
+                properties.SetColor("_Color", volume.IsActive(_action, _frame) ? new Color(1f, .65f, .1f) : Color.gray);
+                box.GetComponent<MeshRenderer>().SetPropertyBlock(properties);
+            }
         }
     }
 }

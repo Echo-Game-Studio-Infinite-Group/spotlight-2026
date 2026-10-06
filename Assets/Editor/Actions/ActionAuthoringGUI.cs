@@ -31,7 +31,15 @@ namespace GameJam.Actions.Editor
             {"FreezeExpiryDuringHitStop", "顿帧暂停预输入过期"}, {"Button", "触发语义键"}, {"Trigger", "触发方式"},
             {"RequireHeld", "必须按住"}, {"ForbidHeld", "禁止按住"}, {"MinHoldFrames", "最短按住（采样帧）"},
             {"MaxHoldFrames", "最长按住（0 不限）"}, {"BufferCapacity", "请求缓冲容量"},
-            {"InputHistoryCapacity", "输入事件历史容量"}, {"Actions", "动作资产列表"}
+            {"InputHistoryCapacity", "输入事件历史容量"}, {"Actions", "动作资产列表"},
+            {"CooldownGroup", "共享冷却组（空则独立）"}, {"RequestVariants", "提交时选择的差分（按成功执行交替）"},
+            {"IgnoreCooldown", "此取消窗口允许越过冷却"}, {"Motion", "动作前移与俯冲"},
+            {"ForwardImpulse", "窗口开始时前移增速"}, {"BoostSpeedLimit", "前移增速上限（保留更高惯性）"},
+            {"DiveInAir", "空中前移时俯冲并脱墙"}, {"DiveAngle", "俯冲角度"}, {"MaxDiveSpeed", "最大俯冲速度"},
+            {"DiveResponse", "竖直速度响应（每秒）"}, {"ClearMomentumOnCompletion", "自然收招后落地清空水平动量"},
+            {"ScaleDamageWithSpeed", "伤害随挥出时水平速度变化"}, {"SpeedDamage", "速度倍率→伤害倍率曲线"},
+            {"HitVolumes", "伤害判定框（空则沿用预制体）"}, {"AnchorPath", "相对玩家根节点的挂点路径（空=根节点）"},
+            {"Center", "局部中心"}, {"Rotation", "局部旋转角度"}, {"Size", "局部尺寸"}, {"SweepSpacing", "扫掠最大采样间距"}
         };
         private static readonly Dictionary<string, string> EnumLabels = new Dictionary<string, string>
         {
@@ -66,6 +74,7 @@ namespace GameJam.Actions.Editor
         private static void DrawProperty(SerializedProperty property, ActionDefinition action, int selectedWindow)
         {
             string label = Labels.TryGetValue(property.name, out string translated) ? translated : property.displayName;
+            if (property.propertyPath == "Motion.Enabled") label = "启用前移与俯冲";
             if (property.isArray && property.propertyType != SerializedPropertyType.String)
             {
                 DrawArray(property, action, selectedWindow, label);
@@ -217,6 +226,14 @@ namespace GameJam.Actions.Editor
             SetString(property, "SegmentId", Guid.NewGuid().ToString("N"));
             SetString(property, "WindowId", Guid.NewGuid().ToString("N"));
             SetString(property, "DisplayName", property.type == nameof(ActionSegment) ? "新子段" : "新取消窗口");
+            if (property.type == nameof(ActionHitVolume))
+            {
+                SetString(property, "DisplayName", "新判定框");
+                property.FindPropertyRelative("Size").vector3Value = new Vector3(1.3f, 1.2f, 0.8f);
+                property.FindPropertyRelative("Center").vector3Value = new Vector3(0f, 0.6f, 1f);
+                property.FindPropertyRelative("SweepSpacing").floatValue = 0.1f;
+                property.FindPropertyRelative("HitGroup").intValue = 1;
+            }
             SerializedProperty duration = property.FindPropertyRelative("DurationFrames");
             if (duration != null) duration.intValue = 1;
             SerializedProperty control = property.FindPropertyRelative("Control");
@@ -258,6 +275,8 @@ namespace GameJam.Actions.Editor
                 case SerializedPropertyType.Integer: property.intValue = 0; break;
                 case SerializedPropertyType.Enum: property.enumValueIndex = 0; break;
                 case SerializedPropertyType.ObjectReference: property.objectReferenceValue = null; break;
+                case SerializedPropertyType.Vector3: property.vector3Value = Vector3.zero; break;
+                case SerializedPropertyType.Vector2: property.vector2Value = Vector2.zero; break;
             }
             property.isExpanded = true;
         }

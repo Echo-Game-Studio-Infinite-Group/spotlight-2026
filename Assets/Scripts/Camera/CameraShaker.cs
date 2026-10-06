@@ -10,7 +10,9 @@ public sealed class CameraShaker : MonoBehaviour
     // 必须与发射端 CinemachineImpulseSource 的 m_ImpulseChannel 对齐；两边错开时 impulse 会被静默丢弃。
     public const int ImpulseChannel = 1;
 
-    [SerializeField] private CinemachineVirtualCamera _virtualCamera;
+    // 震屏作用在 vcam 的最终输出上，本组件必须与 CinemachineImpulseListener 同挂在 vcam 物体，
+    // 所以这个引用只有自取一种可能——不暴露到 Inspector，免得被指到别处后静默失效。
+    [HideInInspector, SerializeField] private CinemachineVirtualCamera _virtualCamera;
     [Tooltip("基准伤害，对应下面那个幅度")]
     [SerializeField, Min(0.001f)] private float _referenceDamage = 20f;
     [Tooltip("基准伤害对应的抖动幅度")]

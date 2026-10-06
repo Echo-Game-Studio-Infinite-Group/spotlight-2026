@@ -9,7 +9,9 @@ namespace GameJam.Actions.Editor
         {
             if (action == null || action.TotalFrames <= 0) return;
             int windows = action.CancelWindows?.Count ?? 0;
-            Rect rect = GUILayoutUtility.GetRect(200, 64 + windows * 25, GUILayout.ExpandWidth(true));
+            int volumes = action.Combat?.HitVolumes?.Count ?? 0;
+            int motion = action.Motion?.Enabled == true ? 1 : 0;
+            Rect rect = GUILayoutUtility.GetRect(200, 64 + (windows + volumes + motion) * 25, GUILayout.ExpandWidth(true));
             EditorGUI.DrawRect(rect, new Color(0.1f, 0.12f, 0.15f));
             float labelWidth = Mathf.Min(150, rect.width * 0.3f);
             float left = rect.x + labelWidth;
@@ -55,6 +57,18 @@ namespace GameJam.Actions.Editor
                 Color color = i == selectedWindow ? new Color(0.3f, 0.75f, 1) : new Color(0.43f, 0.54f, 0.76f);
                 EditorGUI.DrawRect(bar, color);
                 if (GUI.Button(bar, new GUIContent("[" + begin + "," + end + ")", window.DisplayName), EditorStyles.whiteMiniLabel)) selectWindow?.Invoke(i);
+            }
+            for (int i = 0; i < volumes + motion; i++)
+            {
+                ActionHitVolume volume = i < volumes ? action.Combat.HitVolumes[i] : null;
+                ActionFrameAnchor beginAnchor = volume != null ? volume.Start : action.Motion.Start;
+                ActionFrameAnchor endAnchor = volume != null ? volume.End : action.Motion.End;
+                float y = rect.y + 56 + (windows + i) * 25;
+                GUI.Label(new Rect(rect.x + 6, y, labelWidth - 9, 20), volume != null ? volume.DisplayName : "前移 / 空中俯冲", EditorStyles.whiteMiniLabel);
+                if (!action.TryResolve(beginAnchor, out int begin) || !action.TryResolve(endAnchor, out int end) || end <= begin) continue;
+                Rect bar = new Rect(left + width * begin / total, y, width * (end - begin) / total, 20);
+                EditorGUI.DrawRect(bar, volume != null ? new Color(0.85f, 0.53f, 0.2f) : new Color(0.45f, 0.7f, 0.7f));
+                GUI.Label(bar, "[" + begin + "," + end + ")", EditorStyles.whiteMiniLabel);
             }
             if (cursor >= 0)
             {

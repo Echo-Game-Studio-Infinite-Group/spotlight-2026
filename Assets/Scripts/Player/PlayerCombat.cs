@@ -30,6 +30,10 @@ public sealed class PlayerCombat : MonoBehaviour
     private PlayerMotor _motor;
     private Hitbox _hitbox;
     private HealthComponent _self;
+    private long _sequenceInstance;
+    private ActionCombatSettings _sequenceCombat;
+    private readonly ActionHitboxSampler _sampler = new ActionHitboxSampler();
+    public event System.Action<IAttackDamageReceiver, AttackDamageRequest, AttackDamageResult> SequenceHitLanded;
     public bool IsSequenceDriven { get; private set; }
 
     /// <summary>判定盒从这里取伤害值，因此攻击力只有一处真值（序列招式会临时覆盖组件上的值）。</summary>
@@ -92,12 +96,12 @@ public sealed class PlayerCombat : MonoBehaviour
     private void OnEnable()
     {
         EnsureReferences();
-        if (_combat != null) _combat.Landed += OnLandedHit;
+        if (_combat != null) { _combat.Landed += OnLandedHit; _combat.SequenceLanded += OnSequenceLanded; }
     }
 
     private void OnDisable()
     {
-        if (_combat != null) _combat.Landed -= OnLandedHit;
+        if (_combat != null) { _combat.Landed -= OnLandedHit; _combat.SequenceLanded -= OnSequenceLanded; }
         ResetAttackState();
     }
 
@@ -176,6 +180,8 @@ public sealed class PlayerCombat : MonoBehaviour
     // 连续两次自检/测试之间必须调用，否则上一轮的冷却会让 BeginAttack 失败。
     public void ResetAttackState()
     {
+        _sampler.End(_sequenceInstance);
+        _sequenceInstance = 0; _sequenceCombat = null;
         if (Combat != null) Combat.ResetAttackState();
     }
 
@@ -187,23 +193,64 @@ public sealed class PlayerCombat : MonoBehaviour
     public void BeginSequenceAction(ActionExecutionState state)
     {
         if (!IsSequenceDriven || state.Action?.Combat == null || !state.Action.Combat.Enabled) return;
-        if (Combat != null)
-            Combat.BeginSequence(state.InstanceId, state.Action.Combat.HitMask, state.Action.Combat.Damage);
+        EnsureReferences();
+        _sequenceInstance = state.InstanceId; _sequenceCombat = state.Action.Combat;
+        _sampler.Begin(state.InstanceId);
+        Combat.BeginSequence(state.InstanceId, _sequenceCombat.HitMask, _sequenceCombat.Damage);
     }
     public void HandleSequenceEvent(ActionExecutionState state, ActionFrameEvent frameEvent)
     {
-        if (!IsSequenceDriven || Combat == null) return;
-        if (frameEvent.EventKey == "combat.hitbox.open") Combat.OpenSequenceWindow(frameEvent.HitGroup);
+        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _sequenceCombat == null || Combat == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) return;
+        if (frameEvent.EventKey == "combat.hitbox.open")
+        { SequenceDamage(frameEvent.HitGroup); Combat.OpenSequenceWindow(frameEvent.HitGroup); }
         else if (frameEvent.EventKey == "combat.hitbox.close") Combat.CloseSequenceWindow();
     }
     public void SampleSequenceHitbox(long instanceId)
     {
-        if (IsSequenceDriven && Combat != null) Combat.SampleSequenceWindow();
+        if (IsSequenceDriven && _sequenceInstance == instanceId && _sequenceCombat != null && _sequenceCombat.HitVolumes.Count == 0)
+            Combat.SampleSequenceWindow();
+    }
+    public float SequenceDamage(int group)
+    {
+        if (_sequenceCombat == null) return AttackDamage;
+        if (Combat.TryGetSequenceDamage(_sequenceInstance, group, out float damage)) return damage;
+        float ratio = _motor != null && _motor.Params != null && _motor.Params.GroundSpeedThreshold > 0f
+            ? _motor.HorizontalSpeed / _motor.Params.GroundSpeedThreshold : 0f;
+        damage = _sequenceCombat.Damage * (_sequenceCombat.ScaleDamageWithSpeed
+            ? Mathf.Max(0f, _sequenceCombat.SpeedDamage.Evaluate(ratio)) : 1f);
+        Combat.SetSequenceDamage(_sequenceInstance, group, damage);
+        return damage;
+    }
+    public void SampleSequenceHitbox(ActionExecutionState from, ActionExecutionState to, System.Collections.Generic.IReadOnlyList<Vector3> path)
+    {
+        if (!IsSequenceDriven || _sequenceInstance != to.InstanceId || _sequenceCombat == null || _hitbox == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) SampleConfigured(from, to, path);
+        else if (System.Math.Abs(to.FrameProgress - System.Math.Round(to.FrameProgress)) > .000001) Combat.SampleSequenceWindow();
+    }
+    public void SampleSequenceBoundary(ActionExecutionState state)
+    {
+        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _sequenceCombat == null || _hitbox == null) return;
+        if (_sequenceCombat.HitVolumes.Count > 0) SampleConfigured(state, state, null);
+        else Combat.SampleSequenceWindow();
+    }
+    private void SampleConfigured(ActionExecutionState from, ActionExecutionState to, System.Collections.Generic.IReadOnlyList<Vector3> path)
+    {
+        CharacterController controller = GetComponent<CharacterController>();
+        Vector3 offset = Vector3.up * controller.height * .5f;
+        int mask = _motor != null && _motor.Params != null ? _motor.Params.CollisionMask.value : ~0;
+        _sampler.Sample(from, to, path, transform, _hitbox, offset, mask, group => SequenceDamage(group));
     }
     public void EndSequenceAction(long instanceId)
     {
-        // 序列招式的伤害覆盖在 CombatComponent 内部独立存放，收招时它自己会还原。
+        if (_sequenceInstance != instanceId) return;
+        _sampler.End(instanceId); _sequenceInstance = 0; _sequenceCombat = null;
         if (Combat != null) Combat.EndSequence(instanceId);
+    }
+    private void OnSequenceLanded(IAttackDamageReceiver target, AttackDamageRequest request, AttackDamageResult result)
+    {
+        // 命中扩展事件不再执行顿帧；顿帧只由 Landed 订阅处理一次。
+        SequenceHitLanded?.Invoke(target, request, result);
     }
 
     // ===== 打击感 =====

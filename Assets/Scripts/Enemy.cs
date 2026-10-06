@@ -312,6 +312,11 @@ public sealed class Enemy : MonoBehaviour
         if (_health == null) return 0f;
         return _health.TakeDamage(amount, hitPoint, hitDirection);
     }
+    public AttackDamageResult ReceiveAttack(AttackDamageRequest request)
+    {
+        EnsureHealth();
+        return _health.ReceiveAttack(request);
+    }
 
     [SerializeField] private DamagePopup _damagePopup;
     [SerializeField] private Color _damageTextColor = new Color(1f, 0.85f, 0.2f);

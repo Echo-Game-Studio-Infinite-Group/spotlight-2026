@@ -26,6 +26,8 @@ namespace GameJam.Actions
         private bool _ownsJump;
         private bool _ownsSlide;
         private bool _alive = true;
+        private bool _pendingLandingStop;
+        private readonly List<Vector3> _motionPath = new List<Vector3>();
         public event Action<ActionExecutionState, ActionFrameEvent> FrameEvent;
         public ActionCatalog Catalog => _catalog;
         public ActionSequencePlayer Player => _player;
@@ -74,6 +76,7 @@ namespace GameJam.Actions
             _ownsSlide = _catalog.Actions.Exists(action => action.Input.Steps.Exists(step => step.Button == ActionInputButtons.Slide));
             _input.Cleared += ClearPendingInput;
             _motor.Teleported += OnTeleported;
+            _motor.MotionPathPoint += RecordMotionPoint;
             _tick = 0;
             _connected = true;
             return true;
@@ -94,6 +97,11 @@ namespace GameJam.Actions
             LastSimulatedSeconds = 0;
             if (!_alive) sample = new ActionInputSample(sample.Tick);
             _player.Tick(sample, playerDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop);
+            // 完成帧先让新动作提交，再处理落地清速；成功接招会撤销旧动作的清速请求。
+            if (_pendingLandingStop && _motor.isActiveAndEnabled && _motor.IsGrounded)
+            {
+                _motor.SetHorizontalSpeed(0f); _pendingLandingStop = false;
+            }
         }
         public bool CheckCondition(string key, ActionExecutionState source, ActionInputRequest request)
         {
@@ -105,8 +113,8 @@ namespace GameJam.Actions
                 case "sliding": return _motor.IsSliding;
                 case "can_jump": return _motor.CanExecute(MotorCommandKind.Jump);
                 case "can_slide": return _motor.CanExecute(MotorCommandKind.EnterSlide);
-                case "speed_low": return _motor.Params != null && _motor.HorizontalSpeed < _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
-                case "speed_high": return _motor.Params != null && _motor.HorizontalSpeed >= _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
+                case "speed_low": return _motor.Params != null && _motor.HorizontalSpeed <= _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
+                case "speed_high": return _motor.Params != null && _motor.HorizontalSpeed > _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
                 case "non_stationary_jump": return request.Direction.sqrMagnitude > 0f;
                 case "forward_jump": return request.Direction.y > 0f;
                 case "flash_available": return _conditions.Contains("parry") || _conditions.Contains("limb_break");
@@ -126,6 +134,9 @@ namespace GameJam.Actions
             else if (request.Target.Combat?.Enabled == true && _combat.Hitbox == null) reason = "攻击缺少命中盒";
             else if (request.Target.EnergyCost > 0f && (_energy == null || _energy.CurrentEnergy < request.Target.EnergyCost)) reason = "能量不足";
             else
+            {
+                foreach (ActionHitVolume volume in request.Target.Combat.HitVolumes)
+                    if (!string.IsNullOrEmpty(volume.AnchorPath) && transform.Find(volume.AnchorPath) == null) reason = "判定框挂点不存在：" + volume.AnchorPath;
                 foreach (ActionSegment segment in request.Target.Timeline)
                 {
                     if (!_animation.CanPlay(segment.Animation)) { reason = "动画状态不存在"; break; }
@@ -135,6 +146,7 @@ namespace GameJam.Actions
                         if (frameEvent.Frame == 0 && frameEvent.EventKey == "motor.command" && !_motor.CanExecute(frameEvent.MotorCommand))
                             reason = "起招运动命令的物理条件不满足";
                 }
+            }
             return reason == null;
         }
         public bool TryCommit(ActionExecutionState source, ActionInputRequest request)
@@ -142,7 +154,11 @@ namespace GameJam.Actions
             if (!CanStart(source, request, out _)) return false;
             return request.Target.EnergyCost <= 0f || _energy != null && _energy.TrySpend(request.Target.EnergyCost);
         }
-        public void OnActionStarted(ActionExecutionState state) => _combat.BeginSequenceAction(state);
+        public void OnActionStarted(ActionExecutionState state)
+        {
+            _pendingLandingStop = false;
+            _combat.BeginSequenceAction(state);
+        }
         public void OnSegmentEntered(ActionExecutionState state)
         {
             _motor.SetActionControl(state.Segment.Control);
@@ -166,6 +182,9 @@ namespace GameJam.Actions
         public void OnActionEnded(ActionExecutionState state, ActionExitReason reason)
         {
             _combat.EndSequenceAction(state.InstanceId);
+            _motor.EndMotion(state.InstanceId);
+            _motionPath.Clear();
+            if (reason == ActionExitReason.Completed && state.Action.Motion.ClearMomentumOnCompletion) _pendingLandingStop = true;
             if (reason != ActionExitReason.Completed) _motor.CancelActionCommands();
             _motor.SetActionControl(null);
             _animation.EndAction(state.InstanceId, reason != ActionExitReason.Completed);
@@ -175,14 +194,16 @@ namespace GameJam.Actions
         {
             SimulateMovement(from.Segment.Control, frames);
             _animation.Sample(to, (float)(frames / ActionSequencePlayer.FramesPerSecond));
-            // 整帧边界先仲裁取消并处理开关事件，再采样；慢动作中的分数帧也需保持骨骼同步。
-            if (Math.Abs(to.FrameProgress - Math.Round(to.FrameProgress)) > 0.000001)
-                _combat.SampleSequenceHitbox(to.InstanceId);
+            _combat.SampleSequenceHitbox(from, to, _motionPath);
+            _motionPath.Clear();
         }
         public void OnFrameBoundary(ActionExecutionState state)
         {
             _animation.Sample(state, 0f);
-            _combat.SampleSequenceHitbox(state.InstanceId);
+            // 先锁定挥出时的伤害，再执行一次性前移增速，避免当前招自己抬高伤害快照。
+            _combat.SampleSequenceBoundary(state);
+            if (state.Action.Motion.IsActive(state.Action, state.FrameProgress)) _motor.BeginMotion(state.Action.Motion, state.InstanceId);
+            else _motor.EndMotion(state.InstanceId);
         }
         public void OnIdleSimulation(double frames)
         {
@@ -191,6 +212,7 @@ namespace GameJam.Actions
         }
         private void SimulateMovement(ActionControlPolicy control, double frames)
         {
+            _motionPath.Clear();
             float dt = (float)(frames / ActionSequencePlayer.FramesPerSecond);
             _motor.SetActionControl(control);
             // 外部接管模拟后仍须尊重 Motor 的禁用状态，场景工具与演出会用它暂停角色位移。
@@ -199,7 +221,7 @@ namespace GameJam.Actions
             LastSimulatedSeconds += dt;
         }
         public void ClearPendingInput() => _player?.ClearPendingInput();
-        public void Interrupt() => _player?.Interrupt();
+        public void Interrupt() { _pendingLandingStop = false; _player?.Interrupt(); }
         public void SetAlive(bool alive)
         {
             _alive = alive;
@@ -207,6 +229,7 @@ namespace GameJam.Actions
         }
         public void ResetActions()
         {
+            _pendingLandingStop = false;
             _player?.Reset();
             _conditions.Clear();
             _input?.Clear();
@@ -214,14 +237,16 @@ namespace GameJam.Actions
         private void OnTeleported(Vector3 delta) => ResetActions();
         public void Disconnect()
         {
+            _pendingLandingStop = false;
             _player?.Reset();
             if (_input != null) { _input.Cleared -= ClearPendingInput; _input.ReleaseSequenceInput(this); }
-            if (_motor != null) { _motor.Teleported -= OnTeleported; _motor.ReleaseSimulation(this); }
+            if (_motor != null) { _motor.Teleported -= OnTeleported; _motor.MotionPathPoint -= RecordMotionPoint; _motor.ReleaseSimulation(this); }
             if (_animation != null) _animation.Release(this);
             if (_connected && _combat != null) _combat.SetSequenceDriven(false);
             _player = null;
             _connected = false;
         }
         private void OnDisable() => Disconnect();
+        private void RecordMotionPoint(Vector3 point) => _motionPath.Add(point);
     }
 }

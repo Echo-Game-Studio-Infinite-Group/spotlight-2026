@@ -36,11 +36,14 @@ public sealed class ActionPlayerIntegrationTests
         Invoke(_motor, "Awake");
         _combat = _root.GetComponent<PlayerCombat>();
         Invoke(_combat, "Awake");
+        Invoke(_combat, "OnEnable");
         _bridge = _root.GetComponent<ActionAnimatorBridge>();
         _runner = _root.GetComponent<PlayerActionRunner>();
         Assert.NotNull(_runner, "先运行 ActionPlayerSetup.Install，再执行接入测试");
         _catalog = Object.Instantiate(_runner.Catalog); _created.Add(_catalog);
         _attack = Object.Instantiate(_catalog.Actions[0]); _created.Add(_attack);
+        _attack.RequestVariants.Clear();
+        _attack.CooldownGroup = "";
         _catalog.Actions[0] = _attack;
         _runner.Configure(_catalog, _root.GetComponent<PlayerInputReader>(), _motor, _combat, _bridge);
         Assert.IsTrue(_runner.Connect());
@@ -72,6 +75,7 @@ public sealed class ActionPlayerIntegrationTests
             child.AddComponent<BoxCollider>().size = Vector3.one * 20f;
         }
         Enemy target = host.AddComponent<Enemy>(); target.ConfigureStats(1000f, 0f, 0f); target.SetInvulnerableTime(0f);
+        Invoke(target, "OnEnable");
         return target;
     }
     private void ShortAttack()
@@ -95,6 +99,189 @@ public sealed class ActionPlayerIntegrationTests
         ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
         Physics.SyncTransforms(); Tick(); Tick();
         Assert.IsTrue(_motor.IsGrounded);
+    }
+
+    [Test]
+    public void ConfiguredVolumesDoNotHitThroughWallAndCanRetryAfterWallRemoved()
+    {
+        Enemy target = Target();
+        target.transform.position = _root.transform.position + new Vector3(0f, 1f, 2f);
+        target.GetComponent<BoxCollider>().size = Vector3.one * .2f;
+        _attack.Combat.HitVolumes.Add(new ActionHitVolume { Center = new Vector3(0f, 1f, 2f), Size = Vector3.one,
+            Start = new ActionFrameAnchor { RelativeTo = ActionFrameAnchor.Boundary.ActionStart } });
+        var wall = new GameObject("AttackObstruction"); _created.Add(wall);
+        wall.transform.position = _root.transform.position + new Vector3(0f, 1f, 1f);
+        wall.AddComponent<BoxCollider>().size = new Vector3(10f, 10f, .2f);
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state); _combat.SampleSequenceBoundary(state);
+        Assert.AreEqual(0, target.DamagedCount);
+        Object.DestroyImmediate(wall); _combat.SampleSequenceBoundary(state);
+        Assert.AreEqual(1, target.DamagedCount);
+    }
+
+    [Test]
+    public void HealthOnlyTargetUsesUnifiedSettlementAndSingleFeedbackEvent()
+    {
+        var host = new GameObject("HealthOnlyTarget"); _created.Add(host);
+        host.transform.position = _root.transform.position + Vector3.up;
+        host.AddComponent<BoxCollider>().size = Vector3.one * 20f;
+        HealthComponent health = host.AddComponent<HealthComponent>(); health.SetMaxHealth(1000f); health.SetInvulnerableTime(0f);
+        int landed = 0, sequence = 0, notifications = 0;
+        _root.GetComponent<CombatComponent>().Landed += (target, point, direction, damage) => landed++;
+        _combat.SequenceHitLanded += (target, request, result) => { Assert.AreSame(health, target); sequence++; };
+        _combat.Hitbox.Hit += (box, collider, target) => notifications++;
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state);
+        _combat.HandleSequenceEvent(state, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); _combat.SampleSequenceHitbox(100);
+        Assert.That(health.Health, Is.EqualTo(1000f - _attack.Combat.Damage));
+        Assert.AreEqual(1, landed); Assert.AreEqual(1, sequence); Assert.AreEqual(1, notifications);
+    }
+
+    [Test]
+    public void InvulnerableTargetIsNotMarkedHitUntilDamageSucceeds()
+    {
+        Enemy target = Target(true);
+        HealthComponent health = target.GetComponent<HealthComponent>(); health.SetInvulnerableTime(100f);
+        health.TakeDamage(1f); int initial = target.DamagedCount;
+        var state = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(state);
+        _combat.HandleSequenceEvent(state, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); Assert.AreEqual(initial, target.DamagedCount);
+        health.Reset(); health.SetInvulnerableTime(0f);
+        _combat.SampleSequenceHitbox(100); _combat.SampleSequenceHitbox(100);
+        Assert.AreEqual(initial + 1, target.DamagedCount);
+    }
+
+    [Test]
+    public void SameCampIsFilteredAndStaleSamplesCannotAffectNewInstance()
+    {
+        Enemy target = Target(true);
+        CombatComponent targetCombat = target.GetComponent<CombatComponent>(); targetCombat.Camp = CampType.Player;
+        var old = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(old);
+        _combat.HandleSequenceEvent(old, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.SampleSequenceHitbox(100); Assert.AreEqual(0, target.DamagedCount);
+        var next = new ActionExecutionState(_attack, 101, 0, 0, 0, default);
+        _combat.BeginSequenceAction(next); targetCombat.Camp = CampType.Enemy;
+        _combat.HandleSequenceEvent(next, new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
+        _combat.HandleSequenceEvent(old, new ActionFrameEvent { EventKey = "combat.hitbox.close" });
+        _combat.EndSequenceAction(100); _combat.SampleSequenceHitbox(100);
+        Assert.AreEqual(0, target.DamagedCount); Assert.IsTrue(_combat.Hitbox.SequenceWindowOpen);
+        _combat.SampleSequenceHitbox(101); Assert.AreEqual(1, target.DamagedCount);
+    }
+
+    [Test]
+    public void ConfiguredVolumesSweepPastThinEnemyAndShareGroupDamageSnapshot()
+    {
+        Enemy target = Target(true);
+        target.transform.position = _root.transform.position + new Vector3(0f, 1f, 2f);
+        foreach (BoxCollider collider in target.GetComponentsInChildren<BoxCollider>()) collider.size = Vector3.one * .1f;
+        _attack.Combat.ScaleDamageWithSpeed = true; _attack.Combat.SpeedDamage = AnimationCurve.Linear(0f, 1f, 2f, 2f);
+        _attack.Combat.HitVolumes.Add(new ActionHitVolume { Center = Vector3.up, Size = Vector3.one * .2f,
+            Start = new ActionFrameAnchor { RelativeTo = ActionFrameAnchor.Boundary.ActionStart } });
+        _attack.Combat.HitVolumes.Add(new ActionHitVolume { Center = Vector3.up, Size = Vector3.one * .3f,
+            Start = new ActionFrameAnchor { RelativeTo = ActionFrameAnchor.Boundary.ActionStart } });
+        _motor.SetHorizontalSpeed(10f);
+        var start = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(start); _combat.SampleSequenceBoundary(start);
+        Assert.AreEqual(0, target.DamagedCount);
+        _motor.SetHorizontalSpeed(100f);
+        _root.transform.position += Vector3.forward * 4f;
+        var end = new ActionExecutionState(_attack, 100, 0, 1, 0, default);
+        _combat.SampleSequenceHitbox(start, end, new[] { _root.transform.position });
+        Assert.AreEqual(1, target.DamagedCount);
+        Assert.That(target.Health, Is.EqualTo(1000f - _attack.Combat.Damage * 1.5f).Within(.001f));
+    }
+
+    [Test]
+    public void InstalledHighspeedStatesSampleDistinctPosesAndIndependentMotionTimes()
+    {
+        ActionDefinition a = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_a");
+        ActionDefinition b = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_b");
+        Assert.NotNull(a); Assert.NotNull(b); Assert.AreEqual(76, a.TotalFrames); Assert.AreEqual(68, b.TotalFrames);
+        Assert.IsFalse(a.Timeline[0].Animation.Clip.isLooping); Assert.IsFalse(b.Timeline[0].Animation.Clip.isLooping);
+        _bridge.EnterSegment(new ActionExecutionState(a, 120, 0, 6, 0, default), true);
+        _bridge.Sample(new ActionExecutionState(a, 120, 0, 6, 0, default), 0f);
+        Transform hand = _bridge.Animator.GetBoneTransform(HumanBodyBones.RightHand);
+        Quaternion first = hand.rotation;
+        _bridge.EnterSegment(new ActionExecutionState(a, 120, 1, 22, 12, default), true);
+        _bridge.Sample(new ActionExecutionState(a, 120, 1, 22, 12, default), 0f);
+        Assert.Greater(Quaternion.Angle(first, hand.rotation), .1f);
+        float sourceTime = _bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter);
+        _bridge.EnterSegment(new ActionExecutionState(b, 121, 0, 5, 0, default), true);
+        _bridge.Sample(new ActionExecutionState(b, 121, 0, 5, 0, default), 0f);
+        Assert.AreNotEqual(a.Timeline[0].Animation.TimeParameter, b.Timeline[0].Animation.TimeParameter);
+        Assert.That(_bridge.Animator.GetFloat(b.Timeline[0].Animation.TimeParameter), Is.EqualTo(5f / 68f).Within(.0001f));
+        Assert.That(_bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter), Is.EqualTo(sourceTime).Within(.0001f));
+    }
+
+    [Test]
+    public void LeftClickResolvesHighspeedAThenBCancelAndLosingSpeedBlocksNextCancel()
+    {
+        ActionDefinition a = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_a");
+        ActionDefinition b = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_b");
+        _attack.RequestVariants.AddRange(new[] { a, b, _attack });
+        _motor.SetHorizontalSpeed(20f); _motor.LaunchVertical(8f);
+        Tick(ActionInputButtons.Attack, frames: 30f);
+        Assert.AreSame(a, _runner.Player.State.Action); Assert.Less(_motor.Velocity.y, 0f);
+        long instance = _runner.Player.State.InstanceId;
+        float speed = _motor.HorizontalSpeed;
+        Tick(ActionInputButtons.Attack);
+        Assert.AreSame(b, _runner.Player.State.Action); Assert.Greater(_runner.Player.State.InstanceId, instance);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.001f));
+        Tick(frames: 27f); _motor.SetHorizontalSpeed(2f); Tick(ActionInputButtons.Attack);
+        Assert.AreSame(b, _runner.Player.State.Action);
+        Assert.IsFalse(_bridge.Animator.applyRootMotion);
+    }
+
+    [Test]
+    public void AirCompletionWaitsForLandingAndTeleportDiscardsPendingMomentumStop()
+    {
+        ShortAttack(); _attack.Motion.ClearMomentumOnCompletion = true;
+        _motor.SetHorizontalSpeed(5f); _motor.LaunchVertical(8f);
+        Tick(ActionInputButtons.Attack, frames: 4f);
+        Assert.Greater(_motor.HorizontalSpeed, 0f);
+        _motor.Teleport(new Vector3(2100f, 0f, 2100f)); _motor.SetHorizontalSpeed(5f);
+        Ground(); Assert.Greater(_motor.HorizontalSpeed, 0f, "传送后不能继承上一招的待落地清速");
+        _motor.LaunchVertical(8f); _motor.SetHorizontalSpeed(5f); Tick(ActionInputButtons.Attack, frames: 4f);
+        for (int i = 0; i < 120 && !_motor.IsGrounded; i++) Tick();
+        Assert.IsTrue(_motor.IsGrounded); Assert.That(_motor.HorizontalSpeed, Is.Zero);
+    }
+
+    [Test]
+    public void CancelClearsSweepHistoryAndNewInstanceMayHitAgain()
+    {
+        Enemy target = Target(); target.GetComponent<BoxCollider>().size = Vector3.one * .1f;
+        target.transform.position = _root.transform.position + new Vector3(0f, 1f, 2f);
+        _attack.Combat.HitVolumes.Add(new ActionHitVolume { Center = Vector3.up, Size = Vector3.one * .2f,
+            Start = new ActionFrameAnchor { RelativeTo = ActionFrameAnchor.Boundary.ActionStart } });
+        var start = new ActionExecutionState(_attack, 100, 0, 0, 0, default);
+        _combat.BeginSequenceAction(start); _combat.SampleSequenceBoundary(start); _combat.EndSequenceAction(100);
+        _root.transform.position += Vector3.forward * 4f;
+        var next = new ActionExecutionState(_attack, 101, 0, 0, 0, default);
+        _combat.BeginSequenceAction(next); _combat.SampleSequenceBoundary(next);
+        Assert.AreEqual(0, target.DamagedCount, "两刀切换不能产生跨越空间的扫掠");
+        _root.transform.position -= Vector3.forward * 2f;
+        _combat.SampleSequenceBoundary(next); Assert.AreEqual(1, target.DamagedCount);
+        _combat.EndSequenceAction(101);
+        next = new ActionExecutionState(_attack, 102, 0, 0, 0, default);
+        _combat.BeginSequenceAction(next); _combat.SampleSequenceBoundary(next); Assert.AreEqual(2, target.DamagedCount);
+    }
+
+    [Test]
+    public void NaturalCompletionClearsGroundSpeedButSuccessfulSameFrameFollowupPreservesIt()
+    {
+        Ground(); ShortAttack(); _motor.SetHorizontalSpeed(5f);
+        _attack.Motion.ClearMomentumOnCompletion = true;
+        Tick(ActionInputButtons.Attack, frames: 4f);
+        Assert.That(_motor.HorizontalSpeed, Is.Zero);
+        _runner.ResetActions(); _motor.SetHorizontalSpeed(5f);
+        ActionDefinition follow = _catalog.Actions.Find(action => action.ActionId == "player_jump");
+        _runner.Player.Queue(_attack, 0); _runner.Player.Queue(follow, 0);
+        _runner.SimulateTick(new ActionInputSample(0), default, 4f / 60f);
+        Assert.AreSame(follow, _runner.Player.State.Action);
+        Assert.Greater(_motor.HorizontalSpeed, 0f);
     }
 
     [Test]

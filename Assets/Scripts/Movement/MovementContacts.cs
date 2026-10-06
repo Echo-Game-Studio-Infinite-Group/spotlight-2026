@@ -47,7 +47,7 @@ public sealed class MovementContacts
         WallIncoming = _incoming;
     }
 
-    public void Move(ref Vector3 velocity, float dt)
+    public void Move(ref Vector3 velocity, float dt, System.Action<Vector3> pathPoint = null)
     {
         HasWall = false;
         WallAngle = -1f;
@@ -60,6 +60,7 @@ public sealed class MovementContacts
             _normalCount = 0;
             _incoming = velocity;
             last = _controller.Move(velocity * (dt / count));
+            pathPoint?.Invoke(_controller.transform.position);
             for (int j = 0; j < _normalCount; j++)
             {
                 Vector3 normal = _normals[j];

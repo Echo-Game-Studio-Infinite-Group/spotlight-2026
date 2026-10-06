@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 // 攻守双方共用的战斗层：数值、状态、结算三件事都在这里。
@@ -33,6 +34,12 @@ public sealed class CombatComponent : MonoBehaviour
     private long _sequenceInstance;
     // 序列招式的临时伤害。< 0 表示没有覆盖，此时用落盘的 _damage。
     private float _sequenceDamage = -1f;
+    private readonly Dictionary<int, float> _groupDamage = new Dictionary<int, float>();
+    private readonly Dictionary<int, HashSet<IAttackDamageReceiver>> _hitTargets = new Dictionary<int, HashSet<IAttackDamageReceiver>>();
+    // 受击事件可能同步取消动作；正在结算的目标不能重入扣血。
+    private readonly HashSet<IAttackDamageReceiver> _resolving = new HashSet<IAttackDamageReceiver>();
+    public long SequenceInstanceId => _sequenceInstance;
+    public event Action<IAttackDamageReceiver, AttackDamageRequest, AttackDamageResult> SequenceLanded;
 
     /// <summary>命中且真的扣了血时触发：目标、命中点、方向、实际伤害。</summary>
     public event Action<HealthComponent, Vector3, Vector3, float> Landed;
@@ -91,6 +98,8 @@ public sealed class CombatComponent : MonoBehaviour
         _windowOpen = false;
         _sequenceInstance = 0;
         _sequenceDamage = -1f;
+        _groupDamage.Clear();
+        _hitTargets.Clear();
         if (_hitbox != null) _hitbox.EndSequence();
         DisableHitbox();
     }
@@ -106,6 +115,7 @@ public sealed class CombatComponent : MonoBehaviour
     public void BeginSequence(long instanceId, int hitMask, float damage)
     {
         EnsureReferences();
+        ResetAttackState();
         _sequenceInstance = instanceId;
         _sequenceDamage = Mathf.Max(0f, damage);
         if (_hitbox != null) _hitbox.BeginSequence(instanceId, hitMask);
@@ -120,6 +130,8 @@ public sealed class CombatComponent : MonoBehaviour
         if (_sequenceInstance != instanceId) return;
         _sequenceInstance = 0;
         _sequenceDamage = -1f;
+        _groupDamage.Clear();
+        _hitTargets.Clear();
         if (_hitbox != null) _hitbox.EndSequence();
     }
 
@@ -129,31 +141,49 @@ public sealed class CombatComponent : MonoBehaviour
         if (_hitbox != null) _hitbox.SetOwner(this);
     }
 
-    private void OnEnable()
+    private void OnDisable() => ResetAttackState();
+
+    public bool TryGetSequenceDamage(long instanceId, int group, out float damage)
     {
-        EnsureReferences();
-        if (_hitbox != null) _hitbox.Hit += OnHit;
+        damage = 0f;
+        return instanceId != 0 && _sequenceInstance == instanceId && _groupDamage.TryGetValue(group, out damage);
     }
 
-    private void OnDisable()
+    public void SetSequenceDamage(long instanceId, int group, float damage)
     {
-        if (_hitbox != null) _hitbox.Hit -= OnHit;
+        if (instanceId != 0 && _sequenceInstance == instanceId && !_groupDamage.ContainsKey(group))
+            _groupDamage.Add(group, Mathf.Max(0f, damage));
     }
 
-    private void OnHit(Hitbox box, Collider other, HealthComponent target)
+    public float SequenceDamage(int group) => _groupDamage.TryGetValue(group, out float damage) ? damage : Damage;
+
+    // 所有判定入口在此结算；Hitbox 的事件只通知结果，不能再由订阅者扣血。
+    public AttackDamageResult TryHit(Collider other, IAttackDamageReceiver target, AttackDamageRequest request)
     {
-        if (target == null) return;
+        if (!isActiveAndEnabled || other == null || target == null) return default;
+        if (request.ActionInstanceId != _sequenceInstance) return default;
         EnsureReferences();
-        if (target == _self) return;
-
-        // 阵营过滤：目标没有 CombatComponent 时视为中立，可打。
-        CombatComponent otherCombat = other.GetComponentInParent<CombatComponent>();
-        if (otherCombat != null && otherCombat != this && otherCombat._camp == _camp) return;
-
-        Vector3 point = other.ClosestPoint(transform.position);
-        Vector3 direction = target.transform.position - transform.position;
-        float applied = target.TakeDamage(Damage, point, direction);
-        if (applied > 0f) Landed?.Invoke(target, point, direction, applied);
+        HealthComponent health = target as HealthComponent;
+        if (health == _self && health != null || other.transform.IsChildOf(transform)) return default;
+        CombatComponent otherCombat = health != null ? health.GetComponentInParent<CombatComponent>() : other.GetComponentInParent<CombatComponent>();
+        if (otherCombat != null && otherCombat != this && otherCombat.Camp == Camp) return default;
+        HashSet<IAttackDamageReceiver> hit = null;
+        if (_sequenceInstance != 0)
+        {
+            if (!_hitTargets.TryGetValue(request.HitGroup, out hit))
+                _hitTargets.Add(request.HitGroup, hit = new HashSet<IAttackDamageReceiver>());
+            if (hit.Contains(target)) return default;
+        }
+        if (!_resolving.Add(target)) return default;
+        AttackDamageResult result;
+        try { result = target.ReceiveAttack(request); }
+        finally { _resolving.Remove(target); }
+        if (result.AppliedDamage <= 0f) return result;
+        // 死亡表现可同步结束攻击。记录归属旧组，不得污染新动作的去重集。
+        hit?.Add(target);
+        if (health != null) Landed?.Invoke(health, request.Point, request.Direction, result.AppliedDamage);
+        if (request.ActionInstanceId != 0) SequenceLanded?.Invoke(target, request, result);
+        return result;
     }
 
     // 惰性解析：Awake 不保证跑过（编辑模式装配工具、测试里 AddComponent 都不会触发它），

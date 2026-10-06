@@ -29,9 +29,11 @@ MonoBehaviour:
   SlideDecel: 2
   SlideEndSpeed: 2
   SlideCapsuleHeight: 1
-  WallMaxApproachAngle: 45
+  WallMaxApproachAngle: 60
   WallNormalMaxUpDot: 0.3
   WallGraceTime: 1
+  WallVerticalFriction: 3
+  WallVerticalStopSpeed: 0.01
   WallFriction: 1
   WallStopSpeed: 0.01
   WallGravityScale: 0.6
@@ -40,7 +42,7 @@ MonoBehaviour:
   WallJumpAngle: 9.3
   WallJumpUpImpulse: 8
   WallJumpCooldown: 0.2
-  WallJumpFacingLockTime: 0.9
+  WallJumpFacingLockTime: 0.1
   WallRearmDistance: 0.17
   WallProbeDistance: 0.08
   WallContactGraceTime: 0.08
