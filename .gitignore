@@ -75,11 +75,12 @@ TestResults*.xml
 !Tools/**/*.csproj
 !Tools/**/*.sln
 
-# Wwise 集成中的调试符号和帮助文档不参与运行，避免把仓库膨胀数百 MB。
+# Wwise 集成中的帮助文档、Debug 运行库和调试符号不参与编辑器运行。
+# Windows Profile/AkUnitySoundEngine.dll 是编辑器实际加载的原生运行库，需要提交。
 Assets/Wwise/Documentation/
 Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
 Assets/Wwise/API/Runtime/Plugins/Mac/Profile/
 Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/
-Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Profile/
 Assets/Wwise/**/*.pdb
+Assets/Wwise/**/*.pdb.meta
 Assets/Wwise/**/*.dSYM/
