@@ -1451,7 +1451,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -1461,7 +1460,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 976650858}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -2056,7 +2054,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -2066,7 +2063,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 1361423359}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -2823,7 +2819,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -2833,7 +2828,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 318055743}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -3070,7 +3064,7 @@ MonoBehaviour:
   _fastFov: 85
   _fullEffectSpeed: 25
   _response: 5
-  _wallRoll: 5
+  _wallRoll: 20
   _chromaticIntensity: 0.5
   _motionBlurIntensity: 0.5
   _customMotionBlur: 2.5
@@ -3128,7 +3122,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 7700110000000000004}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -3138,7 +3131,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 271706128}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -3543,7 +3535,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -3553,7 +3544,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 1214954861}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -4177,7 +4167,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _health: {fileID: 0}
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -4187,7 +4176,6 @@ MonoBehaviour:
   _chasePlayer: 1
   _sightRange: 128
   _attackRange: 1
-  _impulseSource: {fileID: 0}
   _damagePopup: {fileID: 484677237}
   _damageTextColor: {r: 1, g: 0.85, b: 0.2, a: 1}
   _numberLifetime: 1.2
@@ -4812,8 +4800,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000002
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4830,8 +4816,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4848,8 +4832,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4866,8 +4848,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4884,8 +4864,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8800220000000000006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4902,8 +4880,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
 --- !u!114 &8869678147187144729 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3277439423563062544, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
