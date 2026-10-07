@@ -9,12 +9,15 @@ using UnityEngine;
 public sealed class AudioActionClipAnalysis
 {
     private const float WindowSeconds = 0.02f;
-    private const int ChunkFrames = 1 << 15;
     private const float AudibleFloorRatio = 0.02f;
 
     public float[] WindowRms = Array.Empty<float>();
     /// <summary>单声道混合采样，供循环点互相关搜索使用（过长素材不保留）。</summary>
     public float[] Mono;
+    /// <summary>原始交错 PCM；来自 AudioClip 或 StreamingAssets WAV 均可。</summary>
+    public float[] Samples = Array.Empty<float>();
+    public int Channels;
+    public int SampleRate;
     public AudioClip Clip;
     public float Duration;
     public float PeakRms;
@@ -29,75 +32,90 @@ public sealed class AudioActionClipAnalysis
 
     public static AudioActionClipAnalysis Analyze(AudioClip clip)
     {
-        var result = new AudioActionClipAnalysis();
         if (clip == null)
         {
-            result.Error = "没有绑定 AudioClip。";
-            return result;
+            return Failure("没有绑定 AudioClip。");
         }
         if (clip.loadType == AudioClipLoadType.Streaming)
         {
-            result.Error = "该素材是 Streaming 导入，编辑器无法读取采样做分析。请改成 Decompress On Load。";
-            return result;
+            return Failure(
+                "该素材是 Streaming 导入，编辑器无法读取采样做分析。请改成 Decompress On Load。");
         }
 
         int channels = clip.channels;
         int samples = clip.samples;
         if (channels <= 0 || samples <= 0)
         {
-            result.Error = "AudioClip 没有可用采样数据。";
-            return result;
+            return Failure("AudioClip 没有可用采样数据。");
         }
 
-        int windowFrames = Mathf.Max(1, Mathf.RoundToInt(clip.frequency * WindowSeconds));
+        var data = new float[samples * channels];
+        if (!clip.GetData(data, 0))
+        {
+            return Failure(
+                "当前导入设置不允许读取采样数据。请给该定义配置 Wwise 源 WAV 路径。");
+        }
+
+        AudioActionClipAnalysis result =
+            Analyze(data, channels, clip.frequency);
+        result.Clip = clip;
+        return result;
+    }
+
+    /// <summary>
+    /// 直接分析交错 PCM。Wwise 接管 Unity 音频输出时，通过源 WAV 解析走这里。
+    /// </summary>
+    public static AudioActionClipAnalysis Analyze(
+        float[] samplesData, int channels, int sampleRate)
+    {
+        if (samplesData == null || samplesData.Length == 0 ||
+            channels <= 0 || sampleRate <= 0)
+        {
+            return Failure("PCM 源没有可用采样数据。");
+        }
+
+        int samples = samplesData.Length / channels;
+        if (samples <= 1)
+        {
+            return Failure("PCM 源没有可用帧。");
+        }
+
+        var result = new AudioActionClipAnalysis
+        {
+            Samples = samplesData,
+            Channels = channels,
+            SampleRate = sampleRate
+        };
+
+        int windowFrames = Mathf.Max(1, Mathf.RoundToInt(sampleRate * WindowSeconds));
         int windowCount = Mathf.CeilToInt(samples / (float)windowFrames);
         var energy = new float[windowCount];
-        var buffer = new float[ChunkFrames * channels];
-        result.Clip = clip;
         // 互相关搜索需要原始采样；超过 30 秒的素材不保留，避免占内存。
-        float[] mono = samples <= clip.frequency * 30 ? new float[samples] : null;
+        float[] mono = samples <= sampleRate * 30 ? new float[samples] : null;
 
-        try
+        for (int frame = 0; frame < samples; frame++)
         {
-            int frame = 0;
-            while (frame < samples)
+            int window = frame / windowFrames;
+            if (window >= windowCount) break;
+            int baseIndex = frame * channels;
+            double sum = 0.0;
+            float monoSample = 0f;
+            for (int c = 0; c < channels; c++)
             {
-                int frames = Mathf.Min(ChunkFrames, samples - frame);
-                if (!clip.GetData(buffer, frame))
-                {
-                    result.Error = "当前导入设置不允许读取采样数据。";
-                    return result;
-                }
-                for (int f = 0; f < frames; f++)
-                {
-                    int window = (frame + f) / windowFrames;
-                    if (window >= windowCount) break;
-                    int baseIndex = f * channels;
-                    double sum = 0.0;
-                    float monoSample = 0f;
-                    for (int c = 0; c < channels; c++)
-                    {
-                        float value = buffer[baseIndex + c];
-                        sum += (double)value * value;
-                        monoSample += value;
-                        float magnitude = Mathf.Abs(value);
-                        if (magnitude > result.PeakAmplitude) result.PeakAmplitude = magnitude;
-                    }
-                    energy[window] += (float)(sum / channels);
-                    if (mono != null) mono[frame + f] = monoSample / channels;
-                }
-                frame += frames;
+                float value = samplesData[baseIndex + c];
+                sum += (double)value * value;
+                monoSample += value;
+                float magnitude = Mathf.Abs(value);
+                if (magnitude > result.PeakAmplitude)
+                    result.PeakAmplitude = magnitude;
             }
-        }
-        catch (Exception e)
-        {
-            result.Error = $"{e.GetType().Name}: {e.Message}";
-            return result;
+            energy[window] += (float)(sum / channels);
+            if (mono != null) mono[frame] = monoSample / channels;
         }
 
         result.WindowRms = new float[windowCount];
         result.Mono = mono;
-        result.Duration = samples / (float)clip.frequency;
+        result.Duration = samples / (float)sampleRate;
         for (int w = 0; w < windowCount; w++)
         {
             int framesInWindow = Mathf.Min(windowFrames, samples - w * windowFrames);
@@ -128,6 +146,11 @@ public sealed class AudioActionClipAnalysis
             result.LastAudible01 = Mathf.Min(1f, ((last + 1) * windowFrames) / (float)samples);
         }
         return result;
+    }
+
+    private static AudioActionClipAnalysis Failure(string message)
+    {
+        return new AudioActionClipAnalysis { Error = message };
     }
 
     /// <summary>归一化区间 [start01, end01] 内的平均 RMS。</summary>
@@ -176,17 +199,17 @@ public sealed class AudioActionClipAnalysis
     /// <summary>循环接缝的瞬时跳变幅度：|起点的首采样 - 终点的末采样|，多声道取最大。</summary>
     public float SeamStep01(float start01, float end01)
     {
-        if (Clip == null || !Success || Clip.channels <= 0) return 0f;
-        int last = Clip.samples - 1;
+        if (Samples.Length == 0 || !Success || Channels <= 0) return 0f;
+        int last = Samples.Length / Channels - 1;
         int startSample = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(start01) * last), 0, last);
         int endSample = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(end01) * last) - 1, 0, last);
-        var first = new float[Clip.channels];
-        var final = new float[Clip.channels];
-        if (!Clip.GetData(first, startSample)) return 0f;
-        if (!Clip.GetData(final, endSample)) return 0f;
         float step = 0f;
-        for (int c = 0; c < Clip.channels; c++)
-            step = Mathf.Max(step, Mathf.Abs(first[c] - final[c]));
+        for (int c = 0; c < Channels; c++)
+        {
+            float first = Samples[startSample * Channels + c];
+            float final = Samples[endSample * Channels + c];
+            step = Mathf.Max(step, Mathf.Abs(first - final));
+        }
         return step;
     }
 
@@ -204,9 +227,13 @@ public sealed class AudioActionClipAnalysis
         end01 = 1f;
         score = 0f;
         seamStep = 0f;
-        if (Mono == null || !HasAudibleContent || Clip == null) return false;
+        if (Mono == null || !HasAudibleContent || SampleRate <= 0 ||
+            Channels <= 0)
+        {
+            return false;
+        }
 
-        int rate = Clip.frequency;
+        int rate = SampleRate;
         int window = Mathf.Clamp(rate / 50, 64, 4096);        // ~20 ms 比较窗
         int first = Mathf.Clamp(Mathf.RoundToInt(FirstAudible01 * Mono.Length), 0, Mono.Length - 1);
         int last = Mathf.Clamp(Mathf.RoundToInt(LastAudible01 * Mono.Length), 0, Mono.Length - 1);

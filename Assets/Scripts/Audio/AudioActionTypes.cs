@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum AudioActionState
@@ -8,6 +9,144 @@ public enum AudioActionState
     Sustaining,
     Releasing,
     Finished
+}
+
+/// <summary>
+/// 动态动作上报给音频系统的阶段。
+/// 动作代码只描述“开始 / 更新 / 请求停止”，不直接操作 Wwise 或 PCM。
+/// </summary>
+public enum DynamicAudioActionPhase
+{
+    Start,
+    Update,
+    Stop
+}
+
+/// <summary>
+/// 特殊停止方式。动作代码可以在停止请求里指定，音频侧负责解释。
+/// </summary>
+public enum DynamicAudioActionStopMode
+{
+    /// <summary>走当前定义的 Release 逻辑。</summary>
+    Release,
+
+    /// <summary>立即停止，不等待循环或尾音。</summary>
+    Immediate,
+
+    /// <summary>走完当前这一遍循环，再进入 Release。</summary>
+    FinishCurrentLoop,
+
+    /// <summary>从头或当前位置完整播放一遍，不循环。</summary>
+    PlayFullOnce
+}
+
+/// <summary>
+/// 动态动作接口的数据帧。动作代码只生产这个结构，不依赖 Wwise 类型。
+/// </summary>
+public struct DynamicAudioActionRequest
+{
+    public string ActionId;
+    public int InstanceId;
+    public DynamicAudioActionPhase Phase;
+    public DynamicAudioActionStopMode StopMode;
+    public float NormalizedSpeed;
+    public float ContactIntensity;
+    public float Direction;
+    public string SurfaceId;
+    public int Seed;
+
+    public static DynamicAudioActionRequest Start(
+        string actionId,
+        float normalizedSpeed = 0f,
+        float contactIntensity = 0f,
+        float direction = 0f,
+        string surfaceId = "",
+        int seed = 0,
+        int instanceId = 0)
+    {
+        return Build(
+            actionId,
+            instanceId,
+            DynamicAudioActionPhase.Start,
+            DynamicAudioActionStopMode.Release,
+            normalizedSpeed,
+            contactIntensity,
+            direction,
+            surfaceId,
+            seed);
+    }
+
+    public static DynamicAudioActionRequest Update(
+        string actionId,
+        float normalizedSpeed,
+        float contactIntensity,
+        float direction = 0f,
+        string surfaceId = "",
+        int instanceId = 0)
+    {
+        return Build(
+            actionId,
+            instanceId,
+            DynamicAudioActionPhase.Update,
+            DynamicAudioActionStopMode.Release,
+            normalizedSpeed,
+            contactIntensity,
+            direction,
+            surfaceId,
+            0);
+    }
+
+    public static DynamicAudioActionRequest Stop(
+        string actionId,
+        DynamicAudioActionStopMode stopMode = DynamicAudioActionStopMode.Release,
+        int instanceId = 0)
+    {
+        return Build(
+            actionId,
+            instanceId,
+            DynamicAudioActionPhase.Stop,
+            stopMode,
+            0f,
+            0f,
+            0f,
+            string.Empty,
+            0);
+    }
+
+    private static DynamicAudioActionRequest Build(
+        string actionId,
+        int instanceId,
+        DynamicAudioActionPhase phase,
+        DynamicAudioActionStopMode stopMode,
+        float normalizedSpeed,
+        float contactIntensity,
+        float direction,
+        string surfaceId,
+        int seed)
+    {
+        return new DynamicAudioActionRequest
+        {
+            ActionId = actionId ?? string.Empty,
+            InstanceId = instanceId,
+            Phase = phase,
+            StopMode = stopMode,
+            NormalizedSpeed = Mathf.Clamp01(normalizedSpeed),
+            ContactIntensity = Mathf.Clamp01(contactIntensity),
+            Direction = Mathf.Clamp(direction, -1f, 1f),
+            SurfaceId = surfaceId ?? string.Empty,
+            Seed = seed
+        };
+    }
+}
+
+/// <summary>
+/// 动作代码实现这个接口，音频系统按帧收集动态动作请求。
+/// 一个组件可以同时上报多个动作，例如滑铲和墙滑。
+/// </summary>
+public interface IDynamicAudioActionSource
+{
+    void CollectDynamicAudioActions(
+        List<DynamicAudioActionRequest> output);
 }
 
 /// <summary>
@@ -123,13 +262,6 @@ public static class AudioCurveUtility
     {
         if (curve == null) return Map(time, mapping);
         return Map(curve.Evaluate(Mathf.Clamp01(time)), mapping);
-    }
-
-    public static float LerpFrequency(float minHz, float maxHz, float t)
-    {
-        float min = Mathf.Max(10f, minHz);
-        float max = Mathf.Max(min, maxHz);
-        return min * Mathf.Pow(max / min, Mathf.Clamp01(t));
     }
 
     public static float DbToLinear(float db)

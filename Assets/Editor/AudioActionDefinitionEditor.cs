@@ -4,13 +4,6 @@ using UnityEngine;
 [CustomEditor(typeof(AudioActionDefinition))]
 public sealed class AudioActionDefinitionEditor : Editor
 {
-    private enum PreviewTab
-    {
-        Adsr,
-        Pitch,
-        Lowpass
-    }
-
     private static readonly Color[] NodeColors =
     {
         new Color(0.9f, 0.72f, 0.2f),
@@ -28,7 +21,6 @@ public sealed class AudioActionDefinitionEditor : Editor
     private static readonly string[] LegendLabels = { "裁掉", "启动", "保持段循环", "尾音" };
     private static readonly Color[] LegendColors = { HeadColor, FirstPassColor, LoopColor, ReleaseTargetColor };
 
-    private PreviewTab _tab = PreviewTab.Adsr;
     private bool _previewHeld;
     private double _previewStartTime;
     private float _previewSpeed;
@@ -50,9 +42,7 @@ public sealed class AudioActionDefinitionEditor : Editor
         AudioActionDefinition definition = (AudioActionDefinition)target;
         definition.EnsureDefaults();
         EditorGUILayout.Space(10f);
-        EditorGUILayout.LabelField("包络与曲线", EditorStyles.boldLabel);
-        _tab = (PreviewTab)GUILayout.Toolbar((int)_tab, new[] { "ADSR (音量)", "Pitch", "Lowpass" });
-        // 按钮单独一行：和 Toolbar 挤在一起时窄面板会重叠。
+        EditorGUILayout.LabelField("包络", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("恢复默认值", GUILayout.Width(92f)))
@@ -77,18 +67,11 @@ public sealed class AudioActionDefinitionEditor : Editor
             Repaint();
         }
         EditorGUILayout.EndHorizontal();
-        switch (_tab)
+        if (GUILayout.Button("Wwise 绑定 / Event / 源 WAV"))
         {
-            case PreviewTab.Pitch:
-                DrawCurvePanel(definition.PitchFollow);
-                break;
-            case PreviewTab.Lowpass:
-                DrawCurvePanel(definition.LowpassFollow);
-                break;
-            default:
-                DrawAdsrPanel(definition);
-                break;
+            WwiseActionBindingWindow.Open(definition);
         }
+        DrawAdsrPanel(definition);
 
         EditorGUILayout.Space(6f);
         DrawRegionPanel(definition);
@@ -99,12 +82,12 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (_previewUpdateBound) EditorApplication.update -= OnPreviewUpdate;
         _previewUpdateBound = false;
-        AudioActionPreviewPlayer.Stop();
+        WwiseActionPreviewPlayer.Stop();
     }
 
     private void OnPreviewUpdate()
     {
-        if (_previewHeld || AudioActionPreviewPlayer.IsActive) Repaint();
+        if (_previewHeld || WwiseActionPreviewPlayer.IsActive) Repaint();
     }
 
     // ---------------- ADSR ----------------
@@ -236,54 +219,6 @@ public sealed class AudioActionDefinitionEditor : Editor
         Handles.DrawSolidDisc(new Vector3(x, y, 0f), Vector3.forward, 5f);
         Handles.color = Color.white;
         Handles.DrawWireDisc(new Vector3(x, y, 0f), Vector3.forward, 5f);
-    }
-
-    // ---------------- 速度跟随曲线 ----------------
-
-    private static void DrawCurvePanel(AudioEnvelope envelope)
-    {
-        if (envelope == null) return;
-        envelope.EnsureDefaults();
-        Rect outer = GUILayoutUtility.GetRect(10f, 150f, GUILayout.ExpandWidth(true));
-        DrawPanel(outer);
-        Rect graph = new Rect(outer.x + 14f, outer.y + 16f, outer.width - 28f, outer.height - 34f);
-        DrawGrid(graph);
-        DrawEnvelope(graph, envelope);
-        GUI.Label(new Rect(outer.x + 12f, outer.y + outer.height - 24f, 210f, 18f),
-            "Speed 0", EditorStyles.miniLabel);
-        GUI.Label(new Rect(outer.x + outer.width - 108f, outer.y + outer.height - 24f, 96f, 18f),
-            "Speed 1", EditorStyles.miniLabel);
-    }
-
-    private static void DrawEnvelope(Rect graph, AudioEnvelope envelope)
-    {
-        const int samples = 96;
-        Vector3[] points = new Vector3[samples];
-        for (int i = 0; i < samples; i++)
-        {
-            float t = i / (float)(samples - 1);
-            float value = Mathf.Clamp01(envelope.Evaluate(t));
-            points[i] = new Vector3(
-                Mathf.Lerp(graph.x, graph.xMax, t),
-                Mathf.Lerp(graph.yMax, graph.y, value),
-                0f);
-        }
-
-        Handles.BeginGUI();
-        Handles.DrawAAPolyLine(3.5f, points);
-        for (int i = 0; i < envelope.Keys.Length; i++)
-        {
-            EnvelopeKey key = envelope.Keys[i];
-            float x = Mathf.Lerp(graph.x, graph.xMax, Mathf.Clamp01(key.Time));
-            float y = Mathf.Lerp(graph.yMax, graph.y, Mathf.Clamp01(key.Value));
-            Color color = NodeColors[i % NodeColors.Length];
-            Handles.color = color;
-            Handles.DrawSolidDisc(new Vector3(x, y, 0f), Vector3.forward, 6f);
-            Handles.color = Color.white;
-            Handles.DrawWireDisc(new Vector3(x, y, 0f), Vector3.forward, 6f);
-        }
-        Handles.color = Color.white;
-        Handles.EndGUI();
     }
 
     // ---------------- 采样区域 ----------------
@@ -514,7 +449,36 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (!force && ReferenceEquals(_analysisClip, definition.Clip)) return;
         _analysisClip = definition.Clip;
-        _analysis = definition.Clip != null ? AudioActionClipAnalysis.Analyze(definition.Clip) : null;
+        if (AudioActionSourceLocator.TryResolve(
+                definition,
+                out string sourceRelativePath,
+                out string sourcePathError))
+        {
+            WwiseActionPcmSource.Data source = WwiseActionPcmSource.Load(
+                sourceRelativePath,
+                out string error);
+            if (source != null)
+            {
+                _analysis = AudioActionClipAnalysis.Analyze(
+                    source.Samples,
+                    source.Channels,
+                    source.SampleRate);
+                return;
+            }
+
+            _analysis = new AudioActionClipAnalysis { Error = error };
+            return;
+        }
+
+        _analysis = definition.Clip != null
+            ? AudioActionClipAnalysis.Analyze(definition.Clip)
+            : null;
+        if (_analysis != null &&
+            !_analysis.Success &&
+            !string.IsNullOrEmpty(sourcePathError))
+        {
+            _analysis.Error = sourcePathError;
+        }
     }
 
     private void ApplySuggestedLoop(AudioActionDefinition definition)
@@ -751,14 +715,16 @@ public sealed class AudioActionDefinitionEditor : Editor
         if (_previewHeld)
         {
             double elapsed = EditorApplication.timeSinceStartup - _previewStartTime;
-            float gain = AudioActionPreviewPlayer.EvaluateGain(definition, (float)elapsed);
+            float gain = WwiseActionPreviewPlayer.EvaluateGain(
+                definition,
+                (float)elapsed);
             _previewStatus =
-                $"{AudioActionPreviewPlayer.DescribeStage(definition, (float)elapsed)} · " +
+                $"{WwiseActionPreviewPlayer.DescribeStage(definition, (float)elapsed)} · " +
                 $"held {elapsed * 1000.0:0} ms · Gain {gain:0.00}";
         }
-        else if (AudioActionPreviewPlayer.IsActive)
+        else if (WwiseActionPreviewPlayer.IsActive)
         {
-            _previewStatus = AudioActionPreviewPlayer.Status;
+            _previewStatus = WwiseActionPreviewPlayer.Status;
         }
 
         EditorGUILayout.HelpBox(
@@ -770,8 +736,8 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         _previewHeld = true;
         _previewStartTime = EditorApplication.timeSinceStartup;
-        AudioActionPreviewPlayer.Stop();
-        _previewStatus = AudioActionPreviewPlayer.Begin(
+        WwiseActionPreviewPlayer.Stop();
+        _previewStatus = WwiseActionPreviewPlayer.Begin(
             definition, _previewSpeed, _previewContact, out string error)
             ? "Attack"
             : error;
@@ -787,8 +753,8 @@ public sealed class AudioActionDefinitionEditor : Editor
     {
         if (!_previewHeld) return;
         _previewHeld = false;
-        AudioActionPreviewPlayer.Release();
-        _previewStatus = AudioActionPreviewPlayer.Status;
+        WwiseActionPreviewPlayer.Release();
+        _previewStatus = WwiseActionPreviewPlayer.Status;
         Repaint();
     }
 

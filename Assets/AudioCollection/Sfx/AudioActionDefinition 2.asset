@@ -38,22 +38,6 @@ MonoBehaviour:
     DecayCurve: 2
     ReleaseCurve: 2
   IntroReleaseMode: 1
-  PitchFollow:
-    Keys:
-    - Time: 0
-      Value: 0
-      CurveToNext: 0
-    - Time: 1
-      Value: 1
-      CurveToNext: 0
-  LowpassFollow:
-    Keys:
-    - Time: 0
-      Value: 0
-      CurveToNext: 0
-    - Time: 1
-      Value: 1
-      CurveToNext: 0
   StartPitchSemitones:
     Min: -0.35
     Max: 0.35
@@ -61,18 +45,11 @@ MonoBehaviour:
     Min: -0.2
     Max: 0.2
   ReleasePitchSemitones:
-    Min: -1.2
-    Max: 1.2
+    Min: 0
+    Max: 0
   GainDbVariation:
     Min: -2
     Max: 1.5
-  LowpassVariation:
-    Min: -1800
-    Max: 1800
-  PitchFollowMaxSemitones: 0.9
-  LowpassIdleHz: 18000
-  LowpassFastHz: 8500
-  DirectionPan: 0.35
   SpatialBlend: 1
   MinDistance: 1.5
   MaxDistance: 55

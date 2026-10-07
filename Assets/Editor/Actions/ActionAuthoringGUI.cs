@@ -125,7 +125,7 @@ namespace GameJam.Actions.Editor
                 {
                     var menu = new GenericMenu();
                     SerializedObject owner = property.serializedObject; string path = property.propertyPath;
-                    foreach (string key in new[] { "combat.hitbox.open", "combat.hitbox.close", "vfx.attack", "motor.command" })
+                    foreach (string key in new[] { "combat.hitbox.open", "combat.hitbox.close", "vfx.attack", "motor.command", "audio.player_jump" })
                     {
                         string captured = key;
                         menu.AddItem(new GUIContent(key), property.stringValue == key, () =>

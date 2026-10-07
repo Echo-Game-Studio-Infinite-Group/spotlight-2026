@@ -131,9 +131,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94146e29f3f9449690e2faa38bfbef06, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyBase: {fileID: 0}
-  player: {fileID: 8594125883543137620}
-  campType: 0
 --- !u!54 &7347666023460703118
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -21869,10 +21866,10 @@ GameObject:
   - component: {fileID: 7914500188541957443}
   - component: {fileID: 4665384076844296193}
   - component: {fileID: 2066287590154686313}
-  - component: {fileID: 61113850465615520}
   - component: {fileID: 6112233445566778900}
   - component: {fileID: 6112233445566778899}
   - component: {fileID: 6112233445566778901}
+  - component: {fileID: 1386344926403369641}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -22052,14 +22049,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9faa3d74f305904bb7d784a81046b18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _attackDamage: 25
-  _attackDuration: 1.6
-  _attackCooldown: 0.35
   _hitStopSeconds: 0.2
   _hitTimeScale: 0.75
   _impactSeconds: 0.09
   _impactTimeScale: 0.35
-  _hitbox: {fileID: 2702717769718696655}
   _logHits: 0
 --- !u!114 &4061813187216391473
 MonoBehaviour:
@@ -22184,7 +22177,7 @@ MonoBehaviour:
     m_DissipationDistance: 100
     m_PropagationSpeed: 343
   m_DefaultVelocity: {x: 0, y: -1, z: 0}
---- !u!114 &61113850465615520
+--- !u!114 &6112233445566778900
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -22193,11 +22186,58 @@ MonoBehaviour:
   m_GameObject: {fileID: 7725487067667272363}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a293007b6c7a720419b61e332caacd74, type: 3}
+  m_Script: {fileID: 11500000, guid: d4e7a1b93c6f4a2e8b5d0c7f1a9e3b62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _slideAction: {fileID: 11400000, guid: 89f4da5642b12bd45bbac965401063bf, type: 2}
-  _wallSlideAction: {fileID: 11400000, guid: a5cda46560712244a9cc2f14a4c9f69b, type: 2}
+  _maxHealth: 100
+  _invulnerableTime: 0.6
+--- !u!114 &6112233445566778899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8f2b6c41d9a4e7f3b5c8d0a2e6f4b91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6112233445566778901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _camp: 0
+  _damage: 25
+  _cooldown: 0.35
+  _windowSeconds: 1.6
+--- !u!114 &1386344926403369641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38560efae576eaa4aa68b3ddf5ac4f5e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _rules:
+  - ActionId: player_slide
+    ConditionKey: sliding
+    ContactIntensity: 1
+  - ActionId: wall_slide
+    ConditionKey: wall_sliding
+    ContactIntensity: 1
 --- !u!1 &8086042382189617009
 GameObject:
   m_ObjectHideFlags: 0
@@ -22470,49 +22510,3 @@ Transform:
   - {fileID: 6059804388648228849}
   m_Father: {fileID: 9098032750027886642}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6112233445566778900
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4e7a1b93c6f4a2e8b5d0c7f1a9e3b62, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _maxHealth: 100
-  _invulnerableTime: 0.6
---- !u!114 &6112233445566778899
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e8f2b6c41d9a4e7f3b5c8d0a2e6f4b91, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _motor: {fileID: 90014127479559784}
-  _health: {fileID: 6112233445566778900}
---- !u!114 &6112233445566778901
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d407ff2f5084f3548ba82aed68620225, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _camp: 0
-  _damage: 25
-  _cooldown: 0.35
-  _windowSeconds: 1.6
-  _hitbox: {fileID: 0}
-  _self: {fileID: 0}
