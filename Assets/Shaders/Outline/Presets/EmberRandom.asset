@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71743d0c48487e541afeff90412099ff, type: 3}
+  m_Name: EmberRandom
+  m_EditorClassIdentifier: 
+  tbnEqualSpacingPixels: 0
+  colorLayerCount: 2
+  color0: {r: 0, g: 0, b: 0, a: 1}
+  color1: {r: 4.916183, g: 6.9198833, b: 7.8718348, a: 1}
+  color2: {r: 0.9, g: 0.04, b: 0.02, a: 0.8}
+  color3: {r: 0.22, g: 0.02, b: 0.01, a: 0.55}
+  width0: 5.59
+  width1: 5.59
+  width2: 5.59
+  width3: 5.59
+  distortion: -1.85
+  flowSpeed: {x: 0, y: 0.2}
+  flowScale: 3.03
+  glowIntensity: 1.55
+  glowRadius: 5.5
+  motionTailMaxPixels: 18
+  motionTailSeconds: 0.085
+  motionTailReturnSeconds: 0.2
+  motionFlameStartSpeed: 0.15
+  motionFlameFullSpeed: 3.2
+  motionFlameBezier1: {x: 0.25, y: 0.02}
+  motionFlameBezier2: {x: 0.75, y: 0.9}
+  enableSpecialMask: 0
+  specialMask: {fileID: 2800000, guid: 228e0f208ca40404cb21ddaa99a5fe0d, type: 2}
+  maskTiling: {x: 1, y: 1}
+  maskOffset: {x: 0, y: 0}
+  flameIntensity: 1
+  flameColor: {r: 4.916183, g: 6.9198833, b: 7.8718348, a: 1}
+  transitionMode: 0
+  appearDuration: 1.1
+  disappearDuration: 0.75
+  bezierControl1: {x: 0.18, y: 0.02}
+  bezierControl2: {x: 0.2, y: 1}
+  transitionEdgeSoftness: 0.07
+  transitionDistortion: 0.22
+  transitionNoiseScale: 7
+  idleExtensionHeight: 0.025
+  movingExtensionHeight: 0.075

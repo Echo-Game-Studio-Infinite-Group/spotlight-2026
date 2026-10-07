@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Warm_Lamp
+  m_Shader: {fileID: 4800000, guid: d865d9bc4f09480c99c125b495ba343e, type: 3}
+  m_Parent: {fileID: 2100000, guid: 09e1e99382a34feca516cfb7ca094425, type: 2}
+  m_ModifiedSerializedProperties: 2
+  m_ValidKeywords:
+  - _EMISSION
+  m_InvalidKeywords:
+  - _EMISSIONENABLED_ON
+  - _OVERRIDEOUTLINE_ON
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _EmissionEnabled: 1
+    - _EmissionIntensity: 0.9
+    - _Hatching: 0
+    - _OutlineEnabled: 0
+    - _OverrideOutline: 1
+    - _Smoothness: 0.25
+    m_Colors:
+    - _BaseColor: {r: 0.65, g: 0.72, b: 0.72, a: 1}
+    - _EmissionColor: {r: 1.5, g: 1.65, b: 1.65, a: 1}
+    - _ShadowColor: {r: 0.16, g: 0.29, b: 0.43, a: 1}
+  m_BuildTextureStacks: []
