@@ -1096,11 +1096,11 @@ MonoBehaviour:
   m_LookAt: {fileID: 4556680379290461721}
   m_Follow: {fileID: 4556680379290461721}
   m_Lens:
-    FieldOfView: 60.000004
+    FieldOfView: 69.84818
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
-    Dutch: 0
+    Dutch: -2.2e-44
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
@@ -1278,23 +1278,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
-  _deathChance: 1
-  _waist: {fileID: 0}
-  _waistOffset: -0.12
-  _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
-  _edgeWidth: 0.015
-  _separationSpeed: 2.5
-  _liftSpeed: 2
-  _gravity: 18
-  _spinSpeed: 110
-  _colliderRadiusScale: 0.85
-  _protectedArmRoots: []
-  _lifetime: 0
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 51
 --- !u!143 &1057900000
 CharacterController:
   m_ObjectHideFlags: 0
@@ -1787,23 +1770,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
-  _deathChance: 1
-  _waist: {fileID: 0}
-  _waistOffset: -0.12
-  _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
-  _edgeWidth: 0.015
-  _separationSpeed: 2.5
-  _liftSpeed: 2
-  _gravity: 18
-  _spinSpeed: 110
-  _colliderRadiusScale: 0.85
-  _protectedArmRoots: []
-  _lifetime: 0
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 51
 --- !u!143 &1144092145
 CharacterController:
   m_ObjectHideFlags: 0
@@ -2517,7 +2483,7 @@ MonoBehaviour:
     m_DissipationMode: 2
     m_DissipationDistance: 100
     m_PropagationSpeed: 343
-  m_DefaultVelocity: {x: 0, y: -0.5, z: 0.5}
+  m_DefaultVelocity: {x: 0.8638154, y: -0.05561849, z: -0.500729}
 --- !u!195 &1383363929
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -2552,23 +2518,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
-  _deathChance: 1
-  _waist: {fileID: 0}
-  _waistOffset: -0.12
-  _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
-  _edgeWidth: 0.015
-  _separationSpeed: 2.5
-  _liftSpeed: 2
-  _gravity: 18
-  _spinSpeed: 110
-  _colliderRadiusScale: 0.85
-  _protectedArmRoots: []
-  _lifetime: 0
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 51
 --- !u!143 &1383363931
 CharacterController:
   m_ObjectHideFlags: 0
@@ -2701,7 +2650,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 60.000004
+  field of view: 69.84818
   orthographic: 0
   orthographic size: 10
   m_Depth: -1
@@ -3072,23 +3021,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
-  _deathChance: 1
-  _waist: {fileID: 0}
-  _waistOffset: -0.12
-  _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
-  _edgeWidth: 0.015
-  _separationSpeed: 2.5
-  _liftSpeed: 2
-  _gravity: 18
-  _spinSpeed: 110
-  _colliderRadiusScale: 0.85
-  _protectedArmRoots: []
-  _lifetime: 0
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 51
 --- !u!143 &1549752695
 CharacterController:
   m_ObjectHideFlags: 0
@@ -3704,23 +3636,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _cutoutShader: {fileID: 4800000, guid: 32e9438663b7450e9a3154812ba31cb1, type: 3}
-  _deathChance: 1
-  _waist: {fileID: 0}
-  _waistOffset: -0.12
-  _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
-  _edgeWidth: 0.015
-  _separationSpeed: 2.5
-  _liftSpeed: 2
-  _gravity: 18
-  _spinSpeed: 110
-  _colliderRadiusScale: 0.85
-  _protectedArmRoots: []
-  _lifetime: 0
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 51
 --- !u!143 &1883966006
 CharacterController:
   m_ObjectHideFlags: 0
@@ -4130,63 +4045,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7588622732077400848, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
   m_PrefabInstance: {fileID: 6227528867191727369}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &5385265384880592482
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_Name
-      value: EnemyTest
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 5.91
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.9855607
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -0.041268468
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
 --- !u!1001 &6227528867191727369
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4195,6 +4053,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6952890567594264593, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.x
       value: 5.35
@@ -4428,7 +4294,6 @@ SceneRoots:
   - {fileID: 1928397343}
   - {fileID: 152914459}
   - {fileID: 236166663}
-  - {fileID: 5385265384880592482}
   - {fileID: 1883966008}
   - {fileID: 1549752697}
   - {fileID: 1144092147}

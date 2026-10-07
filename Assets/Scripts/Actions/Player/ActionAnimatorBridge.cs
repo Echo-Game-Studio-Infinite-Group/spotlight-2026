@@ -9,7 +9,6 @@ namespace GameJam.Actions
         public const string PlayingParameter = "ActionPlaying";
         private static readonly int TimeId = Animator.StringToHash(TimeParameter);
         private static readonly int PlayingId = Animator.StringToHash(PlayingParameter);
-        private static readonly string[] BaseStates = { "Idle", "Move", "Jump", "Trackle" };
         [SerializeField] private Animator _animator;
         [SerializeField] private PlayerAnimation _locomotion;
         [SerializeField] private PlayerVFXManager _vfx;
@@ -114,8 +113,7 @@ namespace GameJam.Actions
             _instance = 0;
             _animator.SetBool(PlayingId, false);
             _locomotion.UpdateLocomotion(0f);
-            int index = Mathf.Clamp(_locomotion.CurrentMotionState, 0, BaseStates.Length - 1);
-            int hash = Animator.StringToHash("Base Layer." + BaseStates[index]);
+            int hash = Animator.StringToHash("Base Layer." + PlayerAnimation.LocomotionStateName(_locomotion.CurrentMotionState));
             if (_animator.HasState(0, hash)) _animator.CrossFadeInFixedTime(hash, _returnBlendFrames / (float)ActionSequencePlayer.FramesPerSecond, 0);
             if (stopEffects) _vfx?.StopAttacks();
             // 物体已经失活（场景卸载 / 退出播放 / 被禁用）时再驱一次 Animator 会报
