@@ -115,6 +115,7 @@ public sealed class RangeComponent : MonoBehaviour
         // ActionInstanceId 传 0 表示「不属于任何动作序列」——远程弹没有多段判定。
         var request = new AttackDamageRequest(_damage, point, direction, 0L, 0);
         AttackDamageResult result = target.ReceiveAttack(request);
+        
         if (result.AppliedDamage > 0f) Landed?.Invoke(target, point, direction, result.AppliedDamage);
     }
 }

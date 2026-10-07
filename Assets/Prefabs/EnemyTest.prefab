@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 6933992379520688310}
   - component: {fileID: 272345407190437723}
   - component: {fileID: 4623099684999661832}
-  - component: {fileID: 3028087142412133251}
   m_Layer: 6
   m_Name: EnemyTest
   m_TagString: Untagged
@@ -227,24 +226,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
---- !u!114 &3028087142412133251
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1391353707647759481}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fa587497fff7f8943a4cbc5c37783f31, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _camp: 1
-  _damage: 8
-  _cooldown: 1.2
-  _range: 16
-  _projectilePrefab: {fileID: 7746541512407784284, guid: fb4fa679f07bb414184ed87584df024d, type: 3}
-  _muzzle: {fileID: 4847742537834707422}
 --- !u!1 &5376847941588103365
 GameObject:
   m_ObjectHideFlags: 0
