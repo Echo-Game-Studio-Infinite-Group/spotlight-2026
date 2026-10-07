@@ -6,7 +6,7 @@ namespace GameJam.Actions
 {
     [DefaultExecutionOrder(-10)]
     [DisallowMultipleComponent]
-    public sealed class PlayerActionRunner : MonoBehaviour, IActionSequenceHost, IActionSequenceSink, IActionSequenceSimulationSink
+    public sealed class PlayerActionRunner : MonoBehaviour, IActionSequenceHost, IActionSequenceSink, IActionSequenceSimulationSink, IActionInputFallback
     {
         [SerializeField] private ActionCatalog _catalog;
         [SerializeField] private PlayerInputReader _input;
@@ -18,6 +18,7 @@ namespace GameJam.Actions
         private readonly HashSet<string> _conditions = new HashSet<string>(StringComparer.Ordinal);
         private IEnergyAccount _energy;
         private IEnergyAccount _energyOverride;
+        private TimeStopController _timeStop;
         private ActionSequencePlayer _player;
         private PlayerInputFrame _movementInput;
         private long _tick;
@@ -29,6 +30,8 @@ namespace GameJam.Actions
         private bool _pendingLandingStop;
         private readonly List<Vector3> _motionPath = new List<Vector3>();
         public event Action<ActionExecutionState, ActionFrameEvent> FrameEvent;
+        // 持续技能结算使用本 tick 已实际模拟的时长，不能在命中改倍率后重新取 dt。
+        public event Action<float> Simulated;
         public ActionCatalog Catalog => _catalog;
         public ActionSequencePlayer Player => _player;
         public bool IsConnected => _connected;
@@ -51,6 +54,7 @@ namespace GameJam.Actions
             if (_combat == null) _combat = GetComponent<PlayerCombat>();
             if (_animation == null) _animation = GetComponent<ActionAnimatorBridge>();
             if (_energySource == null) _energySource = GetComponent<VectorEnergy>();
+            if (_timeStop == null) _timeStop = GetComponent<TimeStopController>();
             _energy = _energyOverride ?? _energySource as IEnergyAccount;
             string reason = null;
             if (_catalog == null || _input == null || _motor == null || _combat == null || _animation == null)
@@ -102,6 +106,7 @@ namespace GameJam.Actions
             {
                 _motor.SetHorizontalSpeed(0f); _pendingLandingStop = false;
             }
+            Simulated?.Invoke(LastSimulatedSeconds);
         }
         public bool CheckCondition(string key, ActionExecutionState source, ActionInputRequest request)
         {
@@ -127,6 +132,9 @@ namespace GameJam.Actions
             if (value) _conditions.Add(key); else _conditions.Remove(key);
         }
         public void SetEnergyAccount(IEnergyAccount account) { _energyOverride = account; _energy = account; }
+        public ActionInputButtons GetIgnoredForbiddenButtons(ActionInputEdge edge)
+            => edge.Button == ActionInputButtons.Attack && _timeStop != null && _timeStop.IsTimeStopping
+                ? ActionInputButtons.Skill : ActionInputButtons.None;
         public bool CanStart(ActionExecutionState source, ActionInputRequest request, out string reason)
         {
             reason = null;

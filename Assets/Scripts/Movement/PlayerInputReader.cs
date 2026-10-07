@@ -14,6 +14,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private InputAction _move, _look, _sprint, _slide, _skill, _attack;
     private readonly List<ActionInputEdge> _actionEdges = new List<ActionInputEdge>();
     private ActionInputButtons _heldButtons;
+    private long _skillPressVersion;
     private object _sequenceOwner;
     private long _snapshotTick = long.MinValue;
     private ActionInputSample _actionSnapshot;
@@ -26,9 +27,24 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action Cleared;
+    public event Action<bool> SkillHeldChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
     public bool GameplayEnabled => _gameplayEnabled && _focused;
+    // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
+    public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
+    public long SkillPressVersion => _skillPressVersion;
+    // Clear 会清空快照；失焦或暂停恢复时仍需区分物理按住与一次新的按下。
+    public bool SkillHeldOnDevice
+    {
+        get
+        {
+            if (_skill == null) return false;
+            foreach (InputControl control in _skill.controls)
+                if (control.device.added && control is UnityEngine.InputSystem.Controls.ButtonControl key && key.isPressed) return true;
+            return false;
+        }
+    }
     public Vector2 LookDelta => _look != null && GameplayEnabled ? _look.ReadValue<Vector2>() : Vector2.zero;
     public void Configure(InputActionAsset actions) => _actions = actions;
 
@@ -118,6 +134,11 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         bool wasHeld = (_heldButtons & button) != 0;
         if (pressed == wasHeld) return;
         if (pressed) _heldButtons |= button; else _heldButtons &= ~button;
+        if (button == ActionInputButtons.Skill)
+        {
+            if (pressed) _skillPressVersion++;
+            SkillHeldChanged?.Invoke(pressed);
+        }
         // 未接入序列时无需积累另一份历史，避免闲置缓冲无限增长。
         if (_sequenceOwner != null)
         {
@@ -125,9 +146,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
             // 同一设备事件内两个键同时变化时，修饰键不能依赖回调先后顺序。
             if (_skill != null)
             {
-                bool skillHeld = false;
-                foreach (InputControl control in _skill.controls)
-                    if (control.device.added && control is UnityEngine.InputSystem.Controls.ButtonControl key && key.isPressed) skillHeld = true;
+                bool skillHeld = SkillHeldOnDevice;
                 if (skillHeld) atEvent |= ActionInputButtons.Skill; else atEvent &= ~ActionInputButtons.Skill;
             }
             _actionEdges.Add(new ActionInputEdge(button, pressed ? ActionInputStep.Edge.Pressed : ActionInputStep.Edge.Released, atEvent, _moveValue));

@@ -21870,6 +21870,8 @@ GameObject:
   - component: {fileID: 6112233445566778899}
   - component: {fileID: 6112233445566778901}
   - component: {fileID: 1386344926403369641}
+  - component: {fileID: 6112233445566778902}
+  - component: {fileID: 6112233445566778903}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -22103,7 +22105,7 @@ MonoBehaviour:
   _motor: {fileID: 90014127479559784}
   _combat: {fileID: 8594125883543137620}
   _animation: {fileID: 2065041283254902871}
-  _energySource: {fileID: 0}
+  _energySource: {fileID: 6112233445566778903}
   _highSpeedRatio: 0.8
 --- !u!114 &4665384076844296193
 MonoBehaviour:
@@ -22510,3 +22512,34 @@ Transform:
   - {fileID: 6059804388648228849}
   m_Father: {fileID: 9098032750027886642}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6112233445566778902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11ee83db96e58d24999e97741258bc36, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _params: {fileID: 11400000, guid: a5c6ce7901388054faedd3621b28fdbf, type: 2}
+  _energy: {fileID: 6112233445566778903}
+  _input: {fileID: 3277439423563062544}
+  _holdThresholdFrames: 30
+  _globalRate: 0.2
+--- !u!114 &6112233445566778903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da12f2aadfb426e4e96e84d6e517d25b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _params: {fileID: 11400000, guid: a5c6ce7901388054faedd3621b28fdbf, type: 2}
+  _movementParams: {fileID: 11400000, guid: 0a744fae14afc52429ffb97b42039bed, type: 2}

@@ -59,17 +59,23 @@ namespace GameJam.Actions
                 if (_reserved.Contains(trigger.Id)) continue;
                 ActionDefinition best = null;
                 List<long> bestIds = null;
-                if (_catalog != null && _catalog.Actions != null)
-                    foreach (ActionDefinition action in _catalog.Actions)
-                    {
-                        if (action == null || action.Input == null || !TryMatch(action.Input, index, out List<long> ids)) continue;
-                        var request = new ActionInputRequest(action, trigger.Id, sample.Tick, source.InstanceId, trigger.Edge.DirectionAtEvent);
-                        if (!ActionConditionEvaluator.Matches(action.Input.RequireAll, action.Input.RequireAny, host, source, request)) continue;
-                        if (best != null && (best.Input.Priority > action.Input.Priority ||
-                            best.Input.Priority == action.Input.Priority && best.Input.Steps.Count >= action.Input.Steps.Count)) continue;
-                        best = action;
-                        bestIds = ids;
-                    }
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    IActionInputFallback fallback = pass == 0 ? null : host as IActionInputFallback;
+                    if (pass > 0 && fallback == null) break;
+                    if (_catalog != null && _catalog.Actions != null)
+                        foreach (ActionDefinition action in _catalog.Actions)
+                        {
+                            if (action == null || action.Input == null || !TryMatch(action.Input, index, out List<long> ids, fallback)) continue;
+                            var request = new ActionInputRequest(action, trigger.Id, sample.Tick, source.InstanceId, trigger.Edge.DirectionAtEvent);
+                            if (!ActionConditionEvaluator.Matches(action.Input.RequireAll, action.Input.RequireAny, host, source, request)) continue;
+                            if (best != null && (best.Input.Priority > action.Input.Priority ||
+                                best.Input.Priority == action.Input.Priority && best.Input.Steps.Count >= action.Input.Steps.Count)) continue;
+                            best = action;
+                            bestIds = ids;
+                        }
+                    if (best != null) break;
+                }
                 if (best == null) continue;
                 foreach (long id in bestIds) _reserved.Add(id);
                 if (trigger.Edge.Trigger == ActionInputStep.Edge.Held) _claimedHolds.Add(trigger.Edge.Button);
@@ -83,7 +89,7 @@ namespace GameJam.Actions
             }
         }
 
-        private bool TryMatch(ActionInputPolicy policy, int triggerIndex, out List<long> ids)
+        private bool TryMatch(ActionInputPolicy policy, int triggerIndex, out List<long> ids, IActionInputFallback fallback)
         {
             ids = null;
             if (policy.Steps == null || policy.Steps.Count == 0) return false;
@@ -98,7 +104,7 @@ namespace GameJam.Actions
                 {
                     Occurrence occurrence = _history[index];
                     if (nextTick - occurrence.Tick > policy.MaxStepGapFrames) return false;
-                    if (!_reserved.Contains(occurrence.Id) && Matches(step, occurrence))
+                    if (!_reserved.Contains(occurrence.Id) && Matches(step, occurrence, fallback))
                     {
                         matched.Add(occurrence.Id);
                         nextTick = occurrence.Tick;
@@ -116,11 +122,12 @@ namespace GameJam.Actions
             return true;
         }
 
-        private static bool Matches(ActionInputStep step, Occurrence occurrence)
+        private static bool Matches(ActionInputStep step, Occurrence occurrence, IActionInputFallback fallback)
         {
             if (step == null || step.Button != occurrence.Edge.Button || step.Trigger != occurrence.Edge.Trigger) return false;
+            ActionInputButtons ignored = fallback?.GetIgnoredForbiddenButtons(occurrence.Edge) ?? ActionInputButtons.None;
             return (occurrence.Edge.HeldAtEvent & step.RequireHeld) == step.RequireHeld &&
-                (occurrence.Edge.HeldAtEvent & step.ForbidHeld) == 0 && occurrence.HeldFrames >= step.MinHoldFrames &&
+                (occurrence.Edge.HeldAtEvent & step.ForbidHeld & ~ignored) == 0 && occurrence.HeldFrames >= step.MinHoldFrames &&
                 (step.MaxHoldFrames == 0 || occurrence.HeldFrames <= step.MaxHoldFrames);
         }
 

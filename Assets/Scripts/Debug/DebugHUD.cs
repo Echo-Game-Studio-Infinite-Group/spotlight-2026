@@ -70,8 +70,10 @@ public sealed class DebugHUD : MonoBehaviour
             GUILayout.Label($"敌人 {enemy.name} 血量 {enemy.Health:F0} / {enemy.MaxHealth:F0}", _style);
         }
 
-        GUILayout.Label(TimeManager.InSlowMotion
-            ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
-            : $"常速 {TimeManager.PlayerRate:0.##}", _style);
+        GUILayout.Label(TimeManager.GlobalRate < 1f
+            ? $"全局减速 {TimeManager.GlobalRate:0.##}x · 玩家 {TimeManager.PlayerRate:0.##}x · 世界 {TimeManager.WorldRate:0.##}x"
+            : TimeManager.InSlowMotion
+                ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
+                : $"常速 {TimeManager.PlayerRate:0.##}", _style);
     }
 }

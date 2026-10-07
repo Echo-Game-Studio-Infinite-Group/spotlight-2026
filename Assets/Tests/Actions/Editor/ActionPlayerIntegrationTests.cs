@@ -568,4 +568,117 @@ public sealed class ActionPlayerIntegrationTests
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
         Assert.IsTrue(PlayerLocomotionAnimatorSetup.HasWallDash(AssetDatabase.LoadAssetAtPath<AnimatorController>(path)));
     }
+    private TimeStopController StartGlobalTimeStop(ActionTestEnergy energy = null)
+    {
+        var clock = new GameObject("GlobalTimeStopIntegrationClock"); _created.Add(clock);
+        Invoke(clock.AddComponent<TimeManager>(), "Awake");
+        var parameters = ScriptableObject.CreateInstance<EnergyParams>(); _created.Add(parameters);
+        parameters.TimeStopCostPerTick = energy == null ? 0f : 1f;
+        var controller = _root.GetComponent<TimeStopController>();
+        Assert.NotNull(controller, "玩家预制体必须落盘独立时停组件");
+        Invoke(controller, "OnEnable");
+        controller.Configure(parameters, _root.GetComponent<PlayerInputReader>(), energy ?? new ActionTestEnergy { Balance = 100f });
+        controller.BeginTimeStop();
+        Assert.IsTrue(controller.IsTimeStopping);
+        return controller;
+    }
+
+    [Test]
+    public void GlobalTimeStopKeepsActionMotorAndManualAnimationOnOneClock()
+    {
+        var energy = new ActionTestEnergy { Balance = 100f };
+        TimeStopController timeStop = StartGlobalTimeStop(energy);
+        ActionInputButtons held = ActionInputButtons.Attack | ActionInputButtons.Skill;
+        var edge = new ActionInputEdge(ActionInputButtons.Attack, ActionInputStep.Edge.Pressed, held, default);
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { edge }), default, .2f / 60f);
+        Assert.AreSame(_attack, _runner.Player.State.Action);
+        Assert.That(_runner.Player.State.FrameProgress, Is.EqualTo(.2d).Within(.000001));
+        Assert.That(_runner.LastSimulatedSeconds, Is.EqualTo(.2f / 60f).Within(.000001));
+        Assert.AreEqual(1f, _bridge.Animator.speed);
+        Assert.IsFalse(_bridge.Animator.enabled);
+        Assert.That(energy.Balance, Is.EqualTo(99.8f).Within(.0001f));
+        for (int i = 0; i < 10; i++) _runner.SimulateTick(new ActionInputSample(_tick++, held), default, .2f / 60f);
+        Assert.That(_runner.Player.State.FrameProgress, Is.EqualTo(2.2d).Within(.000001));
+        Assert.That(_bridge.Animator.GetFloat(ActionAnimatorBridge.TimeParameter),
+            Is.EqualTo(_runner.Player.State.AnimationNormalizedTime).Within(.000001));
+        long instance = _runner.Player.State.InstanceId;
+        timeStop.EndTimeStop();
+        _runner.SimulateTick(new ActionInputSample(_tick++), default, 1f / 60f);
+        Assert.AreEqual(instance, _runner.Player.State.InstanceId);
+        Assert.That(_runner.Player.State.FrameProgress, Is.EqualTo(3.2d).Within(.000001));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ActualComboIntentWinsDuringTimeStopEvenWhenResourcesAreInsufficient(bool affordable)
+    {
+        StartGlobalTimeStop();
+        var combo = ScriptableObject.CreateInstance<ActionDefinition>(); _created.Add(combo);
+        combo.ActionId = "time_stop_combo_test";
+        combo.EnergyCost = affordable ? 0f : 10000f;
+        combo.Input.Priority = -100;
+        combo.Input.PreInputFrames = 8;
+        combo.Input.Steps.Add(new ActionInputStep { Button = ActionInputButtons.Attack, RequireHeld = ActionInputButtons.Skill });
+        combo.Timeline.Add(new ActionSegment { DurationFrames = 10 });
+        _catalog.Actions.Add(combo);
+        ActionInputButtons held = ActionInputButtons.Attack | ActionInputButtons.Skill;
+        var edge = new ActionInputEdge(ActionInputButtons.Attack, ActionInputStep.Edge.Pressed, held, default);
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { edge }), default, .2f / 60f);
+        if (affordable) Assert.AreSame(combo, _runner.Player.State.Action);
+        else { Assert.IsFalse(_runner.Player.IsRunning); Assert.AreEqual(1, _runner.Player.PendingCount); }
+    }
+
+    [Test]
+    public void GlobalTimeStopPreservesSuccessfulHitDedupAndClearsHitboxOnInterrupt()
+    {
+        StartGlobalTimeStop();
+        ShortAttack();
+        Enemy target = Target(true);
+        Assert.IsTrue(_runner.Player.Queue(_attack, _tick));
+        for (int i = 0; i < 11; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++), default, .2f / 60f);
+        Assert.AreEqual(1, target.DamagedCount);
+        Assert.IsFalse(_combat.Hitbox.SequenceWindowOpen);
+        _runner.Interrupt();
+        Assert.IsFalse(_runner.Player.IsRunning);
+        Assert.IsFalse(_combat.Hitbox.SequenceWindowOpen);
+    }
+
+    [Test]
+    public void TeleportReleasesTimeStopAndPendingActionInput()
+    {
+        StartGlobalTimeStop();
+        Assert.IsTrue(_runner.Player.Queue(_attack, _tick));
+        _motor.Teleport(_root.transform.position + Vector3.right);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+        Assert.AreEqual(1f, TimeManager.PlayerRate);
+        Assert.AreEqual(0, _runner.Player.PendingCount);
+    }
+
+    [Test]
+    public void GlobalTimeStopKeepsHighspeedABCancelOnAuthoredActionFrames()
+    {
+        StartGlobalTimeStop();
+        ActionDefinition a = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_a");
+        ActionDefinition b = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_b");
+        _attack.RequestVariants.AddRange(new[] { a, b, _attack });
+        _motor.SetHorizontalSpeed(20f); _motor.LaunchVertical(8f);
+        ActionInputButtons held = ActionInputButtons.Attack | ActionInputButtons.Skill;
+        var press = new ActionInputEdge(ActionInputButtons.Attack, ActionInputStep.Edge.Pressed, held, default);
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { press }), default, .2f / 60f);
+        for (int i = 1; i < 150; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Skill), default, .2f / 60f);
+        Assert.AreSame(a, _runner.Player.State.Action);
+        Assert.That(_runner.Player.State.FrameProgress, Is.EqualTo(30d).Within(.00001));
+        long instance = _runner.Player.State.InstanceId;
+        float speed = _motor.HorizontalSpeed;
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { press }), default, .2f / 60f);
+        Assert.AreSame(b, _runner.Player.State.Action);
+        Assert.Greater(_runner.Player.State.InstanceId, instance);
+        Assert.That(_runner.Player.State.FrameProgress, Is.EqualTo(.2d).Within(.00001));
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.001f));
+        Assert.AreEqual(1f, _bridge.Animator.speed);
+        Assert.IsFalse(_bridge.Animator.applyRootMotion);
+    }
+
 }

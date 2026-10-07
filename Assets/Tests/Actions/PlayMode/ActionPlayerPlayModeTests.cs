@@ -14,6 +14,7 @@ public sealed class ActionPlayerPlayModeTests
     private GameObject _root;
     private Mouse _mouse;
     private PlayerActionRunner _runner;
+    private GameObject _clock;
     private InputSettings _previousSettings, _testSettings;
     [UnitySetUp]
     public IEnumerator SetUp()
@@ -41,7 +42,9 @@ public sealed class ActionPlayerPlayModeTests
         if (_root != null) Object.Destroy(_root);
         if (_previousSettings != null) InputSystem.settings = _previousSettings;
         if (_testSettings != null) Object.Destroy(_testSettings);
+        TimeManager.SetPaused(false);
         TimeManager.ClearSlowMotion();
+        if (_clock != null) Object.Destroy(_clock);
         yield return null;
     }
     [UnityTest]
@@ -97,5 +100,98 @@ public sealed class ActionPlayerPlayModeTests
         Assert.IsFalse(_root.GetComponent<PlayerCombat>().IsSequenceDriven);
         yield return null;
     }
+    private TimeStopController PrepareTimeStop()
+    {
+        if (Object.FindObjectOfType<TimeManager>() == null)
+        {
+            _clock = new GameObject("ActionTimeStopPlayModeClock");
+            _clock.AddComponent<TimeManager>();
+        }
+        _root.GetComponent<VectorEnergy>().SetForDebug(200f);
+        TimeStopController controller = _root.GetComponent<TimeStopController>();
+        Assert.NotNull(controller);
+        return controller;
+    }
+
+    [UnityTest]
+    public IEnumerator RightHoldStartsAfterThirtyInputFramesAndAllowsLeftAttackDuringGlobalSlow()
+    {
+        TimeStopController controller = PrepareTimeStop();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right));
+        InputSystem.Update();
+        for (int i = 0; i < 29; i++) yield return new WaitForFixedUpdate();
+        Assert.IsFalse(controller.IsTimeStopping);
+        for (int i = 0; i < 4 && !controller.IsTimeStopping; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(controller.IsTimeStopping);
+        Assert.AreEqual(.2f, TimeManager.GlobalRate);
+        Assert.AreEqual(.2f, TimeManager.PlayerRate);
+        Assert.AreEqual(.2f, TimeManager.WorldRate);
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right).WithButton(MouseButton.Left));
+        InputSystem.Update();
+        for (int i = 0; i < 3 && !_runner.Player.IsRunning; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(_runner.Player.IsRunning);
+        Assert.AreEqual("player_attack", _runner.Player.State.Action.ActionId);
+        double progress = _runner.Player.State.FrameProgress;
+        float before = _root.GetComponent<VectorEnergy>().CurrentEnergy;
+        for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+        Assert.That(_runner.Player.State.FrameProgress - progress, Is.EqualTo(1d).Within(.00001));
+        Assert.That(_runner.LastSimulatedSeconds, Is.EqualTo(.2f / 60f).Within(.000001));
+        Assert.That(before - _root.GetComponent<VectorEnergy>().CurrentEnergy, Is.EqualTo(1f).Within(.0001f));
+        Assert.AreEqual(1f, _root.GetComponent<ActionAnimatorBridge>().Animator.speed);
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Left));
+        InputSystem.Update();
+        Assert.IsFalse(controller.IsTimeStopping);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+        long instance = _runner.Player.State.InstanceId;
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual(instance, _runner.Player.State.InstanceId);
+        Assert.That(_runner.LastSimulatedSeconds, Is.EqualTo(1f / 60f).Within(.000001));
+    }
+
+    [UnityTest]
+    public IEnumerator PauseAndInputClearReleaseTimeStopAndRequireFreshHold()
+    {
+        TimeStopController controller = PrepareTimeStop();
+        // 此用例等待多次长按，隔离掉灰盒掉出地图后的自动传送复位。
+        _root.GetComponent<PlayerMotor>().enabled = false;
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right));
+        InputSystem.Update();
+        for (int i = 0; i < 33; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(controller.IsTimeStopping);
+        TimeManager.SetPaused(true);
+        yield return null;
+        Assert.IsFalse(controller.IsTimeStopping);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+        TimeManager.SetPaused(false);
+        for (int i = 0; i < 35; i++) yield return new WaitForFixedUpdate();
+        Assert.IsFalse(controller.IsTimeStopping);
+        InputSystem.QueueStateEvent(_mouse, new MouseState()); InputSystem.Update();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right)); InputSystem.Update();
+        for (int i = 0; i < 33; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(controller.IsTimeStopping);
+        _root.GetComponent<PlayerInputReader>().SetGameplayEnabled(false);
+        Assert.IsFalse(controller.IsTimeStopping);
+        Assert.AreEqual(1f, TimeManager.PlayerRate);
+    }
+
+    [UnityTest]
+    public IEnumerator HitStopEndsBackAtGlobalRateWithoutDoubleSlow()
+    {
+        TimeStopController controller = PrepareTimeStop();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right));
+        InputSystem.Update();
+        controller.BeginTimeStop();
+        TimeManager.HitStop(.05f, .05f);
+        Assert.AreEqual(.05f, TimeManager.PlayerRate);
+        Assert.AreEqual(.05f, TimeManager.WorldRate);
+        Assert.IsTrue(TimeManager.InHitStop);
+        yield return new WaitForSecondsRealtime(.08f);
+        Assert.IsFalse(TimeManager.InHitStop);
+        Assert.IsTrue(controller.IsTimeStopping);
+        Assert.AreEqual(.2f, TimeManager.GlobalRate);
+        Assert.AreEqual(.2f, TimeManager.PlayerRate);
+        Assert.AreEqual(.2f, TimeManager.WorldRate);
+    }
+
 }
 #endif
