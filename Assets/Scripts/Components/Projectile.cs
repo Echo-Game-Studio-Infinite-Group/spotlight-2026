@@ -87,9 +87,9 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
 
     private void EnsureReferences()
     {
-        if (_hitbox == null) _hitbox = GetComponent<Hitbox>();
-        if (_combat == null) _combat = GetComponent<CombatComponent>();
-        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
+        _hitbox = GetComponent<Hitbox>();
+        _combat = GetComponent<CombatComponent>();
+        _impulseSource = GetComponent<CinemachineImpulseSource>();
     }
 
     // 判定层随发射者走：阵营决定打谁，伤害决定扣多少。
@@ -177,7 +177,6 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         // 震屏就保留x y，不要z轴视觉效果好些
         //CameraShaker.Emit(_impulseSource, new Vector3(direction.x, direction.y, 0f), applied);
         CameraShaker.Emit(_impulseSource, direction, applied);
-        // 打中就收工，不必继续飞。
         if (_isFlying) Recycle();
     }
 

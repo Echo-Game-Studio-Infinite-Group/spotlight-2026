@@ -581,7 +581,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7139187032569165066, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: _range
-      value: 32
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 7139187032569165066, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: _damage
@@ -702,8 +702,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _virtualCamera: {fileID: 1056056692}
-  _referenceDamage: 20
-  _referenceAmplitude: 0.5
+  _refDmg: 20
+  _refAmp: 0.5
 --- !u!1 &1100700798
 GameObject:
   m_ObjectHideFlags: 0

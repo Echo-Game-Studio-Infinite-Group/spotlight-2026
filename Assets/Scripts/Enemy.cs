@@ -91,24 +91,21 @@ public sealed class Enemy : MonoBehaviour
     private void Awake()
     {
         EnsureHealth();
-        if (_agent == null) _agent = GetComponent<NavMeshAgent>();
-        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
+        _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
         // 判定盒先解析再装配结算层，否则 Configure 拿到的是 null。
         EnsureCombat();
-        if (_ranged == null) _ranged = GetComponent<RangeComponent>();
+        _ranged = GetComponent<RangeComponent>();
         DisableHitbox();
         PreviousPosition = transform.position;
         PreviousRotation = transform.rotation;
-        if (_agent != null)
-        {
-            // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
-            _agent.speed = _walkSpeed;
-            // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
-            _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
-        }
-        if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
+        _agent = GetComponent<NavMeshAgent>();
+        // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
+        _agent.speed = _walkSpeed;
+        // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
+        _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+        _damagePopup.gameObject.SetActive(false);
     }
 
     private void FixedUpdate()
