@@ -75,11 +75,16 @@ TestResults*.xml
 !Tools/**/*.csproj
 !Tools/**/*.sln
 
-# Wwise 集成中的调试符号和帮助文档不参与运行，避免把仓库膨胀数百 MB。
+# Wwise Windows/x86_64/Profile/不能被ignore
+# Wwise 文档（不参与运行，体积大）
 Assets/Wwise/Documentation/
-Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
-Assets/Wwise/API/Runtime/Plugins/Mac/Profile/
-Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/
-Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Profile/
+
+# Wwise 调试符号文件（不参与运行，体积大）
 Assets/Wwise/**/*.pdb
 Assets/Wwise/**/*.dSYM/
+
+# Mac 下的 Debug 构建（带完整调试信息，体积大）
+Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
+
+# Windows 下的 Debug 构建（带完整调试信息，体积大）
+Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/

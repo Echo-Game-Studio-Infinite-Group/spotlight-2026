@@ -2,6 +2,8 @@
 
 Unity 菜单 **超高速行者 → 动作序列配表**。模块位于 `Assets/Scripts/Actions` 与 `Assets/Editor/Actions`，当前已将玩家攻击、跳跃与滑铲起手接入 `Player.prefab`。详细接线、配置和执行顺序见 [动作序列与动画攻击接入说明](../../Docs/动作序列与动画攻击接入说明.md)。未新增第三方依赖。
 
+当前源码、完整移动参数、输入/取消/差分规则、正式动作表及配表步骤见 [PlayerMotor 与动作序列配表详解](../../Docs/PlayerMotor与动作序列配表详解.md)。
+
 首次使用点「打开 / 创建示例」，或双击 `Assets/Settings/ActionSequences/Examples/ExampleActions.asset`。示例动作关系参考 Git 历史中的 1.03，帧数是演示占位；再次打开示例不会覆盖已经改过的配置。
 
 ## 配置与操作

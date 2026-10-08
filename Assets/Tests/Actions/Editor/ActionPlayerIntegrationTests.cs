@@ -439,7 +439,9 @@ public sealed class ActionPlayerIntegrationTests
         float deltaTime = rate / ActionSequencePlayer.FramesPerSecond;
         ActionInputButtons held = ActionInputButtons.Sprint | ActionInputButtons.Forward;
         if (attack) held |= ActionInputButtons.Attack;
-        for (int i = 0; i < 4 * ActionSequencePlayer.FramesPerSecond; i++)
+        // 按玩家时间覆盖完整收招与加速；慢速下相同 tick 数不足以结束攻击前摇。
+        int ticks = Mathf.CeilToInt(4 * ActionSequencePlayer.FramesPerSecond / rate);
+        for (int i = 0; i < ticks; i++)
         {
             ActionInputEdge[] edges = attack && i == 0
                 ? new[] { new ActionInputEdge(ActionInputButtons.Attack, ActionInputStep.Edge.Pressed, held, Vector2.up) } : null;
@@ -536,5 +538,34 @@ public sealed class ActionPlayerIntegrationTests
         first.Actions[0].Input.PreInputFrames = 19;
         ActionCatalog second = ActionPlayerSetup.CreateCatalog(_attack.Timeline[0].Animation.Clip, _combat, _motor.Params, _folder);
         Assert.AreSame(first, second); Assert.AreEqual(19, second.Actions[0].Input.PreInputFrames);
+    }
+
+    [Test]
+    public void WallDashSetupPreservesManualStatesAndActionBindingsAcrossRepeatedInstall()
+    {
+        _folder = "Assets/__WallDashTests_" + Guid.NewGuid().ToString("N");
+        AssetDatabase.CreateFolder("Assets", _folder.Substring(7));
+        string path = _folder + "/Controller.controller";
+        Assert.IsTrue(AssetDatabase.CopyAsset(ActionPlayerSetup.ControllerPath, path));
+        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+        AnimatorStateMachine root = controller.layers[0].stateMachine;
+        AnimatorState manual = root.AddState("ManualState");
+        Motion manualMotion = root.defaultState.motion;
+        manual.motion = manualMotion;
+        foreach (ChildAnimatorState child in root.states)
+            if (child.state.name == "WallDashLeft" || child.state.name == "WallDashRight") root.RemoveState(child.state);
+        PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
+        int stateCount = ActionAnimatorAuthoring.GetStates(controller).Count;
+        int transitionCount = root.anyStateTransitions.Length;
+        PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
+        ActionPlayerSetup.EnsureAnimator(controller, _catalog);
+        Assert.IsTrue(PlayerLocomotionAnimatorSetup.HasWallDash(controller));
+        Assert.AreEqual(stateCount, ActionAnimatorAuthoring.GetStates(controller).Count);
+        Assert.AreEqual(transitionCount, root.anyStateTransitions.Length);
+        Assert.AreSame(manualMotion, manual.motion);
+        Assert.IsEmpty(ActionAnimatorAuthoring.Validate(_catalog, controller));
+        AssetDatabase.SaveAssets();
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+        Assert.IsTrue(PlayerLocomotionAnimatorSetup.HasWallDash(AssetDatabase.LoadAssetAtPath<AnimatorController>(path)));
     }
 }

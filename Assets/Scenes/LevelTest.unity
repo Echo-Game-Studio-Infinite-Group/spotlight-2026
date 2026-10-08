@@ -333,7 +333,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 0be7a22f1f520ef4da8c0472e03687b9, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 147b12632a9cf314492adeaca503d2c0, type: 2}
   m_BuildHeightMesh: 0
 --- !u!4 &4446090
 Transform:
@@ -8374,11 +8374,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5522643380033296029, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 15.752914
+      value: 6.152915
       objectReference: {fileID: 0}
     - target: {fileID: 5522643380033296029, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 479.20444
+      value: 466.50443
       objectReference: {fileID: 0}
     - target: {fileID: 5522643380033296029, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8416,6 +8416,14 @@ PrefabInstance:
       propertyPath: m_LookAt
       value: 
       objectReference: {fileID: 71080871}
+    - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
+      propertyPath: m_Lens.Dutch
+      value: -3.396465e-13
+      objectReference: {fileID: 0}
+    - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
+      propertyPath: m_Lens.FieldOfView
+      value: 51.97988
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -46783,10 +46791,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 777957050568175645, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      propertyPath: field of view
+      value: 51.97988
+      objectReference: {fileID: 0}
     - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: _volume
       value: 
       objectReference: {fileID: 1710727688}
+    - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      propertyPath: _fastFov
+      value: 65
+      objectReference: {fileID: 0}
+    - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      propertyPath: _normalFov
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: _virtualCamera
       value: 
@@ -46809,11 +46829,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8618143917340687812, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 15.752914
+      value: 6.152915
       objectReference: {fileID: 0}
     - target: {fileID: 8618143917340687812, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 479.20444
+      value: 466.50443
       objectReference: {fileID: 0}
     - target: {fileID: 8618143917340687812, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: m_LocalRotation.w
@@ -62453,6 +62473,14 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: -1.29
       objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4486568241627599383, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: _attackDuration
       value: 1.2
@@ -62467,11 +62495,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6952890567594264593, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 13
+      value: 3.4
       objectReference: {fileID: 0}
     - target: {fileID: 6952890567594264593, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 485
+      value: 472.3
       objectReference: {fileID: 0}
     - target: {fileID: 7146600531868507599, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.y

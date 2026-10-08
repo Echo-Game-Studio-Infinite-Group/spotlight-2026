@@ -62,6 +62,7 @@ public sealed class Enemy : MonoBehaviour
 
     private Hitbox _attackHitbox;
     private CombatComponent _combat;
+    private RangeComponent _ranged;
     private bool _runningChase;
     // 攻击命中时向玩家相机广播震动。方向取「敌人 → 玩家」，力度按攻击伤害换算，见 OnLandedHit。
     // 同样不进序列化：ImpulseSource 挂在自己身上，Awake 里 GetComponent 取。
@@ -90,23 +91,21 @@ public sealed class Enemy : MonoBehaviour
     private void Awake()
     {
         EnsureHealth();
-        if (_agent == null) _agent = GetComponent<NavMeshAgent>();
-        if (_impulseSource == null) _impulseSource = GetComponent<CinemachineImpulseSource>();
+        _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
         // 判定盒先解析再装配结算层，否则 Configure 拿到的是 null。
         EnsureCombat();
+        _ranged = GetComponent<RangeComponent>();
         DisableHitbox();
         PreviousPosition = transform.position;
         PreviousRotation = transform.rotation;
-        if (_agent != null)
-        {
-            // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
-            _agent.speed = _walkSpeed;
-            // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
-            _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
-        }
-        if (_damagePopup != null) _damagePopup.gameObject.SetActive(false);
+        _agent = GetComponent<NavMeshAgent>();
+        // 速度与停止距离都以 Enemy 的字段为准，策划只在一个地方填值
+        _agent.speed = _walkSpeed;
+        // 预留胶囊半径，避免 Agent 在攻击边界外减速停下，永远无法开打。
+        _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+        _damagePopup.gameObject.SetActive(false);
     }
 
     private void FixedUpdate()
@@ -246,18 +245,18 @@ public sealed class Enemy : MonoBehaviour
 
         if (distance > _sightRange) { StopMoving(); return; }
 
-        if (distance - _attackRange > 0.001f)
+        if (distance - StopDistance > 0.001f)
         {
             // 进跑与退跑分开阈值，避免跟随移动玩家时在边界反复切换。
             _runningChase = _runningChase
-                ? distance > Mathf.Max(_attackRange, _runDistance - _runHysteresis)
+                ? distance > Mathf.Max(StopDistance, _runDistance - _runHysteresis)
                 : distance >= _runDistance;
             float desiredSpeed = _runningChase ? _runSpeed : _walkSpeed;
             if (AgentReady)
             {
                 float rate = TimeManager.WorldRate;
                 _agent.speed = desiredSpeed * rate;
-                _agent.stoppingDistance = Mathf.Max(0f, _attackRange - _agent.radius);
+                _agent.stoppingDistance = Mathf.Max(0f, StopDistance - _agent.radius);
                 _agent.isStopped = false;
                 _agent.SetDestination(target.transform.position);
                 Speed = Vector3.ProjectOnPlane(_agent.velocity, Vector3.up).magnitude / rate;
@@ -267,9 +266,14 @@ public sealed class Enemy : MonoBehaviour
 
         StopMoving();
         TryAttack(target);
+        TryFireAt(target, health);
     }
 
     private bool AgentReady => _agent != null && _agent.isActiveAndEnabled && _agent.isOnNavMesh;
+
+    // 停步距离：有远程就用射程，否则用近战距离。
+    // 这样策划只填一个值，敌人自己的停步位置就跟着变，不会出现"站在射程外干等"。
+    private float StopDistance => _ranged != null && _ranged.CanFire ? _ranged.Range : _attackRange;
 
     private void StopMoving()
     {
@@ -295,6 +299,14 @@ public sealed class Enemy : MonoBehaviour
         EnsureCombat();
         if (_combat == null || !_combat.TryBeginAttack(TimeManager.WorldTime)) return;
         _animation.PlayAttack();
+    }
+
+    // 远程开火：射程与冷却都由 RangeComponent 自己判断，这里只负责"什么时候尝试"。
+    // 和 TryAttack 同一个套路——前置检查在组件里，冷却不会被"够不着"白白吃掉。
+    private void TryFireAt(PlayerMotor target, HealthComponent health)
+    {
+        if (_ranged == null || !_ranged.CanFire) return;
+        _ranged.TryFire(TimeManager.WorldTime, target.transform, health);
     }
 
     // 玩家从场景级注册点取，不再经 GameManager —— 没有 GameManager 的场景里敌人 AI 照样工作。
