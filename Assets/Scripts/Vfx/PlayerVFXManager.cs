@@ -20,10 +20,7 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     private void Awake()
     {
-        if (_impulseSource == null) 
-        {
-            _impulseSource = GetComponent<CinemachineImpulseSource>();
-        }
+        _impulseSource = GetComponent<CinemachineImpulseSource>();
     }
 
     private void OnDestroy()
