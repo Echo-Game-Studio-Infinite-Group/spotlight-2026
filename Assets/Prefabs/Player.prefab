@@ -21870,9 +21870,9 @@ GameObject:
   - component: {fileID: 6112233445566778900}
   - component: {fileID: 6112233445566778899}
   - component: {fileID: 6112233445566778901}
-  - component: {fileID: 1386344926403369641}
   - component: {fileID: 9113310000000000001}
   - component: {fileID: 9113310000000000002}
+  - component: {fileID: 2767437026437357466}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -22063,6 +22063,7 @@ MonoBehaviour:
   _idleSpeed: 0.1
   _blendResponse: 10
   _fallGrace: 0.08
+  _wallSideDeadZone: 0.05
 --- !u!114 &8594125883543137620
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22245,7 +22246,60 @@ MonoBehaviour:
   _damage: 25
   _cooldown: 0.35
   _windowSeconds: 1.6
---- !u!114 &1386344926403369641
+--- !u!114 &9113310000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5491415930ef0643af63852f615f421, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  group: {fileID: 11400000, guid: f5b6ec4dd2aa62f449832fb91b13c2ed, type: 2}
+  presetOverride: {fileID: 0}
+  includeChildren: 0
+  explicitRenderers:
+  - {fileID: 3979433755593833433}
+  - {fileID: 8387837162620342596}
+  outlineMaterialTemplate: {fileID: 0}
+  overrideOutlineAppearance: 1
+  outlineWidthPixels: 4.1
+  flameStrength: 2.08
+  outlineJitterPixels: -1.2
+  overrideRhythmFrequency: 0
+  rhythmFrequencyHz: 0.39788735
+  innerOutlineColor: {r: 1.6245046, g: 0.54499, b: 0.058236726, a: 1}
+  outerOutlineColor: {r: 2.1960783, g: 1.8053813, b: 0.5019607, a: 0.8}
+  overrideColors: 0
+  color0: {r: 1, g: 1, b: 1, a: 1}
+  color1: {r: 0, g: 1, b: 1, a: 1}
+  color2: {r: 0, g: 0, b: 1, a: 1}
+  color3: {r: 1, g: 0, b: 1, a: 1}
+  motionInput: 0
+  externalVelocityTimeout: 0.15
+  motionSmoothingSeconds: 0.1
+  teleportDistance: 5
+  startOn: 1
+  loopInDemo: 0
+  loopHold: 2
+--- !u!114 &9113310000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c3a46acb18d43d9957d87531219524f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _target: {fileID: 9113310000000000001}
+  _effectEnabled: 1
+--- !u!114 &2767437026437357466
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -22536,52 +22590,3 @@ Transform:
   - {fileID: 6059804388648228849}
   m_Father: {fileID: 9098032750027886642}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &9113310000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b5491415930ef0643af63852f615f421, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  group: {fileID: 11400000, guid: f5b6ec4dd2aa62f449832fb91b13c2ed, type: 2}
-  presetOverride: {fileID: 0}
-  includeChildren: 0
-  explicitRenderers:
-  - {fileID: 3979433755593833433}
-  - {fileID: 8387837162620342596}
-  outlineMaterialTemplate: {fileID: 0}
-  overrideOutlineAppearance: 0
-  outlineWidthPixels: 8.6
-  flameStrength: 1.8
-  outlineJitterPixels: 0.8
-  overrideRhythmFrequency: 0
-  rhythmFrequencyHz: 0.39788736
-  innerOutlineColor: {r: 1, g: 0.82, b: 0.27, a: 1}
-  outerOutlineColor: {r: 1, g: 0.16, b: 0.025, a: 0.8}
-  overrideColors: 0
-  color0: {r: 1, g: 1, b: 1, a: 1}
-  color1: {r: 0, g: 1, b: 1, a: 1}
-  color2: {r: 0, g: 0, b: 1, a: 1}
-  color3: {r: 1, g: 0, b: 1, a: 1}
-  startOn: 1
-  loopInDemo: 0
-  loopHold: 2
---- !u!114 &9113310000000000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7725487067667272363}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3c3a46acb18d43d9957d87531219524f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  _target: {fileID: 9113310000000000001}
-  _effectEnabled: 1

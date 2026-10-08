@@ -1541,6 +1541,8 @@ MonoBehaviour:
   _fullEffectSpeed: 25
   _response: 5
   _wallRoll: 20
+  _wallSlideDistance: 3.5
+  _wallSlideResponse: 8
   _chromaticIntensity: 0.5
   _motionBlurIntensity: 0.5
   _customMotionBlur: 2.5
@@ -1957,11 +1959,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1100700799}
   m_LocalEulerAnglesHint: {x: -75, y: 0, z: 0}
---- !u!1 &2049515939 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7725487067667272363, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
-  m_PrefabInstance: {fileID: 6227528867191727369}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4556680379290461721 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7588622732077400848, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
@@ -2088,21 +2085,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 61113850465615520, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 7725487067667272363, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8869678147187144748}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
 --- !u!114 &6292491704391676769 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 90014127479559784, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
   m_PrefabInstance: {fileID: 6227528867191727369}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2049515939}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: adf3383bb0876c74ea8547424df10f59, type: 3}
@@ -2113,31 +2106,12 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3277439423563062544, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
   m_PrefabInstance: {fileID: 6227528867191727369}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2049515939}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cfac1f4fe7eda8141b89ee1c5a7551c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &8869678147187144748
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2049515939}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38560efae576eaa4aa68b3ddf5ac4f5e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _rules:
-  - ActionId: player_slide
-    ConditionKey: sliding
-    ContactIntensity: 1
-  - ActionId: wall_slide
-    ConditionKey: wall_sliding
-    ContactIntensity: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2157,3 +2131,5 @@ SceneRoots:
   - {fileID: 1129462580}
   - {fileID: 5385265384880592482}
   - {fileID: 298730231}
+  - {fileID: 889629291}
+  - {fileID: 902559283}
