@@ -46,6 +46,8 @@ public sealed class Enemy : MonoBehaviour
     internal Vector3 PreviousPosition { get; private set; }
     internal Quaternion PreviousRotation { get; private set; }
     private EnemyAnimation _animation;
+    // 攻击提示（占位表现）：攻击窗口开着时点亮，收招 / 受击 / 死亡自动灭。
+    private AttackTelegraph _telegraph;
 
     [Header("行为")]
     // 寻路与位移全部交给 NavMeshAgent（2026-10-04 主程定：旧的直线追击位移系统废弃）
@@ -93,6 +95,7 @@ public sealed class Enemy : MonoBehaviour
         EnsureHealth();
         _impulseSource = GetComponent<CinemachineImpulseSource>();
         _animation = GetComponentInChildren<EnemyAnimation>();
+        _telegraph = GetComponent<AttackTelegraph>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
         // 判定盒先解析再装配结算层，否则 Configure 拿到的是 null。
         EnsureCombat();
@@ -198,10 +201,13 @@ public sealed class Enemy : MonoBehaviour
     {
         if (_combat != null) _combat.FinishAttack();
         else DisableHitbox();
+        _telegraph?.Stop();
     }
 
     public void EnableHitbox()
     {
+        // 判定生效这一刻 = 前摇结束：提示在这一帧灭掉（FinishAttack 里那句 Stop 只是兜底）。
+        _telegraph?.Stop();
         if (IsAlive && IsAttacking) _combat?.EnableHitbox();
     }
 
@@ -299,6 +305,7 @@ public sealed class Enemy : MonoBehaviour
         EnsureCombat();
         if (_combat == null || !_combat.TryBeginAttack(TimeManager.WorldTime)) return;
         _animation.PlayAttack();
+        _telegraph?.Play();
     }
 
     // 远程开火：射程与冷却都由 RangeComponent 自己判断，这里只负责"什么时候尝试"。
