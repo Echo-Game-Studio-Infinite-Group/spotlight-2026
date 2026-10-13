@@ -125,6 +125,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void Start()
     {
         if (_movementReference == null && Camera.main != null) _movementReference = Camera.main.transform;
+        SaveManager.Init(gameObject);
     }
 
     private void OnEnable()

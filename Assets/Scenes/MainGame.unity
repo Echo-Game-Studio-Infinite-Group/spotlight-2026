@@ -1383,14 +1383,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50d49ce9a5ee4fbebb6ffc23e6d06a53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _motor: {fileID: 264074676}
-  _virtualCamera: {fileID: 171577179}
+  _motor: {fileID: 0}
+  _virtualCamera: {fileID: 0}
   _volume: {fileID: 1710727688}
   _normalFov: 60
   _fastFov: 85
   _fullEffectSpeed: 25
   _response: 5
   _wallRoll: 70
+  _wallSlideDistance: 3.5
+  _wallSlideResponse: 8
   _chromaticIntensity: 0.5
   _motionBlurIntensity: 0.5
   _customMotionBlur: 2.5
@@ -1407,10 +1409,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a72ed520f4e42f793e215ef48f60207, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _motor: {fileID: 264074676}
-  _input: {fileID: 264074677}
-  _target: {fileID: 1938833250}
-  _virtualCamera: {fileID: 171577179}
+  _motor: {fileID: 0}
+  _input: {fileID: 0}
+  _target: {fileID: 0}
+  _virtualCamera: {fileID: 0}
   _mouseSensitivity: 0.15
   _pitchLimits: {x: -25, y: 70}
   _standHeight: 1.2
@@ -1426,8 +1428,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6d2b78e114e34894193e483002d4bbae, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   isDefaultListener: 1
   bOverrideScalingFactor: 0
   scalingFactor: -1
@@ -1442,8 +1444,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f0e7f07cd2460374da9b57f3be60f80d, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   m_listeners:
     initialListenerList: []
     useDefaultListeners: 1
@@ -1483,11 +1485,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: babdf4e091e3bbf4b95fb81e58d77912, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   InitializationSettings: {fileID: 11400000, guid: a037d73f62aebba438ea0b467ecabb56, type: 2}
-  basePath:
-  language:
+  basePath: 
+  language: 
   defaultPoolSize: 0
   lowerPoolSize: 0
   streamingPoolSize: 0
@@ -1513,6 +1515,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &715834384 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7725487067667272363, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+  m_PrefabInstance: {fileID: 1942894695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &715834407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 715834384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f91745847383d478d350255db8bbe7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &728446627
 GameObject:
   m_ObjectHideFlags: 0
@@ -1631,6 +1650,51 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &784891574 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6014332860128062094, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+  m_PrefabInstance: {fileID: 1639929631}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &784891575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784891574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d2b78e114e34894193e483002d4bbae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isDefaultListener: 1
+  bOverrideScalingFactor: 0
+  scalingFactor: -1
+  listenerId: 0
+--- !u!114 &784891576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784891574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0e7f07cd2460374da9b57f3be60f80d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_listeners:
+    initialListenerList: []
+    useDefaultListeners: 1
+  isEnvironmentAware: 0
+  isStaticObject: 0
+  usePositionOffsetData: 0
+  m_positionOffsetData:
+    KeepMe: 0
+    positionOffset: {x: 0, y: 0, z: 0}
+  scalingFactor: 1
+  m_posOffsetData: {fileID: 0}
+  listenerMask: 1
 --- !u!114 &847672077 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
@@ -2162,10 +2226,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7557469011364081667, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6014332860128062094, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 784891576}
+    - targetCorrespondingSourceObject: {fileID: 6014332860128062094, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 784891575}
   m_SourcePrefab: {fileID: 100100000, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
 --- !u!1 &1644564368
 GameObject:
@@ -2420,7 +2491,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7725487067667272363, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 715834407}
   m_SourcePrefab: {fileID: 100100000, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
 --- !u!1001 &3222468362092346444
 PrefabInstance:
@@ -2578,3 +2652,4 @@ SceneRoots:
   - {fileID: 1942894695}
   - {fileID: 4446090}
   - {fileID: 673717281}
+  - {fileID: 643871755}
