@@ -1,0 +1,636 @@
+// ============================================================================
+// GTAO Compute Shader - Ground Truth Ambient Occlusion
+// ============================================================================
+//
+// 算法流程 (Pipeline):
+//
+//   [深度图] ──→ Kernel 0: GTAOMain ──→ [_GTAOBuffer: AO + Normal + Depth]
+//                      │                    (半分辨率, R16G16B16A16_SFloat)
+//                      │                    R=AO值, G=normal.x, B=normal.y, A=深度
+//                      │
+//                      │  1. 利用GroupSharedMemory缓存5x5区域深度 (NORMAL_FROM_DEPTH_PIXEL_RANGE=2)
+//                      │  2. 从深度图还原视空间法线 (cross(hDeriv, vDeriv))
+//                      │  3. 时空噪波生成采样方向 (Hilbert + R2序列)
+//                      │  4. 每像素4个Slice x 3步采样 = 24个采样点计算GTAO
+//                      │  5. 输出AO值 + 编码法线 + 深度
+//                      ▼
+//   [_GTAOBuffer] ──→ Kernel 1: BlurHorizontalMain ──→ [_HorizontalBlurBuffer]
+//                      │                    (宽=全分辨率, 高=半分辨率)
+//                      │
+//                      │  1. 利用GroupSharedMemory缓存水平方向AO+Normal+Depth
+//                      │  2. 29tap高斯模糊 (BLUR_RADIUS=14, [-14,+14])
+//                      │     - 法线权重: pow(dot(centerNormal, sampleNormal), 4)
+//                      │     - 深度权重: 1 - saturate(|depth差| * 300)
+//                      │  3. 根据subpixel偏移做水平双线性插值上采样
+//                      ▼
+//   [_HorizontalBlurBuffer] ──→ Kernel 2: BlurVerticalMain ──→ [_VerticalBlurBuffer]
+//                      │                    (全分辨率)
+//                      │
+//                      │  1. 与水平模糊对称, 缓存垂直方向数据
+//                      │  2. 29tap高斯模糊 (同样带法线+深度权重)
+//                      │  3. 根据subpixel偏移做垂直双线性插值上采样
+//                      ▼
+//   [_VerticalBlurBuffer] ──→ Kernel 3: VisualizeMain ──→ [_VisualizeBuffer]
+//                      │
+//                      │  输出可见度AO(1=未遮蔽), 供 URP _ScreenSpaceOcclusionTexture 使用
+//                      ▼
+//
+// 假阴影/拖影修复:
+//   1. 固定subpixel偏移为(0,0), 消除逐帧旋转导致的鬼影
+//   2. 增大pixelTooCloseThreshold (1.3→3.0), 减少自遮挡假阴影
+//   3. 增强模糊深度拒止 (100→300), 防止AO跨越深度边界泄漏
+//   4. 增强模糊法线拒止 (dot→pow(dot,4)), 防止AO沿边缘扩散
+//   5. 添加horizon bias, 减少平面上的自遮挡
+//
+// 参考: https://www.activision.com/cdn/research/Practical_Real_Time_Strategies_for_Accurate_Indirect_Occlusion_NEW%20VERSION_COLOR.pdf
+//        https://github.com/GameTechDev/XeGTAO
+// ============================================================================
+
+#pragma kernel GTAOMain
+#pragma kernel BlurHorizontalMain
+#pragma kernel BlurVerticalMain
+#pragma kernel TemporalFilterMain
+#pragma kernel VisualizeMain
+
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+Texture2D<float4> _ColorTexture;
+Texture2D<float> _DepthTexture;
+Texture2D<float4> _GTAOTexture;
+Texture2D<float4> _HistoryTexture;
+
+RWTexture2D<float4> _RW_NormalTexture;
+RWTexture2D<float4> _RW_GTAOTexture;
+RWTexture2D<float4> _RW_BlurTexture;
+RWTexture2D<float4> _RW_VisualizeTexture;
+
+SamplerState sampler_LinearClamp;
+SamplerState sampler_PointClamp;
+
+//region Parameters
+uint _FrameIndex;
+uint _DownsamplingFactor;
+float _Intensity;
+float _SampleRadius;
+float _DistributionPower;
+float _FalloffRange;
+float _HorizonBias;
+int _TemporalEnabled;       // 0=静态空间噪声(无时域抖动/拖影), 1=每帧jitter(需配合重投影temporal)
+float _TemporalBlend;       // 历史混合权重 (0=只用当前帧, 越大越平滑/收敛越久)
+float _VarianceClampScale;  // 方差裁剪强度 (越小越激进去鬼影, 越大保留越多历史)
+float4 _TextureSize;
+//endregion
+
+//region Pre-defined Marcos
+#define SQRT2_2                 0.70710678118
+
+#define USE_AVERAGE_COS                 0
+#define SLICE_COUNT                     4
+#define STEPS_PER_SLICE                 3
+// 32x32=1024线程会触发X4714寄存器占用告警(每线程预算仅~16寄存器)
+// 降到16x16=256线程, 每线程预算提升到~64, 同时提高occupancy
+#define GTAO_THREAD_GROUP_SIZE_X        16
+#define GTAO_THREAD_GROUP_SIZE_Y        16
+#define BLUR_THREAD_GROUP_SIZE          64
+
+// For normal calculation, can be deleted if we calculate normal in mrt.
+const static int NORMAL_FROM_DEPTH_PIXEL_RANGE = 2;
+const static int CACHED_DEPTH_FOR_NORMAL_OFFSET = (GTAO_THREAD_GROUP_SIZE_X + 2*NORMAL_FROM_DEPTH_PIXEL_RANGE);
+const static int CACHED_DEPTH_FOR_NORMAL_SIZE = CACHED_DEPTH_FOR_NORMAL_OFFSET * (GTAO_THREAD_GROUP_SIZE_Y + 2*NORMAL_FROM_DEPTH_PIXEL_RANGE);
+
+// For blur
+const static int BILINEAR_RADIUS = 1;
+const static int BLUR_RADIUS = 14; // [-14, +14] for 29 tap gaussian blur
+const static int CACHED_AO_NORMAL_DEPTH_FOR_BLUR_SIZE = BLUR_THREAD_GROUP_SIZE + 2*(BILINEAR_RADIUS+BLUR_RADIUS);
+
+const static int CACHED_AO_FOR_BILINEAR_SIZE = BLUR_THREAD_GROUP_SIZE+2*BILINEAR_RADIUS;
+//endregion
+
+//region Group Shared Memory Help Functions
+// For normal calculation
+groupshared float depthForNormal[CACHED_DEPTH_FOR_NORMAL_SIZE];
+
+void SetDepthForNormal(float depth, int index) {depthForNormal[index]=depth;}
+float GetDepthForNormal(int2 threadPos) {return depthForNormal[threadPos.x+NORMAL_FROM_DEPTH_PIXEL_RANGE+(threadPos.y+NORMAL_FROM_DEPTH_PIXEL_RANGE)*CACHED_DEPTH_FOR_NORMAL_OFFSET];}
+void CacheDepthForNormal(int2 groupCacheStartPos, uint cacheIndex, int2 subpixelBias)
+{
+    int2 threadPos = int2(cacheIndex % CACHED_DEPTH_FOR_NORMAL_OFFSET, cacheIndex / CACHED_DEPTH_FOR_NORMAL_OFFSET);
+    int2 texturePos = (groupCacheStartPos + threadPos) * _DownsamplingFactor + subpixelBias;
+    float depth = _DepthTexture.Load(uint3(texturePos, 0));
+    SetDepthForNormal(depth, cacheIndex);
+}
+
+groupshared float4 aoNormalDepthForBlur[CACHED_AO_NORMAL_DEPTH_FOR_BLUR_SIZE];
+void SetAONormalDepthForBlur(float4 aoNormalDepth, int index) {aoNormalDepthForBlur[index]=aoNormalDepth;}
+float4 GetAONormalDepthForBlur(int threadPos) {return aoNormalDepthForBlur[threadPos+BLUR_RADIUS+BILINEAR_RADIUS];}
+void CacheAONormalDepthForBlur(int2 groupCacheStartPos, uint cacheIndex, uint vertical)
+{
+    int2 threadPos = int2(0, 0);
+    threadPos[vertical] = cacheIndex;
+    int2 texturePos = groupCacheStartPos + threadPos;
+    int2 threshold;
+    if(vertical == 0)
+    {
+        threshold = _TextureSize.xy/_DownsamplingFactor - 1;
+    }
+    else
+    {
+        threshold = int2(_TextureSize.x, _TextureSize.y / _DownsamplingFactor) - 1;
+    }
+
+    texturePos = clamp(texturePos, 0, threshold);
+    float4 aoNormalDepth = _GTAOTexture.Load(uint3(texturePos, 0));
+    SetAONormalDepthForBlur(aoNormalDepth, cacheIndex);
+}
+
+groupshared float aoForBilinear[CACHED_AO_FOR_BILINEAR_SIZE];
+void SetAOForBilinear(float ao, int index) {aoForBilinear[index]=ao;}
+float GetAOForBilinear(int threadPos) {return aoForBilinear[threadPos.x+BILINEAR_RADIUS];}
+//endregion
+
+//region Space Transformation Help Functions
+float3 GetViewSpacePositionFromLinearDepth(float2 uv, float linearDepth)
+{
+#if UNITY_UV_STARTS_AT_TOP
+    uv.y = 1.0 - uv.y;
+#endif
+    float2 uvNDC = uv * 2.0 - 1.0;
+    return float3(uvNDC * linearDepth * rcp(UNITY_MATRIX_P._m00_m11), -linearDepth);
+}
+
+float3 GetViewSpacePosition(float2 uv, float depth)
+{
+#if UNITY_MATRIX_I_P_SUPPORTED
+#if UNITY_UV_STARTS_AT_TOP
+    uv.y = 1.0 - uv.y;
+#endif
+    float3 positionNDC = float3(uv * 2.0 - 1.0, depth);
+    float4 positionVS = mul(UNITY_MATRIX_I_P, float4(positionNDC, 1.0));
+    positionVS /= positionVS.w;
+    return positionVS.xyz;
+#else
+    float linearDepth = LinearEyeDepth(depth, _ZBufferParams);
+    return GetViewSpacePositionFromLinearDepth(uv, linearDepth);
+#endif
+}
+
+float4 LinearEyeDepthFloat4(float4 depthTBLR, float4 zBufferParams)
+{
+    return rcp(depthTBLR * zBufferParams.z + zBufferParams.w);
+}
+//endregion
+
+//region GTAO Help Functions
+//https://github.com/GameTechDev/XeGTAO/blob/master/Source/Rendering/Shaders/XeGTAO.h
+
+//-UNITY_MATRIX_P._m11 = rcp(tan(fovy / 2))
+float GetScreenSpaceRadius(float linearDepth)
+{
+    return _SampleRadius * _TextureSize.y * (-UNITY_MATRIX_P._m11) / (2 * linearDepth);
+}
+
+float GetLengthToPixelRatio(float linearDepth)
+{
+    return _TextureSize.y * (-UNITY_MATRIX_P._m11) / (2 * linearDepth);
+}
+
+// From https://www.shadertoy.com/view/3tB3z3 - except we're using R2 here
+#define XE_HILBERT_LEVEL    6U
+#define XE_HILBERT_WIDTH    ( (1U << XE_HILBERT_LEVEL) )
+
+uint HilbertIndex( uint posX, uint posY )
+{   
+    uint index = 0U;
+    for( uint curLevel = XE_HILBERT_WIDTH/2U; curLevel > 0U; curLevel /= 2U )
+    {
+        uint regionX = ( posX & curLevel ) > 0U;
+        uint regionY = ( posY & curLevel ) > 0U;
+        index += curLevel * curLevel * ( (3U * regionX) ^ regionY);
+        if( regionY == 0U )
+        {
+            if( regionX == 1U )
+            {
+                posX = uint( (XE_HILBERT_WIDTH - 1U) ) - posX;
+                posY = uint( (XE_HILBERT_WIDTH - 1U) ) - posY;
+            }
+
+            uint temp = posX;
+            posX = posY;
+            posY = temp;
+        }
+    }
+    return index;
+}
+
+float2 SpatioTemporalNoise(uint2 pixCoord, uint temporalIndex)
+{
+    uint index = HilbertIndex(pixCoord.x, pixCoord.y);
+    index += 288*(temporalIndex%64);
+    // R2 sequence - see http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
+    return frac( 0.5 + index * float2(0.75487766624669276005, 0.5698402909980532659114));
+}
+//endregion
+
+//region Blur Help Functions
+float GetWeight(float4 center, float4 samplePoint)
+{
+    float4 centerAndSampleXY = float4(center.yz, samplePoint.yz) * 2.0f - 1.0f;
+    float3 centerVS = float3(centerAndSampleXY.xy, sqrt(max(0.0f, 1.0f - dot(centerAndSampleXY.xy, centerAndSampleXY.xy))));
+    float3 sampleVS = float3(centerAndSampleXY.zw, sqrt(max(0.0f, 1.0f - dot(centerAndSampleXY.zw, centerAndSampleXY.zw))));
+    // 增强法线拒止: pow(dot, 4) 替代 dot, 防止AO沿法线不连续处扩散
+    float normalWeight = pow(saturate(dot(centerVS, sampleVS)), 4.0f);
+    // 增强深度拒止: 300 替代 100, 防止AO跨越深度边界泄漏
+    float depthWeight = 1.0f - saturate(abs(center.w - samplePoint.w) * 300.0f);
+
+    return normalWeight * depthWeight;
+}
+
+void CacheGaussianBlur(uint cacheAOIndex, uint vertical)
+{
+    int cacheAOThreadPos = cacheAOIndex - BILINEAR_RADIUS;
+    float4 aoNormalDepthC = GetAONormalDepthForBlur(cacheAOThreadPos);
+    
+    float aoSum = 0.0f;
+    float weightSum = 0.0f;
+
+    float4 aoNormalDepth;
+    float weight;
+
+    // http://demofox.org/gauss.html
+    const float weights[] = 
+    {
+        0.0002,	0.0005,	0.0011,	0.0023,	0.0044,	0.0080,	0.0136,	0.0217,	0.0325,	0.0457,	0.0605,	0.0752,	0.0879,	0.0965,	0.0995,	0.0965,	0.0879,	0.0752,	0.0605,	0.0457,	0.0325,	0.0217,	0.0136,	0.0080,	0.0044,	0.0023,	0.0011,	0.0005,	0.0002
+    };
+
+    [unroll(2*BLUR_RADIUS+1)]
+    for (int i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i)
+    {
+        aoNormalDepth = GetAONormalDepthForBlur(cacheAOThreadPos + i);
+        weight = GetWeight(aoNormalDepthC, aoNormalDepth) * weights[i + BLUR_RADIUS];
+
+        aoSum += aoNormalDepth.r * weight;
+        weightSum += weight;
+    }
+
+    float avgAO = (weightSum > 0.0f) ? (aoSum / weightSum) : aoNormalDepthC.r;
+    SetAOForBilinear(avgAO, cacheAOIndex);
+}
+//endregion
+
+[numthreads(GTAO_THREAD_GROUP_SIZE_X,GTAO_THREAD_GROUP_SIZE_Y,1)]
+void GTAOMain(uint3 groupID : SV_GroupID,
+                uint3 groupThreadID : SV_GroupThreadID,
+                uint groupIndex : SV_GroupIndex,
+                uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    // 固定subpixel偏移为(0,0), 消除逐帧旋转导致的鬼影/拖影
+    // 原代码: subpixelIndex = _FrameIndex % sqrDownSamplingFactor 会导致每帧采样位置变化
+    // 无TAA时帧间无法混合, 造成明显的拖拽阴影
+    int2 subpixelBias = int2(0, 0);
+    int2 pixelCoord = dispatchThreadID.xy * _DownsamplingFactor + subpixelBias;
+    float2 uv = (pixelCoord + 0.5) * _TextureSize.zw;
+    int2 groupCacheStartPos = groupID.xy * int2(GTAO_THREAD_GROUP_SIZE_X, GTAO_THREAD_GROUP_SIZE_Y) - NORMAL_FROM_DEPTH_PIXEL_RANGE;
+    
+    //region Cache Normal
+    int cacheIndex = groupIndex * 2;
+    if(cacheIndex < CACHED_DEPTH_FOR_NORMAL_SIZE-1)
+    {
+        CacheDepthForNormal(groupCacheStartPos, cacheIndex, subpixelBias);
+        CacheDepthForNormal(groupCacheStartPos, cacheIndex + 1, subpixelBias);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    //endregion
+
+    uint loadCacheIndex = groupIndex;
+    int2 threadPos = int2(loadCacheIndex % GTAO_THREAD_GROUP_SIZE_X, loadCacheIndex / GTAO_THREAD_GROUP_SIZE_X);
+
+    //region Calculate Normal From Depth
+    float depthC    = GetDepthForNormal(threadPos               );
+    float depthT    = GetDepthForNormal(threadPos + int2( 0,  1));
+    float depthB    = GetDepthForNormal(threadPos + int2( 0, -1));
+    float depthL    = GetDepthForNormal(threadPos + int2(-1,  0));
+    float depthR    = GetDepthForNormal(threadPos + int2( 1,  0));
+    float depthT2   = GetDepthForNormal(threadPos + int2( 0,  2));
+    float depthB2   = GetDepthForNormal(threadPos + int2( 0, -2));
+    float depthL2   = GetDepthForNormal(threadPos + int2(-2,  0));
+    float depthR2   = GetDepthForNormal(threadPos + int2( 2,  0));
+
+    float linearDepth = LinearEyeDepth(depthC, _ZBufferParams) * 0.99999;
+    float4 linearDepths = LinearEyeDepthFloat4(float4(depthT, depthB, depthL, depthR), _ZBufferParams) * 0.99999;
+
+    float2 center = pixelCoord + 0.5f;
+    float3 viewPosC = GetViewSpacePositionFromLinearDepth(center * _TextureSize.zw, linearDepth);
+    float3 viewPosT = GetViewSpacePositionFromLinearDepth((center + float2( 0,  1) * _DownsamplingFactor) * _TextureSize.zw, linearDepths.x);
+    float3 viewPosB = GetViewSpacePositionFromLinearDepth((center + float2( 0, -1) * _DownsamplingFactor) * _TextureSize.zw, linearDepths.y);
+    float3 viewPosL = GetViewSpacePositionFromLinearDepth((center + float2(-1,  0) * _DownsamplingFactor) * _TextureSize.zw, linearDepths.z);
+    float3 viewPosR = GetViewSpacePositionFromLinearDepth((center + float2( 1,  0) * _DownsamplingFactor) * _TextureSize.zw, linearDepths.w);
+
+    float3 t = normalize(viewPosT - viewPosC);
+    float3 b = normalize(viewPosC - viewPosB);
+    float3 l = normalize(viewPosC - viewPosL);
+    float3 r = normalize(viewPosR - viewPosC);
+
+    float4 H = float4(depthL, depthR, depthL2, depthR2);
+    float4 V = float4(depthB, depthT, depthB2, depthT2);
+    float2 he = abs((2 * H.xy - H.zw) - depthC);
+    float2 ve = abs((2 * V.xy - V.zw) - depthC);
+    float3 hDeriv = he.x < he.y ? l : r;
+    float3 vDeriv = ve.x < ve.y ? b : t;
+    float3 normalVS = normalize(cross(hDeriv, vDeriv));
+    //endregion
+
+    //region Calculate GTAO From Depth and Normal
+    // 噪声相位: 静态模式(默认)用固定相位→无时域抖动/拖影, 靠Spatial去噪;
+    //          temporal模式用每帧jitter做高频采样, 需配合重投影Temporal累积。
+    uint temporalIndex = (_TemporalEnabled != 0) ? _FrameIndex : 0u;
+    float2 localNoise = SpatioTemporalNoise(dispatchThreadID.xy, temporalIndex);
+
+    float3 pixCenterPos = viewPosC;
+    float3 viewVec = normalize(-pixCenterPos);
+
+    float effectRadius = _SampleRadius;
+    float sampleDistributionPower = _DistributionPower;
+    float falloffRange = effectRadius * _FalloffRange;
+
+    float falloffFrom = effectRadius - falloffRange;
+    float falloffMul = -rcp(falloffRange);
+    float falloffAdd = 1.0 - falloffFrom * falloffMul;
+
+    float visibility = 0.0;
+    {
+        float noiseSlice = localNoise.x;
+        float noiseSample = localNoise.y;
+        
+        // 增大自遮挡拒止阈值 (1.3→3.0), 减少平面上的假阴影
+        float pixelTooCloseThreshold = 3.0;
+
+        float lengthToPixelRatio = GetLengthToPixelRatio(linearDepth);
+        float screenSpaceRadius = effectRadius * lengthToPixelRatio;
+
+        //fade GTAO if screenSpaceRadius is too small
+        visibility += saturate((10 - screenSpaceRadius) / 200);
+        float minS = pixelTooCloseThreshold / screenSpaceRadius;
+        
+        [unroll(SLICE_COUNT)]
+        for (int slice = 0; slice < SLICE_COUNT; slice++)
+        {
+            float phi = (slice + noiseSlice) * PI / SLICE_COUNT;
+            float sinPhi, cosPhi;
+            sincos(phi, sinPhi, cosPhi);
+            float2 omega = float2(cosPhi, sinPhi);
+
+            omega *= screenSpaceRadius;
+            float3 directionVec = float3(cosPhi, sinPhi, 0.0);
+            float3 orthoDirectionVec = directionVec - (dot(directionVec, viewVec) * viewVec);
+            float3 axisVec = normalize(cross(orthoDirectionVec, viewVec));
+            float3 projectedNormalVec = normalVS - axisVec * dot(normalVS, axisVec);
+            float signNormal = sign(dot(orthoDirectionVec, projectedNormalVec));
+            float projectedNormalVecLength = length(projectedNormalVec);
+            float cosNorm = saturate(dot(projectedNormalVec, viewVec) / projectedNormalVecLength);
+            float n = signNormal * acos(cosNorm);
+            float lowHorizonCos0 = cos(n + HALF_PI);
+            float lowHorizonCos1 = cos(n - HALF_PI);
+
+            float horizonCos0 = lowHorizonCos0;
+            float horizonCos1 = lowHorizonCos1;
+
+#if USE_AVERAGE_COS
+            float baseCos0 = 0.0;
+            float baseCos1 = 0.0;
+#endif
+
+            [unroll]
+            for (float step = 0; step < STEPS_PER_SLICE; step++)
+            {
+                float stepBaseNoise = (slice + step * STEPS_PER_SLICE) * 0.6180339887498948482;
+                float stepNoise = frac(noiseSample + stepBaseNoise);
+                
+                float s = (step + stepNoise) / STEPS_PER_SLICE;
+                s = pow(s, sampleDistributionPower);
+                s += minS;
+
+                float2 sampleOffset = s * omega;
+                float sampleOffsetLength = length(sampleOffset);
+                sampleOffset = round(sampleOffset) * _TextureSize.zw;
+                
+                float2 sampleScreenPos0 = uv + sampleOffset;
+                float sampleLinearDepth0 = LinearEyeDepth(_DepthTexture.SampleLevel(sampler_PointClamp, sampleScreenPos0, 0), _ZBufferParams);
+                float3 samplePos0 = GetViewSpacePositionFromLinearDepth(sampleScreenPos0, sampleLinearDepth0);
+                
+                float2 sampleScreenPos1 = uv - sampleOffset;
+                float sampleLinearDepth1 = LinearEyeDepth(_DepthTexture.SampleLevel(sampler_PointClamp, sampleScreenPos1, 0), _ZBufferParams);
+                float3 samplePos1 = GetViewSpacePositionFromLinearDepth(sampleScreenPos1, sampleLinearDepth1);
+                
+                float3 sampleDelta0 = samplePos0 - pixCenterPos;
+                float3 sampleDelta1 = samplePos1 - pixCenterPos;
+
+                float sampleDist0 = length(sampleDelta0);
+                float sampleDist1 = length(sampleDelta1);
+
+                float3 sampleHorizonVec0 = sampleDelta0 / sampleDist0;
+                float3 sampleHorizonVec1 = sampleDelta1 / sampleDist1;
+
+                float weight0 = saturate(sampleDist0 * falloffMul + falloffAdd);
+                float weight1 = saturate(sampleDist1 * falloffMul + falloffAdd);
+
+                float shc0 = dot(sampleHorizonVec0, viewVec);
+                float shc1 = dot(sampleHorizonVec1, viewVec);
+
+                shc0 = lerp(lowHorizonCos0, shc0, weight0);
+                shc1 = lerp(lowHorizonCos1, shc1, weight1);
+
+#if USE_AVERAGE_COS
+                baseCos0 += shc0;
+                baseCos1 += shc1;
+#else
+                horizonCos0 = max(horizonCos0, shc0);
+                horizonCos1 = max(horizonCos1, shc1);
+#endif
+            }
+
+#if USE_AVERAGE_COS
+            baseCos0 /= STEPS_PER_SLICE;
+            baseCos1 /= STEPS_PER_SLICE;
+
+            horizonCos0 = max(baseCos0, horizonCos0);
+            horizonCos1 = max(baseCos1, horizonCos1);
+#endif
+
+            // Horizon bias: 减少自遮挡, 将地平线角向unoccluded方向偏移
+            horizonCos0 = max(horizonCos0, cos(n + HALF_PI - _HorizonBias));
+            horizonCos1 = max(horizonCos1, cos(n - HALF_PI + _HorizonBias));
+
+            float h0 = acos(horizonCos0);
+            float h1 = -acos(horizonCos1);
+
+            h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
+            h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
+
+            float val0 = (cosNorm + 2 * h0 * sin(n) - cos(2 * h0 - n)) / 4;
+            float val1 = (cosNorm + 2 * h1 * sin(n) - cos(2 * h1 - n)) / 4;
+            visibility += projectedNormalVecLength * (val0 + val1);
+        }
+
+        visibility /= SLICE_COUNT;
+        visibility = max(0.03, visibility);
+    }
+
+    float outputColor = visibility;
+#if USE_AVERAGE_COS
+    outputColor /= HALF_PI;
+#endif
+    //endregion
+
+    _RW_GTAOTexture[dispatchThreadID.xy] = float4(outputColor, normalVS.xy * 0.5f + 0.5f, depthC);
+}
+
+[numthreads(BLUR_THREAD_GROUP_SIZE,1,1)]
+void BlurHorizontalMain(uint3 groupID : SV_GroupID,
+                uint3 groupThreadID : SV_GroupThreadID,
+                uint groupIndex : SV_GroupIndex,
+                uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    // 固定subpixel偏移为(0,0), 与GTAOMain保持一致
+    int2 subpixelBias = int2(0, 0);
+    int2 pixelCoord = int2(dispatchThreadID.x / _DownsamplingFactor, dispatchThreadID.y);
+    int2 thisSubpixelBias = int2(dispatchThreadID.x % _DownsamplingFactor, 0);
+
+    //region Cache AO Normal Depth
+    int2 groupCacheStartPos = groupID.xy * int2(BLUR_THREAD_GROUP_SIZE, 1) / int2(_DownsamplingFactor, 1) - int2(BLUR_RADIUS+BILINEAR_RADIUS, 0);
+    int cacheIndex = groupIndex * 2;
+    if(cacheIndex < int(CACHED_AO_NORMAL_DEPTH_FOR_BLUR_SIZE-1))
+    {
+        CacheAONormalDepthForBlur(groupCacheStartPos, cacheIndex, 0);
+        CacheAONormalDepthForBlur(groupCacheStartPos, cacheIndex + 1, 0);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    //endregion
+
+    float4 thisAONormalDepth = GetAONormalDepthForBlur(groupIndex  / _DownsamplingFactor);
+
+    //region Blur AO
+    int cacheAOIndex = groupIndex * 2;
+    if(cacheAOIndex < CACHED_AO_FOR_BILINEAR_SIZE-1)
+    {
+        CacheGaussianBlur(cacheAOIndex, 0);
+        CacheGaussianBlur(cacheAOIndex + 1, 0);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    //endregion
+
+    //region Bilinear Sampling
+    uint loadIndex = groupIndex;
+    int threadPos = loadIndex / _DownsamplingFactor;
+    float2 signVal = sign(thisSubpixelBias - subpixelBias);
+    float thisAO    = GetAOForBilinear(threadPos);
+    float leftAO    = GetAOForBilinear(threadPos + signVal.x);
+    float2 lerpVal = abs(thisSubpixelBias - subpixelBias) / (float)_DownsamplingFactor;
+    float finalAO = lerp(thisAO, leftAO, lerpVal.x);
+    //endregion
+
+    _RW_BlurTexture[dispatchThreadID.xy] = float4(finalAO, thisAONormalDepth.yzw);
+}
+
+[numthreads(1,BLUR_THREAD_GROUP_SIZE,1)]
+void BlurVerticalMain(uint3 groupID : SV_GroupID,
+                uint3 groupThreadID : SV_GroupThreadID,
+                uint groupIndex : SV_GroupIndex,
+                uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    int2 subpixelBias = int2(0, 0);
+    int2 pixelCoord = dispatchThreadID.xy / _DownsamplingFactor;
+    int2 thisSubpixelBias = dispatchThreadID.xy % _DownsamplingFactor;
+
+    //region Cache AO Normal Depth
+    int2 groupCacheStartPos = groupID.xy * int2(1, BLUR_THREAD_GROUP_SIZE) / int2(1, _DownsamplingFactor) - int2(0, BLUR_RADIUS+BILINEAR_RADIUS);
+    int cacheIndex = groupIndex * 2;
+    if(cacheIndex < int(CACHED_AO_NORMAL_DEPTH_FOR_BLUR_SIZE-1))
+    {
+        CacheAONormalDepthForBlur(groupCacheStartPos, cacheIndex, 1);
+        CacheAONormalDepthForBlur(groupCacheStartPos, cacheIndex + 1, 1);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    //endregion
+
+    //region Blur AO
+    int cacheAOIndex = groupIndex * 2;
+    if(cacheAOIndex < CACHED_AO_FOR_BILINEAR_SIZE-1)
+    {
+        CacheGaussianBlur(cacheAOIndex, 1);
+        CacheGaussianBlur(cacheAOIndex + 1, 1);
+    }
+    GroupMemoryBarrierWithGroupSync();
+    //endregion
+
+    //region Bilinear Sampling
+    uint loadIndex = groupIndex;
+    int threadPos = loadIndex / _DownsamplingFactor;
+    float2 signVal = sign(thisSubpixelBias - subpixelBias);
+    float thisAO    = GetAOForBilinear(threadPos);
+    float topAO    = GetAOForBilinear(threadPos + signVal.y);
+    float2 lerpVal = abs(thisSubpixelBias - subpixelBias) / (float)_DownsamplingFactor;
+    float finalAO = lerp(thisAO, topAO, lerpVal.y); 
+    //endregion
+
+    _RW_BlurTexture[dispatchThreadID.xy] = finalAO;
+}
+
+// ---- Temporal Filter: Variance Clipping 历史混合 ----
+// 作用在Spatial(双边模糊)之后, 消除残留的逐帧闪烁噪点。
+// 用当前帧3x3邻域的均值±标准差作为bounding box, 把历史值clamp进框内,
+// 既能累积多帧采样(去噪/逼近RayTrace), 又能拒绝失配历史(防鬼影/拖影)。
+[numthreads(GTAO_THREAD_GROUP_SIZE_X,GTAO_THREAD_GROUP_SIZE_Y,1)]
+void TemporalFilterMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    int2 coord = int2(dispatchThreadID.xy);
+    int2 maxCoord = int2(_TextureSize.xy) - 1;
+
+    float curVis = _GTAOTexture.Load(uint3(coord, 0)).r;
+
+    // 3x3邻域统计当前帧均值/方差
+    float m1 = 0.0;
+    float m2 = 0.0;
+    [unroll]
+    for (int y = -1; y <= 1; y++)
+    {
+        [unroll]
+        for (int x = -1; x <= 1; x++)
+        {
+            int2 c = clamp(coord + int2(x, y), int2(0, 0), maxCoord);
+            float s = _GTAOTexture.Load(uint3(c, 0)).r;
+            m1 += s;
+            m2 += s * s;
+        }
+    }
+    m1 /= 9.0;
+    m2 /= 9.0;
+    float sigma = sqrt(max(0.0, m2 - m1 * m1));
+    float loBound = m1 - sigma * _VarianceClampScale;
+    float hiBound = m1 + sigma * _VarianceClampScale;
+
+    // 历史(同屏幕坐标) → Variance Clipping 拒绝失配历史
+    float histVis = _HistoryTexture.Load(uint3(coord, 0)).r;
+    histVis = clamp(histVis, loBound, hiBound);
+
+    float result = lerp(curVis, histVis, _TemporalBlend);
+    _RW_VisualizeTexture[dispatchThreadID.xy] = float4(result, result, result, result);
+}
+
+[numthreads(GTAO_THREAD_GROUP_SIZE_X,GTAO_THREAD_GROUP_SIZE_Y,1)]
+void VisualizeMain(uint3 groupID : SV_GroupID,
+                uint3 groupThreadID : SV_GroupThreadID,
+                uint groupIndex : SV_GroupIndex,
+                uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    // GTAO 输出的是可见度(visibility): 1=完全可见, 越小越被遮蔽
+    float visibility = _GTAOTexture.Load(uint3(dispatchThreadID.xy, 0)).r;
+
+    // 转为遮蔽量并按 intensity 调强, 再转回可见度供 URP 使用
+    float occlusion = saturate((1.0f - visibility) * _Intensity);
+    float ao = 1.0f - occlusion;
+
+    // 输出含intensity的可见度: 屏幕调试(debugAOToScreen)时 intensity 同样有效, 便于观察强度与抖动
+    // 输出 R 通道即 URP _ScreenSpaceOcclusionTexture 采样的可见度(1=未遮蔽)
+    _RW_VisualizeTexture[dispatchThreadID.xy] = float4(ao, ao, ao, ao);
+}

@@ -1,5 +1,33 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8169701272156000086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6463ba1bee1495ea27785a1f9e0e940, type: 3}
+  m_Name: TA Temporal Anti Aliasing
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  isPassActive: 1
+  setting:
+    evt: 600
+    jitter: 0.005
+    blend: 0.483
+    clampScale: 0.89
+    velocityThreshold: 0.0565
+    skipWhenStatic: 0
+    debugSplitView: 0
+    debugSplitX: 0.5
+    debugLineWidthPx: 5
+    debugVisMode: 0
+    disableJitter: 0
+  shader: {fileID: 4800000, guid: 935173b272c541b49b80cda9d537b76c, type: 3}
+  motionCopyShader: {fileID: 4800000, guid: 842290b3538441148986c106296016eb, type: 3}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17,8 +45,16 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: 4413292002320621399}
-  m_RendererFeatureMap: 
-  m_UseNativeRenderPass: 0
+  - {fileID: 2026100601}
+  - {fileID: 2026100602}
+  - {fileID: 2026100603}
+  - {fileID: 2026100604}
+  - {fileID: 2026100605}
+  - {fileID: 2254091500125351225}
+  - {fileID: -8169701272156000086}
+  - {fileID: 4318669148863944133}
+  m_RendererFeatureMap: 579f6488b1293f3d79d7c378000000007ad7c378000000007bd7c378000000007cd7c378000000007dd7c3780000000039ed32d44624481f
+  m_UseNativeRenderPass: 1
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   shaders:
@@ -44,18 +80,233 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_DefaultStencilState:
-    overrideStencilState: 0
+    overrideStencilState: 1
     stencilReference: 0
     stencilCompareFunction: 8
     passOperation: 2
     failOperation: 0
     zFailOperation: 0
   m_ShadowTransparentReceive: 1
-  m_RenderingMode: 0
+  m_RenderingMode: 1
   m_DepthPrimingMode: 0
   m_CopyDepthMode: 1
-  m_AccurateGbufferNormals: 0
+  m_AccurateGbufferNormals: 1
   m_IntermediateTextureMode: 1
+--- !u!114 &2026100601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d257a1d5deefc744d9cb782135dda330, type: 3}
+  m_Name: GTAORendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 220
+    useForwardNormals: 0
+    gtaoComputeShader: {fileID: 7200000, guid: 109c4d935ba508a4788045ea40c865ee, type: 3}
+  compositeShader: {fileID: 4800000, guid: 8f6f9d9a62b54f34a9f94f0b5b7c2c51, type: 3}
+--- !u!114 &2026100602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20099b0c246d490fa941b2a3995012e9, type: 3}
+  m_Name: SSRRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 450
+    stepStrideLength: 0.01
+    maxSteps: 145
+    minSmoothness: 0
+    intensity: 1.44
+    reflectionBrightness: 1.4
+    reflectSky: 1
+    useForwardNormals: 0
+    forwardSmoothness: 0.8
+    downsample: 0
+    ditherMode: 0
+    highPrecisionTrace: 1
+    jitterRadiusPixels: 0.75
+    roughnessMipMax: 5
+    debugView: 0
+  shader: {fileID: 4800000, guid: ed9d0a65da034e46a7710fa65a609576, type: 3}
+--- !u!114 &2026100603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc6d6f3448931b2439283aae32c8fe67, type: 3}
+  m_Name: DeferredOutlineFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    renderPassEvent: 503
+    sceneView: 1
+    individualTargets: 1
+    renderingLayerMask: 128
+    group: {fileID: 11400000, guid: f5b6ec4dd2aa62f449832fb91b13c2ed, type: 2}
+    presetOverride: {fileID: 0}
+    maxDistancePixels: 128
+  depthToMaskShader: {fileID: 4800000, guid: 4dc7503238df40d990713901a8ce742d, type: 3}
+  compositeShader: {fileID: 4800000, guid: 27f0cebcb87c7c2439b951c5f3baae72, type: 3}
+  distanceFieldShader: {fileID: 4800000, guid: f7652d0d850d41b59874cb28b4052858, type: 3}
+--- !u!114 &2026100604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4324618e3141e4ca3a2a0f6076db21, type: 3}
+  m_Name: BloomRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 550
+    threshold: 1
+    softKnee: 0.5
+    intensity: 1.19
+    scatter: 0.65
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    iterations: 4
+    downsample: 3
+    minSize: 32
+  shader: {fileID: 4800000, guid: 0d2f079c5d1f4da4eae77ee6d51fc0c9, type: 3}
+--- !u!114 &2026100605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10529ee1e37242d28eb25d947d6deef7, type: 3}
+  m_Name: NPRLightingFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    IsEnabled: 1
+    SceneView: 1
+    OutlineWidth: 1.5
+    MaxOutlineWidth: 3
+    OutlineColor: {r: 0.035, g: 0.045, b: 0.07, a: 1}
+  lightingShader: {fileID: 4800000, guid: 00c694af49474f29a5ebdb6d7830868d, type: 3}
+--- !u!114 &2026100606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a2a8d6419d3abd4b92cd8169bd0e791, type: 3}
+  m_Name: FogRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 546
+    fogColor: {r: 0.34376115, g: 0.49966946, b: 0.7075472, a: 1}
+    fogDensity: 0.0486
+    maxFogOpacity: 0.376
+    fogHeightStart: 3.35
+    heightFalloff: 0.49
+    fogStartDistance: 2
+    fogStartFadeRange: 10
+    skyboxZenithFade: 17.7
+    inscatterColor: {r: 1, g: 0.95, b: 0.8, a: 1}
+    scatteringG: 0.253
+    sunScatterIntensity: 0.45
+    inscatterStartDistance: 50
+  m_Shader: {fileID: 4800000, guid: 522a240773ee74a448333ab212a11e4c, type: 3}
+--- !u!114 &2254091500125351225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a2a8d6419d3abd4b92cd8169bd0e791, type: 3}
+  m_Name: FogRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 500
+    fogColor: {r: 0.34376115, g: 0.49966946, b: 0.7075472, a: 1}
+    fogDensity: 0.009
+    maxFogOpacity: 0.133
+    fogHeightStart: 0
+    heightFalloff: 0.49
+    fogStartDistance: 2
+    fogStartFadeRange: 10
+    skyboxZenithFade: 8.7
+    inscatterColor: {r: 1, g: 1, b: 1, a: 1}
+    scatteringG: 0.253
+    sunScatterIntensity: 2.29
+    inscatterStartDistance: 50
+  m_Shader: {fileID: 4800000, guid: 522a240773ee74a448333ab212a11e4c, type: 3}
+--- !u!114 &4318669148863944133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d19df8a7fe8844649ad46a4df7c8b936, type: 3}
+  m_Name: TA Volumetric Light
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    isEnabled: 1
+    renderPassEvent: 500
+    scatteringTint: {r: 1, g: 0.95, b: 0.85, a: 1}
+    intensity: 4
+    density: 0.035
+    anisotropy: -0.839
+    maxDistance: 10
+    heightFogBase: 12
+    heightFalloff: 0.69
+    shadowStrength: 0.887
+    shadowBias: 0.732
+    jitterStrength: 0.451
+    rayMarchSteps: 76
+    downsample: 2
+    blurIterations: 3
+    blurRadius: 1.901
+    depthAwareBlurThreshold: 2.33
+    debugView: 0
+    logDebugInfo: 0
+    debugLogInterval: 1
+    debugSourceTextureName: _VolumetricLight_Debug_SourceCapture
+    debugRawTextureName: _VolumetricLight_Debug_RawLight
+    debugBlurTextureName: _VolumetricLight_Debug_BlurredLight
+  shader: {fileID: 4800000, guid: 11f9c14044dd4524a898d4f2b72d52b0, type: 3}
 --- !u!114 &4413292002320621399
 MonoBehaviour:
   m_ObjectHideFlags: 0

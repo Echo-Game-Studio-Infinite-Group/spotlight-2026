@@ -28,22 +28,6 @@ MonoBehaviour:
   rounded:
     m_OverrideState: 0
     m_Value: 0
---- !u!114 &-3975872122646180401
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81180773991d8724ab7f2d216912b564, type: 3}
-  m_Name: ChromaticAberration
-  m_EditorClassIdentifier: 
-  active: 1
-  intensity:
-    m_OverrideState: 1
-    m_Value: 0
 --- !u!114 &-1882775700003333331
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -69,34 +53,6 @@ MonoBehaviour:
   clamp:
     m_OverrideState: 1
     m_Value: 0.05
---- !u!114 &-1165244484709718831
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66f335fb1ffd8684294ad653bf1c7564, type: 3}
-  m_Name: ColorAdjustments
-  m_EditorClassIdentifier: 
-  active: 1
-  postExposure:
-    m_OverrideState: 0
-    m_Value: 0
-  contrast:
-    m_OverrideState: 0
-    m_Value: 0
-  colorFilter:
-    m_OverrideState: 0
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
-  hueShift:
-    m_OverrideState: 1
-    m_Value: 0
-  saturation:
-    m_OverrideState: 0
-    m_Value: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110,7 +66,79 @@ MonoBehaviour:
   m_Name: RunVolume
   m_EditorClassIdentifier: 
   components:
-  - {fileID: -1165244484709718831}
-  - {fileID: -3975872122646180401}
   - {fileID: -1882775700003333331}
   - {fileID: -8588564338808054205}
+  - {fileID: 4651407846478167747}
+--- !u!114 &4651407846478167747
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96499b8a20c805b4da4429b5721b7917, type: 3}
+  m_Name: GroundTruthAmbientOcclusion
+  m_EditorClassIdentifier: 
+  active: 1
+  enableAO:
+    m_OverrideState: 1
+    m_Value: 1
+  debugAOToScreen:
+    m_OverrideState: 1
+    m_Value: 0
+  downsamplingFactor:
+    m_OverrideState: 1
+    m_Value: 1
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1.44
+  directLightingStrength:
+    m_OverrideState: 1
+    m_Value: 0.89
+  radius:
+    m_OverrideState: 1
+    m_Value: 1.18
+  distributionPower:
+    m_OverrideState: 1
+    m_Value: 2.34
+  falloffRange:
+    m_OverrideState: 0
+    m_Value: 0.1
+  horizonBias:
+    m_OverrideState: 0
+    m_Value: 0.1
+  temporalEnabled:
+    m_OverrideState: 0
+    m_Value: 1
+  temporalBlend:
+    m_OverrideState: 0
+    m_Value: 0.9
+  varianceClamp:
+    m_OverrideState: 0
+    m_Value: 1
+  enableMultiBounce:
+    m_OverrideState: 1
+    m_Value: 1
+  multiBounceStrength:
+    m_OverrideState: 1
+    m_Value: 0.085
+  enableSSDO:
+    m_OverrideState: 1
+    m_Value: 1
+  ssdoIntensity:
+    m_OverrideState: 1
+    m_Value: 1.57
+  ssdoRadius:
+    m_OverrideState: 1
+    m_Value: 2
+  ssdoSampleCount:
+    m_OverrideState: 1
+    m_Value: 6
+  ssdoMaxContribution:
+    m_OverrideState: 1
+    m_Value: 1.403
+  debugSSDOToScreen:
+    m_OverrideState: 1
+    m_Value: 0
