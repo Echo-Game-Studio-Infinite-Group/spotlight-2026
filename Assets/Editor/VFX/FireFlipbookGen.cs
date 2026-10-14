@@ -27,7 +27,11 @@ public static class FireFlipbookGen
 {
     // ------------------------------------------------------------------
     // 风格参数：三套火（路边 / 驻足 / 烟）只是同一套公式换数字
+    // [Serializable] 是给 RuinsFireConfig 用的：这套风格参数要能搬进 ScriptableObject 资产，
+    // 在 Inspector 里改、进版本库 —— 而不是每次调参都改 C# 字面量再等重编译。
+    // 下面三个静态属性仍保留，作为"没接配置资产时的兜底默认值"。
     // ------------------------------------------------------------------
+    [System.Serializable]
     public struct FlameStyle
     {
         public int cols, rows, tile;
