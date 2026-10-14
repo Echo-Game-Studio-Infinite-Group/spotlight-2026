@@ -2,25 +2,22 @@ using UnityEngine;
 
 public static class SaveManager
 {
-    //存档数据模型
     public class SaveData
     {
         public Vector3 playerPosition;
     }
 
-    private static GameObject _hiddenRunner;
-    private static SaveManagerRunner _runner;
+    private static GameObject hiddenRunner;
+    private static SaveManagerRunner runner;
     public static GameObject PlayerObj { get; set; }
 
-    //初始化：自动创建隐藏物体，用来跑Update监听按键
     public static void Init(GameObject player)
     {
-        if (_hiddenRunner != null) return;
-
+        if (hiddenRunner != null) return;
         PlayerObj = player;
-        _hiddenRunner = new GameObject("SaveManager_HiddenRunner");
-        _hiddenRunner.hideFlags = HideFlags.HideAndDontSave;
-        _runner = _hiddenRunner.AddComponent<SaveManagerRunner>();
+        hiddenRunner = new GameObject("SaveManager_HiddenRunner");
+        hiddenRunner.hideFlags = HideFlags.HideAndDontSave;
+        runner = hiddenRunner.AddComponent<SaveManagerRunner>();
     }
 
     public static void SavePlayer()
@@ -35,7 +32,22 @@ public static class SaveManager
         string json = JsonUtility.ToJson(data);
         PlayerPrefs.SetString("playerSave", json);
         PlayerPrefs.Save();
-        Debug.Log("存档成功");
+        Debug.Log("按键存档成功");
+    }
+
+    public static void SaveAtHitPoint()
+    {
+        if (PlayerObj == null)
+        {
+            Debug.LogWarning("Player对象为空，攻击存档点保存失败");
+            return;
+        }
+        SaveData data = new SaveData();
+        data.playerPosition = PlayerObj.transform.position;
+        string json = JsonUtility.ToJson(data);
+        PlayerPrefs.SetString("playerSave", json);
+        PlayerPrefs.Save();
+        Debug.Log("攻击命中存档点，保存成功");
     }
 
     public static void LoadPlayer()
@@ -52,16 +64,12 @@ public static class SaveManager
             return;
         }
         SaveData data = JsonUtility.FromJson<SaveData>(json);
-        Rigidbody rb = PlayerObj.GetComponent<Rigidbody>();
-        if (rb != null)
+
+        if (PlayerMotor.Active != null)
         {
-            rb.MovePosition(data.playerPosition);
+            PlayerMotor.Active.Teleport(data.playerPosition);
         }
-        else
-        {
-            PlayerObj.transform.position = data.playerPosition;
-        }
-        Debug.Log("读档成功，已设置玩家位置");
+        Debug.Log("读档成功，已传送玩家位置");
     }
 
     public static void ClearPlayerSave()
@@ -71,14 +79,23 @@ public static class SaveManager
         Debug.Log("存档已清除");
     }
 
-    //嵌套Mono：负责Update检测按键，全部在同一个cs文件内
+    // 显示死亡失败面板，由外部调用
+    public static void ShowDeathPanel()
+    {
+        DeathRespawnUI ui = Object.FindObjectOfType<DeathRespawnUI>();
+        if (ui != null)
+        {
+            ui.OpenPanel();
+        }
+    }
+
     private class SaveManagerRunner : MonoBehaviour
     {
         void Update()
         {
             if (SaveManager.PlayerObj == null) return;
 
-            // E保存，L读取
+            //E保存 L读档 R触发死亡失败界面
             if (Input.GetKeyDown(KeyCode.E))
             {
                 SaveManager.SavePlayer();
@@ -87,13 +104,17 @@ public static class SaveManager
             {
                 SaveManager.LoadPlayer();
             }
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                SaveManager.ShowDeathPanel();
+            }
         }
 
         void OnDestroy()
         {
-            if (SaveManager._hiddenRunner != null)
+            if (SaveManager.hiddenRunner != null)
             {
-                Object.Destroy(SaveManager._hiddenRunner);
+                Object.Destroy(SaveManager.hiddenRunner);
             }
         }
     }
