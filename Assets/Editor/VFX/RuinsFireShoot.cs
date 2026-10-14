@@ -168,6 +168,78 @@ namespace Spotlight.VFX
             Debug.Log($"[RuinsFireShoot] 逐子物体隔离完成（{kids.Count} 个）：{string.Join(", ", kids.ConvertAll(k => k.name))}");
         }
 
+        // 循环出图（GIF 用）：固定机位、按**一个 flipbook 周期**逐帧出图，分辨率小而贴脸。
+        // 周期不写死：从材质实读"图集帧数 / 播放速度"，改了生成器参数会自动跟着变。
+        //
+        // 诚实边界：一个预制体里三张卡片的 _Speed 各不相同（驻足档主片 19 / A 26 / B 31，掠过档 26 / 31），
+        // 所以**整堆火**没有一个很短的严格周期 —— 这里取主卡片周期，循环点不是逐位精确的。
+        // 对"看火在动 / 出 GIF"够用；"无缝"这件事本身由生成器的整数频率构造保证（见 FireFlipbookGen 头注释），
+        // 那一路可以用单卡片（iso 出图）来单独看。
+        [MenuItem("超高速行者/VFX/废墟氛围火：循环出图（GIF 用）")]
+        public static void Loop()
+        {
+            if (!File.Exists(Path.GetFullPath(Path.Combine(Application.dataPath, "..", ScenePath))))
+            {
+                Debug.LogError("[RuinsFireShoot] 场景不存在，请先重建演示场景");
+                return;
+            }
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Directory.CreateDirectory(OutDir + "/loop");
+            var cam = Object.FindObjectOfType<Camera>();
+            if (cam == null) { Debug.LogError("[RuinsFireShoot] 场景里没有相机"); return; }
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Art/VFX/Fire/Materials/M_RuinsFire_LingerFlame.mat");
+            if (mat == null) { Debug.LogError("[RuinsFireShoot] 找不到驻足档主火焰材质"); return; }
+            float sheetFrames = Mathf.Max(1f, mat.GetFloat("_FlipbookCols") * mat.GetFloat("_FlipbookRows"));
+            float speed = Mathf.Max(1e-3f, mat.GetFloat("_Speed"));
+            float period = sheetFrames / speed;
+
+            Transform fire = null;
+            var root = GameObject.Find("RUINS_FIRES");
+            if (root != null)
+                foreach (Transform c in root.transform)
+                    if (c.name.StartsWith("FX_RuinsFire_Linger")) { fire = c; break; }
+            if (fire == null) { Debug.LogError("[RuinsFireShoot] 场景里没有驻足档火"); return; }
+
+            Vector3 fp = fire.position;
+            Vector3 pos = fp + new Vector3(-1.55f, 1.05f, -1.75f);   // 留在跑道内侧
+            Vector3 tgt = fp + new Vector3(0f, 0.80f, 0f);            // 瞄火苗中段
+
+            const int N = 48;
+            const int GW = 640, GH = 480;
+            for (int i = 0; i < N; i++)
+                Shoot(cam, 3.6f + i * period / N, pos, tgt, 40f, $"linger_{i:D2}", OutDir + "/loop", false, GW, GH);
+
+            Debug.Log($"[RuinsFireShoot] 循环出图完成：图集 {sheetFrames:0} 帧 / 速度 {speed:0.##} → 周期 {period:F3}s；" +
+                      $"{N} 帧 {GW}x{GH} → {OutDir}/loop");
+        }
+
+        // 掠过序列**加密版**（GIF 用）：Run() 的是"每 5m 一帧"，做成 GIF 要么像幻灯片、
+        // 要么得违心加速播放。这里按 1.67m/帧出 60 帧 → 12fps 播放**正好是真实的 20 m/s**。
+        [MenuItem("超高速行者/VFX/废墟氛围火：掠过序列加密出图（GIF 用）")]
+        public static void FlybyDense()
+        {
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Directory.CreateDirectory(OutDir + "/flyby60");
+            var cam = Object.FindObjectOfType<Camera>();
+            if (cam == null) { Debug.LogError("[RuinsFireShoot] 场景里没有相机"); return; }
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+            var flyby = cam.GetComponent<RuinsFireFlyby>();
+            if (flyby == null) flyby = cam.gameObject.AddComponent<RuinsFireFlyby>();
+
+            const int N = 60;
+            const float t0 = 1.6f, dur = 5f;      // 5s @ 20 m/s = 100m（z 不会触发 Repeat 回绕）
+            for (int i = 0; i < N; i++)
+            {
+                float ft = t0 + i * dur / N;
+                flyby.Sample(ft, out Vector3 p, out Quaternion r);
+                Shoot(cam, ft, p, r, 62f, $"f{i:D2}", OutDir + "/flyby60", flybyLook: true, 960, 540);
+            }
+            Debug.Log($"[RuinsFireShoot] 掠过加密出图完成：{N} 帧 × {dur / N:F4}s = {dur * 20f / N:F2}m/帧（12fps 播 = 实时 20 m/s）→ {OutDir}/flyby60");
+        }
+
         [MenuItem("超高速行者/VFX/废墟氛围火：重建场景并出图（一键）")]
         public static void BuildAndRun()
         {
@@ -191,13 +263,13 @@ namespace Spotlight.VFX
         }
 
         // ------------------------------------------------------------------
-        static void Shoot(Camera cam, float time, Vector3 pos, Vector3 target, float fov, string name, string dir = null, bool flybyLook = false)
+        static void Shoot(Camera cam, float time, Vector3 pos, Vector3 target, float fov, string name, string dir = null, bool flybyLook = false, int w = W, int h = H)
         {
             var rot = Quaternion.LookRotation((target - pos).normalized, Vector3.up);
-            Shoot(cam, time, pos, rot, fov, name, dir, flybyLook);
+            Shoot(cam, time, pos, rot, fov, name, dir, flybyLook, w, h);
         }
 
-        static void Shoot(Camera cam, float time, Vector3 pos, Quaternion rot, float fov, string name, string dir = null, bool flybyLook = false)
+        static void Shoot(Camera cam, float time, Vector3 pos, Quaternion rot, float fov, string name, string dir = null, bool flybyLook = false, int w = W, int h = H)
         {
             // 可复现：把动画时刻、风、火光闪烁、粒子全部拨到指定时刻
             Shader.SetGlobalVector("_Time", new Vector4(time / 20f, time, time * 2f, time * 3f));
@@ -217,17 +289,17 @@ namespace Spotlight.VFX
             tr.SetPositionAndRotation(pos, rot);
             cam.fieldOfView = fov;
 
-            var rt = new RenderTexture(W, H, 24, RenderTextureFormat.DefaultHDR, RenderTextureReadWrite.Linear);
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.DefaultHDR, RenderTextureReadWrite.Linear);
             var prev = cam.targetTexture;
             cam.targetTexture = rt;
             cam.Render();
 
             RenderTexture.active = rt;
-            var tex = new Texture2D(W, H, TextureFormat.RGBAFloat, false, true);
-            tex.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+            var tex = new Texture2D(w, h, TextureFormat.RGBAFloat, false, true);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             tex.Apply();
             var px = tex.GetPixels();
-            var t8 = new Texture2D(W, H, TextureFormat.RGBA32, false, false);
+            var t8 = new Texture2D(w, h, TextureFormat.RGBA32, false, false);
             var c8 = new Color[px.Length];
             for (int k = 0; k < px.Length; k++)
                 c8[k] = new Color(L2S(Mathf.Clamp01(px[k].r)), L2S(Mathf.Clamp01(px[k].g)), L2S(Mathf.Clamp01(px[k].b)), 1f);
