@@ -8,10 +8,11 @@ using UnityEngine;
 //     天然就是「摩擦强度」的表达，不需要自己按帧累计；
 //   · 发射器每帧朝向速度反方向，粒子锥顺着喷，火花看起来是被脚「蹭出来」的；
 //   · 粒子走世界坐标系（World simulation space），火花留在原地，不跟着人跑；
+//   · 开世界碰撞 + 落地弹跳：火花贴着地面蹦跳变暗——金属摩擦的写实签名（与 CombatSparks 同一口径）；
 //   · 门槛取 MovementParams.GroundSpeedThreshold（跑到高速档才开始蹭火花），
-//     滑铲时翻倍强度并抬高发射率上限——滑铲是本作最有「摩擦感」的动作。
+//     滑铲时乘强度倍率——滑铲是本作最有「摩擦感」的动作。
 //
-// 数值均为提案基线，待 3C 与美术定稿后调；发射器与粒子系统全部代码装配，工程里没有对应资产。
+// 数值为提案基线，待 3C 与美术定稿后调；发射器与粒子系统全部代码装配，工程里没有对应资产。
 [RequireComponent(typeof(PlayerMotor))]
 [DisallowMultipleComponent]
 public sealed class SlideSparks : MonoBehaviour
@@ -24,11 +25,11 @@ public sealed class SlideSparks : MonoBehaviour
     [SerializeField, Min(1f)] private float _slideBoost = 2f;
 
     [Header("发射量")]
-    [Tooltip("每米路程的基础火花数（提案 1.2）")]
+    [Tooltip("低速档每米路程的火花数（提案 1.2）")]
     [SerializeField, Min(0f)] private float _sparksPerMeter = 1.2f;
 
-    [Tooltip("每米火花数上限（提案 40，防高速时糊屏）")]
-    [SerializeField, Min(1f)] private float _maxSparksPerMeter = 40f;
+    [Tooltip("高速档每米路程的火花数（提案 8，防高速时糊屏）")]
+    [SerializeField, Min(1f)] private float _maxSparksPerMeter = 8f;
 
     private PlayerMotor _motor;
     private CharacterController _controller;
@@ -75,8 +76,8 @@ public sealed class SlideSparks : MonoBehaviour
         if (horizontal.sqrMagnitude > 0.0001f)
             _emitter.rotation = Quaternion.LookRotation(-horizontal.normalized, Vector3.up);
 
-        // 每米火花数随速度线性涨；滑铲再乘倍率
-        float rate = Mathf.Lerp(2f, _maxSparksPerMeter, Mathf.Clamp01(speed / _motor.Params.MaxSpeed)) * _sparksPerMeter;
+        // 每米火花数随速度在基础档与高速档之间线性涨；滑铲再乘倍率
+        float rate = Mathf.Lerp(_sparksPerMeter, _maxSparksPerMeter, Mathf.Clamp01(speed / _motor.Params.MaxSpeed));
         if (sliding) rate *= _slideBoost;
 
         ParticleSystem.EmissionModule emit = _system.emission;
@@ -97,12 +98,13 @@ public sealed class SlideSparks : MonoBehaviour
 
         ParticleSystem.MainModule main = _system.main;
         main.loop = true;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.4f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 3.5f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.09f);
-        main.gravityModifier = 2.8f;             // 火花蹭出去后有明显的下坠弧线
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.36f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.06f);
+        main.gravityModifier = 2.2f;             // 火花蹭出去后有明显的下坠弧线
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.stopAction = ParticleSystemStopAction.None;
+        main.maxParticles = 240;                 // 高速滑铲时的存活上限，防糊屏
 
         ParticleSystem.EmissionModule emission = _system.emission;
         emission.rateOverTime = 0f;
@@ -111,23 +113,25 @@ public sealed class SlideSparks : MonoBehaviour
         ParticleSystem.ShapeModule shape = _system.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Cone;
-        shape.angle = 28f;
-        shape.radius = 0.05f;
-        shape.rotation = new Vector3(50f, 0f, 0f); // 锥轴向上抬：火花向后上方飞而不是贴地平射
+        shape.angle = 22f;
+        shape.radius = 0.04f;
+        shape.rotation = new Vector3(24f, 0f, 0f); // 锥轴略微上抬：火花向后上方掠过地面，不平射也不戳地
 
         ParticleSystem.ColorOverLifetimeModule color = _system.colorOverLifetime;
         color.enabled = true;
         Gradient gradient = new Gradient();
+        // RGB 常保亮度、alpha 负责熄灭（预乘混合口径，与 CombatSparks.BuildGradient 同一套）
         gradient.SetKeys(
             new[] {
-                new GradientColorKey(new Color(1f, 0.97f, 0.88f), 0f),
-                new GradientColorKey(new Color(1f, 0.55f, 0.12f), 0.4f),
-                new GradientColorKey(new Color(0.45f, 0.08f, 0.01f), 1f),
+                new GradientColorKey(new Color(1f, 0.98f, 0.92f), 0f),
+                new GradientColorKey(new Color(1f, 0.66f, 0.26f), 0.4f),
+                new GradientColorKey(new Color(0.85f, 0.28f, 0.05f), 0.8f),
             },
             new[] {
                 new GradientAlphaKey(1f, 0f),
-                new GradientAlphaKey(0.9f, 0.45f),
-                new GradientAlphaKey(0f, 1f),
+                new GradientAlphaKey(0.95f, 0.4f),
+                new GradientAlphaKey(0.45f, 0.75f),
+                new GradientAlphaKey(0f, 0.95f),
             });
         color.color = new ParticleSystem.MinMaxGradient(gradient);
 
@@ -135,11 +139,22 @@ public sealed class SlideSparks : MonoBehaviour
         size.enabled = true;
         size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0.1f));
 
+        // 世界碰撞 + 落地弹跳：贴着地面蹦跳、LifetimeLoss 快耗寿命≈触地后快熄灭
+        ParticleSystem.CollisionModule collision = _system.collision;
+        collision.enabled = true;
+        collision.type = ParticleSystemCollisionType.World;
+        collision.mode = ParticleSystemCollisionMode.Collision3D;
+        collision.dampen = 0.25f;
+        collision.bounce = 0.4f;
+        collision.lifetimeLoss = 0.4f;
+        collision.minKillSpeed = 0.4f;
+        collision.radiusScale = 1f;
+
         ParticleSystemRenderer renderer = _system.GetComponent<ParticleSystemRenderer>();
         renderer.material = CombatSparks.SparkMaterial;
         renderer.renderMode = ParticleSystemRenderMode.Stretch;
-        renderer.velocityScale = 0.14f;
-        renderer.lengthScale = 2.5f;
+        renderer.velocityScale = 0.045f;
+        renderer.lengthScale = 2.2f;
         renderer.alignment = ParticleSystemRenderSpace.View;
 
         _system.Play(); // 常驻发射器：一直开着，靠 rateOverDistance=0 静默

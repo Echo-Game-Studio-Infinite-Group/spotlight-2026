@@ -1,69 +1,68 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 战斗火花特效库：命中火花 / parry 闪光 / 弹道 parry 闪光，三类一次性爆发的统一入口。
-// 全程序化：贴图运行时生成、粒子系统代码装配、实例按需克隆入池——零美术资产、零外部包。
+// 战斗火花特效库 v2 —— 按「Functional / Industrial Chamfer Sci-Fi Hard Surface」基调重做。
+//   命中火花 / 近战 parry 闪光 / 弹道 parry 弹开 三类一次性爆发的统一入口
+//   （脚底摩擦火花是持续发射器，归 SlideSparks 组件）。
 //
-// 为什么不引开源粒子包：这批都是玩法反馈级的小特效（几十粒子、零点几秒），代码生成足够；
-// 外部包要背授权登记与 .meta GUID 冲突两笔账，GameJam 不值当。
+// 全程序化：贴图运行时生成、粒子系统代码装配、实例池化——零美术资产、零外部包。
 //
-// 时钟口径（与 DamagePopup 同一套考量）：
-//   · 命中火花走缩放时间——命中自带 hit-stop，火花跟着一起凝住正是要的打击感；
-//   · parry 闪光走 UnscaledTime——parry 成功会触发时缓，反馈必须穿透减速打出来。
+// 风格语言（对齐工业硬表面的取舍，调研依据见外层任务文档）：
+//   · 层次构成按业界通行三层：白热闪光（短促过曝，宁短勿长）+ 拉伸火花（主角）+ 结构件（细冲击环/电弧）；
+//   · 混合口径用预乘 alpha（见 SparkAdditive.shader）：白超净室的亮面上 additive 会洗白丢形色，
+//     预乘亮面保形色、暗面等价加光；HDR 染色保证有 Bloom 出辉光、没有也不失真；
+//   · 颜色纪律：金属火花＝白热→金→橙（写实金属摩擦）；能量弹开＝白热→青→蓝（对应场景青色机能指示灯）。
+//     不引入奇幻元素——四角星闪光已移除，换成「白热圆闪 + 极细冲击环」，细线环呼应本作场景的细线纹样；
+//   · 金属火花开世界碰撞 + 落地弹跳：火花触地蹦跳后变暗变小，是「金属感」的关键特征。
 //
-// 调用方只管「在哪、什么方向」，业务语义不在这里：
+// 调用入口（业务语义不在这里，只收「在哪、什么方向」）：
 //   CombatSparks.PlayHit(point, direction, damage);              // 玩家攻击命中敌人（PlayerCombat.OnLandedHit 已接）
 //   CombatSparks.PlayParry(point);                               // 近战 parry 成功
 //   CombatSparks.PlayParryProjectile(point, incomingDirection);  // 对远程道具 parry 成功
-// parry 判定本体尚未落地（dev 侧待移植），落点接进判定处即可；当前由 DebugHUD 的 F5/F6 演示键驱动。
+// parry 判定本体尚未落地（dev 侧待移植），当前由 DebugHUD 的 F5/F6 演示键驱动。
 //
-// 注：以下所有数值（粒子数/速度/颜色/时长）均为提案基线，待 3C 与美术定稿后调。
+// 注：数值为提案基线（参照业界经验值区间：火花 2–5cm、6–15m/s、Bounce 0.3–0.6 / 闪光 0.05–0.1s），
+// 待 3C 与美术定稿后微调。
 public static class CombatSparks
 {
-    // 一次性爆发特效的种类（滑铲火花是持续发射器，归 SlideSparks 组件，不进这个枚举）。
-    // 枚举本体放在 CombatSparksInternal：SparkInstance 要公开持有它，不能是本类的私有类型。
-
-    // 池策略：每类封顶缓存，播完的实例原地隐藏待复用；上限满了就复用最早的实例（重启播放）。
     private const int MaxPerKind = 10;
 
     private static GameObject _poolRoot;
     private static Material _sparkMaterial;
-    private static Material _flashMaterial;
+    private static Material _popMaterial;
+    private static Material _ringMaterial;
+    private static Material _arcMaterial;
     private static readonly Dictionary<CombatSparksInternal.Kind, GameObject> Templates = new Dictionary<CombatSparksInternal.Kind, GameObject>();
     private static readonly Dictionary<CombatSparksInternal.Kind, List<SparkInstance>> Instances = new Dictionary<CombatSparksInternal.Kind, List<SparkInstance>>();
 
-    /// <summary>全战斗火花共用的粒子材质（火花点贴图 + Sprites/Default，混合口径见 BuildSparkTexture 注释）。
-    /// SlideSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一张火花贴图。
+    /// <summary>火花点材质（SlideSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一份火花贴图）。
     /// public：编辑器装配/自检工具（Assembly-CSharp-Editor）也要取它。</summary>
-    public static Material SparkMaterial
-    {
-        get { if (_sparkMaterial == null) _sparkMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = BuildSparkTexture() }; return _sparkMaterial; }
-    }
+    public static Material SparkMaterial { get { EnsureMaterials(); return _sparkMaterial; } }
 
     // ===== 对外入口 =====
 
-    /// <summary>攻击命中敌人的火花。direction 为结算传回的命中方向（攻击者→目标），伤害越大火花越猛。</summary>
+    /// <summary>攻击命中敌人的火花：白热圆闪 + 沿反弹方向的锥形火花（带落地弹跳），伤害越大火花越猛。</summary>
     public static void PlayHit(Vector3 point, Vector3 direction, float damage)
     {
         SparkInstance spark = Acquire(CombatSparksInternal.Kind.Hit);
         if (spark == null) return;
-        // 火花沿「反弹方向」喷：命中方向指向目标，火花朝来路反回去，锥形随机铺开
+        // 火花沿「反弹方向」喷：命中方向指向目标，火花朝来路反回去，锥形铺开
         Vector3 spray = direction.sqrMagnitude > 0.0001f ? -direction.normalized : Vector3.up;
         spark.transform.SetPositionAndRotation(point, Quaternion.LookRotation(spray, Vector3.up));
         spark.Play(Mathf.Clamp01(damage / 40f));
     }
 
-    /// <summary>近战 parry 成功的闪光：星形闪光 + 环形火花，暖金色（与弹道 parry 的冷白区分）。</summary>
+    /// <summary>近战 parry 成功的闪光：白热圆闪 + 极细白环 + 环形火花——金属对金属，偏白热接地。</summary>
     public static void PlayParry(Vector3 point)
     {
         SparkInstance spark = Acquire(CombatSparksInternal.Kind.Parry);
         if (spark == null) return;
         spark.transform.SetPositionAndRotation(point, Quaternion.identity);
         spark.Play(1f);
-        SparkLightFader.Flash(point, new Color(1f, 0.85f, 0.55f), 6f, 7f, 0.18f);
+        SparkLightFader.Flash(point, new Color(1f, 0.92f, 0.78f), 5f, 6f, 0.12f);
     }
 
-    /// <summary>对远程道具 parry 成功的闪光：冷白色，火花沿「弹道来路的反方向」锥形喷出，表意弹开。</summary>
+    /// <summary>对远程道具 parry 成功的弹开：白热圆闪 + 青色细环 + 沿弹道来路反喷的冷色碎屑 + 电弧——能量放电感。</summary>
     public static void PlayParryProjectile(Vector3 point, Vector3 incomingDirection)
     {
         SparkInstance spark = Acquire(CombatSparksInternal.Kind.ParryProjectile);
@@ -71,7 +70,7 @@ public static class CombatSparks
         Vector3 deflect = incomingDirection.sqrMagnitude > 0.0001f ? -incomingDirection.normalized : Vector3.up;
         spark.transform.SetPositionAndRotation(point, Quaternion.LookRotation(deflect, Vector3.up));
         spark.Play(1f);
-        SparkLightFader.Flash(point, new Color(0.75f, 0.92f, 1f), 7f, 8f, 0.16f);
+        SparkLightFader.Flash(point, new Color(0.6f, 0.9f, 1f), 6f, 7f, 0.14f);
     }
 
     // ===== 池 =====
@@ -96,8 +95,7 @@ public static class CombatSparks
             {
                 if (list[i] != null) return list[i];
             }
-            // 列表里全是死引用（场景卸载把实例带走了）：清空重新克隆
-            list.Clear();
+            list.Clear(); // 全是死引用（场景卸载带走）：清空重新克隆
         }
 
         SparkInstance clone = Object.Instantiate(Templates[kind], _poolRoot.transform).GetComponent<SparkInstance>();
@@ -126,73 +124,118 @@ public static class CombatSparks
             _poolRoot = new GameObject("CombatSparks(Pool)");
             if (Application.isPlaying) Object.DontDestroyOnLoad(_poolRoot);
         }
-        // 共享材质不在这里造：ConfigureBurst 取 SparkMaterial 属性时惰性构造（Sprites/Default 必在着色器，
-        // 预乘混合口径见 BuildSparkTexture 注释）
+        EnsureMaterials();
 
         if (!Templates.ContainsKey(CombatSparksInternal.Kind.Hit))
-            Templates.Add(CombatSparksInternal.Kind.Hit, BuildTemplate(CombatSparksInternal.Kind.Hit));
+            Templates.Add(CombatSparksInternal.Kind.Hit, BuildHitTemplate());
         if (!Templates.ContainsKey(CombatSparksInternal.Kind.Parry))
-            Templates.Add(CombatSparksInternal.Kind.Parry, BuildTemplate(CombatSparksInternal.Kind.Parry));
+            Templates.Add(CombatSparksInternal.Kind.Parry, BuildParryTemplate(projectile: false));
         if (!Templates.ContainsKey(CombatSparksInternal.Kind.ParryProjectile))
-            Templates.Add(CombatSparksInternal.Kind.ParryProjectile, BuildTemplate(CombatSparksInternal.Kind.ParryProjectile));
+            Templates.Add(CombatSparksInternal.Kind.ParryProjectile, BuildParryTemplate(projectile: true));
     }
 
-    // 三类特效各一个模板节点：
-    //   命中 = 单层锥形火花；parry = 星形闪光 + 环形火花两层；弹道 parry = 星形闪光 + 定向锥形火花两层。
-    private static GameObject BuildTemplate(CombatSparksInternal.Kind kind)
+    private static GameObject NewHost(string name)
     {
-        GameObject host = new GameObject($"Spark_{kind}");
+        GameObject host = new GameObject(name);
         host.SetActive(false);
-        SparkInstance instance = host.AddComponent<SparkInstance>();
+        host.AddComponent<SparkInstance>();
+        return host;
+    }
 
-        if (kind == CombatSparksInternal.Kind.Hit)
+    // 命中：白热圆闪 + 锥形火花（火花层随伤害力度缩放；闪光层不吃缩放，反馈强度恒定）
+    private static GameObject BuildHitTemplate()
+    {
+        GameObject host = NewHost("Spark_Hit");
+        SparkInstance instance = host.GetComponent<SparkInstance>();
+
+        ParticleSystem pop = NewChildSystem(host, "Pop");
+        ConfigureLayer(pop, new LayerConfig
         {
-            ParticleSystem sparks = host.AddComponent<ParticleSystem>();
-            ConfigureBurst(sparks, new BurstConfig
-            {
-                Count = 26, Speed = new Vector2(3.5f, 8f), ConeAngle = 42f,
-                Size = new Vector2(0.05f, 0.13f), Lifetime = new Vector2(0.14f, 0.38f),
-                Gravity = 2.6f, Stretch = 0.16f, Unscaled = false,
-                Color = BuildGradient(new Color(1f, 0.97f, 0.88f), new Color(1f, 0.5f, 0.1f), new Color(0.45f, 0.08f, 0.01f)),
-            });
-            instance.Register(sparks);
-            return host;
-        }
-
-        bool isMelee = kind == CombatSparksInternal.Kind.Parry;
-
-        // 一个 GameObject 只能挂一个 ParticleSystem——双层结构必须拆成子节点（局部旋转保持 identity，
-        // 让锥形方向完全继承根节点的朝向）。
-        // 闪光层：一颗大粒子快涨快缩，星形贴图就是「闪光」主体
-        ParticleSystem flash = NewChildSystem(host, "Flash");
-        ConfigureBurst(flash, new BurstConfig
-        {
-            Count = 1, Speed = new Vector2(0f, 0f), ConeAngle = 0f,
-            Size = new Vector2(2.0f, 2.4f), Lifetime = new Vector2(0.13f, 0.13f),
-            Gravity = 0f, Stretch = 0f, Unscaled = true,
-            Material = GetFlashMaterial(),
-            Color = BuildGradient(
-                isMelee ? new Color(1f, 0.95f, 0.8f) : new Color(0.9f, 0.98f, 1f),
-                isMelee ? new Color(1f, 0.72f, 0.25f) : new Color(0.55f, 0.85f, 1f),
-                new Color(0f, 0f, 0f)),
+            Material = _popMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
+            Size = new Vector2(0.22f, 0.28f), Lifetime = new Vector2(0.055f, 0.055f),
+            Color = BuildGradient(new Color(1f, 1f, 0.97f), new Color(1f, 0.82f, 0.55f), new Color(1f, 0.6f, 0.25f)),
         });
-        instance.Register(flash);
+        instance.Register(pop, scaleWithStrength: false);
 
-        // 火花层：近战环形炸开；弹道沿反弹方向锥形喷
+        ParticleSystem sparks = NewChildSystem(host, "Sparks");
+        ConfigureLayer(sparks, new LayerConfig
+        {
+            Material = _sparkMaterial, Count = 28, ShapeType = ParticleSystemShapeType.Cone, ConeAngle = 40f,
+            Speed = new Vector2(6f, 15f), Size = new Vector2(0.018f, 0.04f), Lifetime = new Vector2(0.12f, 0.28f),
+            Gravity = 1.8f, Stretch = 0.035f,
+            Bounce = 0.45f, Dampen = 0.25f, LifetimeLoss = 0.35f,
+            Color = BuildGradient(new Color(1f, 0.98f, 0.92f), new Color(1f, 0.66f, 0.26f), new Color(0.85f, 0.28f, 0.05f)),
+        });
+        instance.Register(sparks, scaleWithStrength: true);
+        return host;
+    }
+
+    // parry 共用骨架：白热圆闪 + 细冲击环 + 火花层；projectile=true 时整套换冷色并加电弧层
+    private static GameObject BuildParryTemplate(bool projectile)
+    {
+        GameObject host = NewHost(projectile ? "Spark_ParryProjectile" : "Spark_Parry");
+        SparkInstance instance = host.GetComponent<SparkInstance>();
+
+        Color hot = projectile ? new Color(0.96f, 1f, 1f) : new Color(1f, 1f, 0.97f);
+        Color mid = projectile ? new Color(0.42f, 0.86f, 1f) : new Color(1f, 0.85f, 0.6f);
+        Color outColor = projectile ? new Color(0.16f, 0.42f, 1f) : new Color(1f, 0.62f, 0.28f);
+
+        ParticleSystem pop = NewChildSystem(host, "Pop");
+        ConfigureLayer(pop, new LayerConfig
+        {
+            Material = _popMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
+            Size = projectile ? new Vector2(0.42f, 0.5f) : new Vector2(0.5f, 0.58f),
+            Lifetime = new Vector2(0.06f, 0.06f),
+            Color = BuildGradient(hot, mid, outColor),
+        });
+        instance.Register(pop, scaleWithStrength: false);
+
+        // 细冲击环：尺寸从 ~0.35m 扩到 ~1.4m 后隐去——极细线环是本作场景线纹语言的同族
+        ParticleSystem ring = NewChildSystem(host, "Ring");
+        ConfigureLayer(ring, new LayerConfig
+        {
+            Material = _ringMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
+            Size = projectile ? new Vector2(0.64f, 0.64f) : new Vector2(0.72f, 0.72f),
+            Lifetime = new Vector2(projectile ? 0.16f : 0.18f, projectile ? 0.16f : 0.18f),
+            Color = BuildGradient(hot, mid, outColor),
+            SizeCurve = AnimationCurve.EaseInOut(0f, 0.55f, 1f, 2.4f), // 扩张环
+            Unscaled = true,
+        });
+        instance.Register(ring, scaleWithStrength: false);
+
+        // 火花层：近战环形炸开带弹跳；弹道沿反弹方向锥喷、无重力带阻尼（能量碎屑）
         ParticleSystem spray = NewChildSystem(host, "Spray");
-        ConfigureBurst(spray, new BurstConfig
+        ConfigureLayer(spray, new LayerConfig
         {
-            Count = isMelee ? 30 : 22,
-            Speed = new Vector2(isMelee ? 2.5f : 5f, isMelee ? 6.5f : 11f),
-            ConeAngle = isMelee ? 75f : 24f,
-            Size = new Vector2(0.04f, 0.1f), Lifetime = new Vector2(0.18f, 0.5f),
-            Gravity = 1.4f, Stretch = 0.2f, Unscaled = true,
-            Color = BuildGradient(
-                isMelee ? new Color(1f, 0.93f, 0.75f) : new Color(0.88f, 0.97f, 1f),
-                isMelee ? new Color(1f, 0.6f, 0.15f) : new Color(0.4f, 0.7f, 1f),
-                new Color(0f, 0f, 0f)),
+            Material = _sparkMaterial, Count = projectile ? 28 : 40,
+            ShapeType = projectile ? ParticleSystemShapeType.Cone : ParticleSystemShapeType.Sphere,
+            ConeAngle = projectile ? 26f : 0f,
+            Speed = projectile ? new Vector2(5f, 12f) : new Vector2(3.5f, 9f),
+            Size = new Vector2(0.018f, 0.04f),
+            Lifetime = projectile ? new Vector2(0.12f, 0.26f) : new Vector2(0.14f, 0.3f),
+            Gravity = projectile ? 0.5f : 2f,
+            Stretch = projectile ? 0.03f : 0.03f,
+            Drag = projectile ? 0.8f : 0f,
+            Bounce = projectile ? 0f : 0.4f, Dampen = 0.25f, LifetimeLoss = 0.35f,
+            Color = BuildGradient(hot, mid, outColor),
+            Unscaled = true,
         });
-        instance.Register(spray);
+        instance.Register(spray, scaleWithStrength: false);
+
+        if (projectile)
+        {
+            // 电弧：横向锯齿短线、随机朝向、一瞬即逝——能量弹开的签名元素
+            ParticleSystem arcs = NewChildSystem(host, "Arcs");
+            ConfigureLayer(arcs, new LayerConfig
+            {
+                Material = _arcMaterial, Count = 6, ShapeType = ParticleSystemShapeType.Sphere,
+                Speed = new Vector2(0.6f, 1.8f), Size = new Vector2(0.6f, 0.95f), Lifetime = new Vector2(0.07f, 0.12f),
+                RandomRotation = true,
+                Color = BuildGradient(new Color(0.9f, 0.98f, 1f), new Color(0.45f, 0.88f, 1f), new Color(0.25f, 0.6f, 1f)),
+                Unscaled = true,
+            });
+            instance.Register(arcs, scaleWithStrength: false);
+        }
         return host;
     }
 
@@ -204,7 +247,7 @@ public static class CombatSparks
         return child.AddComponent<ParticleSystem>();
     }
 
-    private static ParticleSystem ConfigureBurst(ParticleSystem ps, BurstConfig config)
+    private static ParticleSystem ConfigureLayer(ParticleSystem ps, LayerConfig config)
     {
         ps.playOnAwake = false;
 
@@ -218,6 +261,8 @@ public static class CombatSparks
         main.simulationSpace = ParticleSystemSimulationSpace.World;  // 火花不跟着目标走
         main.useUnscaledTime = config.Unscaled;                     // parry 反馈穿透时缓；命中火花跟着 hit-stop 凝住
         main.stopAction = ParticleSystemStopAction.None;            // 归还由 SparkInstance 轮询，不依赖回调
+        main.maxParticles = 160;
+        if (config.RandomRotation) main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f); // 弧度
 
         ParticleSystem.EmissionModule emission = ps.emission;
         emission.rateOverTime = 0f;
@@ -225,10 +270,10 @@ public static class CombatSparks
 
         ParticleSystem.ShapeModule shape = ps.shape;
         shape.enabled = true;
-        shape.shapeType = config.ConeAngle > 0f ? ParticleSystemShapeType.Cone : ParticleSystemShapeType.Sphere;
+        shape.shapeType = config.ShapeType;
         shape.angle = config.ConeAngle;
-        shape.radius = 0.04f;
-        shape.randomDirectionAmount = 0.25f; // 保留方向性但带点散乱，火花不至于太「整齐」
+        shape.radius = 0.03f;
+        shape.randomDirectionAmount = config.ShapeType == ParticleSystemShapeType.Cone ? 0.25f : 0f;
 
         ParticleSystem.ColorOverLifetimeModule color = ps.colorOverLifetime;
         color.enabled = true;
@@ -236,58 +281,125 @@ public static class CombatSparks
 
         ParticleSystem.SizeOverLifetimeModule size = ps.sizeOverLifetime;
         size.enabled = true;
-        size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0.15f));
+        size.size = new ParticleSystem.MinMaxCurve(1f, config.SizeCurve != null ? config.SizeCurve : DefaultShrinkCurve);
+
+        if (config.Drag > 0f)
+        {
+            // 拖拽：限速模块限速 0 + dampen = 速度按比例衰减（能量碎屑：无重力、靠阻尼收住）
+            ParticleSystem.LimitVelocityOverLifetimeModule limit = ps.limitVelocityOverLifetime;
+            limit.enabled = true;
+            limit.limit = new ParticleSystem.MinMaxCurve(0f);
+            limit.dampen = config.Drag;
+            limit.space = ParticleSystemSimulationSpace.Local;
+        }
+
+        if (config.Bounce > 0f)
+        {
+            // 世界碰撞 + 弹跳：火花触地蹦跳后变小变暗（LifetimeLoss 快耗寿命≈快熄灭）
+            ParticleSystem.CollisionModule collision = ps.collision;
+            collision.enabled = true;
+            collision.type = ParticleSystemCollisionType.World;
+            collision.mode = ParticleSystemCollisionMode.Collision3D;
+            collision.dampen = config.Dampen;
+            collision.bounce = config.Bounce;
+            collision.lifetimeLoss = config.LifetimeLoss;
+            collision.minKillSpeed = 0.4f;
+            collision.radiusScale = 1f;
+        }
 
         ParticleSystemRenderer renderer = ps.GetComponent<ParticleSystemRenderer>();
         renderer.material = config.Material != null ? config.Material : SparkMaterial;
         renderer.renderMode = config.Stretch > 0f ? ParticleSystemRenderMode.Stretch : ParticleSystemRenderMode.Billboard;
         renderer.velocityScale = config.Stretch;
-        renderer.lengthScale = 2.5f;
+        renderer.lengthScale = 2f;
         renderer.alignment = ParticleSystemRenderSpace.View;
         return ps;
     }
 
-    // 颜色梯度：白热核心 → 主色 → 熄灭。RGB 同步衰减到黑（不是只掉 alpha），配合预乘混合才会真正「暗下去」。
+    private static readonly AnimationCurve DefaultShrinkCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0.15f);
+
+    // 颜色梯度：白热 → 主色 → 熄灭。RGB 常保亮度、alpha 提前收零——
+    // 预乘混合下若 RGB 先熄黑而 alpha 残留，会在亮面上压出灰渍（"烟灰"）。
     private static Gradient BuildGradient(Color hot, Color mid, Color extinguished)
     {
         Gradient gradient = new Gradient();
         gradient.SetKeys(
             new[] {
                 new GradientColorKey(hot, 0f),
-                new GradientColorKey(mid, 0.45f),
-                new GradientColorKey(extinguished, 1f),
+                new GradientColorKey(mid, 0.4f),
+                new GradientColorKey(extinguished, 0.8f),
             },
             new[] {
                 new GradientAlphaKey(1f, 0f),
-                new GradientAlphaKey(0.85f, 0.5f),
-                new GradientAlphaKey(0f, 1f),
+                new GradientAlphaKey(0.95f, 0.4f),
+                new GradientAlphaKey(0.45f, 0.75f),
+                new GradientAlphaKey(0f, 0.95f),
             });
         return gradient;
     }
 
-    private sealed class BurstConfig
+    private sealed class LayerConfig
     {
+        public Material Material;
         public int Count;
-        public Vector2 Speed;
+        public ParticleSystemShapeType ShapeType;
         public float ConeAngle;
+        public Vector2 Speed;
         public Vector2 Size;
         public Vector2 Lifetime;
         public float Gravity;
         public float Stretch;
+        public float Drag;
+        public float Bounce;
+        public float Dampen;
+        public float LifetimeLoss;
         public bool Unscaled;
+        public bool RandomRotation;
         public Gradient Color;
-        public Material Material;
+        public AnimationCurve SizeCurve;
     }
 
-    // ===== 程序化贴图 =====
+    // ===== 材质与程序化贴图 =====
+    // 贴图口径：RGB = 颜色（常保亮度），alpha = 轮廓塑形；混合与 HDR 染色说明见 SparkAdditive.shader。
 
-    /// <summary>火花点贴图：白热核心向橙红衰减的圆点，预乘风格（RGB 随强度衰减到黑）。</summary>
+    private static void EnsureMaterials()
+    {
+        if (_sparkMaterial != null) return;
+        Shader shader = ResolveShader();
+        if (shader == null) return;
+        _sparkMaterial = MakeMaterial(shader, BuildSparkTexture(), 1.9f);
+        _popMaterial = MakeMaterial(shader, BuildPopTexture(), 2.4f);
+        _ringMaterial = MakeMaterial(shader, BuildRingTexture(), 2.1f);
+        _arcMaterial = MakeMaterial(shader, BuildArcTexture(), 3f);
+    }
+
+    // 着色器经 Resources 下的材质资产引用加载：资产引用保证打包时着色器不被裁剪；
+    // 引擎里没有 Bloom 时 HDR 染色也只是更亮，不会失真。
+    private static Shader ResolveShader()
+    {
+        Material baseMaterial = Resources.Load<Material>("CombatVfx/SparkAdditive");
+        if (baseMaterial != null && baseMaterial.shader != null) return baseMaterial.shader;
+        Shader found = Shader.Find("GameJam/SparkAdditive");
+        if (found == null)
+        {
+            Debug.LogWarning("[CombatSparks] 找不到 GameJam/SparkAdditive：请确认 Assets/Resources/CombatVfx/SparkAdditive.mat 在库内（打包防裁剪靠它）");
+        }
+        return found;
+    }
+
+    private static Material MakeMaterial(Shader shader, Texture2D texture, float tint)
+    {
+        Material material = new Material(shader);
+        material.mainTexture = texture;
+        material.SetColor("_Tint", new Color(tint, tint, tint, 1f));
+        return material;
+    }
+
+    /// <summary>火花点贴图：紧实圆点，白热核心带一线暖边（颜色主要由粒子的寿命渐变决定）。</summary>
     private static Texture2D BuildSparkTexture()
     {
         const int size = 64;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
+        Texture2D tex = NewTexture(size, size);
         Color32[] pixels = new Color32[size * size];
         Vector2 center = new Vector2(size - 1, size - 1) * 0.5f;
         float radius = size * 0.5f - 1f;
@@ -296,49 +408,112 @@ public static class CombatSparks
             for (int x = 0; x < size; x++)
             {
                 float d = Vector2.Distance(new Vector2(x, y), center) / radius;
-                float intensity = Mathf.Pow(Mathf.Clamp01(1f - d), 2.6f);
-                Color c = Color.Lerp(new Color(0.5f, 0.09f, 0.01f), new Color(1f, 0.6f, 0.16f), intensity);
-                c = Color.Lerp(c, new Color(1f, 0.98f, 0.92f), Mathf.Pow(intensity, 4f));
-                pixels[y * size + x] = (Color32)(c * intensity); // 预乘：亮度衰减的同时 RGB 收黑
+                // 紧实轮廓 + 白热硬核：软高斯轮廓在大尺寸叠加时会糊成"火球"，火花要的是细而亮
+                float profile = Mathf.Clamp01(Mathf.Pow(Mathf.Clamp01(1f - d), 7f) + Mathf.Pow(Mathf.Clamp01(1f - d), 20f) * 0.55f);
+                Color c = Color.Lerp(new Color(1f, 0.82f, 0.55f), new Color(1f, 1f, 1f), Mathf.Pow(Mathf.Clamp01(1f - d), 5f));
+                pixels[y * size + x] = Pack(c, profile);
             }
         }
         tex.SetPixels32(pixels);
-        tex.Apply(false, true); // 上传并设为只读，省一点显存
+        tex.Apply(false, true);
         return tex;
     }
 
-    /// <summary>闪光星形贴图：径向核心 + 十字光针，parry「闪光」的主体。</summary>
-    private static Material GetFlashMaterial()
+    /// <summary>白热圆闪贴图：软圆 + 硬核，一帧大白的本体。</summary>
+    private static Texture2D BuildPopTexture()
     {
-        if (_flashMaterial != null) return _flashMaterial;
-        const int size = 128;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
+        const int size = 96;
+        Texture2D tex = NewTexture(size, size);
         Color32[] pixels = new Color32[size * size];
-        float center = (size - 1) * 0.5f;
+        Vector2 center = new Vector2(size - 1, size - 1) * 0.5f;
         float radius = size * 0.5f - 1f;
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                float dx = (x - center) / radius;
-                float dy = (y - center) / radius;
-                float d = Mathf.Sqrt(dx * dx + dy * dy);
-                float core = Mathf.Pow(Mathf.Clamp01(1f - d), 3.2f);
-                // 十字光针：沿轴向窄、横向快的衰减，两轴取大者
-                float streakH = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx) * 1.1f), 6f)
-                              * Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dy) * 2.2f), 1.4f);
-                float streakV = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dy) * 1.1f), 6f)
-                              * Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx) * 2.2f), 1.4f);
-                float intensity = Mathf.Clamp01(Mathf.Max(core, Mathf.Max(streakH, streakV) * 0.85f));
-                Color c = Color.Lerp(new Color(1f, 0.8f, 0.4f), new Color(1f, 1f, 0.97f), core);
-                pixels[y * size + x] = (Color32)(c * intensity);
+                float d = Vector2.Distance(new Vector2(x, y), center) / radius;
+                float profile = Mathf.Clamp01(Mathf.Pow(Mathf.Clamp01(1f - d), 2.6f) + Mathf.Pow(Mathf.Clamp01(1f - d), 12f) * 0.6f);
+                pixels[y * size + x] = Pack(Color.white, profile);
             }
         }
         tex.SetPixels32(pixels);
         tex.Apply(false, true);
-        _flashMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = tex };
-        return _flashMaterial;
+        return tex;
     }
+
+    /// <summary>细冲击环贴图：一圈极细亮环 + 内侧微弱辉光——硬表面语言里的「精密环」。</summary>
+    private static Texture2D BuildRingTexture()
+    {
+        const int size = 128;
+        Texture2D tex = NewTexture(size, size);
+        Color32[] pixels = new Color32[size * size];
+        Vector2 center = new Vector2(size - 1, size - 1) * 0.5f;
+        float radius = size * 0.5f - 1f;
+        const float ringRadius = 0.72f;   // 归一化半径：贴图留一圈余量给辉光
+        const float sigma = 0.014f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x, y), center) / radius;
+                float ring = Mathf.Exp(-((d - ringRadius) * (d - ringRadius)) / (2f * sigma * sigma));
+                float glow = Mathf.Pow(Mathf.Clamp01(1f - d), 4f) * 0.08f;
+                pixels[y * size + x] = Pack(Color.white, Mathf.Clamp01(ring + glow));
+            }
+        }
+        tex.SetPixels32(pixels);
+        tex.Apply(false, true);
+        return tex;
+    }
+
+    /// <summary>电弧贴图：横向随机折线 + 两端收尖，能量弹开的签名元素。固定种子保证每次会话外形一致。</summary>
+    private static Texture2D BuildArcTexture()
+    {
+        const int width = 256, height = 64, segments = 9;
+        Texture2D tex = NewTexture(width, height);
+        Color32[] pixels = new Color32[width * height];
+
+        // 控制点随机游走 + 每段亮度随机（有的段亮、有的段暗，更像真的放电）
+        System.Random rng = new System.Random(20261014);
+        float[] ys = new float[segments];
+        float[] brightness = new float[segments];
+        ys[0] = height * 0.5f;
+        brightness[0] = 1f;
+        for (int i = 1; i < segments; i++)
+        {
+            ys[i] = Mathf.Clamp(ys[i - 1] + (float)(rng.NextDouble() * 2.0 - 1.0) * height * 0.3f, height * 0.16f, height * 0.84f);
+            brightness[i] = 0.55f + (float)rng.NextDouble() * 0.45f;
+        }
+
+        for (int x = 0; x < width; x++)
+        {
+            float t = (float)x / (width - 1) * (segments - 1);
+            int segment = Mathf.Min((int)t, segments - 2);
+            float f = t - segment;
+            float lineY = Mathf.Lerp(ys[segment], ys[segment + 1], f);
+            float energy = Mathf.Lerp(brightness[segment], brightness[segment + 1], f);
+            // 两端收尖：电弧端头细、中段亮
+            float taper = Mathf.Pow(Mathf.Sin(Mathf.PI * x / (width - 1)), 0.35f);
+            for (int y = 0; y < height; y++)
+            {
+                float dy = y - lineY;
+                float stroke = Mathf.Exp(-(dy * dy) / (2f * 2.2f * 2.2f));
+                pixels[y * width + x] = Pack(Color.white, Mathf.Clamp01(stroke * energy * taper));
+            }
+        }
+        tex.SetPixels32(pixels);
+        tex.Apply(false, true);
+        return tex;
+    }
+
+    private static Texture2D NewTexture(int width, int height)
+    {
+        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        return tex;
+    }
+
+    // 打包一个像素：RGB 常保亮度（熄灭由 alpha 负责）
+    private static Color32 Pack(Color rgb, float alpha) => (Color32)new Color(rgb.r, rgb.g, rgb.b, Mathf.Clamp01(alpha));
 }
