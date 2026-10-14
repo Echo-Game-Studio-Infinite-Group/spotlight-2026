@@ -48,6 +48,76 @@ public static class CombatVfxSnapshot
         Debug.Log($"[CombatVfxSnapshot] 装配完成：定妆照已写入 {OutDir}（暗棚 + 亮棚两套）");
     }
 
+    // ------------------------------------------------------------------
+    // 序列出图（GIF 用）：一次播放 → 逐帧推进 → 逐帧存 PNG
+    // -executeMethod CombatVfxSnapshot.Sequence
+    //
+    // 为什么定妆照不够：静帧只能回答"某一个瞬间好不好看"，而特效是**随时间展开**的——
+    // 弧线怎么扫开、火花怎么散、白热闪光多久衰、拖尾留多长，只有连起来才看得出来。
+    // （交付/评审里 GIF 也最好传：丢群里就能看，不用开 Unity。）
+    public static void Sequence()
+    {
+        if (EditorApplication.isPlaying)
+        {
+            Debug.LogError("[CombatVfxSnapshot] 请先退出 Play 模式再执行");
+            return;
+        }
+        Directory.CreateDirectory(OutDir);
+
+        const int frames = 24;
+        const float step = 0.025f;   // 24 × 0.025 = 0.6s：覆盖到火花基本燃尽
+
+        try
+        {
+            foreach (StudioMode mode in new[] { StudioMode.Dark, StudioMode.Bright })
+            {
+                SetupStudio(mode);
+                string p = mode == StudioMode.Bright ? "b_" : "";
+
+                SeqShot(p + "01_slide",
+                    () => { SlideBurst(new Vector3(0.3f, 0.12f, 0f), Vector3.right); return 0f; },
+                    new Vector3(-1.2f, 1.0f, -2.7f), new Vector3(0.15f, 0.3f, 0f), frames, step);
+
+                SeqShot(p + "02_hit",
+                    () => { CombatSparks.PlayHit(new Vector3(0f, 0.9f, 0f), new Vector3(-0.75f, 0.3f, 0.5f), 25f); return 0f; },
+                    new Vector3(1.0f, 1.25f, -2.9f), new Vector3(0f, 0.85f, 0f), frames, step);
+
+                SeqShot(p + "03_parry",
+                    () => { CombatSparks.PlayParry(new Vector3(0f, 0.9f, 0f)); return 0f; },
+                    new Vector3(0f, 1.15f, -3.1f), new Vector3(0f, 0.85f, 0f), frames, step);
+
+                SeqShot(p + "04_parry_projectile",
+                    () => { CombatSparks.PlayParryProjectile(new Vector3(0f, 0.9f, 0f), new Vector3(0f, 0f, 1f)); return 0f; },
+                    new Vector3(1.1f, 1.15f, -2.9f), new Vector3(0f, 0.85f, 0f), frames, step);
+
+                TeardownStudio();
+            }
+        }
+        finally
+        {
+            TeardownStudio();
+        }
+        Debug.Log($"[CombatVfxSnapshot] 序列出图完成：4 个特效 × 2 棚 × {frames} 帧 → {OutDir}/seq");
+    }
+
+    private static void SeqShot(string name, System.Func<float> play, Vector3 camPos, Vector3 lookAt, int frames, float step)
+    {
+        ClearAllParticles();
+        play();                     // 起手不推进：第 0 帧就是"刚触发"的那一刻
+        _cam.transform.position = camPos;
+        _cam.transform.rotation = Quaternion.LookRotation(lookAt - camPos, Vector3.up);
+
+        string dir = Path.Combine(OutDir, "seq");
+        Directory.CreateDirectory(dir);
+        for (int i = 0; i < frames; i++)
+        {
+            if (i > 0) AdvanceAll(step);
+            RenderTo(Path.Combine(dir, $"{name}_{i:D2}.png"));
+        }
+        DestroyTempHosts();         // 宿主留到最后再收：中途销毁等于销毁粒子
+        Debug.Log($"[CombatVfxSnapshot] 序列 {name} 完成（{frames} 帧 × {step}s）");
+    }
+
     // 五张：全员合影 + 四张单人近景；parry 多补一张晚帧（闪光散后看火花尾段）
     private static void RenderShots(string prefix)
     {
