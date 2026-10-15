@@ -20,7 +20,7 @@
 | `TechBlastDoor` | 防爆门 v5.6 自包含单元（FBX/材质/贴图/manifest/IMPORT.md） |
 | `Editor/HST` | 编辑器工具（烘焙器/目录棚拍/布光/验证/出图） |
 | `Runtime/HST` · `Runtime/TechBlastDoor` | 要进包的运行时脚本（AgX 特性、摆门；门控制器、接近开门） |
-| `Scenes/` | 室内三场景与光贴图、城市 LookDev、标准件目录/棚拍、走廊房间试验、防爆门试验场 |
+| `Scenes/` | 室内三场景（**全实时光照，无烘焙数据**，灯与后处理保留）、城市 LookDev、标准件目录/棚拍、走廊房间试验、防爆门试验场 |
 | `ReflectionProbes` · `Skybox` | 场景光照依赖 |
 | `Manifests/HST_Prags` | 逐件尺寸/材质槽 manifests |
 
