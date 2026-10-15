@@ -11,6 +11,9 @@ public sealed class MapManager : MonoBehaviour
     private readonly Dictionary<string, AsyncOperation> _loads = new Dictionary<string, AsyncOperation>();
     private readonly HashSet<string> _unloads = new HashSet<string>();
     private readonly HashSet<int> _persistentScenes = new HashSet<int>();
+    private bool _isRestarting;
+    public static bool Exists => _instance != null;
+    public string BootstrapSceneName { get; private set; } = string.Empty;
 
     public static MapManager Instance
     {
@@ -37,16 +40,57 @@ public sealed class MapManager : MonoBehaviour
         }
         _instance = this;
         DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void OnDestroy()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (_instance == this) _instance = null;
     }
 
     public void RegisterPersistentScene(Scene scene)
     {
-        if (scene.IsValid()) _persistentScenes.Add(scene.handle);
+        if (!scene.IsValid()) return;
+        _persistentScenes.Add(scene.handle);
+        if (string.IsNullOrEmpty(BootstrapSceneName)) BootstrapSceneName = scene.name;
+    }
+
+    public bool TryRestartMap()
+    {
+        if (IsTransitioning || string.IsNullOrEmpty(BootstrapSceneName)) return false;
+        IsTransitioning = true;
+        StartCoroutine(RestartMap());
+        return true;
+    }
+
+    private IEnumerator RestartMap()
+    {
+        // 等待所有后台任务完成，避免 Single 重启后旧的预加载任务把旧房间重新加回来。
+        while (_loads.Count > 0 || _unloads.Count > 0) yield return null;
+        _isRestarting = true;
+        AsyncOperation load = null;
+        try { load = SceneManager.LoadSceneAsync(BootstrapSceneName, LoadSceneMode.Single); }
+        catch (Exception exception) { Fail("无法重开地图：" + exception.Message); }
+        if (load == null)
+        {
+            _isRestarting = false;
+            IsTransitioning = false;
+            yield break;
+        }
+        while (!load.isDone) yield return null;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!_isRestarting || mode != LoadSceneMode.Single || scene.name != BootstrapSceneName) return;
+        _persistentScenes.Clear();
+        _persistentScenes.Add(scene.handle);
+        CurrentRoomSceneName = string.Empty;
+        LastError = string.Empty;
+        _isRestarting = false;
+        // sceneLoaded 早于新场景的 Start，在 Bootstrapper 发起首房加载前解除重启锁。
+        IsTransitioning = false;
     }
 
     public bool IsRoomReady(string sceneName)

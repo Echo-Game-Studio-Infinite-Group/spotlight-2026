@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // 常驻场景只保存玩家、相机和全局系统；房间场景可被卸载而不会销毁这些运行时对象。
 [DisallowMultipleComponent]
@@ -11,6 +12,8 @@ public sealed class MapBootstrapper : MonoBehaviour
     private CharacterController _controller;
     private PlayerInputReader _input;
     private bool _controllerWasEnabled;
+    private MapManager _manager;
+    private PlayerRespawn _respawn;
     public bool IsReady { get; private set; }
     public string InitialRoomSceneName => _initialRoomSceneName;
 
@@ -23,6 +26,9 @@ public sealed class MapBootstrapper : MonoBehaviour
     private IEnumerator Start()
     {
         var manager = MapManager.Instance;
+        _manager = manager;
+        manager.RoomEntered += OnRoomEntered;
+        if (_playerMotor != null) _respawn = _playerMotor.GetComponent<PlayerRespawn>();
         manager.RegisterPersistentScene(gameObject.scene);
         // 动作序列已经拥有 Motor 的积分权；仅关闭碰撞控制器，加载完成前 Simulate 会直接返回。
         if (_playerMotor != null)
@@ -37,12 +43,24 @@ public sealed class MapBootstrapper : MonoBehaviour
         while (manager.IsTransitioning) yield return null;
         if (manager.CurrentRoomSceneName != _initialRoomSceneName) yield break;
         IsReady = true;
+        GameManager.Instance.StartGame();
         RestorePlayer();
     }
 
     private void OnDestroy()
     {
+        if (_manager != null) _manager.RoomEntered -= OnRoomEntered;
         RestorePlayer();
+    }
+
+    private void OnRoomEntered(string sceneName)
+    {
+        if (_respawn == null) return;
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+        foreach (GameObject root in scene.GetRootGameObjects())
+            foreach (MapRoom room in root.GetComponentsInChildren<MapRoom>(true))
+                if (room.RespawnPoint != null)
+                    _respawn.SetCheckpoint(room.RespawnPoint.position, room.FallDeathY);
     }
 
     private void RestorePlayer()
