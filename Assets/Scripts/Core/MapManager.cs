@@ -4,35 +4,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// 地图流式加载的唯一入口：房间场景始终以 Additive 方式加载，避免切场景时销毁仍在使用的相邻房间。
 [DisallowMultipleComponent]
 public sealed class MapManager : MonoBehaviour
 {
-    private sealed class RoomLoadRequest
-    {
-        public Coroutine Routine;
-    }
-
     private static MapManager _instance;
-    private readonly Dictionary<string, RoomLoadRequest> _loadingRequests =
-        new Dictionary<string, RoomLoadRequest>(StringComparer.Ordinal);
-    private Coroutine _transitionRoutine;
+    private readonly Dictionary<string, AsyncOperation> _loads = new Dictionary<string, AsyncOperation>();
+    private readonly HashSet<string> _unloads = new HashSet<string>();
+    private readonly HashSet<int> _persistentScenes = new HashSet<int>();
 
     public static MapManager Instance
     {
         get
         {
-            if (_instance == null)
-            {
-                _instance = new GameObject("MapManager").AddComponent<MapManager>();
-            }
-
+            if (_instance == null) _instance = new GameObject("MapManager").AddComponent<MapManager>();
             return _instance;
         }
     }
 
-    public bool IsTransitioning => _transitionRoutine != null;
+    public bool IsTransitioning { get; private set; }
+    public string CurrentRoomSceneName { get; private set; } = string.Empty;
+    public string LastError { get; private set; } = string.Empty;
     public event Action<string> RoomLoaded;
+    public event Action<string> RoomEntered;
     public event Action<string> RoomUnloaded;
 
     private void Awake()
@@ -42,7 +35,6 @@ public sealed class MapManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
         _instance = this;
         DontDestroyOnLoad(gameObject);
     }
@@ -52,165 +44,165 @@ public sealed class MapManager : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
-    // 启动场景使用。sourceRoomSceneName 为空时，不会卸载 Boot 等常驻场景。
-    public bool TryLoadInitialRoom(string roomSceneName)
+    public void RegisterPersistentScene(Scene scene)
     {
-        return TryEnterRoom(string.Empty, roomSceneName);
+        if (scene.IsValid()) _persistentScenes.Add(scene.handle);
     }
 
-    // 在玩家进入当前房间时调用；只加载资源，不改活动场景，因此不会抢走输入与光照上下文。
-    public bool PreloadRoom(string roomSceneName)
+    public bool IsRoomReady(string sceneName)
     {
-        if (!CanLoadRoom(roomSceneName)) return false;
-        BeginRoomLoad(roomSceneName);
+        if (string.IsNullOrWhiteSpace(sceneName)) return false;
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+        return scene.IsValid() && scene.isLoaded && !_unloads.Contains(sceneName);
+    }
+
+    public bool TryLoadInitialRoom(string sceneName) => TryEnterRoom(string.Empty, sceneName);
+
+    public bool PreloadRoom(string sceneName)
+    {
+        if (!CanLoadRoom(sceneName)) return false;
+        return IsRoomReady(sceneName) || BeginLoad(sceneName) != null;
+    }
+
+    public bool TryEnterRoom(string sourceSceneName, string targetSceneName)
+    {
+        if (IsTransitioning || !CanLoadRoom(targetSceneName)) return false;
+        if (!string.IsNullOrEmpty(sourceSceneName) && sourceSceneName != targetSceneName)
+        {
+            Scene source = SceneManager.GetSceneByName(sourceSceneName);
+            if (source.IsValid() && _persistentScenes.Contains(source.handle))
+                return Fail($"场景「{sourceSceneName}」是常驻场景，不能作为待卸载房间");
+        }
+
+        // 在启动协程前设锁；已预加载的目标可能在首个 MoveNext 内完成，不能用 Coroutine 赋值当锁。
+        LastError = string.Empty;
+        IsTransitioning = true;
+        StartCoroutine(EnterRoom(sourceSceneName, targetSceneName));
         return true;
     }
 
-    // 目标房间必须先完整加载，才会切换活动场景并卸载来源房间，门口不会出现空场景。
-    public bool TryEnterRoom(string sourceRoomSceneName, string targetRoomSceneName)
+    public bool TryUnloadRoom(string sceneName)
     {
-        if (IsTransitioning)
-        {
-            Debug.LogWarning("[MapManager] 正在切换房间，忽略重复请求", this);
-            return false;
-        }
-
-        if (!CanLoadRoom(targetRoomSceneName)) return false;
-
-        _transitionRoutine = StartCoroutine(EnterRoomRoutine(sourceRoomSceneName, targetRoomSceneName));
+        if (string.IsNullOrWhiteSpace(sceneName)) return false;
+        if (IsTransitioning || _loads.ContainsKey(sceneName) || !IsRoomReady(sceneName)) return false;
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+        if (_persistentScenes.Contains(scene.handle) || scene == SceneManager.GetActiveScene())
+            return Fail($"场景「{sceneName}」仍在使用，不能卸载");
+        StartCoroutine(UnloadRoom(scene));
         return true;
     }
 
-    public bool TryUnloadRoom(string roomSceneName)
+    private IEnumerator EnterRoom(string sourceSceneName, string targetSceneName)
     {
-        if (string.IsNullOrWhiteSpace(roomSceneName)) return false;
-
-        Scene room = SceneManager.GetSceneByName(roomSceneName);
-        if (!room.IsValid() || !room.isLoaded) return false;
-
-        if (room == SceneManager.GetActiveScene())
+        try
         {
-            Debug.LogWarning($"[MapManager] 房间「{roomSceneName}」仍是活动场景，不能卸载", this);
-            return false;
-        }
-
-        StartCoroutine(UnloadRoomRoutine(room));
-        return true;
-    }
-
-    private IEnumerator EnterRoomRoutine(string sourceRoomSceneName, string targetRoomSceneName)
-    {
-        RoomLoadRequest request = BeginRoomLoad(targetRoomSceneName);
-        if (request != null) yield return request.Routine;
-
-        Scene targetRoom = SceneManager.GetSceneByName(targetRoomSceneName);
-        if (!targetRoom.IsValid() || !targetRoom.isLoaded)
-        {
-            Debug.LogError($"[MapManager] 房间「{targetRoomSceneName}」加载失败，保留当前房间", this);
-            _transitionRoutine = null;
-            yield break;
-        }
-
-        SceneManager.SetActiveScene(targetRoom);
-
-        if (!string.IsNullOrWhiteSpace(sourceRoomSceneName) &&
-            !string.Equals(sourceRoomSceneName, targetRoomSceneName, StringComparison.Ordinal))
-        {
-            Scene sourceRoom = SceneManager.GetSceneByName(sourceRoomSceneName);
-            if (sourceRoom.IsValid() && sourceRoom.isLoaded)
+            AsyncOperation load = IsRoomReady(targetSceneName) ? null : BeginLoad(targetSceneName);
+            if (load != null)
             {
-                yield return UnloadRoomRoutine(sourceRoom);
+                while (!load.isDone) yield return null;
+                // 场景激活回调可能仍在同帧执行，下一帧再查询场景列表。
+                yield return null;
+            }
+            if (!IsRoomReady(targetSceneName))
+            {
+                Fail($"房间「{targetSceneName}」加载失败，保留原房间");
+                yield break;
+            }
+
+            Scene target = SceneManager.GetSceneByName(targetSceneName);
+            if (SceneManager.GetActiveScene() != target && !SceneManager.SetActiveScene(target))
+            {
+                Fail($"无法激活房间「{targetSceneName}」");
+                yield break;
+            }
+            CurrentRoomSceneName = targetSceneName;
+
+            // 只有真正进入的房间才预加载后继；预加载房间自身不会递归加载整张地图。
+            foreach (GameObject root in target.GetRootGameObjects())
+                foreach (MapRoom room in root.GetComponentsInChildren<MapRoom>(true))
+                    if (!string.IsNullOrWhiteSpace(room.NextRoomSceneName)) PreloadRoom(room.NextRoomSceneName);
+
+            if (!string.IsNullOrWhiteSpace(sourceSceneName) && sourceSceneName != targetSceneName)
+            {
+                Scene source = SceneManager.GetSceneByName(sourceSceneName);
+                if (source.IsValid() && source.isLoaded) yield return UnloadRoom(source);
             }
         }
-
-        _transitionRoutine = null;
-    }
-
-    private RoomLoadRequest BeginRoomLoad(string roomSceneName)
-    {
-        if (IsRoomLoaded(roomSceneName)) return null;
-
-        if (_loadingRequests.TryGetValue(roomSceneName, out RoomLoadRequest existingRequest))
+        finally
         {
-            return existingRequest;
+            IsTransitioning = false;
         }
-
-        var request = new RoomLoadRequest();
-        _loadingRequests.Add(roomSceneName, request);
-        request.Routine = StartCoroutine(LoadRoomRoutine(roomSceneName, request));
-        return request;
+        if (CurrentRoomSceneName == targetSceneName) RoomEntered?.Invoke(targetSceneName);
     }
 
-    private IEnumerator LoadRoomRoutine(string roomSceneName, RoomLoadRequest request)
+    private AsyncOperation BeginLoad(string sceneName)
     {
-        AsyncOperation load = SceneManager.LoadSceneAsync(roomSceneName, LoadSceneMode.Additive);
+        if (_loads.TryGetValue(sceneName, out AsyncOperation pending)) return pending;
+        AsyncOperation load;
+        try
+        {
+            // 不使用 allowSceneActivation=false，它会阻塞 Unity 后面的异步加载/卸载队列。
+            load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+        }
+        catch (Exception exception)
+        {
+            Fail($"无法加载「{sceneName}」：{exception.Message}");
+            return null;
+        }
         if (load == null)
         {
-            Debug.LogError($"[MapManager] 无法异步加载房间「{roomSceneName}」", this);
-            FinishLoadRequest(roomSceneName, request);
-            yield break;
+            Fail($"无法加载「{sceneName}」");
+            return null;
         }
-
-        yield return load;
-
-        Scene room = SceneManager.GetSceneByName(roomSceneName);
-        if (room.IsValid() && room.isLoaded)
-        {
-            RoomLoaded?.Invoke(roomSceneName);
-        }
-        else
-        {
-            Debug.LogError($"[MapManager] 房间「{roomSceneName}」异步加载结束但未处于已加载状态", this);
-        }
-
-        FinishLoadRequest(roomSceneName, request);
+        _loads.Add(sceneName, load);
+        StartCoroutine(ObserveLoad(sceneName, load));
+        return load;
     }
 
-    private IEnumerator UnloadRoomRoutine(Scene room)
+    private IEnumerator ObserveLoad(string sceneName, AsyncOperation load)
     {
-        string roomSceneName = room.name;
-        AsyncOperation unload = SceneManager.UnloadSceneAsync(room);
-        if (unload == null)
-        {
-            Debug.LogError($"[MapManager] 无法卸载房间「{roomSceneName}」", this);
-            yield break;
-        }
-
-        yield return unload;
-        RoomUnloaded?.Invoke(roomSceneName);
+        while (!load.isDone) yield return null;
+        yield return null;
+        _loads.Remove(sceneName);
+        if (IsRoomReady(sceneName)) RoomLoaded?.Invoke(sceneName);
+        else Fail($"房间「{sceneName}」加载结束，但场景不可用");
     }
 
-    private bool CanLoadRoom(string roomSceneName)
+    private IEnumerator UnloadRoom(Scene scene)
     {
-        if (string.IsNullOrWhiteSpace(roomSceneName))
+        string sceneName = scene.name;
+        if (!_unloads.Add(sceneName)) yield break;
+        try
         {
-            Debug.LogError("[MapManager] 房间场景名不能为空", this);
-            return false;
+            AsyncOperation unload = SceneManager.UnloadSceneAsync(scene);
+            if (unload == null)
+            {
+                Fail($"无法卸载房间「{sceneName}」");
+                yield break;
+            }
+            yield return unload;
         }
-
-        if (IsRoomLoaded(roomSceneName)) return true;
-
-        if (!Application.CanStreamedLevelBeLoaded(roomSceneName))
+        finally
         {
-            Debug.LogError($"[MapManager] 房间「{roomSceneName}」不在 Build Settings 中", this);
-            return false;
+            _unloads.Remove(sceneName);
         }
+        RoomUnloaded?.Invoke(sceneName);
+    }
 
+    private bool CanLoadRoom(string sceneName)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName)) return Fail("房间场景名不能为空");
+        if (_unloads.Contains(sceneName)) return false;
+        if (IsRoomReady(sceneName) || _loads.ContainsKey(sceneName)) return true;
+        if (!Application.CanStreamedLevelBeLoaded(sceneName))
+            return Fail($"房间「{sceneName}」不在 Build Settings 中");
         return true;
     }
 
-    private static bool IsRoomLoaded(string roomSceneName)
+    private bool Fail(string error)
     {
-        Scene room = SceneManager.GetSceneByName(roomSceneName);
-        return room.IsValid() && room.isLoaded;
-    }
-
-    private void FinishLoadRequest(string roomSceneName, RoomLoadRequest request)
-    {
-        if (_loadingRequests.TryGetValue(roomSceneName, out RoomLoadRequest activeRequest) &&
-            ReferenceEquals(activeRequest, request))
-        {
-            _loadingRequests.Remove(roomSceneName);
-        }
+        LastError = error;
+        Debug.LogError($"[MapManager] {error}", this);
+        return false;
     }
 }
