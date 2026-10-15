@@ -138,7 +138,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &73879521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -482,6 +482,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: EnemyTest
       objectReference: {fileID: 0}
+    - target: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
       propertyPath: m_LocalPosition.x
       value: 5.91
@@ -538,6 +542,10 @@ PrefabInstance:
     - target: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_Name
       value: EnemyTestRange
+      objectReference: {fileID: 0}
+    - target: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6321473744218458539, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1975,6 +1983,10 @@ PrefabInstance:
     - target: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
       propertyPath: m_Name
       value: EnemyTest
+      objectReference: {fileID: 0}
+    - target: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6768101621955389463, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
       propertyPath: _deathHitStopRate
