@@ -8,7 +8,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateIdle = 0;    // 0：站立/待机
     public const int MotionStateMove = 1;    // 1：奔跑
     public const int MotionStateJump = 2;    // 2：空中/下落
-    public const int MotionStateSlide = 3;   // 3：滑铲（Soccer Tackle）
+    public const int MotionStateSlide = 3;   // 3：滑铲（Running Slide）
     public const int MotionStateAttack = 4;  // 4：攻击（Attack）
     public const int MotionStateWallDashLeft = 5;
     public const int MotionStateWallDashRight = 6;

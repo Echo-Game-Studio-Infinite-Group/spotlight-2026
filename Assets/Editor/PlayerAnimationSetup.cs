@@ -13,7 +13,7 @@ public static class PlayerAnimationSetup
     private const string IdleClipPath = "Assets/Animations/fbx/Idle.fbx";
     private const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
     private const string JumpClipPath = "Assets/Animations/fbx/Jump.fbx";
-    private const string SlideClipPath = "Assets/Animations/fbx/Tackle.fbx";
+    private const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
     private const string AttackParameterName = "IsAttacking";
 
     private static readonly string[] RequiredStates = { "Idle", "Move", "Jump", "Trackle", "Attack", "WallDashLeft", "WallDashRight" };
