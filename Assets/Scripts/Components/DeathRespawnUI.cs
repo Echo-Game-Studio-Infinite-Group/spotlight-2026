@@ -4,20 +4,25 @@ using GameJam.Actions;
 
 public class DeathRespawnUI : MonoBehaviour
 {
+    public static DeathRespawnUI Instance;
+
     public Button respawnButton;
+    public Transform panelRoot;
     private HealthComponent playerHealth;
 
     void Awake()
     {
-        //初始关闭面板
-        gameObject.SetActive(false);
+        Instance = this;
 
-        //查找玩家血量组件
+        if (panelRoot != null)
+        {
+            panelRoot.gameObject.SetActive(false);
+        }
+
         GameObject player = Object.FindObjectOfType<PlayerMotor>().gameObject;
         if (player != null)
         {
             playerHealth = player.GetComponent<HealthComponent>();
-            //订阅玩家血量变化事件，血量为0弹出失败面板
             playerHealth.Damaged += OnPlayerTakeDamage;
         }
 
@@ -29,7 +34,6 @@ public class DeathRespawnUI : MonoBehaviour
 
     private void OnPlayerTakeDamage(HealthComponent health, float damage, Vector3 point, Vector3 dir)
     {
-        //血量等于0，弹出死亡面板
         if (health.Health <= 0)
         {
             OpenPanel();
@@ -38,34 +42,44 @@ public class DeathRespawnUI : MonoBehaviour
 
     public void OpenPanel()
     {
-        gameObject.SetActive(true);
-        //暂停游戏时间
+        if (panelRoot != null)
+        {
+            panelRoot.gameObject.SetActive(true);
+        }
         Time.timeScale = 0;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        Debug.Log("死亡面板已经打开");
     }
 
     public void ClosePanel()
     {
-        gameObject.SetActive(false);
+        if (panelRoot != null)
+        {
+            panelRoot.gameObject.SetActive(false);
+        }
         Time.timeScale = 1;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
-    //复活按钮点击
     private void OnClickRespawn()
     {
-        //读取存档点存档，回到存档位置
+        Debug.Log("复活按钮被点击！");
         SaveManager.LoadPlayer();
-
-        //恢复玩家全部血量
         if (playerHealth != null)
         {
             playerHealth.Reset();
         }
-
         ClosePanel();
     }
 
     void OnDestroy()
     {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
         if (playerHealth != null)
         {
             playerHealth.Damaged -= OnPlayerTakeDamage;

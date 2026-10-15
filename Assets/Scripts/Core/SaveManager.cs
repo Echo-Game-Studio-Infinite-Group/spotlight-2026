@@ -64,7 +64,6 @@ public static class SaveManager
             return;
         }
         SaveData data = JsonUtility.FromJson<SaveData>(json);
-
         if (PlayerMotor.Active != null)
         {
             PlayerMotor.Active.Teleport(data.playerPosition);
@@ -79,13 +78,16 @@ public static class SaveManager
         Debug.Log("存档已清除");
     }
 
-    // 显示死亡失败面板，由外部调用
     public static void ShowDeathPanel()
     {
-        DeathRespawnUI ui = Object.FindObjectOfType<DeathRespawnUI>();
-        if (ui != null)
+        Debug.Log("R键触发调用ShowDeathPanel");
+        if (DeathRespawnUI.Instance != null)
         {
-            ui.OpenPanel();
+            DeathRespawnUI.Instance.OpenPanel();
+        }
+        else
+        {
+            Debug.LogWarning("ShowDeathPanel：找不到DeathRespawnUI.Instance！检查DeathFailPanel是否激活，脚本是否挂载");
         }
     }
 
@@ -95,7 +97,6 @@ public static class SaveManager
         {
             if (SaveManager.PlayerObj == null) return;
 
-            //E保存 L读档 R触发死亡失败界面
             if (Input.GetKeyDown(KeyCode.E))
             {
                 SaveManager.SavePlayer();
@@ -106,6 +107,7 @@ public static class SaveManager
             }
             if (Input.GetKeyDown(KeyCode.R))
             {
+                Debug.Log("触发死亡界面调用");
                 SaveManager.ShowDeathPanel();
             }
         }
