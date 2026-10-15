@@ -214,6 +214,9 @@ namespace Spotlight.VFX
         public TierSpec roadside = new TierSpec();
         public TierSpec linger = new TierSpec();
 
+        [Header("战斗火花（命中/近战parry/弹道parry/滑铲摩擦）")]
+        public CombatSparkTune combatSparks = new CombatSparkTune();
+
         // ------------------------------------------------------------------
         // 默认值 = 2026-10-14 那版 C# 字面量（逐项对齐，构建产物应与之前一致）
         // ------------------------------------------------------------------
@@ -306,5 +309,148 @@ namespace Spotlight.VFX
 
         static CardSpec Card(string name, string material, Vector3 pos, Vector3 euler, Vector3 scale)
             => new CardSpec { name = name, material = material, position = pos, euler = euler, scale = scale };
+    }
+
+    // ==================================================================
+    // 战斗火花（命中 / 近战 parry / 弹道 parry / 脚底滑铲摩擦）
+    // 与火焰同一份配方（RuinsFireConfig.asset 的 combatSparks 段）：运行时由 SlideSparks
+    // 接线注入 CombatSparks；不接（配置为空）时用字段默认值 = 2026-10-15 v2 字面量，
+    // 行为与并入前一致。类型放命名空间层（不嵌进 RuinsFireConfig），火花侧裸名引用。
+    // ==================================================================
+    [Serializable]
+    public sealed class SparkGradient
+    {
+        public Color hot = new Color(1f, 1f, 0.97f);
+        public Color mid = new Color(1f, 0.85f, 0.6f);
+        public Color extinct = new Color(1f, 0.62f, 0.28f);
+    }
+
+    [Serializable]
+    public sealed class SparkPopTune   // 白热圆闪：一帧大白的本体
+    {
+        public float sizeX = 0.5f, sizeY = 0.58f;
+        public float lifetime = 0.06f;
+        public SparkGradient color = new SparkGradient();
+    }
+
+    [Serializable]
+    public sealed class SparkRingTune  // 极细冲击环：扩张后隐去（场景细线纹样同族）
+    {
+        public float size = 0.72f;
+        public float lifetime = 0.18f;
+        [Tooltip("生命周期里的尺寸倍率终点（起点 0.55 固定在代码）")]
+        public float expandEnd = 2.4f;
+        public SparkGradient color = new SparkGradient();
+    }
+
+    [Serializable]
+    public sealed class SparkSprayTune // 火花喷层
+    {
+        public int count = 40;
+        [Tooltip("锥角（度）；0 = 球形炸开")]
+        public float coneAngle = 0f;
+        public float speedMin = 3.5f, speedMax = 9f;
+        public float sizeMin = 0.018f, sizeMax = 0.04f;
+        public float lifeMin = 0.14f, lifeMax = 0.3f;
+        public float gravity = 2f;
+        public float stretch = 0.03f;
+        [Tooltip("速度阻尼（能量碎屑靠它收速度；0 = 不启用）")]
+        public float drag = 0f;
+        public float bounce = 0.4f, dampen = 0.25f, lifetimeLoss = 0.35f;
+        public SparkGradient color = new SparkGradient();
+    }
+
+    [Serializable]
+    public sealed class SparkArcTune   // 电弧：弹道 parry 的签名元素
+    {
+        public int count = 6;
+        public float speedMin = 0.6f, speedMax = 1.8f;
+        public float sizeX = 0.6f, sizeY = 0.95f;
+        public float lifeMin = 0.07f, lifeMax = 0.12f;
+        public SparkGradient color = new SparkGradient
+        {
+            hot = new Color(0.9f, 0.98f, 1f), mid = new Color(0.45f, 0.88f, 1f), extinct = new Color(0.25f, 0.6f, 1f),
+        };
+    }
+
+    [Serializable]
+    public sealed class SparkFlashTune // parry 时的点光衰减
+    {
+        public Color color = new Color(1f, 0.92f, 0.78f);
+        public float intensity = 5f, range = 6f, duration = 0.12f;
+    }
+
+    [Serializable]
+    public sealed class SlideSparkTune // 脚底摩擦：持续发射器
+    {
+        public float speedThresholdFactor = 1f;
+        public float slideBoost = 2f;
+        public float sparksPerMeter = 1.2f, maxSparksPerMeter = 8f;
+        public float lifeMin = 0.18f, lifeMax = 0.36f;
+        public float speedMin = 2.5f, speedMax = 5f;
+        public float sizeMin = 0.03f, sizeMax = 0.06f;
+        public float gravity = 2.2f;
+        public int maxParticles = 240;
+        public float coneAngle = 22f;
+        [Tooltip("锥轴上抬角（度）：火花向后上方掠过地面，不平射也不戳地")]
+        public float coneTiltX = 24f;
+        public float stretch = 0.045f, lengthScale = 2.2f;
+        public float bounce = 0.4f, dampen = 0.25f, lifetimeLoss = 0.4f;
+        public SparkGradient color = new SparkGradient
+        {
+            hot = new Color(1f, 0.98f, 0.92f), mid = new Color(1f, 0.66f, 0.26f), extinct = new Color(0.85f, 0.28f, 0.05f),
+        };
+    }
+
+    [Serializable]
+    public sealed class CombatSparkTune
+    {
+        [Tooltip("同类爆发同时存在的上限（超限复用最老的）")]
+        public int maxPerKind = 10;
+        [Tooltip("命中强度归一：强度 = damage / 此值（0–1 截断）")]
+        public float hitDamageFullScale = 40f;
+
+        public SparkPopTune hitPop = new SparkPopTune
+        {
+            sizeX = 0.22f, sizeY = 0.28f, lifetime = 0.055f,
+            color = new SparkGradient { hot = new Color(1f, 1f, 0.97f), mid = new Color(1f, 0.82f, 0.55f), extinct = new Color(1f, 0.6f, 0.25f) },
+        };
+        public SparkSprayTune hitSparks = new SparkSprayTune
+        {
+            count = 28, coneAngle = 40f, speedMin = 6f, speedMax = 15f,
+            sizeMin = 0.018f, sizeMax = 0.04f, lifeMin = 0.12f, lifeMax = 0.28f,
+            gravity = 1.8f, stretch = 0.035f, bounce = 0.45f, dampen = 0.25f, lifetimeLoss = 0.35f,
+            color = new SparkGradient { hot = new Color(1f, 0.98f, 0.92f), mid = new Color(1f, 0.66f, 0.26f), extinct = new Color(0.85f, 0.28f, 0.05f) },
+        };
+
+        public SparkPopTune parryPop = new SparkPopTune();
+        public SparkRingTune parryRing = new SparkRingTune();
+        public SparkSprayTune parrySpray = new SparkSprayTune();
+        public SparkFlashTune parryLight = new SparkFlashTune();
+
+        public SparkPopTune parryProjectilePop = new SparkPopTune
+        {
+            sizeX = 0.42f, sizeY = 0.5f,
+            color = new SparkGradient { hot = new Color(0.96f, 1f, 1f), mid = new Color(0.42f, 0.86f, 1f), extinct = new Color(0.16f, 0.42f, 1f) },
+        };
+        public SparkRingTune parryProjectileRing = new SparkRingTune
+        {
+            size = 0.64f, lifetime = 0.16f,
+            color = new SparkGradient { hot = new Color(0.96f, 1f, 1f), mid = new Color(0.42f, 0.86f, 1f), extinct = new Color(0.16f, 0.42f, 1f) },
+        };
+        public SparkSprayTune parryProjectileSpray = new SparkSprayTune
+        {
+            count = 28, coneAngle = 26f, speedMin = 5f, speedMax = 12f,
+            lifeMin = 0.12f, lifeMax = 0.26f,
+            gravity = 0.5f, drag = 0.8f, bounce = 0f,
+            color = new SparkGradient { hot = new Color(0.96f, 1f, 1f), mid = new Color(0.42f, 0.86f, 1f), extinct = new Color(0.16f, 0.42f, 1f) },
+        };
+        public SparkArcTune arcs = new SparkArcTune();
+        public SparkFlashTune parryProjectileLight = new SparkFlashTune
+        {
+            color = new Color(0.6f, 0.9f, 1f), intensity = 6f, range = 7f, duration = 0.14f,
+        };
+
+        public SlideSparkTune slide = new SlideSparkTune();
     }
 }

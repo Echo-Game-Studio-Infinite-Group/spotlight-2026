@@ -487,3 +487,149 @@ MonoBehaviour:
       - Embers
       - Light
       runtimeOnly: 1
+  combatSparks:
+    maxPerKind: 10
+    hitDamageFullScale: 40
+    hitPop:
+      sizeX: 0.22
+      sizeY: 0.28
+      lifetime: 0.055
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.82, b: 0.55, a: 1}
+        extinct: {r: 1, g: 0.6, b: 0.25, a: 1}
+    hitSparks:
+      count: 28
+      coneAngle: 40
+      speedMin: 6
+      speedMax: 15
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.12
+      lifeMax: 0.28
+      gravity: 1.8
+      stretch: 0.035
+      drag: 0
+      bounce: 0.45
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 1, g: 0.98, b: 0.92, a: 1}
+        mid: {r: 1, g: 0.66, b: 0.26, a: 1}
+        extinct: {r: 0.85, g: 0.28, b: 0.05, a: 1}
+    parryPop:
+      sizeX: 0.5
+      sizeY: 0.58
+      lifetime: 0.06
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parryRing:
+      size: 0.72
+      lifetime: 0.18
+      expandEnd: 2.4
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parrySpray:
+      count: 40
+      coneAngle: 0
+      speedMin: 3.5
+      speedMax: 9
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.14
+      lifeMax: 0.3
+      gravity: 2
+      stretch: 0.03
+      drag: 0
+      bounce: 0.4
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parryLight:
+      color: {r: 1, g: 0.92, b: 0.78, a: 1}
+      intensity: 5
+      range: 6
+      duration: 0.12
+    parryProjectilePop:
+      sizeX: 0.42
+      sizeY: 0.5
+      lifetime: 0.06
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    parryProjectileRing:
+      size: 0.64
+      lifetime: 0.16
+      expandEnd: 2.4
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    parryProjectileSpray:
+      count: 28
+      coneAngle: 26
+      speedMin: 5
+      speedMax: 12
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.12
+      lifeMax: 0.26
+      gravity: 0.5
+      stretch: 0.03
+      drag: 0.8
+      bounce: 0
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    arcs:
+      count: 6
+      speedMin: 0.6
+      speedMax: 1.8
+      sizeX: 0.6
+      sizeY: 0.95
+      lifeMin: 0.07
+      lifeMax: 0.12
+      color:
+        hot: {r: 0.9, g: 0.98, b: 1, a: 1}
+        mid: {r: 0.45, g: 0.88, b: 1, a: 1}
+        extinct: {r: 0.25, g: 0.6, b: 1, a: 1}
+    parryProjectileLight:
+      color: {r: 0.6, g: 0.9, b: 1, a: 1}
+      intensity: 6
+      range: 7
+      duration: 0.14
+    slide:
+      speedThresholdFactor: 1
+      slideBoost: 2
+      sparksPerMeter: 1.2
+      maxSparksPerMeter: 8
+      lifeMin: 0.18
+      lifeMax: 0.36
+      speedMin: 2.5
+      speedMax: 5
+      sizeMin: 0.03
+      sizeMax: 0.06
+      gravity: 2.2
+      maxParticles: 240
+      coneAngle: 22
+      coneTiltX: 24
+      stretch: 0.045
+      lengthScale: 2.2
+      bounce: 0.4
+      dampen: 0.25
+      lifetimeLoss: 0.4
+      color:
+        hot: {r: 1, g: 0.98, b: 0.92, a: 1}
+        mid: {r: 1, g: 0.66, b: 0.26, a: 1}
+        extinct: {r: 0.85, g: 0.28, b: 0.05, a: 1}

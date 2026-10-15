@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Spotlight.VFX;
 using UnityEngine;
 
 // 战斗火花特效库 v2 —— 按「Functional / Industrial Chamfer Sci-Fi Hard Surface」基调重做。
@@ -25,7 +26,18 @@ using UnityEngine;
 // 待 3C 与美术定稿后微调。
 public static class CombatSparks
 {
-    private const int MaxPerKind = 10;
+    // ===== 调参（RuinsFireConfig.asset 的 combatSparks 段——与火焰同一份配方） =====
+    // SlideSparks 接到配方后经 ApplyTune 注入；不接时用 CombatSparkTune 的字段默认值
+    // （= 2026-10-15 v2 字面量，行为与并入配置前一致）。模板与灯光参数是**首用快照**：
+    // 改了资产要重进 Play / 重开场景才对模板生效。
+
+    private static CombatSparkTune _tune;
+
+    /// <summary>注入配方（SlideSparks.Awake 调用；传 null = 回到内置默认）。</summary>
+    public static void ApplyTune(RuinsFireConfig config) { _tune = config != null ? config.combatSparks : null; }
+
+    /// <summary>当前配方（懒初始化为内置默认，读-only；模板装配期取值一次）。</summary>
+    private static CombatSparkTune T => _tune ?? (_tune = new CombatSparkTune());
 
     private static GameObject _poolRoot;
     private static Material _sparkMaterial;
@@ -49,7 +61,7 @@ public static class CombatSparks
         // 火花沿「反弹方向」喷：命中方向指向目标，火花朝来路反回去，锥形铺开
         Vector3 spray = direction.sqrMagnitude > 0.0001f ? -direction.normalized : Vector3.up;
         spark.transform.SetPositionAndRotation(point, Quaternion.LookRotation(spray, Vector3.up));
-        spark.Play(Mathf.Clamp01(damage / 40f));
+        spark.Play(Mathf.Clamp01(damage / T.hitDamageFullScale));
     }
 
     /// <summary>近战 parry 成功的闪光：白热圆闪 + 极细白环 + 环形火花——金属对金属，偏白热接地。</summary>
@@ -59,7 +71,8 @@ public static class CombatSparks
         if (spark == null) return;
         spark.transform.SetPositionAndRotation(point, Quaternion.identity);
         spark.Play(1f);
-        SparkLightFader.Flash(point, new Color(1f, 0.92f, 0.78f), 5f, 6f, 0.12f);
+        SparkFlashTune light = T.parryLight;
+        SparkLightFader.Flash(point, light.color, light.intensity, light.range, light.duration);
     }
 
     /// <summary>对远程道具 parry 成功的弹开：白热圆闪 + 青色细环 + 沿弹道来路反喷的冷色碎屑 + 电弧——能量放电感。</summary>
@@ -70,7 +83,8 @@ public static class CombatSparks
         Vector3 deflect = incomingDirection.sqrMagnitude > 0.0001f ? -incomingDirection.normalized : Vector3.up;
         spark.transform.SetPositionAndRotation(point, Quaternion.LookRotation(deflect, Vector3.up));
         spark.Play(1f);
-        SparkLightFader.Flash(point, new Color(0.6f, 0.9f, 1f), 6f, 7f, 0.14f);
+        SparkFlashTune light = T.parryProjectileLight;
+        SparkLightFader.Flash(point, light.color, light.intensity, light.range, light.duration);
     }
 
     // ===== 池 =====
@@ -89,7 +103,7 @@ public static class CombatSparks
         }
 
         // 没有闲置且到上限：复用列表里最早的那个（最老的实例在最前面）
-        if (list.Count >= MaxPerKind)
+        if (list.Count >= T.maxPerKind)
         {
             for (int i = 0; i < list.Count; i++)
             {
@@ -147,24 +161,28 @@ public static class CombatSparks
     {
         GameObject host = NewHost("Spark_Hit");
         SparkInstance instance = host.GetComponent<SparkInstance>();
+        CombatSparkTune t = T;
+        SparkPopTune pop = t.hitPop;
+        SparkSprayTune spray = t.hitSparks;
 
-        ParticleSystem pop = NewChildSystem(host, "Pop");
-        ConfigureLayer(pop, new LayerConfig
+        ParticleSystem popPs = NewChildSystem(host, "Pop");
+        ConfigureLayer(popPs, new LayerConfig
         {
             Material = _popMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
-            Size = new Vector2(0.22f, 0.28f), Lifetime = new Vector2(0.055f, 0.055f),
-            Color = BuildGradient(new Color(1f, 1f, 0.97f), new Color(1f, 0.82f, 0.55f), new Color(1f, 0.6f, 0.25f)),
+            Size = new Vector2(pop.sizeX, pop.sizeY), Lifetime = new Vector2(pop.lifetime, pop.lifetime),
+            Color = BuildGradient(pop.color),
         });
-        instance.Register(pop, scaleWithStrength: false);
+        instance.Register(popPs, scaleWithStrength: false);
 
         ParticleSystem sparks = NewChildSystem(host, "Sparks");
         ConfigureLayer(sparks, new LayerConfig
         {
-            Material = _sparkMaterial, Count = 28, ShapeType = ParticleSystemShapeType.Cone, ConeAngle = 40f,
-            Speed = new Vector2(6f, 15f), Size = new Vector2(0.018f, 0.04f), Lifetime = new Vector2(0.12f, 0.28f),
-            Gravity = 1.8f, Stretch = 0.035f,
-            Bounce = 0.45f, Dampen = 0.25f, LifetimeLoss = 0.35f,
-            Color = BuildGradient(new Color(1f, 0.98f, 0.92f), new Color(1f, 0.66f, 0.26f), new Color(0.85f, 0.28f, 0.05f)),
+            Material = _sparkMaterial, Count = spray.count, ShapeType = ParticleSystemShapeType.Cone, ConeAngle = spray.coneAngle,
+            Speed = new Vector2(spray.speedMin, spray.speedMax), Size = new Vector2(spray.sizeMin, spray.sizeMax),
+            Lifetime = new Vector2(spray.lifeMin, spray.lifeMax),
+            Gravity = spray.gravity, Stretch = spray.stretch,
+            Bounce = spray.bounce, Dampen = spray.dampen, LifetimeLoss = spray.lifetimeLoss,
+            Color = BuildGradient(spray.color),
         });
         instance.Register(sparks, scaleWithStrength: true);
         return host;
@@ -175,52 +193,52 @@ public static class CombatSparks
     {
         GameObject host = NewHost(projectile ? "Spark_ParryProjectile" : "Spark_Parry");
         SparkInstance instance = host.GetComponent<SparkInstance>();
+        CombatSparkTune t = T;
+        SparkPopTune pop = projectile ? t.parryProjectilePop : t.parryPop;
+        SparkRingTune ring = projectile ? t.parryProjectileRing : t.parryRing;
+        SparkSprayTune spray = projectile ? t.parryProjectileSpray : t.parrySpray;
 
-        Color hot = projectile ? new Color(0.96f, 1f, 1f) : new Color(1f, 1f, 0.97f);
-        Color mid = projectile ? new Color(0.42f, 0.86f, 1f) : new Color(1f, 0.85f, 0.6f);
-        Color outColor = projectile ? new Color(0.16f, 0.42f, 1f) : new Color(1f, 0.62f, 0.28f);
-
-        ParticleSystem pop = NewChildSystem(host, "Pop");
-        ConfigureLayer(pop, new LayerConfig
+        ParticleSystem popPs = NewChildSystem(host, "Pop");
+        ConfigureLayer(popPs, new LayerConfig
         {
             Material = _popMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
-            Size = projectile ? new Vector2(0.42f, 0.5f) : new Vector2(0.5f, 0.58f),
-            Lifetime = new Vector2(0.06f, 0.06f),
-            Color = BuildGradient(hot, mid, outColor),
+            Size = new Vector2(pop.sizeX, pop.sizeY),
+            Lifetime = new Vector2(pop.lifetime, pop.lifetime),
+            Color = BuildGradient(pop.color),
         });
-        instance.Register(pop, scaleWithStrength: false);
+        instance.Register(popPs, scaleWithStrength: false);
 
         // 细冲击环：尺寸从 ~0.35m 扩到 ~1.4m 后隐去——极细线环是本作场景线纹语言的同族
-        ParticleSystem ring = NewChildSystem(host, "Ring");
-        ConfigureLayer(ring, new LayerConfig
+        ParticleSystem ringPs = NewChildSystem(host, "Ring");
+        ConfigureLayer(ringPs, new LayerConfig
         {
             Material = _ringMaterial, Count = 1, ShapeType = ParticleSystemShapeType.Sphere,
-            Size = projectile ? new Vector2(0.64f, 0.64f) : new Vector2(0.72f, 0.72f),
-            Lifetime = new Vector2(projectile ? 0.16f : 0.18f, projectile ? 0.16f : 0.18f),
-            Color = BuildGradient(hot, mid, outColor),
-            SizeCurve = AnimationCurve.EaseInOut(0f, 0.55f, 1f, 2.4f), // 扩张环
+            Size = new Vector2(ring.size, ring.size),
+            Lifetime = new Vector2(ring.lifetime, ring.lifetime),
+            Color = BuildGradient(ring.color),
+            SizeCurve = AnimationCurve.EaseInOut(0f, 0.55f, 1f, ring.expandEnd), // 扩张环
             Unscaled = true,
         });
-        instance.Register(ring, scaleWithStrength: false);
+        instance.Register(ringPs, scaleWithStrength: false);
 
         // 火花层：近战环形炸开带弹跳；弹道沿反弹方向锥喷、无重力带阻尼（能量碎屑）
-        ParticleSystem spray = NewChildSystem(host, "Spray");
-        ConfigureLayer(spray, new LayerConfig
+        ParticleSystem sprayPs = NewChildSystem(host, "Spray");
+        ConfigureLayer(sprayPs, new LayerConfig
         {
-            Material = _sparkMaterial, Count = projectile ? 28 : 40,
-            ShapeType = projectile ? ParticleSystemShapeType.Cone : ParticleSystemShapeType.Sphere,
-            ConeAngle = projectile ? 26f : 0f,
-            Speed = projectile ? new Vector2(5f, 12f) : new Vector2(3.5f, 9f),
-            Size = new Vector2(0.018f, 0.04f),
-            Lifetime = projectile ? new Vector2(0.12f, 0.26f) : new Vector2(0.14f, 0.3f),
-            Gravity = projectile ? 0.5f : 2f,
-            Stretch = projectile ? 0.03f : 0.03f,
-            Drag = projectile ? 0.8f : 0f,
-            Bounce = projectile ? 0f : 0.4f, Dampen = 0.25f, LifetimeLoss = 0.35f,
-            Color = BuildGradient(hot, mid, outColor),
+            Material = _sparkMaterial, Count = spray.count,
+            ShapeType = spray.coneAngle > 0f ? ParticleSystemShapeType.Cone : ParticleSystemShapeType.Sphere,
+            ConeAngle = spray.coneAngle,
+            Speed = new Vector2(spray.speedMin, spray.speedMax),
+            Size = new Vector2(spray.sizeMin, spray.sizeMax),
+            Lifetime = new Vector2(spray.lifeMin, spray.lifeMax),
+            Gravity = spray.gravity,
+            Stretch = spray.stretch,
+            Drag = spray.drag,
+            Bounce = spray.bounce, Dampen = spray.dampen, LifetimeLoss = spray.lifetimeLoss,
+            Color = BuildGradient(spray.color),
             Unscaled = true,
         });
-        instance.Register(spray, scaleWithStrength: false);
+        instance.Register(sprayPs, scaleWithStrength: false);
 
         if (projectile)
         {
@@ -228,10 +246,12 @@ public static class CombatSparks
             ParticleSystem arcs = NewChildSystem(host, "Arcs");
             ConfigureLayer(arcs, new LayerConfig
             {
-                Material = _arcMaterial, Count = 6, ShapeType = ParticleSystemShapeType.Sphere,
-                Speed = new Vector2(0.6f, 1.8f), Size = new Vector2(0.6f, 0.95f), Lifetime = new Vector2(0.07f, 0.12f),
+                Material = _arcMaterial, Count = t.arcs.count, ShapeType = ParticleSystemShapeType.Sphere,
+                Speed = new Vector2(t.arcs.speedMin, t.arcs.speedMax),
+                Size = new Vector2(t.arcs.sizeX, t.arcs.sizeY),
+                Lifetime = new Vector2(t.arcs.lifeMin, t.arcs.lifeMax),
                 RandomRotation = true,
-                Color = BuildGradient(new Color(0.9f, 0.98f, 1f), new Color(0.45f, 0.88f, 1f), new Color(0.25f, 0.6f, 1f)),
+                Color = BuildGradient(t.arcs.color),
                 Unscaled = true,
             });
             instance.Register(arcs, scaleWithStrength: false);
@@ -320,6 +340,9 @@ public static class CombatSparks
 
     // 颜色梯度：白热 → 主色 → 熄灭。RGB 常保亮度、alpha 提前收零——
     // 预乘混合下若 RGB 先熄黑而 alpha 残留，会在亮面上压出灰渍（"烟灰"）。
+    private static Gradient BuildGradient(SparkGradient g)
+        => BuildGradient(g.hot, g.mid, g.extinct);
+
     private static Gradient BuildGradient(Color hot, Color mid, Color extinguished)
     {
         Gradient gradient = new Gradient();

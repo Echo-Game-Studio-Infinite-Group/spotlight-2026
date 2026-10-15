@@ -1,3 +1,4 @@
+using Spotlight.VFX;
 using UnityEngine;
 
 // 脚底摩擦火花：玩家在地面高速移动 / 滑铲时，从脚底沿运动反方向喷火花。
@@ -17,6 +18,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class SlideSparks : MonoBehaviour
 {
+    [Header("调参配方")]
+    [Tooltip("调参入口 = RuinsFireConfig.asset 的 combatSparks 段（与火焰同一份配方）。留空 = 用内置默认（提案基线）。给出时覆盖下面所有序列化值。")]
+    [SerializeField] private RuinsFireConfig _config;
+
     [Header("触发门槛")]
     [Tooltip("开始蹭火花的速度 = GroundSpeedThreshold × 此系数（提案 1.0）")]
     [SerializeField, Min(0f)] private float _speedThresholdFactor = 1f;
@@ -40,6 +45,17 @@ public sealed class SlideSparks : MonoBehaviour
     {
         _motor = GetComponent<PlayerMotor>();
         _controller = GetComponent<CharacterController>();
+        // 配方是唯一权威：给了资产就覆盖组件上已序列化的数值
+        // （与火焰构建「覆盖手工值」同一哲学；想保住手工调参就回填资产）
+        if (_config != null)
+        {
+            SlideSparkTune s = _config.combatSparks.slide;
+            _speedThresholdFactor = s.speedThresholdFactor;
+            _slideBoost = s.slideBoost;
+            _sparksPerMeter = s.sparksPerMeter;
+            _maxSparksPerMeter = s.maxSparksPerMeter;
+        }
+        CombatSparks.ApplyTune(_config);   // 命中 / parry 火花同源接配方
     }
 
     private void OnEnable() => EnsureEmitter();
@@ -90,6 +106,10 @@ public sealed class SlideSparks : MonoBehaviour
     {
         if (_system != null) return;
 
+        // 参数源：配方（RuinsFireConfig.asset 的 combatSparks.slide）；没接配方时
+        // SlideSparkTune 的字段默认值就是原字面量提案基线，行为不变
+        SlideSparkTune s = _config != null ? _config.combatSparks.slide : new SlideSparkTune();
+
         GameObject host = new GameObject("SlideSparks(Emitter)");
         _emitter = host.transform;
         _emitter.SetParent(transform, false);
@@ -98,13 +118,13 @@ public sealed class SlideSparks : MonoBehaviour
 
         ParticleSystem.MainModule main = _system.main;
         main.loop = true;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.36f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.06f);
-        main.gravityModifier = 2.2f;             // 火花蹭出去后有明显的下坠弧线
+        main.startLifetime = new ParticleSystem.MinMaxCurve(s.lifeMin, s.lifeMax);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(s.speedMin, s.speedMax);
+        main.startSize = new ParticleSystem.MinMaxCurve(s.sizeMin, s.sizeMax);
+        main.gravityModifier = s.gravity;        // 火花蹭出去后有明显的下坠弧线
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.stopAction = ParticleSystemStopAction.None;
-        main.maxParticles = 240;                 // 高速滑铲时的存活上限，防糊屏
+        main.maxParticles = s.maxParticles;      // 高速滑铲时的存活上限，防糊屏
 
         ParticleSystem.EmissionModule emission = _system.emission;
         emission.rateOverTime = 0f;
@@ -113,9 +133,9 @@ public sealed class SlideSparks : MonoBehaviour
         ParticleSystem.ShapeModule shape = _system.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Cone;
-        shape.angle = 22f;
+        shape.angle = s.coneAngle;
         shape.radius = 0.04f;
-        shape.rotation = new Vector3(24f, 0f, 0f); // 锥轴略微上抬：火花向后上方掠过地面，不平射也不戳地
+        shape.rotation = new Vector3(s.coneTiltX, 0f, 0f); // 锥轴略微上抬：火花向后上方掠过地面，不平射也不戳地
 
         ParticleSystem.ColorOverLifetimeModule color = _system.colorOverLifetime;
         color.enabled = true;
@@ -123,9 +143,9 @@ public sealed class SlideSparks : MonoBehaviour
         // RGB 常保亮度、alpha 负责熄灭（预乘混合口径，与 CombatSparks.BuildGradient 同一套）
         gradient.SetKeys(
             new[] {
-                new GradientColorKey(new Color(1f, 0.98f, 0.92f), 0f),
-                new GradientColorKey(new Color(1f, 0.66f, 0.26f), 0.4f),
-                new GradientColorKey(new Color(0.85f, 0.28f, 0.05f), 0.8f),
+                new GradientColorKey(s.color.hot, 0f),
+                new GradientColorKey(s.color.mid, 0.4f),
+                new GradientColorKey(s.color.extinct, 0.8f),
             },
             new[] {
                 new GradientAlphaKey(1f, 0f),
@@ -144,17 +164,17 @@ public sealed class SlideSparks : MonoBehaviour
         collision.enabled = true;
         collision.type = ParticleSystemCollisionType.World;
         collision.mode = ParticleSystemCollisionMode.Collision3D;
-        collision.dampen = 0.25f;
-        collision.bounce = 0.4f;
-        collision.lifetimeLoss = 0.4f;
+        collision.dampen = s.dampen;
+        collision.bounce = s.bounce;
+        collision.lifetimeLoss = s.lifetimeLoss;
         collision.minKillSpeed = 0.4f;
         collision.radiusScale = 1f;
 
         ParticleSystemRenderer renderer = _system.GetComponent<ParticleSystemRenderer>();
         renderer.material = CombatSparks.SparkMaterial;
         renderer.renderMode = ParticleSystemRenderMode.Stretch;
-        renderer.velocityScale = 0.045f;
-        renderer.lengthScale = 2.2f;
+        renderer.velocityScale = s.stretch;
+        renderer.lengthScale = s.lengthScale;
         renderer.alignment = ParticleSystemRenderSpace.View;
 
         _system.Play(); // 常驻发射器：一直开着，靠 rateOverDistance=0 静默
