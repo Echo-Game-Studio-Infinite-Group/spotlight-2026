@@ -168,9 +168,8 @@ namespace GameJam.Actions.Editor
                 EditorUtility.SetDirty(transition);
             }
             foreach (ActionDefinition action in catalog.Actions)
-                foreach (ActionSegment segment in action.Timeline)
+                foreach (ActionAnimationBinding binding in AnimationBindings(action))
                 {
-                    ActionAnimationBinding binding = segment.Animation;
                     if (string.IsNullOrWhiteSpace(binding.AnimatorState)) continue;
                     const string prefix = "Base Layer.Actions.";
                     if (binding.Layer != 0 || !binding.AnimatorState.StartsWith(prefix, StringComparison.Ordinal)) continue;
@@ -190,6 +189,14 @@ namespace GameJam.Actions.Editor
                 }
             EditorUtility.SetDirty(actions); EditorUtility.SetDirty(root); EditorUtility.SetDirty(controller);
             ActionAnimatorAuthoring.Invalidate();
+        }
+        private static IEnumerable<ActionAnimationBinding> AnimationBindings(ActionDefinition action)
+        {
+            foreach (ActionSegment segment in action.Timeline) yield return segment.Animation;
+            if (action.AirborneAnimation == null) yield break;
+            yield return action.AirborneAnimation.Airborne;
+            yield return action.AirborneAnimation.Descending;
+            yield return action.AirborneAnimation.Landing;
         }
         private static void EnsureParameter(AnimatorController controller, string name, AnimatorControllerParameterType type)
         {

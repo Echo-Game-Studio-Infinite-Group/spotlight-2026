@@ -22,8 +22,16 @@ namespace GameJam.Actions
         private int _stateHash;
         private int _layer;
         private int _motionTimeId;
+        private PlayerMotor _motor;
+        private ActionAirborneAnimationSettings _airborneSettings;
+        private ActionAnimationBinding _jumpUpBinding;
+        private ActionAnimationBinding _airborneBinding;
+        private float _airborneProgress;
+        private int _flightStartJumpCount;
+        private bool _hasLeftGround;
         public Animator Animator => _animator;
         public bool IsOwned => _owner != null;
+        public bool IsHoldingAirbornePose => _airborneSettings != null && _instance == 0;
 
         public void Configure(Animator animator, PlayerAnimation locomotion, PlayerVFXManager vfx = null)
         {
@@ -38,6 +46,7 @@ namespace GameJam.Actions
             if (_animator == null) _animator = GetComponentInChildren<Animator>(true);
             if (_locomotion == null) _locomotion = GetComponentInChildren<PlayerAnimation>(true);
             if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>(true);
+            _motor = GetComponent<PlayerMotor>();
             if (owner == null || _animator == null || _animator.runtimeAnimatorController == null || _locomotion == null)
             { reason = "缺少 Animator、Controller 或 PlayerAnimation"; return false; }
             if (!HasParameter(TimeParameter, AnimatorControllerParameterType.Float) || !HasParameter(PlayingParameter, AnimatorControllerParameterType.Bool))
@@ -78,6 +87,17 @@ namespace GameJam.Actions
             ActionAnimationBinding binding = state.Segment?.Animation;
             if (binding == null || string.IsNullOrWhiteSpace(binding.AnimatorState))
             { EndAction(_instance, false); return; }
+            _airborneBinding = null;
+            if (state.Action.AirborneAnimation?.HoldJumpUpPose == true && _airborneSettings != state.Action.AirborneAnimation)
+            {
+                _airborneSettings = state.Action.AirborneAnimation;
+                _jumpUpBinding = binding;
+                foreach (ActionSegment segment in state.Action.Timeline)
+                    if (!string.IsNullOrWhiteSpace(segment.Animation.AnimatorState)) _jumpUpBinding = segment.Animation;
+                _airborneBinding = null;
+                _flightStartJumpCount = _motor != null ? _motor.JumpCount : 0;
+                _hasLeftGround = false;
+            }
             int hash = Animator.StringToHash(binding.AnimatorState);
             bool same = _instance == state.InstanceId && _stateHash == hash && _layer == binding.Layer;
             _animator.SetBool(PlayingId, true);
@@ -100,31 +120,77 @@ namespace GameJam.Actions
         {
             if (!IsOwned) return;
             _locomotion.UpdateLocomotion(deltaTime);
+            if (_airborneSettings != null && _motor != null)
+            {
+                _hasLeftGround |= _motor.JumpCount > _flightStartJumpCount;
+                if (_hasLeftGround && (_motor.IsGrounded || _motor.IsWallSliding) && _instance != 0)
+                    ClearAirborneVisual();
+            }
             if (_instance == state.InstanceId && state.Action != null)
             {
                 _animator.SetFloat(TimeId, state.AnimationNormalizedTime);
                 _animator.SetFloat(_motionTimeId, state.AnimationNormalizedTime);
             }
+            else if (_instance == 0) SampleAirborneVisual(deltaTime);
             _animator.Update(deltaTime);
         }
         public void EndAction(long instanceId, bool stopEffects)
         {
             if (!IsOwned || _instance != instanceId) return;
             _instance = 0;
+            if (!SampleAirborneVisual(0f)) ReturnToLocomotion();
+            if (stopEffects) _vfx?.StopAttacks();
+            // 失活对象不能再手动驱动 Animator，退出播放与卸载场景会走这条路径。
+            if (_animator != null && _animator.gameObject.activeInHierarchy) _animator.Update(0f);
+        }
+        private void ReturnToLocomotion()
+        {
             _animator.SetBool(PlayingId, false);
             _locomotion.UpdateLocomotion(0f);
             int hash = Animator.StringToHash("Base Layer." + PlayerAnimation.LocomotionStateName(_locomotion.CurrentMotionState));
             if (_animator.HasState(0, hash)) _animator.CrossFadeInFixedTime(hash, _returnBlendFrames / (float)ActionSequencePlayer.FramesPerSecond, 0);
-            if (stopEffects) _vfx?.StopAttacks();
-            // 物体已经失活（场景卸载 / 退出播放 / 被禁用）时再驱一次 Animator 会报
-            // "Can't call Animator.Update on inactive object"。Release 是从 OnDisable 调的，
-            // 那条路径必然踩到这里；禁用但激活的 Animator 仍然允许手动驱（本类就靠这个跑序列）。
-            if (_animator != null && _animator.gameObject.activeInHierarchy) _animator.Update(0f);
+        }
+        private bool SampleAirborneVisual(float deltaTime)
+        {
+            if (_airborneSettings == null || _motor == null || !_hasLeftGround) return false;
+            bool landed = _motor.IsGrounded;
+            ActionAnimationBinding binding = landed ? _airborneSettings.Landing :
+                _motor.Velocity.y < 0f && !string.IsNullOrWhiteSpace(_airborneSettings.Descending.AnimatorState)
+                    ? _airborneSettings.Descending : _airborneSettings.Airborne;
+            bool hold = !landed && string.IsNullOrWhiteSpace(binding.AnimatorState);
+            if (hold) binding = _jumpUpBinding;
+            if (_motor.IsWallSliding || binding == null || string.IsNullOrWhiteSpace(binding.AnimatorState))
+            { ClearAirborneVisual(); return false; }
+            if (_airborneBinding != binding)
+            {
+                _airborneBinding = binding;
+                _airborneProgress = 0f;
+                _motionTimeId = Animator.StringToHash(binding.TimeParameter);
+                int hash = Animator.StringToHash(binding.AnimatorState);
+                _animator.CrossFadeInFixedTime(hash, binding.BlendFrames / (float)ActionSequencePlayer.FramesPerSecond, binding.Layer,
+                    binding.Clip != null ? binding.NormalizedStart * binding.Clip.length : 0f);
+            }
+            if (!hold && binding.Clip != null && binding.Clip.length > 0f) _airborneProgress += deltaTime / binding.Clip.length;
+            float normalized = hold ? binding.NormalizedEnd : Mathf.Lerp(binding.NormalizedStart, binding.NormalizedEnd, Mathf.Clamp01(_airborneProgress));
+            _animator.SetBool(PlayingId, true);
+            _animator.SetFloat(_motionTimeId, normalized);
+            _animator.SetFloat(TimeId, normalized);
+            if (landed && _airborneProgress >= 1f) { ClearAirborneVisual(); return false; }
+            return true;
+        }
+        public void ClearAirborneVisual()
+        {
+            if (_airborneSettings == null) return;
+            _airborneSettings = null;
+            _jumpUpBinding = _airborneBinding = null;
+            _hasLeftGround = false;
+            if (IsOwned && _instance == 0) ReturnToLocomotion();
         }
         public void PlayAttackEffect(int index) => _vfx?.PlayAttack(index);
         public void Release(object owner)
         {
             if (!ReferenceEquals(_owner, owner)) return;
+            ClearAirborneVisual();
             EndAction(_instance, true);
             _locomotion.SetSequenceDriven(false);
             _vfx?.SetSequenceDriven(false);

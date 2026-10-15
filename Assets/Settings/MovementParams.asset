@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MovementParams
   m_EditorClassIdentifier: 
   GroundSpeedThreshold: 10
-  WalkSpeed: 3
+  LowSpeedRatio: 0.8
   RunAccel: 10
   GroundFriction: 2
   GroundStopSpeed: 0.05
@@ -31,10 +31,10 @@ MonoBehaviour:
   SlideCapsuleHeight: 1
   WallMaxApproachAngle: 70
   WallNormalMaxUpDot: 0.3
-  WallGraceTime: 3.5
+  WallGraceTime: 2.5
   WallVerticalFriction: 2
   WallVerticalStopSpeed: 0.01
-  WallFriction: 1
+  WallFriction: 2.5
   WallStopSpeed: 0.01
   WallGravityScale: 0.6
   WallMaxFallSpeed: 1

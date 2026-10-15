@@ -52,6 +52,7 @@ MonoBehaviour:
       ForbidHeld: 0
       MinHoldFrames: 0
       MaxHoldFrames: 0
+    AlternativeTriggers: []
     MaxStepGapFrames: 0
     PreInputFrames: 0
     BufferGroup: slide
@@ -64,10 +65,89 @@ MonoBehaviour:
   StartConditions:
   - can_slide
   EnergyCost: 0
+  EnergyCostSource: 0
+  EnergyParameters: {fileID: 0}
+  TimeEffect:
+    UsesVectorConverter: 0
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 0
+  LandingCompletionStart:
+    SegmentId: 
+    RelativeTo: 0
+    OffsetFrames: 0
   CooldownFrames: 0
+  CooldownGroup: 
+  RequestVariants: []
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
   Combat:
     Enabled: 0
     Damage: 25
     HitMask:
       serializedVersion: 2
       m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

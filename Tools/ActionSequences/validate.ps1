@@ -1,12 +1,13 @@
 param(
-    [ValidateSet('Compile', 'EditMode', 'PlayMode', 'BaselinePlayMode', 'Examples', 'Install', 'All')][string]$Stage = 'Compile',
+    [ValidateSet('Compile', 'EditMode', 'PlayMode', 'BaselinePlayMode', 'Examples', 'Install', 'MobilityInstall', 'All')][string]$Stage = 'Compile',
     [string]$TestFilter = '',
+    [string]$ValidationDirectory = 'Temp/PlayerActionValidation',
     [switch]$UseRepositoryPackages
 )
 $ErrorActionPreference = 'Stop'
 if ($Stage -eq 'All') {
     foreach ($taskCheckStage in @('Compile', 'EditMode', 'PlayMode')) {
-        & $PSCommandPath -Stage $taskCheckStage -TestFilter $TestFilter -UseRepositoryPackages:$UseRepositoryPackages
+        & $PSCommandPath -Stage $taskCheckStage -TestFilter $TestFilter -ValidationDirectory $ValidationDirectory -UseRepositoryPackages:$UseRepositoryPackages
         if ($LASTEXITCODE -ne 0) { throw "验证失败：$taskCheckStage" }
     }
     exit 0
@@ -25,6 +26,8 @@ if ($Stage -eq 'Compile') {
     $taskCsc = Join-Path 'C:/Program Files/dotnet/sdk' "$taskSdkVersion/Roslyn/bincore/csc.dll"
     $taskReferenceRoot = Join-Path $taskEditorData 'NetStandard/ref/2.1.0'
     $taskReferences = @(Get-ChildItem -LiteralPath $taskReferenceRoot -Filter '*.dll')
+    $taskReferences += Get-Item -LiteralPath (Join-Path $taskEditorData 'NetStandard/compat/2.1.0/shims/netfx/mscorlib.dll')
+    $taskReferences += @(Get-ChildItem -LiteralPath (Join-Path $taskRepoRoot 'Library/PackageCache') -Filter 'nunit.framework.dll' -Recurse)
     $taskReferences += @(Get-ChildItem -LiteralPath (Join-Path $taskEditorData 'Managed/UnityEngine') -Filter '*.dll')
     $taskReferences += @(Get-ChildItem -LiteralPath (Join-Path $taskRepoRoot 'Library/ScriptAssemblies') -Filter '*.dll' | Where-Object { $_.Name -notlike 'GameJam.*' -and $_.Name -ne 'Assembly-CSharp-Editor.dll' })
     $taskCommon = @('-nologo', '-nostdlib+', '-target:library', '-langversion:9', '-define:UNITY_EDITOR')
@@ -46,7 +49,7 @@ if ($Stage -eq 'Compile') {
     exit 0
 }
 
-$taskValidationRoot = Join-Path $taskRepoRoot 'Temp/PlayerActionValidation'
+$taskValidationRoot = Join-Path $taskRepoRoot $ValidationDirectory
 New-Item -ItemType Directory -Path $taskValidationRoot -Force | Out-Null
 foreach ($taskFolder in @('Assets', 'Packages', 'ProjectSettings')) {
     & robocopy (Join-Path $taskRepoRoot $taskFolder) (Join-Path $taskValidationRoot $taskFolder) /E /NJH /NJS /NDL /NFL /NP /R:1 /W:1 | Out-Null
@@ -81,6 +84,7 @@ if ($Stage -eq 'BaselinePlayMode') {
 $taskArguments = @('-batchmode', '-projectPath', ('"' + $taskValidationRoot + '"'), '-logFile', ('"' + $taskLog + '"'))
 if ($Stage -ne 'EditMode') { $taskArguments += '-nographics' }
 if ($Stage -eq 'Install') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.ActionPlayerSetup.Install', '-quit') }
+elseif ($Stage -eq 'MobilityInstall') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.PlayerMobilitySetup.Install', '-quit') }
 elseif ($Stage -eq 'Examples') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.ActionSequenceBatchValidation.CreateAndCheckExamples', '-quit') }
 else {
     $taskPlatform = if ($Stage -eq 'BaselinePlayMode') { 'PlayMode' } else { $Stage }
@@ -91,7 +95,7 @@ $taskProcess = Start-Process -FilePath $taskEditorPath -ArgumentList $taskArgume
 Write-Output "Unity $Stage PID=$($taskProcess.Id)；日志：$taskLog"
 $taskProcess.WaitForExit()
 if ($taskProcess.ExitCode -ne 0) { throw "Unity $Stage 失败，exit=$($taskProcess.ExitCode)，请检查日志" }
-if ($Stage -ne 'Examples' -and $Stage -ne 'Install') {
+if ($Stage -ne 'Examples' -and $Stage -ne 'Install' -and $Stage -ne 'MobilityInstall') {
     $taskResult = Join-Path $taskValidationRoot "$Stage.xml"
     if (-not (Test-Path -LiteralPath $taskResult)) { throw 'Unity 未生成测试结果' }
     [xml]$taskXml = Get-Content -LiteralPath $taskResult -Raw
@@ -99,5 +103,6 @@ if ($Stage -ne 'Examples' -and $Stage -ne 'Install') {
     Write-Output "$Stage：$($taskXml.'test-run'.passed) 通过，$($taskXml.'test-run'.failed) 失败。"
 }
 elseif ($Stage -eq 'Install') { Write-Output '玩家攻击装配已生成在验证工程中。' }
+elseif ($Stage -eq 'MobilityInstall') { Write-Output '高跳与冲刺配表装配已生成在验证工程中。' }
 else { Write-Output '独立示例资产与 SVG 已生成在验证工程中。' }
 exit 0
