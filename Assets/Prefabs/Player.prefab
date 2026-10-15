@@ -22913,6 +22913,7 @@ GameObject:
   - component: {fileID: 2767437026437357466}
   - component: {fileID: 2805868951403254720}
   - component: {fileID: 7612907096352858083}
+  - component: {fileID: 7296055474667861831}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -23296,20 +23297,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   group: {fileID: 11400000, guid: f5b6ec4dd2aa62f449832fb91b13c2ed, type: 2}
-  presetOverride: {fileID: 0}
+  presetOverride: {fileID: 11400000, guid: 565cef4ad2ac0554b9fef546f784c84b, type: 2}
   includeChildren: 0
   explicitRenderers:
   - {fileID: 3979433755593833433}
   - {fileID: 8387837162620342596}
   outlineMaterialTemplate: {fileID: 0}
   overrideOutlineAppearance: 1
-  outlineWidthPixels: 4.1
-  flameStrength: 2.08
-  outlineJitterPixels: -1.2
+  outlineWidthPixels: 2.2
+  flameStrength: 0.25
+  outlineJitterPixels: -0.6
   overrideRhythmFrequency: 0
   rhythmFrequencyHz: 0.39788735
-  innerOutlineColor: {r: 1.6245046, g: 0.54499, b: 0.058236726, a: 1}
-  outerOutlineColor: {r: 2.1960783, g: 1.8053813, b: 0.5019607, a: 0.8}
+  innerOutlineColor: {r: 0.015, g: 0.12, b: 0.65, a: 1}
+  outerOutlineColor: {r: 0.04, g: 0.7, b: 3.5, a: 0.9}
   overrideColors: 0
   color0: {r: 1, g: 1, b: 1, a: 1}
   color1: {r: 0, g: 1, b: 1, a: 1}
@@ -23319,7 +23320,7 @@ MonoBehaviour:
   externalVelocityTimeout: 0.15
   motionSmoothingSeconds: 0.1
   teleportDistance: 5
-  startOn: 1
+  startOn: 0
   loopInDemo: 0
   loopHold: 2
 --- !u!114 &9113310000000000002
@@ -23393,6 +23394,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _params: {fileID: 11400000, guid: a5c6ce7901388054faedd3621b28fdbf, type: 2}
   _movementParams: {fileID: 11400000, guid: 0a744fae14afc52429ffb97b42039bed, type: 2}
+--- !u!114 &7296055474667861831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ac8e695fdb4476cb480661a2eb15164, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _settings: {fileID: 11400000, guid: 8de23a55a20367646abdd37ef26ab4d4, type: 2}
+  _sources:
+  - {fileID: 3979433755593833433}
+  - {fileID: 8387837162620342596}
+  _emissionChanged:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 9113310000000000002}
+        m_TargetAssemblyTypeName: DeferredOutline.OutlineController, Assembly-CSharp
+        m_MethodName: SetEnabled
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName:
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument:
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!1 &8086042382189617009
 GameObject:
   m_ObjectHideFlags: 0

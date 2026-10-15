@@ -27,6 +27,7 @@ public sealed class TimeStopController : MonoBehaviour
     private long _pressVersion;
 
     public bool IsTimeStopping => _state == HoldState.Active;
+    public event Action<bool> TimeStopChanged;
     public int HeldFrames => _heldFrames;
     public int HoldThresholdFrames => _holdThresholdFrames;
     public float GlobalRate => _globalRate;
@@ -52,7 +53,7 @@ public sealed class TimeStopController : MonoBehaviour
         _runner = GetComponent<PlayerActionRunner>();
         Subscribe();
         // 组件恢复时按键可能仍被按住，必须先松开才能重新触发。
-        _state = _input != null && _input.SkillHeldOnDevice ? HoldState.WaitForRelease : HoldState.Idle;
+        SetState(_input != null && _input.SkillHeldOnDevice ? HoldState.WaitForRelease : HoldState.Idle);
     }
 
     private void Subscribe()
@@ -93,7 +94,7 @@ public sealed class TimeStopController : MonoBehaviour
         {
             _pressVersion = pressVersion;
             _heldFrames = 0;
-            _state = HoldState.Waiting;
+            SetState(HoldState.Waiting);
             return;
         }
         float previousRate = TimeManager.PlayerRate;
@@ -125,8 +126,8 @@ public sealed class TimeStopController : MonoBehaviour
             Account.CurrentEnergy < Mathf.Max(0f, _params.TimeStopCostPerTick))
         { Interrupt(); return; }
         if (_input != null) _pressVersion = _input.SkillPressVersion;
-        _state = HoldState.Active;
         TimeManager.SetTimeStop(true, _globalRate, this);
+        SetState(HoldState.Active);
     }
 
     // 外部结束也需要重新按下，避免仍按住的右键在下一 tick 自动开启。
@@ -136,14 +137,21 @@ public sealed class TimeStopController : MonoBehaviour
     {
         TimeManager.SetTimeStop(false, _globalRate, this);
         _heldFrames = 0;
-        _state = InputAvailable && !_input.SkillHeldOnDevice ? HoldState.Idle : HoldState.WaitForRelease;
+        SetState(InputAvailable && !_input.SkillHeldOnDevice ? HoldState.Idle : HoldState.WaitForRelease);
     }
 
     private void ResetHold()
     {
         TimeManager.SetTimeStop(false, _globalRate, this);
         _heldFrames = 0;
-        _state = HoldState.Idle;
+        SetState(HoldState.Idle);
+    }
+
+    private void SetState(HoldState state)
+    {
+        bool wasActive = IsTimeStopping;
+        _state = state;
+        if (wasActive != IsTimeStopping) TimeStopChanged?.Invoke(IsTimeStopping);
     }
 
     private void OnSkillHeldChanged(bool held)

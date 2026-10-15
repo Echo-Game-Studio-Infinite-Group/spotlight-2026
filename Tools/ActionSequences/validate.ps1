@@ -1,13 +1,14 @@
 param(
-    [ValidateSet('Compile', 'EditMode', 'PlayMode', 'BaselinePlayMode', 'Examples', 'Install', 'MobilityInstall', 'All')][string]$Stage = 'Compile',
+    [ValidateSet('Compile', 'EditMode', 'PlayMode', 'BaselinePlayMode', 'Examples', 'Install', 'MobilityInstall', 'AfterimageInstall', 'All')][string]$Stage = 'Compile',
     [string]$TestFilter = '',
     [string]$ValidationDirectory = 'Temp/PlayerActionValidation',
-    [switch]$UseRepositoryPackages
+    [switch]$UseRepositoryPackages,
+    [switch]$Graphics
 )
 $ErrorActionPreference = 'Stop'
 if ($Stage -eq 'All') {
     foreach ($taskCheckStage in @('Compile', 'EditMode', 'PlayMode')) {
-        & $PSCommandPath -Stage $taskCheckStage -TestFilter $TestFilter -ValidationDirectory $ValidationDirectory -UseRepositoryPackages:$UseRepositoryPackages
+        & $PSCommandPath -Stage $taskCheckStage -TestFilter $TestFilter -ValidationDirectory $ValidationDirectory -UseRepositoryPackages:$UseRepositoryPackages -Graphics:$Graphics
         if ($LASTEXITCODE -ne 0) { throw "验证失败：$taskCheckStage" }
     }
     exit 0
@@ -82,9 +83,10 @@ if ($Stage -eq 'BaselinePlayMode') {
     }
 }
 $taskArguments = @('-batchmode', '-projectPath', ('"' + $taskValidationRoot + '"'), '-logFile', ('"' + $taskLog + '"'))
-if ($Stage -ne 'EditMode') { $taskArguments += '-nographics' }
+if ($Stage -ne 'EditMode' -and -not $Graphics) { $taskArguments += '-nographics' }
 if ($Stage -eq 'Install') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.ActionPlayerSetup.Install', '-quit') }
 elseif ($Stage -eq 'MobilityInstall') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.PlayerMobilitySetup.Install', '-quit') }
+elseif ($Stage -eq 'AfterimageInstall') { $taskArguments += @('-executeMethod', 'PlayerAfterimageSetup.Install', '-quit') }
 elseif ($Stage -eq 'Examples') { $taskArguments += @('-executeMethod', 'GameJam.Actions.Editor.ActionSequenceBatchValidation.CreateAndCheckExamples', '-quit') }
 else {
     $taskPlatform = if ($Stage -eq 'BaselinePlayMode') { 'PlayMode' } else { $Stage }
@@ -95,7 +97,7 @@ $taskProcess = Start-Process -FilePath $taskEditorPath -ArgumentList $taskArgume
 Write-Output "Unity $Stage PID=$($taskProcess.Id)；日志：$taskLog"
 $taskProcess.WaitForExit()
 if ($taskProcess.ExitCode -ne 0) { throw "Unity $Stage 失败，exit=$($taskProcess.ExitCode)，请检查日志" }
-if ($Stage -ne 'Examples' -and $Stage -ne 'Install' -and $Stage -ne 'MobilityInstall') {
+if ($Stage -notin @('Examples', 'Install', 'MobilityInstall', 'AfterimageInstall')) {
     $taskResult = Join-Path $taskValidationRoot "$Stage.xml"
     if (-not (Test-Path -LiteralPath $taskResult)) { throw 'Unity 未生成测试结果' }
     [xml]$taskXml = Get-Content -LiteralPath $taskResult -Raw
@@ -104,5 +106,6 @@ if ($Stage -ne 'Examples' -and $Stage -ne 'Install' -and $Stage -ne 'MobilityIns
 }
 elseif ($Stage -eq 'Install') { Write-Output '玩家攻击装配已生成在验证工程中。' }
 elseif ($Stage -eq 'MobilityInstall') { Write-Output '高跳与冲刺配表装配已生成在验证工程中。' }
+elseif ($Stage -eq 'AfterimageInstall') { Write-Output '蓝色机动残影装配已生成在验证工程中。' }
 else { Write-Output '独立示例资产与 SVG 已生成在验证工程中。' }
 exit 0

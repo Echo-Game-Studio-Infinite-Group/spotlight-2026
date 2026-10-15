@@ -32,6 +32,8 @@ namespace GameJam.Actions
         private readonly object _mobilityTimeOwner = new object();
         private readonly List<Vector3> _motionPath = new List<Vector3>();
         public event Action<ActionExecutionState, ActionFrameEvent> FrameEvent;
+        public event Action<ActionExecutionState, ActionExitReason> ActionEnded;
+        public event Action ActionsReset;
         // 持续技能结算使用本 tick 已实际模拟的时长，不能在命中改倍率后重新取 dt。
         public event Action<float> Simulated;
         public ActionCatalog Catalog => _catalog;
@@ -227,6 +229,7 @@ namespace GameJam.Actions
             _motor.SetActionControl(null);
             _animation.EndAction(state.InstanceId, reason != ActionExitReason.Completed);
             if (reason == ActionExitReason.Reset || reason == ActionExitReason.Interrupted) _animation.ClearAirborneVisual();
+            ActionEnded?.Invoke(state, reason);
         }
         public void OnStateSampled(ActionExecutionState state) => _animation.Sample(state, 0f);
         public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames)
@@ -267,6 +270,7 @@ namespace GameJam.Actions
         public void ClearPendingInput() => _player?.ClearPendingInput();
         public void Interrupt()
         {
+            ActionsReset?.Invoke();
             _pendingLandingStop = false;
             _player?.Interrupt();
             _animation?.ClearAirborneVisual();
@@ -279,6 +283,7 @@ namespace GameJam.Actions
         }
         public void ResetActions()
         {
+            ActionsReset?.Invoke();
             _pendingLandingStop = false;
             _player?.Reset();
             _animation?.ClearAirborneVisual();
@@ -289,6 +294,7 @@ namespace GameJam.Actions
         private void OnTeleported(Vector3 delta) => ResetActions();
         public void Disconnect()
         {
+            ActionsReset?.Invoke();
             _pendingLandingStop = false;
             _player?.Reset();
             _animation?.ClearAirborneVisual();

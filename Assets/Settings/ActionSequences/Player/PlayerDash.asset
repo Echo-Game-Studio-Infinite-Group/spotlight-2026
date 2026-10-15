@@ -26,6 +26,11 @@ MonoBehaviour:
       EventKey: motor.command
       HitGroup: 0
       Value: 4
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: vfx.afterimage.start
+      HitGroup: 0
+      Value: 0
     Control:
       AllowMove: 1
       AllowTurn: 1
@@ -67,7 +72,12 @@ MonoBehaviour:
     DisplayName: "\u51B2\u523A\u6536\u62DB"
     Phase: 2
     DurationFrames: 12
-    Events: []
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: vfx.afterimage.stop
+      HitGroup: 0
+      Value: 0
     Control:
       AllowMove: 1
       AllowTurn: 1

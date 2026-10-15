@@ -1035,7 +1035,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_Lens.FieldOfView
-      value: 60.00395
+      value: 60.32866
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1272,7 +1272,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 60.00395
+  field of view: 60.32866
   orthographic: 0
   orthographic size: 10
   m_Depth: 0
@@ -1401,6 +1401,7 @@ MonoBehaviour:
   _normalFov: 60
   _fastFov: 85
   _fullEffectSpeed: 25
+  _effectStartSpeed: 3
   _response: 5
   _wallRoll: 70
   _wallSlideDistance: 3.5
@@ -2163,7 +2164,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 777957050568175645, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: field of view
-      value: 60.00395
+      value: 60.32866
       objectReference: {fileID: 0}
     - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: _volume
