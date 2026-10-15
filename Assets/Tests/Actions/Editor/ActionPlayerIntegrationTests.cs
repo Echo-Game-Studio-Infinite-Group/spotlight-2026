@@ -824,19 +824,30 @@ public sealed class ActionPlayerIntegrationTests
         Assert.AreEqual(0, _motor.JumpCount); Assert.AreEqual(100f, energy.Balance); Assert.IsTrue(_motor.IsSliding);
     }
 
-    [Test]
-    public void JumpUpCompletesIntoHeldPoseUntilRealLandingWithoutOccupyingActionPlayer()
+    [TestCase(true)]
+    [TestCase(false)]
+    public void JumpUpCompletionUsesConfiguredHoldPoseOrDefaultAirborneState(bool holdPose)
     {
-        Ground(); MobilityEnergy(); SkillTick(ActionInputButtons.Jump);
+        Ground(); MobilityEnergy();
+        MobilityAction("player_high_jump").AirborneAnimation.HoldJumpUpPose = holdPose;
+        SkillTick(ActionInputButtons.Jump);
         for (int i = 0; i < 51; i++) Tick();
         Assert.IsFalse(_runner.Player.IsRunning); Assert.IsFalse(_motor.IsGrounded);
-        Assert.IsTrue(_bridge.IsHoldingAirbornePose);
+        Assert.AreEqual(holdPose, _bridge.IsHoldingAirbornePose);
         Transform hips = _bridge.Animator.transform.Find("mixamorig:Hips"); Assert.NotNull(hips);
         for (int i = 0; i < 5; i++) Tick();
         Vector3 pose = hips.localPosition; Quaternion rotation = hips.localRotation;
         for (int i = 0; i < 8; i++) Tick();
-        Assert.That(Vector3.Distance(pose, hips.localPosition), Is.LessThan(.001f));
-        Assert.That(Quaternion.Angle(rotation, hips.localRotation), Is.LessThan(.1f));
+        if (holdPose)
+        {
+            Assert.That(Vector3.Distance(pose, hips.localPosition), Is.LessThan(.001f));
+            Assert.That(Quaternion.Angle(rotation, hips.localRotation), Is.LessThan(.1f));
+        }
+        else
+        {
+            Assert.IsFalse(_bridge.Animator.GetBool(ActionAnimatorBridge.PlayingParameter));
+            Assert.IsTrue(_bridge.Animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Jump"));
+        }
         for (int i = 0; i < 120 && !_motor.IsGrounded; i++) Tick();
         Assert.IsTrue(_motor.IsGrounded); Assert.IsFalse(_bridge.IsHoldingAirbornePose);
     }
