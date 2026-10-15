@@ -24,8 +24,11 @@ public sealed class MovementParams : ScriptableObject
     [Header("滑铲")]
     [Min(0f)] public float SlideSpeedRatio = 0.8f;
     [Min(0f)] public float SlideDecel = 15f;
-    [Min(0f)] public float SlideEndSpeed = 2f;
     [Min(0.1f)] public float SlideCapsuleHeight = 1f;
+    [Tooltip("滑铲及起身姿态从角色根节点向前占用的长度；只增加前向保护，不加宽窄缝碰撞。")]
+    [Min(0f)] public float SlideForwardExtent = 1.1f;
+    [Tooltip("低顶下撞停后，主动移动脱困的目标速度；已有高速惯性不受此上限截断。")]
+    [Min(0f)] public float SlideBlockedMoveSpeed = 2f;
 
     [Header("划墙与墙面 bhop")]
     [Range(0f, 90f)] public float WallMaxApproachAngle = 45f;

@@ -12,22 +12,36 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateAttack = 4;  // 4：攻击（Attack）
     public const int MotionStateWallDashLeft = 5;
     public const int MotionStateWallDashRight = 6;
+    public const string SlideTimeParameter = "SlideTime";
 
     private static readonly int MotionStateId = Animator.StringToHash("MotionState");
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
+    private static readonly int SlideTimeId = Animator.StringToHash(SlideTimeParameter);
 
     [SerializeField] private Animator _animator;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
     [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
+    [Header("滑铲动画")]
+    [SerializeField] private AnimationClip _slideClip;
+    [Tooltip("播放到完全铲下的姿态后保持；退出物理滑铲后继续播放剩余起身段。")]
+    [SerializeField, Range(0f, 1f)] private float _slideHoldNormalizedTime = 0.3f;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
+    private bool _hasSlideTime;
+    private bool _wasSliding;
+    private int _slideStartJumpCount;
+    private float _slideProgress;
 
     // 供测试与诊断读取当前实际下发给动画机的状态编号
     public int CurrentMotionState { get; private set; }
     public Animator Animator => _animator;
     public bool IsSequenceDriven { get; private set; }
+    public bool IsSlideRecovering { get; private set; }
+    public bool IsHoldingSlidePose => _wasSliding && _slideProgress >= _slideHoldNormalizedTime;
+    public float SlideNormalizedTime => _slideProgress;
+    public float SlideHoldNormalizedTime => _slideHoldNormalizedTime;
     public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
 
     // 收招与自动过渡共用状态名称；MotionState 编号不依赖 Animator 编辑器中的排列顺序。
@@ -48,6 +62,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     {
         _animator = animator;
         DisableRootMotion();
+        CacheSlideParameter();
     }
 
     private void DisableRootMotion()
@@ -62,6 +77,52 @@ public sealed class PlayerAnimation : MonoBehaviour
         _combat = GetComponentInParent<PlayerCombat>();
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         DisableRootMotion();
+        CacheSlideParameter();
+    }
+
+    private void CacheSlideParameter()
+    {
+        _hasSlideTime = false;
+        foreach (AnimatorControllerParameter parameter in _animator.parameters)
+            if (parameter.nameHash == SlideTimeId && parameter.type == AnimatorControllerParameterType.Float)
+            { _hasSlideTime = true; break; }
+    }
+
+    private void UpdateSlide(float deltaTime)
+    {
+        if (!_hasSlideTime || _slideClip == null || _slideClip.length <= 0f) return;
+        if (_motor.IsSliding)
+        {
+            if (!_wasSliding) { _slideProgress = 0f; _slideStartJumpCount = _motor.JumpCount; }
+            IsSlideRecovering = false;
+            _slideProgress = Mathf.Min(_slideHoldNormalizedTime, _slideProgress + deltaTime / _slideClip.length);
+        }
+        else
+        {
+            if (_wasSliding)
+            {
+                IsSlideRecovering = _motor.IsGrounded && _motor.JumpCount == _slideStartJumpCount;
+                // 提前松键也直接进入起身段，不再把铲下段补播一遍。
+                if (IsSlideRecovering) _slideProgress = Mathf.Max(_slideProgress, _slideHoldNormalizedTime);
+            }
+            if (!_motor.IsGrounded || _motor.JumpCount != _slideStartJumpCount) IsSlideRecovering = false;
+            if (IsSlideRecovering)
+            {
+                _slideProgress = Mathf.Min(1f, _slideProgress + deltaTime / _slideClip.length);
+                if (_slideProgress >= 1f) IsSlideRecovering = false;
+            }
+        }
+        _wasSliding = _motor.IsSliding;
+        _motor.SetSlidePoseActive(_wasSliding || IsSlideRecovering);
+        // 退出时保留源姿态的采样时间，让过渡从铲下姿态开始；下次进入再归零。
+        _animator.SetFloat(SlideTimeId, _slideProgress);
+    }
+
+    private void OnDisable()
+    {
+        if (_motor != null) _motor.SetSlidePoseActive(false);
+        _wasSliding = IsSlideRecovering = false;
+        _slideProgress = 0f;
     }
 
     // Unity 只把动画事件发给 Animator 同节点组件。
@@ -81,6 +142,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
         if (_combat == null) _combat = GetComponentInParent<PlayerCombat>();
         if (_motor == null || _animator == null || _motor.Params == null) return;
+        UpdateSlide(deltaTime);
 
         // CharacterController 在贴地移动时可能短暂丢失 Grounded，延迟进入下落动画；主动起跳立即播放。
         _airborneTime = _motor.IsGrounded ? 0f : _airborneTime + deltaTime;
@@ -93,7 +155,7 @@ public sealed class PlayerAnimation : MonoBehaviour
             else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
         }
         else _wallMotionState = MotionStateWallDashLeft;
-        int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding ? MotionStateSlide : airborne ? MotionStateJump :
+        int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding || IsSlideRecovering ? MotionStateSlide : airborne ? MotionStateJump :
             _motor.HasForwardInput ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，

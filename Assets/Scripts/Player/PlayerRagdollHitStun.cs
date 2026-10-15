@@ -313,7 +313,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     }
 
     // ---------- 撞击触发 ----------
-    // 判定条件不在这里：移动层判「能不能划墙」的那一处，角度不够时抛 WallImpact（同一个接触、同一个门槛）。
+    // 移动层统一报告正撞接触，保护规则只过滤伤害，不能屏蔽碰撞本身。
     // 这里只负责数值与后果：够不够快、扣多少血、清不清速度、进不进硬直。
     private void OnEnable()
     {
@@ -342,10 +342,17 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         float speed = MovementMath.Horizontal(contact.IncomingVelocity).magnitude;
         if (speed < _minSpeedFactor * threshold) return;      // 不够快 → 不吃撞击惩罚
 
+        // 低顶下无法安全播放站立起身；保留低姿态与撞墙事件，允许玩家主动低速退出通道。
+        if (contact.WasSliding && _motor.IsSlideHeadBlocked)
+        {
+            if (_zeroSpeedOnImpact) _motor.SetHorizontalSpeed(0f);
+            return;
+        }
+
         _nextImpactAt = Time.time + _impactCooldown;
 
         // 伤害按「地速阈值的倍数」换算，和策划案里速度/能量用的是同一套单位
-        float damage = threshold > 0.0001f ? _damagePerSpeed * (speed / threshold) : 0f;
+        float damage = !contact.WasSliding && threshold > 0.0001f ? _damagePerSpeed * (speed / threshold) : 0f;
         if (_zeroSpeedOnImpact) _motor.SetHorizontalSpeed(0f);
 
         HealthComponent health = GetComponent<HealthComponent>();
