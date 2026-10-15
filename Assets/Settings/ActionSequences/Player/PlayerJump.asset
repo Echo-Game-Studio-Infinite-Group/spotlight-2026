@@ -54,9 +54,10 @@ MonoBehaviour:
     - Button: 4
       Trigger: 0
       RequireHeld: 0
-      ForbidHeld: 0
+      ForbidHeld: 2
       MinHoldFrames: 0
       MaxHoldFrames: 0
+    AlternativeTriggers: []
     MaxStepGapFrames: 0
     PreInputFrames: 8
     BufferGroup: jump
@@ -69,6 +70,40 @@ MonoBehaviour:
   StartConditions:
   - can_jump
   EnergyCost: 0
+  EnergyCostSource: 0
+  EnergyParameters: {fileID: 0}
+  TimeEffect:
+    UsesVectorConverter: 0
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 0
+  LandingCompletionStart:
+    SegmentId: 
+    RelativeTo: 0
+    OffsetFrames: 0
   CooldownFrames: 0
   CooldownGroup: 
   RequestVariants: []

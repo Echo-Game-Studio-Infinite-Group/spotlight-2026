@@ -13,8 +13,11 @@ public sealed class ActionPlayerPlayModeTests
 {
     private GameObject _root;
     private Mouse _mouse;
+    private Keyboard _keyboard;
+    private GameObject _ground;
     private PlayerActionRunner _runner;
     private GameObject _clock;
+    private float _mobilitySpentEnergy;
     private InputSettings _previousSettings, _testSettings;
     [UnitySetUp]
     public IEnumerator SetUp()
@@ -29,6 +32,7 @@ public sealed class ActionPlayerPlayModeTests
         _root.transform.position = new Vector3(3000f, 10f, 3000f);
         _runner = _root.GetComponent<PlayerActionRunner>();
         _mouse = InputSystem.AddDevice<Mouse>();
+        _keyboard = InputSystem.AddDevice<Keyboard>();
         yield return null;
         PlayerInputReader reader = _root.GetComponent<PlayerInputReader>();
         typeof(PlayerInputReader).GetMethod("OnApplicationFocus", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(reader, new object[] { true });
@@ -39,6 +43,8 @@ public sealed class ActionPlayerPlayModeTests
     public IEnumerator TearDown()
     {
         if (_mouse != null) InputSystem.RemoveDevice(_mouse);
+        if (_keyboard != null) InputSystem.RemoveDevice(_keyboard);
+        if (_ground != null) Object.Destroy(_ground);
         if (_root != null) Object.Destroy(_root);
         if (_previousSettings != null) InputSystem.settings = _previousSettings;
         if (_testSettings != null) Object.Destroy(_testSettings);
@@ -193,5 +199,145 @@ public sealed class ActionPlayerPlayModeTests
         Assert.AreEqual(.2f, TimeManager.WorldRate);
     }
 
+    private IEnumerator PrepareMobilityGround()
+    {
+        _ground = new GameObject("MobilityInputGround");
+        _ground.transform.position = _root.transform.position + Vector3.down * .5f;
+        _ground.AddComponent<BoxCollider>().size = new Vector3(200f, 1f, 200f);
+        Physics.SyncTransforms();
+        for (int i = 0; i < 5 && !_root.GetComponent<PlayerMotor>().IsGrounded; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(_root.GetComponent<PlayerMotor>().IsGrounded);
+        VectorEnergy energy = _root.GetComponent<VectorEnergy>();
+        energy.SetForDebug(200f);
+        _mobilitySpentEnergy = 0f;
+        float previousBalance = energy.CurrentEnergy;
+        // 四倍速度会立即积能，记录实际扣费，避免把同 tick 的收入误判为少扣费用。
+        energy.Changed += balance =>
+        {
+            if (balance < previousBalance) _mobilitySpentEnergy += previousBalance - balance;
+            previousBalance = balance;
+        };
+    }
+
+    [UnityTest]
+    public IEnumerator ForwardKeyRunsWithoutShiftAndReleaseIdlesWhileStillCoasting()
+    {
+        yield return PrepareMobilityGround();
+        for (int i = 0; i < 60; i++) yield return new WaitForFixedUpdate();
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.W)); InputSystem.Update();
+        for (int i = 0; i < 45; i++) yield return new WaitForFixedUpdate();
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        Animator animator = _root.GetComponent<ActionAnimatorBridge>().Animator;
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(10f).Within(.001f));
+        Assert.AreEqual(PlayerAnimation.MotionStateMove, animation.CurrentMotionState);
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Move"));
+        Transform leg = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+        Quaternion pose = leg.localRotation;
+        for (int i = 0; i < 6; i++) yield return new WaitForFixedUpdate();
+        Assert.Greater(Quaternion.Angle(pose, leg.localRotation), .1f);
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+        yield return new WaitForFixedUpdate();
+        Assert.IsFalse(motor.HasForwardInput);
+        Assert.Greater(motor.HorizontalSpeed, 0f);
+        Assert.AreEqual(PlayerAnimation.MotionStateIdle, animation.CurrentMotionState);
+        for (int i = 0; i < 8; i++) yield return new WaitForFixedUpdate();
+        Assert.Greater(motor.HorizontalSpeed, 0f);
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Idle"));
+    }
+
+    [UnityTest]
+    public IEnumerator ShiftFromRunAddsSixteenOnceWithoutEnergyCostOrTimeEffect()
+    {
+        yield return PrepareMobilityGround();
+        for (int i = 0; i < 60; i++) yield return new WaitForFixedUpdate();
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.W)); InputSystem.Update();
+        for (int i = 0; i < 45; i++) yield return new WaitForFixedUpdate();
+        int commands = 0;
+        _runner.FrameEvent += (state, frameEvent) => { if (frameEvent.MotorCommand == MotorCommandKind.SprintBoost) commands++; };
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.W, Key.LeftShift)); InputSystem.Update();
+        yield return new WaitForFixedUpdate();
+        Assert.AreEqual("player_sprint", _runner.Player.State.Action.ActionId);
+        Assert.That(_root.GetComponent<PlayerMotor>().HorizontalSpeed, Is.EqualTo(26f).Within(.001f));
+        Assert.AreEqual(0f, _mobilitySpentEnergy);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+        for (int i = 0; i < 35; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual(1, commands);
+        Assert.IsFalse(_runner.Player.IsRunning);
+        Assert.AreEqual(0f, _mobilitySpentEnergy);
+    }
+
+    [UnityTest]
+    public IEnumerator HoldingShiftThenPressingRightMouseDashesOnceAndDoesNotReopenTimeStop()
+    {
+        yield return PrepareMobilityGround();
+        int accelerationCommands = 0;
+        _runner.FrameEvent += (state, frameEvent) =>
+        {
+            if (frameEvent.EventKey == "motor.command" && frameEvent.MotorCommand == MotorCommandKind.Accelerate) accelerationCommands++;
+        };
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.LeftShift)); InputSystem.Update();
+        yield return new WaitForFixedUpdate();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right)); InputSystem.Update();
+        for (int i = 0; i < 5 && (!_runner.Player.IsRunning || _runner.Player.State.Action.ActionId != "player_dash"); i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual("player_dash", _runner.Player.State.Action.ActionId);
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(motor.Params.GroundSpeedThreshold * 4f).Within(.001f));
+        Assert.That(_mobilitySpentEnergy, Is.EqualTo(50f).Within(.001f));
+        for (int i = 0; i < 34; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual(1, accelerationCommands);
+        Assert.That(_mobilitySpentEnergy, Is.EqualTo(50f).Within(.001f));
+        Assert.GreaterOrEqual(_root.GetComponent<VectorEnergy>().CurrentEnergy, 150f);
+        Assert.IsFalse(_root.GetComponent<TimeStopController>().IsTimeStopping);
+    }
+
+    [UnityTest]
+    public IEnumerator HoldingRightMouseThenPressingShiftUsesAlternativeDashTrigger()
+    {
+        yield return PrepareMobilityGround();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right)); InputSystem.Update();
+        yield return new WaitForFixedUpdate();
+        Assert.IsFalse(_runner.Player.IsRunning);
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.RightShift)); InputSystem.Update();
+        for (int i = 0; i < 5 && !_runner.Player.IsRunning; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual("player_dash", _runner.Player.State.Action.ActionId);
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(motor.Params.GroundSpeedThreshold * 4f).Within(.001f));
+        Assert.That(_mobilitySpentEnergy, Is.EqualTo(50f).Within(.001f));
+    }
+
+    [UnityTest]
+    public IEnumerator RightMouseForwardWithoutShiftDoesNotDash()
+    {
+        yield return PrepareMobilityGround();
+        int accelerationCommands = 0;
+        _runner.FrameEvent += (state, frameEvent) =>
+        {
+            if (frameEvent.EventKey == "motor.command" && frameEvent.MotorCommand == MotorCommandKind.Accelerate) accelerationCommands++;
+        };
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.W)); InputSystem.Update();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right)); InputSystem.Update();
+        for (int i = 0; i < 5; i++) yield return new WaitForFixedUpdate();
+        Assert.IsFalse(_runner.Player.IsRunning);
+        Assert.AreEqual(0, accelerationCommands);
+    }
+
+    [UnityTest]
+    public IEnumerator RightMouseSpaceUsesHighJumpAndCannotRelaunchInAir()
+    {
+        yield return PrepareMobilityGround();
+        InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Right)); InputSystem.Update();
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Space)); InputSystem.Update();
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        for (int i = 0; i < 5 && motor.JumpCount == 0; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual("player_high_jump", _runner.Player.State.Action.ActionId);
+        Assert.Greater(motor.Velocity.y, motor.Params.JumpSpeed);
+        Assert.AreEqual(1, motor.JumpCount);
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Space)); InputSystem.Update();
+        for (int i = 0; i < 10; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual(1, motor.JumpCount);
+        Assert.That(_root.GetComponent<VectorEnergy>().CurrentEnergy, Is.EqualTo(180f).Within(.001f));
+    }
 }
 #endif

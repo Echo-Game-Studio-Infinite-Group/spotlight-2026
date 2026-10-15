@@ -6,7 +6,7 @@ public sealed class PlayerAnimation : MonoBehaviour
 {
     // 编号与装配工具的 MotionState 条件保持一致；动作状态使用完整路径，不依赖状态数组下标。
     public const int MotionStateIdle = 0;    // 0：站立/待机
-    public const int MotionStateMove = 1;    // 1：移动（Walk↔Run 混合树，由 RunBlend 控制）
+    public const int MotionStateMove = 1;    // 1：奔跑
     public const int MotionStateJump = 2;    // 2：空中/下落
     public const int MotionStateSlide = 3;   // 3：滑铲（Soccer Tackle）
     public const int MotionStateAttack = 4;  // 4：攻击（Attack）
@@ -14,17 +14,13 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateWallDashRight = 6;
 
     private static readonly int MotionStateId = Animator.StringToHash("MotionState");
-    private static readonly int RunBlendId = Animator.StringToHash("RunBlend");
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
 
     [SerializeField] private Animator _animator;
-    [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
-    [SerializeField, Min(0f)] private float _blendResponse = 10f;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
     [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
-    private float _runBlend;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
 
@@ -98,24 +94,17 @@ public sealed class PlayerAnimation : MonoBehaviour
         }
         else _wallMotionState = MotionStateWallDashLeft;
         int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding ? MotionStateSlide : airborne ? MotionStateJump :
-            _motor.HorizontalSpeed > _idleSpeed ? MotionStateMove : MotionStateIdle;
+            _motor.HasForwardInput ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，
         // 不在动画侧另存一份计时器，否则两边的「攻击什么时候结束」会各说各话。
         bool attacking = !IsSequenceDriven && _combat != null && _combat.IsAttacking;
         if (attacking) state = MotionStateAttack;
 
-        float runStart = _motor.Params.WalkSpeed;
-        float runEnd = Mathf.Max(runStart + 0.01f, _motor.Params.GroundSpeedThreshold);
-        float targetBlend = Mathf.InverseLerp(runStart, runEnd, _motor.HorizontalSpeed);
-        _runBlend = Mathf.MoveTowards(_runBlend, targetBlend,
-            _blendResponse * deltaTime);
-
         CurrentMotionState = state;
         _animator.SetInteger(MotionStateId, state);
         // 显式的攻击布尔：状态机的进/出边由它驱动，语义比复用 MotionState 编号清晰，
         // 也不会被每帧重写的移动编号互相干扰。
         _animator.SetBool(IsAttackingId, attacking);
-        _animator.SetFloat(RunBlendId, _runBlend);
     }
 }

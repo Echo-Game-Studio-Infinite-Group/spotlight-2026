@@ -11,7 +11,6 @@ public static class PlayerAnimationSetup
     // 片段路径写成常量：这几个 fbx 在工程整理时被改过名（Idle (1).fbx → Idle.fbx、
     // Soccer Tackle.fbx → Tackle.fbx），散落在代码里的硬编码路径会直接抛「动画片段缺失」。
     private const string IdleClipPath = "Assets/Animations/fbx/Idle.fbx";
-    private const string WalkClipPath = "Assets/Animations/fbx/Walking.fbx";
     private const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
     private const string JumpClipPath = "Assets/Animations/fbx/Jump.fbx";
     private const string SlideClipPath = "Assets/Animations/fbx/Tackle.fbx";
@@ -42,7 +41,7 @@ public static class PlayerAnimationSetup
         AnimatorStateMachine machine = controller.layers[0].stateMachine;
         if (!RequiredStates.All(name => machine.states.Any(child => child.state.name == name))) return false;
 
-        return HasParameter(controller, "MotionState") && HasParameter(controller, "RunBlend")
+        return HasParameter(controller, "MotionState") && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasRun(controller)
             && HasParameter(controller, "IsAttacking")
             && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasWallDash(controller);
     }
@@ -69,20 +68,19 @@ public static class PlayerAnimationSetup
                 GameJam.Actions.ActionCatalog catalog = AssetDatabase.LoadAssetAtPath<GameJam.Actions.ActionCatalog>(GameJam.Actions.Editor.ActionPlayerSetup.CatalogPath);
                 if (catalog != null) GameJam.Actions.Editor.ActionPlayerSetup.EnsureAnimator(controller, catalog);
                 else GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
+                GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureRun(controller);
                 EditorUtility.SetDirty(controller); AssetDatabase.SaveAssets();
                 Debug.Log("[PlayerAnimationSetup] 保留已接入的 Actions 子状态机与手工状态，按动作表增量装配");
                 return controller;
             }
 
         AnimationClip idleClip = Clip(IdleClipPath);
-        AnimationClip walkClip = Clip(WalkClipPath);
         AnimationClip runClip = Clip(RunClipPath);
         AnimationClip jumpClip = Clip(JumpClipPath);
         AnimationClip slideClip = Clip(SlideClipPath);
         AnimationClip attackClip = Clip(AttackClipPath);
 
         EnsureParameter(controller, "MotionState", AnimatorControllerParameterType.Int);
-        EnsureParameter(controller, "RunBlend", AnimatorControllerParameterType.Float);
         EnsureParameter(controller, AttackParameterName, AnimatorControllerParameterType.Bool);
 
         if (controller.layers.Length == 0)
@@ -98,25 +96,8 @@ public static class PlayerAnimationSetup
         }
         AnimatorStateMachine machine = controller.layers[0].stateMachine;
 
-        Motion locomotion = machine.states.FirstOrDefault(child => child.state.name == "Move").state?.motion;
-        if (locomotion == null)
-        {
-            BlendTree blend = new BlendTree
-            {
-                name = "Walk Run",
-                blendType = BlendTreeType.Simple1D,
-                blendParameter = "RunBlend",
-                useAutomaticThresholds = false
-            };
-            AssetDatabase.AddObjectToAsset(blend, controller);
-            blend.AddChild(walkClip, 0f);
-            blend.AddChild(runClip, 1f);
-            locomotion = blend;
-            EditorUtility.SetDirty(blend);
-        }
-
         AnimatorState idle = State(machine, "Idle", idleClip, new Vector3(240f, 0f));
-        State(machine, "Move", locomotion, new Vector3(500f, 0f));
+        State(machine, "Move", runClip, new Vector3(500f, 0f));
         State(machine, "Jump", jumpClip, new Vector3(500f, 100f));
         State(machine, "Trackle", slideClip, new Vector3(240f, 100f));
         AnimatorState attack = State(machine, "Attack", attackClip, new Vector3(760f, 100f));
@@ -134,6 +115,7 @@ public static class PlayerAnimationSetup
         AddAnyStateTransition(machine, attack, AnimatorConditionMode.Equals, PlayerAnimation.MotionStateAttack, "MotionState", 0.08f);
         AddExitTransition(attack, idle, AttackParameterName);
         GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
+        GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureRun(controller);
 
         EditorUtility.SetDirty(machine);
         EditorUtility.SetDirty(controller);

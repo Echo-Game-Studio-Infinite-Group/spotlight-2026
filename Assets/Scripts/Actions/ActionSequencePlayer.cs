@@ -220,6 +220,11 @@ namespace GameJam.Actions
             _sink?.OnActionEnded(ended, reason);
         }
 
+        public void Complete()
+        {
+            if (IsRunning) End(ActionExitReason.Completed);
+        }
+
         private static bool HasExecutableTimeline(ActionDefinition target)
         {
             if (target.Timeline == null || target.Timeline.Count == 0 || target.TotalFrames == int.MaxValue) return false;

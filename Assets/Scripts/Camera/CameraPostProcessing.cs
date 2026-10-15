@@ -15,6 +15,7 @@ public sealed class CameraPostProcessing : MonoBehaviour
     [SerializeField] private float _normalFov = 60f;
     [SerializeField] private float _fastFov = 85f;
     [SerializeField] private float _fullEffectSpeed = 25f;
+    [SerializeField, Min(0f)] private float _effectStartSpeed = 3f;
     [SerializeField] private float _response = 5f;
     [SerializeField] private float _wallRoll = 20f;
     [Tooltip("贴墙滑行时镜头拉近到的距离；必须小于 vcam 上的基准距离，否则按基准距离处理")]
@@ -60,7 +61,7 @@ public sealed class CameraPostProcessing : MonoBehaviour
     {
         if (_motor == null) return;
         float blend = 1f - Mathf.Exp(-_response * TimeManager.UnscaledDeltaTime);
-        float target = Mathf.InverseLerp(_motor.Params.WalkSpeed, _fullEffectSpeed, _motor.HorizontalSpeed);
+        float target = Mathf.InverseLerp(_effectStartSpeed, _fullEffectSpeed, _motor.HorizontalSpeed);
         _intensity = Mathf.Lerp(_intensity, target, blend);
         float side = Vector3.Dot(_motor.WallNormal, _virtualCamera.transform.right);
         _roll = Mathf.Lerp(_roll, _motor.IsWallSliding ? -Mathf.Sign(side) * _wallRoll : 0f, blend);

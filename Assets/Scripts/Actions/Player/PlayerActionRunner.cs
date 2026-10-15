@@ -14,7 +14,6 @@ namespace GameJam.Actions
         [SerializeField] private PlayerCombat _combat;
         [SerializeField] private ActionAnimatorBridge _animation;
         [SerializeField] private MonoBehaviour _energySource;
-        [SerializeField, Min(0f)] private float _highSpeedRatio = 0.8f;
         private readonly HashSet<string> _conditions = new HashSet<string>(StringComparer.Ordinal);
         private IEnergyAccount _energy;
         private IEnergyAccount _energyOverride;
@@ -28,6 +27,9 @@ namespace GameJam.Actions
         private bool _ownsSlide;
         private bool _alive = true;
         private bool _pendingLandingStop;
+        private int _actionStartJumpCount;
+        private bool _actionHasJumped;
+        private readonly object _mobilityTimeOwner = new object();
         private readonly List<Vector3> _motionPath = new List<Vector3>();
         public event Action<ActionExecutionState, ActionFrameEvent> FrameEvent;
         // 持续技能结算使用本 tick 已实际模拟的时长，不能在命中改倍率后重新取 dt。
@@ -66,8 +68,11 @@ namespace GameJam.Actions
             else if (!_animation.TryAcquire(this, out reason)) { }
             if (reason == null)
                 foreach (ActionDefinition action in _catalog.Actions)
+                {
+                    if (!CanPlayAirborne(action)) reason = "空中动画状态或独立时间参数缺失";
                     foreach (ActionSegment segment in action.Timeline)
                         if (!_animation.CanPlay(segment.Animation)) reason = "动画状态或独立时间参数缺失：" + segment.Animation.AnimatorState;
+                }
             if (reason != null)
             {
                 Disconnect();
@@ -76,8 +81,8 @@ namespace GameJam.Actions
             }
             _combat.SetSequenceDriven(true);
             _player = new ActionSequencePlayer(_catalog, this, this);
-            _ownsJump = _catalog.Actions.Exists(action => action.Input.Steps.Exists(step => step.Button == ActionInputButtons.Jump));
-            _ownsSlide = _catalog.Actions.Exists(action => action.Input.Steps.Exists(step => step.Button == ActionInputButtons.Slide));
+            _ownsJump = _catalog.Actions.Exists(action => action.Input.ReferencesButton(ActionInputButtons.Jump));
+            _ownsSlide = _catalog.Actions.Exists(action => action.Input.ReferencesButton(ActionInputButtons.Slide));
             _input.Cleared += ClearPendingInput;
             _motor.Teleported += OnTeleported;
             _motor.MotionPathPoint += RecordMotionPoint;
@@ -101,6 +106,11 @@ namespace GameJam.Actions
             LastSimulatedSeconds = 0;
             if (!_alive) sample = new ActionInputSample(sample.Tick);
             _player.Tick(sample, playerDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop);
+            ActionExecutionState current = _player.State;
+            if (current.Action != null && current.Action.CompleteOnLanding && _actionHasJumped &&
+                _motor.IsGrounded && current.Action.TryResolve(current.Action.LandingCompletionStart, out int earliestLanding) &&
+                current.FrameProgress >= earliestLanding)
+                _player.Complete();
             // 完成帧先让新动作提交，再处理落地清速；成功接招会撤销旧动作的清速请求。
             if (_pendingLandingStop && _motor.isActiveAndEnabled && _motor.IsGrounded)
             {
@@ -117,9 +127,12 @@ namespace GameJam.Actions
                 case "wall_sliding": return _motor.IsWallSliding;
                 case "sliding": return _motor.IsSliding;
                 case "can_jump": return _motor.CanExecute(MotorCommandKind.Jump);
+                case "can_high_jump": return _motor.CanExecute(MotorCommandKind.HighJump) && (!_motor.IsSliding || request.Direction.y > 0f);
+                case "can_accelerate": return _motor.CanExecute(MotorCommandKind.Accelerate);
+                case "can_sprint": return _motor.CanExecute(MotorCommandKind.SprintBoost);
                 case "can_slide": return _motor.CanExecute(MotorCommandKind.EnterSlide);
-                case "speed_low": return _motor.Params != null && _motor.HorizontalSpeed <= _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
-                case "speed_high": return _motor.Params != null && _motor.HorizontalSpeed > _motor.Params.GroundSpeedThreshold * _highSpeedRatio;
+                case "speed_low": return _motor.Params != null && _motor.HorizontalSpeed <= _motor.Params.LowSpeedThreshold;
+                case "speed_high": return _motor.Params != null && _motor.HorizontalSpeed > _motor.Params.LowSpeedThreshold;
                 case "non_stationary_jump": return request.Direction.sqrMagnitude > 0f;
                 case "forward_jump": return request.Direction.y > 0f;
                 case "flash_available": return _conditions.Contains("parry") || _conditions.Contains("limb_break");
@@ -140,7 +153,9 @@ namespace GameJam.Actions
             reason = null;
             if (!_connected || !_alive || !_combat.enabled || !_motor.enabled) reason = "角色执行组件不可用或角色死亡";
             else if (request.Target.Combat?.Enabled == true && _combat.Hitbox == null) reason = "攻击缺少命中盒";
-            else if (request.Target.EnergyCost > 0f && (_energy == null || _energy.CurrentEnergy < request.Target.EnergyCost)) reason = "能量不足";
+            else if (float.IsNaN(request.Target.ResolvedEnergyCost) || float.IsInfinity(request.Target.ResolvedEnergyCost) || request.Target.ResolvedEnergyCost < 0f) reason = "耗能参数无效";
+            else if (request.Target.ResolvedEnergyCost > 0f && (_energy == null || _energy.CurrentEnergy < request.Target.ResolvedEnergyCost)) reason = "能量不足";
+            else if (!CanPlayAirborne(request.Target)) reason = "空中动画状态不存在";
             else
             {
                 foreach (ActionHitVolume volume in request.Target.Combat.HitVolumes)
@@ -160,11 +175,23 @@ namespace GameJam.Actions
         public bool TryCommit(ActionExecutionState source, ActionInputRequest request)
         {
             if (!CanStart(source, request, out _)) return false;
-            return request.Target.EnergyCost <= 0f || _energy != null && _energy.TrySpend(request.Target.EnergyCost);
+            return request.Target.ResolvedEnergyCost <= 0f || _energy != null && _energy.TrySpend(request.Target.ResolvedEnergyCost);
         }
+        private bool CanPlayAirborne(ActionDefinition action)
+            => action.AirborneAnimation == null || _animation.CanPlay(action.AirborneAnimation.Airborne) &&
+               _animation.CanPlay(action.AirborneAnimation.Descending) && _animation.CanPlay(action.AirborneAnimation.Landing);
         public void OnActionStarted(ActionExecutionState state)
         {
             _pendingLandingStop = false;
+            _actionStartJumpCount = _motor.JumpCount;
+            _actionHasJumped = false;
+            if (state.Action.TimeEffect?.UsesVectorConverter == true)
+            {
+                _timeStop?.Interrupt();
+                if (state.Action.TimeEffect.DurationSeconds > 0f)
+                    TimeManager.Apply(TimeManager.TimeLayer.Global, state.Action.TimeEffect.GlobalRate,
+                        state.Action.TimeEffect.DurationSeconds, _mobilityTimeOwner);
+            }
             _combat.BeginSequenceAction(state);
         }
         public void OnSegmentEntered(ActionExecutionState state)
@@ -196,6 +223,7 @@ namespace GameJam.Actions
             if (reason != ActionExitReason.Completed) _motor.CancelActionCommands();
             _motor.SetActionControl(null);
             _animation.EndAction(state.InstanceId, reason != ActionExitReason.Completed);
+            if (reason == ActionExitReason.Reset || reason == ActionExitReason.Interrupted) _animation.ClearAirborneVisual();
         }
         public void OnStateSampled(ActionExecutionState state) => _animation.Sample(state, 0f);
         public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames)
@@ -225,11 +253,18 @@ namespace GameJam.Actions
             _motor.SetActionControl(control);
             // 外部接管模拟后仍须尊重 Motor 的禁用状态，场景工具与演出会用它暂停角色位移。
             if (_motor.isActiveAndEnabled) _motor.Simulate(_movementInput, dt, _inputTime);
+            _actionHasJumped |= _motor.JumpCount > _actionStartJumpCount;
             _movementInput.JumpPressed = _movementInput.SlidePressed = false;
             LastSimulatedSeconds += dt;
         }
         public void ClearPendingInput() => _player?.ClearPendingInput();
-        public void Interrupt() { _pendingLandingStop = false; _player?.Interrupt(); }
+        public void Interrupt()
+        {
+            _pendingLandingStop = false;
+            _player?.Interrupt();
+            _animation?.ClearAirborneVisual();
+            TimeManager.Release(TimeManager.TimeLayer.Global, _mobilityTimeOwner);
+        }
         public void SetAlive(bool alive)
         {
             _alive = alive;
@@ -239,6 +274,8 @@ namespace GameJam.Actions
         {
             _pendingLandingStop = false;
             _player?.Reset();
+            _animation?.ClearAirborneVisual();
+            TimeManager.Release(TimeManager.TimeLayer.Global, _mobilityTimeOwner);
             _conditions.Clear();
             _input?.Clear();
         }
@@ -247,6 +284,8 @@ namespace GameJam.Actions
         {
             _pendingLandingStop = false;
             _player?.Reset();
+            _animation?.ClearAirborneVisual();
+            TimeManager.Release(TimeManager.TimeLayer.Global, _mobilityTimeOwner);
             if (_input != null) { _input.Cleared -= ClearPendingInput; _input.ReleaseSequenceInput(this); }
             if (_motor != null) { _motor.Teleported -= OnTeleported; _motor.MotionPathPoint -= RecordMotionPoint; _motor.ReleaseSimulation(this); }
             if (_animation != null) _animation.Release(this);

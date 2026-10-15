@@ -12,7 +12,7 @@ public class EnergyParams : ScriptableObject
     public float EnergyPerTickPerExcessSpeed = 1f;
 
     [Header("机动技能耗能")]
-    [Tooltip("加速：右键 + W（+Shift），快速加速至地速阈值")]
+    [Tooltip("冲刺：Shift + 右键，补速倍率由动作序列配置")]
     public float AccelerateCost = 50f;
 
     [Tooltip("高跳：右键 + 空格，跳跃高度约为常态两倍")]
