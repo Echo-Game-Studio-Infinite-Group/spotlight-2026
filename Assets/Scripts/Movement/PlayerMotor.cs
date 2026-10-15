@@ -73,6 +73,11 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public event Action<Vector3> Teleported;
     // 只报告不合格的新墙接触；反弹、伤害等撞墙反馈留给后续系统。
     public event Action<WallContact> WallCollision;
+    /// <summary>
+    /// 撞上「不可划的墙」时触发：用的是和划墙同一份接触数据、同一个角度门槛，只是没划进去。
+    /// 去重交给消费方（同一面墙可能连续多帧命中）。
+    /// </summary>
+    public event Action<WallContact> WallImpact;
 
     // 场景里玩家是唯一的，表现层（相机、音频）不必各自找一遍引用。
     // 不进 Inspector 手填：预制体实例换位置后手填的引用最容易悄悄指错。
@@ -300,7 +305,13 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void TryEnterWall(Vector3 wish)
     {
         // 以入墙速度与墙切线的锐角判定；只接受确实向墙内运动且小于上限的接触。
-        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle) return;
+        if (!_contacts.HasWall) return;
+        if (_contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle)
+        {
+            // 角度不够划墙 = 撞上了不可划的墙。口径与划墙完全一致，交给撞击惩罚/布娃娃消费。
+            WallImpact?.Invoke(new WallContact(_contacts.WallPoint, _contacts.WallNormal, _contacts.WallIncoming, _contacts.WallAngle));
+            return;
+        }
         bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
             Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
         if (sameWall) return;

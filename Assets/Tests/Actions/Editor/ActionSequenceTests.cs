@@ -64,6 +64,28 @@ public sealed class ActionSequenceTests
         CollectionAssert.AreEqual(new[] { "first@0", "second@2", "hit@5" }, _host.Events);
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void SimulationCallbackEndingActionStopsOldTimeline(bool reset)
+    {
+        ActionDefinition action = Make("collision");
+        action.Timeline[0].Events.Add(new ActionFrameEvent { Frame = 1, EventKey = "stale_hit" });
+        ActionSequencePlayer player = Player();
+        _host.SimulationCallback = () => { if (reset) player.Reset(); else player.Interrupt(); };
+        player.Queue(action, 0);
+        Assert.DoesNotThrow(() => player.Tick(new ActionInputSample(0), 3));
+        Assert.IsFalse(player.IsRunning);
+        Assert.That(_host.SimulationSteps, Has.Count.EqualTo(1));
+        Assert.IsEmpty(_host.IdleSteps);
+        Assert.IsEmpty(_host.Events);
+        CollectionAssert.AreEqual(new[] { reset ? ActionExitReason.Reset : ActionExitReason.Interrupted }, _host.Exits);
+        _host.SimulationCallback = null;
+        player.Queue(action, 1);
+        player.Tick(new ActionInputSample(1), 1);
+        Assert.IsTrue(player.IsRunning);
+        CollectionAssert.AreEqual(new[] { "stale_hit@1" }, _host.Events);
+    }
+
     [Test]
     public void AnchorFollowsSegmentWhenEarlierDurationChanges()
     {

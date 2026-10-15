@@ -106,6 +106,51 @@ public sealed class ActionPlayerPlayModeTests
         Assert.IsFalse(_root.GetComponent<PlayerCombat>().IsSequenceDriven);
         yield return null;
     }
+    [UnityTest]
+    public IEnumerator DisconnectDuringIdleMovementStopsTickAndAllowsReconnect()
+        => DisconnectDuringMovement(false);
+
+    [UnityTest]
+    public IEnumerator DisconnectDuringActionMovementStopsTickAndAllowsReconnect()
+        => DisconnectDuringMovement(true);
+
+    private IEnumerator DisconnectDuringMovement(bool startAction)
+    {
+        if (startAction)
+        {
+            InputSystem.QueueStateEvent(_mouse, new MouseState().WithButton(MouseButton.Left));
+            InputSystem.Update();
+            for (int i = 0; i < 10 && !_runner.Player.IsRunning; i++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(_runner.Player.IsRunning);
+        }
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        ActionSequencePlayer player = _runner.Player;
+        bool disconnected = false;
+        bool simulated = false;
+        System.Action<Vector3> disconnect = _ => { disconnected = true; _runner.enabled = false; };
+        _runner.Simulated += _ => simulated = true;
+        motor.MotionPathPoint += disconnect;
+        try
+        {
+            for (int i = 0; i < 5 && !disconnected; i++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(disconnected);
+            Assert.IsFalse(_runner.IsConnected);
+            Assert.IsNull(_runner.Player);
+            Assert.IsFalse(player.IsRunning);
+            Assert.IsFalse(simulated);
+            Assert.IsFalse(motor.IsExternallyDriven);
+            Assert.IsFalse(_root.GetComponent<PlayerCombat>().IsSequenceDriven);
+            Assert.IsTrue(_root.GetComponent<ActionAnimatorBridge>().Animator.enabled);
+        }
+        finally { motor.MotionPathPoint -= disconnect; }
+        _runner.enabled = true;
+        Assert.IsTrue(_runner.IsConnected);
+        Assert.AreNotSame(player, _runner.Player);
+        yield return new WaitForFixedUpdate();
+        Assert.IsTrue(simulated);
+        Assert.IsTrue(motor.IsExternallyDriven);
+    }
+
     private TimeStopController PrepareTimeStop()
     {
         if (Object.FindObjectOfType<TimeManager>() == null)
