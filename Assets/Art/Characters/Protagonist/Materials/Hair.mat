@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Hair
+  m_Shader: {fileID: 4800000, guid: d865d9bc4f09480c99c125b495ba343e, type: 3}
+  m_Parent: {fileID: 2100000, guid: 7d3a3232cef3ff6478f14c378e56a195, type: 2}
+  m_ModifiedSerializedProperties: 16
+  m_ValidKeywords:
+  - _METALLICSPECGLOSSMAP
+  - _NORMALMAP
+  - _ROUGHNESSMAP
+  m_InvalidKeywords:
+  - _HAIRFLOWMAPENABLED_ON
+  - _OVERRIDEOUTLINE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2000
+  stringTagMap:
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: ddb83cf5d60a62340b939851100989df, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 4b2882eeb682cd442bbfc1345a0c081d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 2800000, guid: d7e4090b82f49e84f9bd24218e27e047, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughnessMap:
+        m_Texture: {fileID: 2800000, guid: e52771957fc1f5f458e880e212d22b03, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _CharacterFillStrength: 0.323
+    - _CharacterMinLight: 0.258
+    - _Cutoff: 0
+    - _EmissionEnabled: 0
+    - _HairDirectionRotation: 117
+    - _HairFlowMapEnabled: 1
+    - _HairPower1: 12
+    - _HairPower2: 17
+    - _HairShift1: 0.01
+    - _HairShift2: 0.03
+    - _HairSpecBandSoftness: 0.085
+    - _HairSpecBandStrength: 0.031
+    - _HairSpecBandThreshold: 0.518
+    - _HairSpecStrength1: 0.141
+    - _HairSpecStrength2: 0.458
+    - _OutlineBrightness: 4.33
+    - _OutlineEnabled: 0
+    - _OutlineGeometryEdges: 0
+    - _OutlineWidth: 2.87
+    - _OverrideOutline: 1
+    - _OverrideOutlineColor: 0
+    - _SSSStrength: 0.645
+    - _SmoothNormalOutline: 0
+    - _Smoothness: 0
+    - _Thickness: 0.512
+    - _ThicknessMapEnabled: 0
+    - _ToonSpecPower: 50.1
+    m_Colors:
+    - _HairSpecColor1: {r: 0.86415094, g: 0.61144584, b: 0.27228904, a: 1}
+    - _HairSpecColor2: {r: 0.2972374, g: 0.33973902, b: 0.4113207, a: 1}
+  m_BuildTextureStacks: []

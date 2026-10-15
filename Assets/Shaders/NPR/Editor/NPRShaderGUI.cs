@@ -8,6 +8,45 @@ namespace Spotlight.NPR.Editor
         {
             EditorGUILayout.HelpBox("Deferred Toon：支持主方向光、额外实时灯与阴影。场景连续描边由 NPRLightingFeature 提供，材质预览仅显示卡通光照。", MessageType.Info);
             EditorGUI.BeginChangeCheck();
+            Draw(editor, properties, "_CharacterModel", "Character Lighting Model");
+            float characterModel = FindProperty("_CharacterModel", properties).floatValue;
+            if (characterModel > 0.5f)
+            {
+                EditorGUILayout.LabelField("Character Shading", EditorStyles.boldLabel);
+                editor.TexturePropertySingleLine(new GUIContent("Character Lighting Ramp R (Linear)", "连续艺术光照曲线；不做多级色阶量化。"), FindProperty("_CharacterLightRamp", properties));
+                foreach (string name in new[] { "_CharacterFillColor", "_CharacterFillStrength", "_CharacterFillDirectionVS", "_CharacterMinLight" })
+                    Draw(editor, properties, name, FindProperty(name, properties).displayName);
+                if (characterModel > 1.5f && characterModel < 2.5f)
+                {
+                    editor.TexturePropertySingleLine(new GUIContent("Face Angular SDF R (Linear)"), FindProperty("_FaceSDFMap", properties));
+                    foreach (string name in new[] { "_FaceSDFSoftness", "_FaceSDFStrength", "_FaceForwardOS", "_FaceRightOS", "_FaceCenterOS" })
+                        Draw(editor, properties, name, FindProperty(name, properties).displayName);
+                    editor.TexturePropertySingleLine(new GUIContent("Face Through Hair Mask RG (Linear)"), FindProperty("_BrowMask", properties));
+                    editor.TexturePropertySingleLine(new GUIContent("Fixed Bangs Shadow Mask R (Linear)"), FindProperty("_FaceBangsShadowMap", properties));
+                    Draw(editor, properties, "_FaceBangsShadowColor", "Fixed Bangs Shadow Tint");
+                    Draw(editor, properties, "_FaceBangsShadowStrength", "Fixed Bangs Shadow Strength");
+                    foreach (string name in new[] { "_BangsOpacity", "_BrowFrontFadeStart", "_BrowFrontFadeEnd" })
+                        Draw(editor, properties, name, FindProperty(name, properties).displayName);
+                    EditorGUILayout.HelpBox("刘海不透明度：0 完全移除遮脸刘海，1 保留原不透明头发。面部透发仅作用于 NPRBrowOverlayTarget 绑定的同角色脸部与头发；模板只占用户位 bit1，墙体遮挡和背面淡出仍有效。", MessageType.Info);
+                }
+                if (characterModel > 2.5f && characterModel < 3.5f)
+                {
+                    Draw(editor, properties, "_HairFlowMapEnabled", "Use Hair Flow Map");
+                    if (FindProperty("_HairFlowMapEnabled", properties).floatValue > 0.5f)
+                        editor.TexturePropertySingleLine(new GUIContent("Hair Flow RG (Linear)"), FindProperty("_HairFlowMap", properties));
+                    foreach (string name in new[] { "_HairDirectionRotation", "_HairShift1", "_HairShift2", "_HairPower1", "_HairPower2", "_HairSpecColor1", "_HairSpecColor2", "_HairSpecStrength1", "_HairSpecStrength2", "_HairSpecBandStrength", "_HairSpecBandThreshold", "_HairSpecBandSoftness" })
+                        Draw(editor, properties, name, FindProperty(name, properties).displayName);
+                }
+                else if (characterModel < 2.5f)
+                {
+                    EditorGUILayout.HelpBox("皮肤 3S：Strength 控制局部扩散强度，Radius 控制散射距离，Color 控制 RGB 扩散衰减，Thickness/贴图控制背散射。采用三尺度局部近似，不是屏幕空间 SSS；保留 SDF 阴影形状。", MessageType.Info);
+                    foreach (string name in new[] { "_SSSStrength", "_SSSRadius", "_SSSColor", "_Thickness", "_TransmissionStrength", "_ThicknessMapEnabled" })
+                        Draw(editor, properties, name, FindProperty(name, properties).displayName);
+                    if (FindProperty("_ThicknessMapEnabled", properties).floatValue > 0.5f)
+                        editor.TexturePropertySingleLine(new GUIContent("Thickness R (Linear, White Thick)"), FindProperty("_ThicknessMap", properties));
+                }
+            }
+            Draw(editor, properties, "_SmoothNormalOutline", "Smooth Normal Mesh Outline (UV3 Tangent Space)");
             editor.TexturePropertySingleLine(new GUIContent("Base Map / Color"), FindProperty("_BaseMap", properties), FindProperty("_BaseColor", properties));
             editor.TextureScaleOffsetProperty(FindProperty("_BaseMap", properties));
             editor.TexturePropertySingleLine(new GUIContent("Normal Map", "Import texture as Normal Map; shared Base Map UV"), FindProperty("_BumpMap", properties), FindProperty("_BumpScale", properties));
@@ -28,7 +67,9 @@ namespace Spotlight.NPR.Editor
             Draw(editor, properties, "_AlphaClip", "Alpha Clip");
             if (FindProperty("_AlphaClip", properties).floatValue > .5f) Draw(editor, properties, "_Cutoff", "Cutoff");
             EditorGUILayout.Space(); EditorGUILayout.LabelField("Toon Lighting", EditorStyles.boldLabel);
-            foreach (string name in new[] { "_ShadowColor", "_ToonThreshold", "_ToonSoftness", "_ToonSpecular", "_ToonSpecPower", "_ShadowPattern", "_Hatching", "_HatchScale" })
+            foreach (string name in characterModel > 0.5f
+                ? new[] { "_ShadowColor", "_ToonSpecular", "_ToonSpecPower" }
+                : new[] { "_ShadowColor", "_ToonThreshold", "_ToonSoftness", "_ToonSpecular", "_ToonSpecPower", "_ShadowPattern", "_Hatching", "_HatchScale" })
                 editor.ShaderProperty(FindProperty(name, properties), FindProperty(name, properties).displayName);
             EditorGUILayout.Space(); Draw(editor, properties, "_OverrideOutline", "Override Outline");
             if (FindProperty("_OverrideOutline", properties).floatValue > .5f)
@@ -51,6 +92,7 @@ namespace Spotlight.NPR.Editor
             SetFloatIfDifferent(material, "_DstBlend", 0);
             bool clip = material.GetFloat("_AlphaClip") > .5f;
             SetKeyword(material, "_ALPHATEST_ON", clip);
+            SetKeyword(material, "_CHARACTER_LIGHT_RAMP", material.GetTexture("_CharacterLightRamp") != null);
             SetKeyword(material, "_ROUGHNESSMAP", material.GetTexture("_RoughnessMap") != null);
             SetKeyword(material, "_NORMALMAP", material.GetTexture("_BumpMap") != null);
             SetKeyword(material, "_METALLICSPECGLOSSMAP", material.GetTexture("_MetallicGlossMap") != null);

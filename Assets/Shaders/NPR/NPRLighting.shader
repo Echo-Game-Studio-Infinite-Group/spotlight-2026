@@ -62,7 +62,7 @@ Shader "Hidden/OurFunction/NPRLighting"
                         half4 candidate=SAMPLE_TEXTURE2D_X_LOD(_NPRDetail,sampler_PointClamp,sampleUV,0);
                         float width=min(candidate.z<0?_NPROutlineWidth:candidate.z,_NPRMaxOutlineWidth);
                         if(candidate.a<=.5||width<=0||distancePixels>width+.5)continue;
-                        float eye=EyeDepth(SampleSceneDepth(sampleUV));
+                        float eye=EyeDepth(SAMPLE_TEXTURE2D_X_LOD(_CameraDepthTexture,sampler_PointClamp,sampleUV,0).r);
                         if(eye>sceneEye+max(.005,sceneEye*.0001))continue;
                         bestDistance=distancePixels;bestWidth=width;bestUV=sampleUV;customColor=fmod(floor((candidate.w-1)/2),2);
                     }
@@ -90,45 +90,53 @@ Shader "Hidden/OurFunction/NPRLighting"
                 uint flags=UnpackMaterialFlags(gb0.a);
                 if((flags & kMaterialFlagReceiveShadowsOff)!=0)light.shadowAttenuation=1;
                 AmbientOcclusionFactor ao=GetScreenSpaceAmbientOcclusion(uv);
-                float halfLambert=saturate(dot(normal,light.direction)*.5+.5);
-                float illumination=halfLambert*light.shadowAttenuation;
-                float band=smoothstep(settings.x-settings.y,settings.x+max(settings.y,.001),illumination);
-                float3 tint=lerp(style.rgb,1.0.xxx,band);
-                // URP14 GBuffer0 是原始 albedo；金属反射率编码在 GBuffer1.r。
-                float metallic=saturate(MetallicFromReflectivity(gb1.r));
-                float3 diffuseColor=gb0.rgb*(1-metallic);
-                float3 specularTint=lerp(1.0.xxx,gb0.rgb,metallic);
-                float3 diffuse=diffuseColor*tint*light.color*light.distanceAttenuation*ao.directAmbientOcclusion;
-                float3 view=GetWorldSpaceNormalizeViewDir(world);
-                float3 halfway=SafeNormalize(light.direction+view);
-                float spec=pow(saturate(dot(normal,halfway)),max(settings.w,4));
-                spec=smoothstep(.45,.55,spec)*settings.z*band;
-                if((flags & kMaterialFlagSpecularHighlightsOff)!=0)spec=0;
-                float3 direct=diffuse+specularTint*light.color*spec*light.shadowAttenuation*ao.directAmbientOcclusion;
-                direct*=NPRShadowPatternAttenuation(i.positionCS.xy,band,detail.x,detail.y,fmod(detail.w-1,2));
                 // GBuffer3 已含环境反射/烘焙GI/自发光，只合成一次主光；不重复标准Deferred BRDF。
                 float3 indirect=SAMPLE_TEXTURE2D_X_LOD(_NPRSource,sampler_PointClamp,uv,0).rgb;
                 float aoRatio=ao.indirectAmbientOcclusion<gb1.a?ao.indirectAmbientOcclusion/max(gb1.a,.0001):1;
                 // 无方向光时，URP 的 SSAOOnly 已对间接光应用同一 AO 比值。
                 aoRatio=lerp(aoRatio,1,_NPRIndirectAOApplied);
-                float3 localDirect=0;
                 float2 localGrid=float2(i.positionCS.x+i.positionCS.y,i.positionCS.y-i.positionCS.x)*.70710678/max(detail.y,3);
                 float localPatternAA=max(max(fwidth(localGrid.x),fwidth(localGrid.y))*.5,.0001);
-                // Fullscreen deferred lighting has no per-object unity_LightIndices list.
-                [loop] for(int lightIndex=0;lightIndex<(int)_NPRAdditionalLightCount;lightIndex++)
+                float3 finalColor;
+                if (style.a > 1.5)
                 {
-                    Light localLight=GetAdditionalPerObjectLight(lightIndex,world);
-                    if(localLight.distanceAttenuation<=0)continue;
-                    half visibility=(flags & kMaterialFlagReceiveShadowsOff)!=0?1:AdditionalLightRealtimeShadow(lightIndex,world,localLight.direction);
-                    float localBand=smoothstep(settings.x-settings.y,settings.x+max(settings.y,.001),saturate(dot(normal,localLight.direction)*.5+.5));
-                    float3 localColor=diffuseColor*lerp(style.rgb,1.0.xxx,localBand);
-                    if((flags & kMaterialFlagSpecularHighlightsOff)==0)
-                    {float highlight=pow(saturate(dot(normal,SafeNormalize(localLight.direction+view))),max(settings.w,4));localColor+=specularTint*smoothstep(.45,.55,highlight)*settings.z*localBand;}
-                    localColor*=NPRShadowPatternAttenuationAA(i.positionCS.xy,localBand,detail.x,detail.y,fmod(detail.w-1,2),localPatternAA);
-                    // Occluded punctual lights contribute no direct light, including shadow tint.
-                    localDirect+=localColor*localLight.color*localLight.distanceAttenuation*visibility*ao.directAmbientOcclusion;
+                    finalColor = indirect * aoRatio + style.rgb * ao.directAmbientOcclusion;
                 }
-                float3 finalColor=indirect*aoRatio+direct*_NPRHasMainLight+localDirect;
+                else
+                {
+                    float halfLambert=saturate(dot(normal,light.direction)*.5+.5);
+                    float illumination=halfLambert*light.shadowAttenuation;
+                    float band=smoothstep(settings.x-settings.y,settings.x+max(settings.y,.001),illumination);
+                    float3 tint=lerp(style.rgb,1.0.xxx,band);
+                    // URP14 GBuffer0 是原始 albedo；金属反射率编码在 GBuffer1.r。
+                    float metallic=saturate(MetallicFromReflectivity(gb1.r));
+                    float3 diffuseColor=gb0.rgb*(1-metallic);
+                    float3 specularTint=lerp(1.0.xxx,gb0.rgb,metallic);
+                    float3 diffuse=diffuseColor*tint*light.color*light.distanceAttenuation*ao.directAmbientOcclusion;
+                    float3 view=GetWorldSpaceNormalizeViewDir(world);
+                    float3 halfway=SafeNormalize(light.direction+view);
+                    float spec=pow(saturate(dot(normal,halfway)),max(settings.w,4));
+                    spec=smoothstep(.45,.55,spec)*settings.z*band;
+                    if((flags & kMaterialFlagSpecularHighlightsOff)!=0)spec=0;
+                    float3 direct=diffuse+specularTint*light.color*spec*light.shadowAttenuation*ao.directAmbientOcclusion;
+                    direct*=NPRShadowPatternAttenuationAA(i.positionCS.xy,band,detail.x,detail.y,fmod(detail.w-1,2),localPatternAA);
+                    float3 localDirect=0;
+                    // Fullscreen deferred lighting has no per-object unity_LightIndices list.
+                    [loop] for(int lightIndex=0;lightIndex<(int)_NPRAdditionalLightCount;lightIndex++)
+                    {
+                        Light localLight=GetAdditionalPerObjectLight(lightIndex,world);
+                        if(localLight.distanceAttenuation<=0)continue;
+                        half visibility=(flags & kMaterialFlagReceiveShadowsOff)!=0?1:AdditionalLightRealtimeShadow(lightIndex,world,localLight.direction);
+                        float localBand=smoothstep(settings.x-settings.y,settings.x+max(settings.y,.001),saturate(dot(normal,localLight.direction)*.5+.5));
+                        float3 localColor=diffuseColor*lerp(style.rgb,1.0.xxx,localBand);
+                        if((flags & kMaterialFlagSpecularHighlightsOff)==0)
+                        {float highlight=pow(saturate(dot(normal,SafeNormalize(localLight.direction+view))),max(settings.w,4));localColor+=specularTint*smoothstep(.45,.55,highlight)*settings.z*localBand;}
+                        localColor*=NPRShadowPatternAttenuationAA(i.positionCS.xy,localBand,detail.x,detail.y,fmod(detail.w-1,2),localPatternAA);
+                        // Occluded punctual lights contribute no direct light, including shadow tint.
+                        localDirect+=localColor*localLight.color*localLight.distanceAttenuation*visibility*ao.directAmbientOcclusion;
+                    }
+                    finalColor=indirect*aoRatio+direct*_NPRHasMainLight+localDirect;
+                }
                 float ownWidth=min(detail.z<0?_NPROutlineWidth:detail.z,_NPRMaxOutlineWidth);
                 if(detail.w>=5 && ownWidth>0)
                 {
@@ -156,6 +164,22 @@ Shader "Hidden/OurFunction/NPRLighting"
                 }
                 return half4(finalColor,1);
             }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "NPRBrowStencilClear"
+            Cull Off ZTest Always ZWrite Off ColorMask 0
+            // 只归零用户 bit1；不能清空相机的深度或 URP 延迟材质高位模板。
+            Stencil { Ref 0 ReadMask 2 WriteMask 2 Comp Always Pass Replace Fail Keep ZFail Keep }
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex BrowClearVertex
+            #pragma fragment BrowClearFragment
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            float4 BrowClearVertex(uint id : SV_VertexID) : SV_POSITION
+            { return GetFullScreenTriangleVertexPosition(id); }
+            half4 BrowClearFragment() : SV_Target { return 0; }
             ENDHLSL
         }
     }

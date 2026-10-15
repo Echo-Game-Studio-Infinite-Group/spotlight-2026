@@ -5,6 +5,7 @@
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ParallaxMapping.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DBuffer.hlsl"
@@ -38,6 +39,21 @@ half _Hatching, _HatchScale, _OverrideOutline, _OutlineEnabled, _OutlineWidth;
 half _ShadowPattern, _OverrideOutlineColor, _OutlineBrightness;
 half4 _OutlineColor;
 half _OutlineGeometryEdges;
+half _CharacterModel, _SmoothNormalOutline;
+half4 _CharacterFillColor, _CharacterFillDirectionVS;
+half _CharacterFillStrength, _CharacterMinLight;
+half _HairSpecBandStrength, _HairSpecBandThreshold, _HairSpecBandSoftness;
+half4 _FaceForwardOS, _FaceRightOS, _FaceCenterOS;
+half _FaceSDFSoftness, _FaceSDFStrength;
+half _BangsOpacity, _BrowFrontFadeStart, _BrowFrontFadeEnd;
+half4 _FaceBangsShadowColor;
+half _FaceBangsShadowStrength;
+half _HairDirectionRotation, _HairFlowMapEnabled;
+half _HairShift1, _HairShift2, _HairPower1, _HairPower2;
+half _HairSpecStrength1, _HairSpecStrength2;
+half4 _HairSpecColor1, _HairSpecColor2;
+half _SSSStrength, _SSSRadius, _Thickness, _ThicknessMapEnabled, _TransmissionStrength;
+half4 _SSSColor;
 CBUFFER_END
 
 // NOTE: Do not ifdef the properties for dots instancing, but ifdef the actual usage.
@@ -125,6 +141,12 @@ void SetupDOTSLitMaterialPropertyCaches()
 
 #endif
 
+TEXTURE2D(_CharacterLightRamp);
+TEXTURE2D(_BrowMask);
+TEXTURE2D(_FaceBangsShadowMap);
+TEXTURE2D(_FaceSDFMap);
+TEXTURE2D(_HairFlowMap);
+TEXTURE2D(_ThicknessMap);
 TEXTURE2D(_RoughnessMap); SAMPLER(sampler_RoughnessMap);
 TEXTURE2D(_ParallaxMap);        SAMPLER(sampler_ParallaxMap);
 TEXTURE2D(_OcclusionMap);       SAMPLER(sampler_OcclusionMap);
@@ -268,6 +290,12 @@ inline void InitializeStandardLitSurfaceData(float2 uv, out SurfaceData outSurfa
     half4 specGloss = SampleMetallicSpecGloss(uv, albedoAlpha.a);
     outSurfaceData.albedo = albedoAlpha.rgb * _BaseColor.rgb;
     outSurfaceData.albedo = AlphaModulate(outSurfaceData.albedo, outSurfaceData.alpha);
+    // 固定在头部 UV 的艺术刘海阴影，独立于灯向；所有 GBuffer/正向/透发路径共用。
+    if (abs(_CharacterModel - 2) < 0.5 && _FaceBangsShadowStrength > 0)
+    {
+        half bangsMask = SAMPLE_TEXTURE2D_LOD(_FaceBangsShadowMap, sampler_LinearClamp, uv, 0).r;
+        outSurfaceData.albedo *= lerp(1.0h.xxx, _FaceBangsShadowColor.rgb, bangsMask * _FaceBangsShadowStrength);
+    }
 
 #if _SPECULAR_SETUP
     outSurfaceData.metallic = half(1.0);

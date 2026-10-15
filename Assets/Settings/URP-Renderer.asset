@@ -53,7 +53,8 @@ MonoBehaviour:
   - {fileID: 2254091500125351225}
   - {fileID: -8169701272156000086}
   - {fileID: 4318669148863944133}
-  m_RendererFeatureMap: 579f6488b1293f3d79d7c378000000007ad7c378000000007bd7c378000000007cd7c378000000007dd7c3780000000039ed32d44624481f
+  - {fileID: 3079899892452753134}
+  m_RendererFeatureMap: 579f6488b1293f3d79d7c378000000007ad7c378000000007bd7c378000000007cd7c378000000007dd7c3780000000039ed32d44624481faab01558fa639f8ec55579a8b5feee3beefe6859a200be2a
   m_UseNativeRenderPass: 1
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -210,6 +211,7 @@ MonoBehaviour:
     OutlineWidth: 1.5
     MaxOutlineWidth: 3
     OutlineColor: {r: 0.035, g: 0.045, b: 0.07, a: 1}
+    CharacterOutlineRenderingLayerMask: 256
   lightingShader: {fileID: 4800000, guid: 00c694af49474f29a5ebdb6d7830868d, type: 3}
 --- !u!114 &2026100606
 MonoBehaviour:
@@ -269,6 +271,25 @@ MonoBehaviour:
     sunScatterIntensity: 2.29
     inscatterStartDistance: 50
   m_Shader: {fileID: 4800000, guid: 522a240773ee74a448333ab212a11e4c, type: 3}
+--- !u!114 &3079899892452753134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fe24407f2d438b469dc9441b330b3a3, type: 3}
+  m_Name: Character Capsule AO
+  m_EditorClassIdentifier:
+  m_Active: 1
+  settings:
+    IsEnabled: 1
+    Strength: 0.28
+    Distance: 0.6
+  nprFeature: {fileID: 2026100605}
+  shader: {fileID: 4800000, guid: 8cd373d6473dfa5469a8d2dff3f2ef39, type: 3}
 --- !u!114 &4318669148863944133
 MonoBehaviour:
   m_ObjectHideFlags: 0

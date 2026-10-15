@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Body
+  m_Shader: {fileID: 4800000, guid: d865d9bc4f09480c99c125b495ba343e, type: 3}
+  m_Parent: {fileID: 2100000, guid: da163857333c4b44783c6460d76b4f50, type: 2}
+  m_ModifiedSerializedProperties: 2
+  m_ValidKeywords:
+  - _EMISSION
+  - _METALLICSPECGLOSSMAP
+  - _NORMALMAP
+  - _ROUGHNESSMAP
+  m_InvalidKeywords:
+  - _EMISSIONENABLED_ON
+  - _EMISSIONUSEMAP_ON
+  - _OUTLINEENABLED_ON
+  - _OVERRIDEOUTLINECOLOR_ON
+  - _OVERRIDEOUTLINE_ON
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 0606e7348e1d01846ac9540a69b83f8d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 52b410f820bd33d489450551c71fa4ce, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 2800000, guid: 2981a1cf9a8509a42970a8d1a32eafce, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 2800000, guid: 8804b222824fcfa4aac951bdd6a77354, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughnessMap:
+        m_Texture: {fileID: 2800000, guid: 192d4ed01d5c8ef46838cb1825eb2e04, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BumpScale: 1
+    - _EmissionEnabled: 1
+    - _EmissionIntensity: 0.07
+    - _EmissionUseMap: 1
+    - _Smoothness: 0.631
+    m_Colors:
+    - _EmissionColor: {r: 0.2, g: 1, b: 1.5, a: 1}
+  m_BuildTextureStacks: []

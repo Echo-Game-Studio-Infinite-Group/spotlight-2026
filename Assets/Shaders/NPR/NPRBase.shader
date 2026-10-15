@@ -4,6 +4,48 @@ Shader "OurFunction/NPR/Deferred Toon"
 {
     Properties
     {
+        [Header(Character Shading)]
+        _CharacterLightRamp("Character Lighting Ramp R (Linear)", 2D) = "white" {}
+        _CharacterFillColor("Character Soft Fill Color", Color) = (1,1,1,1)
+        _CharacterFillStrength("Character Soft Fill Strength", Range(0,1)) = 0
+        _CharacterFillDirectionVS("Character Fill View Space Direction", Vector) = (0.3,0.4,1,0)
+        _CharacterMinLight("Character Minimum Readability", Range(0,0.5)) = 0
+        [Enum(Environment,0,Skin,1,FaceSDF,2,HairKajiyaKay,3,CharacterCloth,4)] _CharacterModel("Character Lighting Model", Float) = 0
+        [Toggle] _SmoothNormalOutline("Smooth Normal Character Outline (UV3)", Float) = 0
+        _FaceSDFMap("Face SDF R (Linear)", 2D) = "gray" {}
+        _FaceSDFSoftness("Face SDF Softness", Range(0.001,0.2)) = 0.035
+        _FaceSDFStrength("Face SDF Blend", Range(0,1)) = 1
+        _BrowMask("Face Through Hair Mask RG (Linear)", 2D) = "black" {}
+        _BangsOpacity("Bangs Opacity (Face Overlap)", Range(0,1)) = 0
+        _FaceBangsShadowMap("Fixed Bangs Shadow Mask R (Linear)", 2D) = "black" {}
+        _FaceBangsShadowColor("Fixed Bangs Shadow Tint", Color) = (0.65,0.5,0.48,1)
+        _FaceBangsShadowStrength("Fixed Bangs Shadow Strength", Range(0,1)) = 0
+        _BrowFrontFadeStart("Face Through Hair Front Facing Fade Start", Range(-0.1,0.8)) = 0.05
+        _BrowFrontFadeEnd("Face Through Hair Front Facing Fade End", Range(0.1,1)) = 0.4
+        _FaceForwardOS("Head Forward Object Space", Vector) = (0,0,1,0)
+        _FaceRightOS("Head Right Object Space", Vector) = (1,0,0,0)
+        _FaceCenterOS("Head Center Object Space", Vector) = (0,0,0,0)
+        _HairDirectionRotation("Hair Tangent Rotation Degrees", Range(-180,180)) = 90
+        [Toggle] _HairFlowMapEnabled("Use Hair Direction Map", Float) = 0
+        _HairFlowMap("Hair Flow RG (Linear Tangent Space)", 2D) = "gray" {}
+        _HairShift1("Hair Primary Shift", Range(-1,1)) = 0.1
+        _HairShift2("Hair Secondary Shift", Range(-1,1)) = -0.18
+        _HairPower1("Hair Primary Exponent", Range(1,256)) = 64
+        _HairPower2("Hair Secondary Exponent", Range(1,256)) = 18
+        [HDR] _HairSpecColor1("Hair Primary Color", Color) = (1,0.85,0.65,1)
+        [HDR] _HairSpecColor2("Hair Secondary Color", Color) = (0.6,0.75,1,1)
+        _HairSpecStrength1("Hair Primary Strength", Range(0,2)) = 0.6
+        _HairSpecStrength2("Hair Secondary Strength", Range(0,2)) = 0.2
+        _HairSpecBandStrength("Hair Highlight Band Strength", Range(0,1)) = 0
+        _HairSpecBandThreshold("Hair Highlight Band Threshold", Range(0.01,0.99)) = 0.45
+        _HairSpecBandSoftness("Hair Highlight Band Softness", Range(0.005,0.3)) = 0.08
+        _SSSStrength("Skin Diffusion Strength", Range(0,1)) = 0.35
+        _SSSRadius("Skin Diffusion Radius", Range(0.01,2)) = 0.6
+        _SSSColor("Skin Scattering Profile RGB", Color) = (1,0.36,0.2,1)
+        [Toggle] _ThicknessMapEnabled("Use Thickness Map", Float) = 0
+        _ThicknessMap("Thickness R (Linear, White Thick)", 2D) = "white" {}
+        _Thickness("Skin Thickness", Range(0,1)) = 0.3
+        _TransmissionStrength("Skin Back Transmission", Range(0,1)) = 0.15
         [Header(Toon Lighting)]
         _ShadowColor("Shadow Tint", Color) = (0.38,0.46,0.64,1)
         _ToonThreshold("Light Band Threshold", Range(0,1)) = 0.65
@@ -123,22 +165,47 @@ Shader "OurFunction/NPR/Deferred Toon"
             #pragma target 3.5
             #pragma vertex LitPassVertex
             #pragma fragment NPRPreviewFragment
+            #pragma shader_feature_local_fragment _CHARACTER_LIGHT_RAMP
             #include "NPRShadowPattern.hlsl"
             #pragma shader_feature_local_fragment _EMISSION
             #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
             #pragma shader_feature_local _ALPHATEST_ON
             #pragma shader_feature_local _NORMALMAP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_instancing
             #define REQUIRES_WORLD_SPACE_POS_INTERPOLATOR
             #include "NPRInput.hlsl"
+            #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ LIGHTMAP_ON
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma shader_feature_local_fragment _OCCLUSIONMAP
+            #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
+            #include "NPRCharacterLighting.hlsl"
             half4 NPRPreviewFragment(Varyings input):SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 SurfaceData surface; InitializeStandardLitSurfaceData(input.uv,surface);
                 InputData data; InitializeInputData(input,surface.normalTS,data);
+                if (_CharacterModel > 0.5)
+                {
+                    float4 shadowCoord = data.shadowCoord;
+                    #if defined(_MAIN_LIGHT_SHADOWS_SCREEN)
+                        shadowCoord = ComputeScreenPos(TransformWorldToHClip(data.positionWS));
+                    #endif
+                    float3 character = NPRCharacterDirect(surface, input.uv, data.positionWS, data.normalWS,
+                        input.tangentWS, data.viewDirectionWS, shadowCoord, false);
+                    BRDFData brdf; InitializeBRDFData(surface, brdf);
+                    character += GlobalIllumination(brdf, data.bakedGI, surface.occlusion, data.positionWS, data.normalWS, data.viewDirectionWS) + surface.emission;
+                    return half4(character, surface.alpha);
+                }
                 Light light=GetMainLight(data.shadowCoord);
                 float amount=saturate(dot(data.normalWS,light.direction)*.5+.5)*light.shadowAttenuation;
                 float band=smoothstep(_ToonThreshold-_ToonSoftness,_ToonThreshold+max(_ToonSoftness,.001),amount);
@@ -465,11 +532,21 @@ Shader "OurFunction/NPR/Deferred Toon"
             #pragma target 4.5
             #pragma vertex LitGBufferPassVertex
             #pragma fragment NPRStyleFragment
+            #pragma shader_feature_local_fragment _CHARACTER_LIGHT_RAMP
+            #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
             #pragma shader_feature_local _ALPHATEST_ON
             #pragma shader_feature_local _NORMALMAP
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
+            #define REQUIRES_WORLD_SPACE_POS_INTERPOLATOR
+            #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR
             #include "NPRInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/LitGBufferPass.hlsl"
+            #include "NPRCharacterLighting.hlsl"
             struct NPRStyleOutput { half4 shadow : SV_Target0; half4 lighting : SV_Target1; half4 detail : SV_Target2; half4 outlineColor : SV_Target3; };
             NPRStyleOutput NPRStyleFragment(Varyings input)
             {
@@ -480,8 +557,192 @@ Shader "OurFunction/NPR/Deferred Toon"
                 output.lighting = half4(_ToonThreshold, _ToonSoftness, _ToonSpecular, _ToonSpecPower);
                 output.detail = half4(_Hatching, _HatchScale, _OverrideOutline > 0.5 ? _OutlineWidth * _OutlineEnabled : -1, 1 + _ShadowPattern + (_OverrideOutlineColor > .5 ? 2 : 0) + (_OutlineGeometryEdges > .5 ? 4 : 0));
                 output.outlineColor = half4(_OutlineColor.rgb * _OutlineBrightness, 1);
+                if (_CharacterModel > 0.5)
+                {
+                    InputData data; InitializeInputData(input, surface.normalTS, data);
+                    float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);
+                    #if defined(_MAIN_LIGHT_SHADOWS_SCREEN)
+                        shadowCoord = ComputeScreenPos(TransformWorldToHClip(input.positionWS));
+                    #endif
+                    output.shadow = half4(NPRCharacterDirect(surface, input.uv, input.positionWS, data.normalWS,
+                        input.tangentWS, data.viewDirectionWS, shadowCoord, true), 2);
+                }
+                // 衣物也可使用平滑挤出，不要求切换皮肤/头发光照模型。
+                if (_SmoothNormalOutline > 0.5) output.detail.z = 0;
                 return output;
             }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "NPRCharacterOutline"
+            Tags { "LightMode"="NPRCharacterOutline" }
+            Cull Front ZWrite Off ZTest LEqual
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex NPRCharacterOutlineVertex
+            #pragma fragment NPRCharacterOutlineFragment
+            #pragma multi_compile_instancing
+            #pragma shader_feature_local _ALPHATEST_ON
+            #include "NPRInput.hlsl"
+            struct OutlineAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float3 smoothNormalTS : TEXCOORD2;
+                float4 tangentOS : TANGENT;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            struct OutlineVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+            OutlineVaryings NPRCharacterOutlineVertex(OutlineAttributes input)
+            {
+                OutlineVaryings output = (OutlineVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                float3 normalOS = SafeNormalize(input.normalOS);
+                float3 tangentOS = input.tangentOS.xyz - normalOS * dot(input.tangentOS.xyz, normalOS);
+                float tangentLength = dot(tangentOS, tangentOS);
+                if (dot(input.smoothNormalTS, input.smoothNormalTS) > 0.01 && tangentLength > 0.0001)
+                {
+                    tangentOS = normalize(tangentOS);
+                    float3 bitangentOS = cross(normalOS, tangentOS) * input.tangentOS.w;
+                    // UV3 为切线空间平滑法线，骨骼变形后的原 TBN 负责恢复方向。
+                    normalOS = SafeNormalize(tangentOS * input.smoothNormalTS.x
+                        + bitangentOS * input.smoothNormalTS.y + normalOS * input.smoothNormalTS.z);
+                }
+                float3 normalWS = TransformObjectToWorldNormal(normalOS);
+                float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+                float2 projected = mul((float2x2)UNITY_MATRIX_P, normalVS.xy) * _ScaledScreenParams.xy;
+                float projectedLength = length(projected);
+                projected = projectedLength > 0.0001 ? projected / projectedLength : float2(0,0);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                // 在齐次裁剪坐标中挤出，保持透视距离及分辨率变化时的像素宽度。
+                output.positionCS.xy += projected * (_OutlineWidth * 2 / _ScaledScreenParams.xy) * output.positionCS.w;
+                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+                return output;
+            }
+            half4 NPRCharacterOutlineFragment(OutlineVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                clip(min(_SmoothNormalOutline - 0.5, min(_OverrideOutline - 0.5, _OutlineEnabled - 0.5)));
+                #if defined(_ALPHATEST_ON)
+                    Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                #endif
+                return half4(_OutlineColor.rgb * _OutlineBrightness, 1);
+            }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "NPRHairBrowStencil"
+            Tags { "LightMode"="NPRHairBrowStencil" }
+            Cull [_Cull] ZWrite Off ZTest Equal ColorMask 0
+            // URP14 低四位由用户拥有；仅使用 bit1，保留高位材质及光体积模板。
+            Stencil { Ref 2 ReadMask 2 WriteMask 2 Comp Always Pass Replace Fail Keep ZFail Keep }
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex NPRHairBrowStencilVertex
+            #pragma fragment NPRHairBrowStencilFragment
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma multi_compile_instancing
+            #include "NPRInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/DepthOnlyPass.hlsl"
+            Varyings NPRHairBrowStencilVertex(Attributes input)
+            {
+                Varyings output = DepthOnlyVertex(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                return output;
+            }
+            half4 NPRHairBrowStencilFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                clip(0.5 - abs(_CharacterModel - 3));
+                #if defined(_ALPHATEST_ON)
+                    Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                #endif
+                return 0;
+            }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "NPRFaceSurface"
+            Tags { "LightMode"="NPRFaceSurface" }
+            Cull Back ZWrite Off ZTest LEqual
+            Blend One Zero, Zero One
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex LitPassVertex
+            #pragma fragment NPRFaceSurfaceFragment
+            #pragma shader_feature_local_fragment _CHARACTER_LIGHT_RAMP
+            #pragma shader_feature_local_fragment _ROUGHNESSMAP
+            #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _OCCLUSIONMAP
+            #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
+            #pragma shader_feature_local_fragment _EMISSION
+            #pragma shader_feature_local _NORMALMAP
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile _ LIGHTMAP_ON
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma multi_compile_instancing
+            #define REQUIRES_WORLD_SPACE_POS_INTERPOLATOR
+            #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR
+            #include "NPRInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
+            #include "NPRFaceRadiance.hlsl"
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "NPRBrowThroughHair"
+            Tags { "LightMode"="NPRBrowThroughHair" }
+            Cull Back ZWrite Off ZTest Greater
+            Blend SrcAlpha OneMinusSrcAlpha, Zero One
+            Stencil { Ref 2 ReadMask 2 WriteMask 0 Comp Equal Pass Keep Fail Keep ZFail Keep }
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex LitPassVertex
+            #pragma fragment NPRBrowThroughHairFragment
+            #pragma shader_feature_local_fragment _CHARACTER_LIGHT_RAMP
+            #pragma shader_feature_local_fragment _ROUGHNESSMAP
+            #pragma shader_feature_local_fragment _METALLICSPECGLOSSMAP
+            #pragma shader_feature_local_fragment _OCCLUSIONMAP
+            #pragma shader_feature_local_fragment _ENVIRONMENTREFLECTIONS_OFF
+            #pragma shader_feature_local_fragment _EMISSION
+            #pragma shader_feature_local _NORMALMAP
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma shader_feature_local _RECEIVE_SHADOWS_OFF
+            #pragma shader_feature_local_fragment _SPECULARHIGHLIGHTS_OFF
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile _ LIGHTMAP_ON
+            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma multi_compile_instancing
+            #define REQUIRES_WORLD_SPACE_POS_INTERPOLATOR
+            #define REQUIRES_WORLD_SPACE_TANGENT_INTERPOLATOR
+            #include "NPRInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitForwardPass.hlsl"
+            #include "NPRFaceRadiance.hlsl"
             ENDHLSL
         }
     }

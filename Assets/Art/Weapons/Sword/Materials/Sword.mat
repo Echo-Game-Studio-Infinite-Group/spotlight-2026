@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Sword
+  m_Shader: {fileID: 4800000, guid: 0a7545dc3eca47a1b1f6f679670c4614, type: 3}
+  m_Parent: {fileID: 2100000, guid: 0ce89b76452820f45b26b2539aa1feb8, type: 2}
+  m_ModifiedSerializedProperties: 2
+  m_ValidKeywords:
+  - _EMISSION
+  - _METALLICSPECGLOSSMAP
+  - _NORMALMAP
+  - _ROUGHNESSMAP
+  m_InvalidKeywords:
+  - _EMISSIONENABLED_ON
+  - _EMISSIONUSEMAP_ON
+  - _METALFLOWMAPENABLED_ON
+  - _OUTLINEENABLED_ON
+  - _OVERRIDEOUTLINECOLOR_ON
+  - _OVERRIDEOUTLINE_ON
+  - _SMOOTHNORMALOUTLINE_ON
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: f7b8e7a6955e5b14d94cc00771e41651, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 78a796e69931e764d913817a58face05, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 2800000, guid: b53d93fa071d07b44850a518fe07127a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetalFlowMap:
+        m_Texture: {fileID: 2800000, guid: d558eff4347af7249b32515fa24c89c0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 2800000, guid: 0543ab1ac5590c541b35954268cd40fb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughnessMap:
+        m_Texture: {fileID: 2800000, guid: b52addcaa78f4fc4a93c125045db11c8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _EmissionEnabled: 1
+    - _EmissionIntensity: 0.35
+    - _EmissionUseMap: 1
+    - _MetalAnisotropy: 0.7
+    - _MetalFlowMapEnabled: 1
+    - _OutlineEnabled: 1
+    - _OutlineWidth: 2.2
+    - _SmoothNormalOutline: 1
+    m_Colors:
+    - _EmissionColor: {r: 0.2, g: 1.2, b: 1.8, a: 1}
+  m_BuildTextureStacks: []
