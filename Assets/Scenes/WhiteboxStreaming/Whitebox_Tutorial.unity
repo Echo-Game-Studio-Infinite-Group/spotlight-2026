@@ -321,6 +321,7 @@ GameObject:
   - component: {fileID: 748332994}
   - component: {fileID: 748332993}
   - component: {fileID: 748332992}
+  - component: {fileID: 748332995}
   m_Layer: 0
   m_Name: "\u51FA\u53E3\u95E8\u69DB"
   m_TagString: Untagged
@@ -338,7 +339,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071067, z: -0, w: -0.7071068}
   m_LocalPosition: {x: 83.5253, y: 123.300446, z: -53.878414}
-  m_LocalScale: {x: 6.5000014, y: 0.3, z: 4.0000005}
+  m_LocalScale: {x: 6.5000005, y: 0.3, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4827605975659396957}
@@ -404,7 +405,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1, y: 1, z: 2}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!33 &748332994
 MeshFilter:
@@ -413,7 +414,22 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 748332990}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: 77aed3fb102e5074883844deeb7ec32d, type: 2}
+--- !u!114 &748332995
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748332990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_01
+  _ownerOnlyMesh: {fileID: 4300000, guid: 77aed3fb102e5074883844deeb7ec32d, type: 2}
+  _withNeighborMesh: {fileID: 4300000, guid: 74618fa20e0fbea4481070625a395a48, type: 2}
 --- !u!1 &781911647
 GameObject:
   m_ObjectHideFlags: 0
@@ -540,7 +556,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071067, z: -0, w: -0.7071068}
   m_LocalPosition: {x: 83.5253, y: 123.300446, z: 26.121582}
-  m_LocalScale: {x: 6.5000014, y: 0.3, z: 4.0000005}
+  m_LocalScale: {x: 6.5000005, y: 0.3, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4827605975659396957}
@@ -606,7 +622,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1, y: 1, z: 2}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!33 &798886348
 MeshFilter:
@@ -615,7 +631,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 798886344}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: c1a99a31780deed47be0eddbaac5f906, type: 2}
 --- !u!1 &1093250339
 GameObject:
   m_ObjectHideFlags: 0
@@ -4802,6 +4818,7 @@ GameObject:
   - component: {fileID: 8332956511364589224}
   - component: {fileID: 9042687873459817701}
   - component: {fileID: 6234264147868497857}
+  - component: {fileID: 9042687873459817702}
   m_Layer: 0
   m_Name: "\u51B2\u523A\u9053 (3)"
   m_TagString: Untagged
@@ -7196,6 +7213,21 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &9042687873459817702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6077891220554165058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_01
+  _ownerOnlyMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  _withNeighborMesh: {fileID: 4300000, guid: 6e9618c82f7cf8c46aad65e35823a901, type: 2}
 --- !u!33 &9051204116939265009
 MeshFilter:
   m_ObjectHideFlags: 0

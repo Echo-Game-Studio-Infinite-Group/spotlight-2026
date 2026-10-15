@@ -23,6 +23,7 @@ public static class TeamWhiteboxSetup
     private static readonly string[] ExitDoors = { "Door (1)", "Door (1)", "Door (3)", "Door (3)", "Door (5)" };
     private const float BridgeGap = 1f;
     private const float TriggerDepth = 4f;
+    private const float ThresholdCollisionOverlap = 1f;
 
     public static string RoomName(int index) => index == 0 ? "Whitebox_Tutorial" : $"Whitebox_Room_0{index}";
     private static string RoomPath(int index) => SceneFolder + "/" + RoomName(index) + ".unity";
@@ -57,6 +58,49 @@ public static class TeamWhiteboxSetup
         EditorSceneManager.OpenScene("Assets/Scenes/Boot.unity");
     }
 
+    [MenuItem("超高速行者/地图无缝加载/修复团队白盒接缝闪烁")]
+    public static void RepairSeams()
+    {
+        if (EditorApplication.isPlaying) throw new InvalidOperationException("请先停止播放");
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        DoorInfo previousExit = default;
+        for (int i = 0; i < RoomAssets.Length; i++)
+        {
+            Scene scene = EditorSceneManager.OpenScene(RoomPath(i));
+            GameObject root = scene.GetRootGameObjects().Single(item => item.name.StartsWith("BOX_S", StringComparison.Ordinal));
+            Transform[] children = root.GetComponentsInChildren<Transform>(true);
+            DoorInfo entry = ReadDoor(root, children.Single(child => child.name == EntryDoors[i]));
+            DoorInfo exit = ReadDoor(root, children.Single(child => child.name == ExitDoors[i]));
+            UpdateThreshold(children.Single(child => child.name == "入口门槛").gameObject, entry, root);
+            UpdateThreshold(children.Single(child => child.name == "出口门槛").gameObject, exit, root);
+            if (i > 0)
+            {
+                BridgeShape(previousExit, entry, out Vector3 center, out float width, out float length);
+                GameObject[] roots = scene.GetRootGameObjects();
+                UpdateBox(roots.Single(item => item.name == "两门间连接地板"), center - Vector3.up * .15f,
+                    new Vector3(width, .3f, length), previousExit.Outward);
+                Vector3 side = Vector3.Cross(Vector3.up, previousExit.Outward) * (width * .5f + .1f);
+                UpdateBox(roots.Single(item => item.name == "连接段左侧墙"), center + side + Vector3.up * 2f,
+                    new Vector3(.2f, 4f, length), previousExit.Outward);
+                UpdateBox(roots.Single(item => item.name == "连接段右侧墙"), center - side + Vector3.up * 2f,
+                    new Vector3(.2f, 4f, length), previousExit.Outward);
+                Scene previousScene = EditorSceneManager.OpenScene(RoomPath(i - 1), OpenSceneMode.Additive);
+                GameObject previousRoot = previousScene.GetRootGameObjects().Single(item => item.name.StartsWith("BOX_S", StringComparison.Ordinal));
+                ConnectSeamSurfaces(previousRoot, root, roots.Single(item => item.name == "两门间连接地板"));
+                EditorSceneManager.SaveScene(previousScene);
+                EditorSceneManager.CloseScene(previousScene, true);
+                SceneManager.SetActiveScene(scene);
+            }
+            Physics.SyncTransforms();
+            BakeNavigation(root, RoomName(i));
+            EditorSceneManager.SaveScene(scene);
+            previousExit = exit;
+        }
+        AssetDatabase.SaveAssets();
+        EditorSceneManager.OpenScene("Assets/Scenes/Boot.unity");
+        Debug.Log("WHITEBOX_SEAM_REPAIR_PASS: 保留原关卡，裁剪共面门槛，仅在真实门口间隙保留连接段");
+    }
+
     [MenuItem("超高速行者/地图无缝加载/接通团队白盒默认路线")]
     public static void BuildGame()
     {
@@ -69,6 +113,7 @@ public static class TeamWhiteboxSetup
         Material wood = AssetDatabase.LoadAssetAtPath<Material>("Assets/Scenes/MapStreaming/Door.mat");
         DoorInfo previousExit = default;
         DoorInfo firstEntry = default;
+        GameObject previousRoot = null;
 
         for (int i = 0; i < RoomAssets.Length; i++)
         {
@@ -116,7 +161,7 @@ public static class TeamWhiteboxSetup
 
             if (i > 0)
             {
-                AddBridge(previousExit, entry, wood);
+                AddBridge(previousExit, entry, wood, previousRoot, root);
                 var portalRoot = new GameObject("真实门后_进入房间");
                 portalRoot.transform.SetPositionAndRotation(
                     entry.Floor - entry.Outward * (entry.Depth * .5f + 1f + TriggerDepth * .5f) + Vector3.up * entry.Height * .5f,
@@ -127,30 +172,12 @@ public static class TeamWhiteboxSetup
             }
             AddLabel(i + 1 < RoomAssets.Length ? "NEXT " + RoomName(i + 1) : "END", exit);
 
-            foreach (NavMeshSurface oldSurface in root.GetComponentsInChildren<NavMeshSurface>(true))
-                UnityEngine.Object.DestroyImmediate(oldSurface);
-            var surface = root.AddComponent<NavMeshSurface>();
-            surface.collectObjects = CollectObjects.Children;
-            surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.PhysicsColliders;
-            // 门板加载后会打开，烘焙时只收集房间固有几何和门槛，不把临时木门作为永久阻挡。
-            surface.BuildNavMesh();
-            if (surface.navMeshData != null)
-            {
-                string navPath = SceneFolder + "/NavMesh_" + RoomName(i) + ".asset";
-                UnityEngine.AI.NavMeshData existing = AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(navPath);
-                if (existing == null) AssetDatabase.CreateAsset(surface.navMeshData, navPath);
-                else
-                {
-                    surface.RemoveData();
-                    EditorUtility.CopySerialized(surface.navMeshData, existing);
-                    surface.navMeshData = existing;
-                    surface.AddData();
-                }
-            }
+            BakeNavigation(root, RoomName(i));
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(.7f, .7f, .7f);
             if (!EditorSceneManager.SaveScene(roomScene, RoomPath(i))) throw new IOException("房间保存失败");
             previousExit = exit;
+            previousRoot = root;
             Debug.Log($"TEAM_ROOM_CONNECTED {RoomName(i)} entry={entry.Floor} exit={exit.Floor} width={entry.Width:F2} depth={entry.Depth:F2}");
         }
 
@@ -281,19 +308,108 @@ public static class TeamWhiteboxSetup
     private static void AddThreshold(string name, DoorInfo info, Transform parent, Material material)
     {
         GameObject floor = Box(name, info.Floor - Vector3.up * .15f,
-            new Vector3(info.Width, .3f, info.Depth + 2f), info.Outward, material);
+            new Vector3(info.Width, .3f, info.Depth), info.Outward, material);
         floor.transform.SetParent(parent, true);
+        UpdateThreshold(floor, info, parent.gameObject);
     }
 
-    private static void AddBridge(DoorInfo source, DoorInfo target, Material material)
+    private static void UpdateThreshold(GameObject floor, DoorInfo info, GameObject root)
     {
-        float width = Mathf.Min(source.Width, target.Width);
-        float length = Vector3.Distance(source.Floor, target.Floor) + (source.Depth + target.Depth) * .5f + 2f;
-        Vector3 center = (source.Floor + target.Floor) * .5f;
-        Box("两门间连接地板", center - Vector3.up * .15f, new Vector3(width, .3f, length), source.Outward, material);
+        UpdateBox(floor, info.Floor - Vector3.up * .15f, new Vector3(info.Width, .3f, info.Depth), info.Outward);
+        // 可见面止于门沿，碰撞仍向两侧各延伸一米，补住原白盒薄片地面的局部碰撞缺口。
+        floor.GetComponent<BoxCollider>().size = new Vector3(1f, 1f, (info.Depth + ThresholdCollisionOverlap * 2f) / info.Depth);
+        WhiteboxSeamMeshBuilder.TrimThreshold(floor, root, SceneFolder + "/SeamMeshes");
+    }
+
+    private static void ConnectSeamSurfaces(GameObject previousRoot, GameObject root, GameObject bridge)
+    {
+        GameObject previousExit = previousRoot.GetComponentsInChildren<Transform>(true)
+            .Single(item => item.name == "出口门槛").gameObject;
+        GameObject entry = root.GetComponentsInChildren<Transform>(true).Single(item => item.name == "入口门槛").gameObject;
+        ConfigureSeam(previousExit, previousRoot, root);
+        ConfigureSeam(entry, root, previousRoot);
+        ConfigureSeam(bridge, root, previousRoot);
+        TrimAuthoredOverlap(previousRoot, root);
+    }
+
+    private static void TrimAuthoredOverlap(GameObject owner, GameObject neighbor)
+    {
+        MeshFilter[] filters = owner.GetComponentsInChildren<MeshFilter>(true);
+        for (int index = 0; index < filters.Length; index++)
+        {
+            MeshFilter filter = filters[index];
+            if (filter.name == "入口门槛" || filter.name == "出口门槛" || filter.sharedMesh == null) continue;
+            MapSeamSurface selector = filter.GetComponent<MapSeamSurface>();
+            Mesh own = selector != null ? selector.OwnerOnlyMesh : filter.sharedMesh;
+            Mesh combined = WhiteboxSeamMeshBuilder.TrimMesh(filter.gameObject, own, new[] { neighbor },
+                SceneFolder + "/SeamMeshes", "_Authored_" + index + "_With_" + neighbor.scene.name, true);
+            if (combined == own && selector == null) continue;
+            if (selector == null) selector = filter.gameObject.AddComponent<MapSeamSurface>();
+            selector.Configure(neighbor.scene.name, own, combined);
+            EditorUtility.SetDirty(selector);
+        }
+    }
+
+    private static void ConfigureSeam(GameObject surface, GameObject owner, GameObject neighbor)
+    {
+        string folder = SceneFolder + "/SeamMeshes";
+        Mesh own = WhiteboxSeamMeshBuilder.TrimBox(surface, new[] { owner }, folder);
+        Mesh combined = WhiteboxSeamMeshBuilder.TrimBox(surface, new[] { owner, neighbor }, folder, "_With_" + neighbor.scene.name);
+        MapSeamSurface selector = surface.GetComponent<MapSeamSurface>();
+        if (selector == null) selector = surface.AddComponent<MapSeamSurface>();
+        selector.Configure(neighbor.scene.name, own, combined);
+        EditorUtility.SetDirty(selector);
+    }
+
+    private static void UpdateBox(GameObject box, Vector3 center, Vector3 size, Vector3 forward)
+    {
+        box.transform.SetPositionAndRotation(center, Quaternion.LookRotation(forward, Vector3.up));
+        box.transform.localScale = size;
+    }
+
+    private static void BridgeShape(DoorInfo source, DoorInfo target, out Vector3 center, out float width, out float length)
+    {
+        Vector3 start = source.Floor + source.Outward * source.Depth * .5f;
+        Vector3 end = target.Floor + target.Outward * target.Depth * .5f;
+        // 长门洞两边深度不同，必须用门洞外沿，不能用两扇门中心的中点。
+        center = (start + end) * .5f;
+        width = Mathf.Min(source.Width, target.Width);
+        length = Vector3.Dot(end - start, source.Outward);
+        if (length <= 0f) throw new InvalidDataException("两门之间没有正向连接间隙");
+    }
+
+    private static void AddBridge(DoorInfo source, DoorInfo target, Material material, GameObject previousRoot, GameObject root)
+    {
+        BridgeShape(source, target, out Vector3 center, out float width, out float length);
+        GameObject floor = Box("两门间连接地板", center - Vector3.up * .15f, new Vector3(width, .3f, length), source.Outward, material);
+        ConnectSeamSurfaces(previousRoot, root, floor);
+        EditorSceneManager.SaveScene(previousRoot.scene);
         Vector3 side = Vector3.Cross(Vector3.up, source.Outward) * (width * .5f + .1f);
         Box("连接段左侧墙", center + side + Vector3.up * 2f, new Vector3(.2f, 4f, length), source.Outward, material);
         Box("连接段右侧墙", center - side + Vector3.up * 2f, new Vector3(.2f, 4f, length), source.Outward, material);
+    }
+
+    private static void BakeNavigation(GameObject root, string roomName)
+    {
+        var surface = root.GetComponent<NavMeshSurface>();
+        if (surface == null) surface = root.AddComponent<NavMeshSurface>();
+        foreach (NavMeshSurface child in root.GetComponentsInChildren<NavMeshSurface>(true))
+            if (child != surface) UnityEngine.Object.DestroyImmediate(child);
+        surface.collectObjects = CollectObjects.Children;
+        surface.useGeometry = UnityEngine.AI.NavMeshCollectGeometry.PhysicsColliders;
+        // 门板加载后会打开，只收集房间固有几何和门槛，不把临时木门烘焙成永久阻挡。
+        surface.BuildNavMesh();
+        if (surface.navMeshData == null) return;
+        string navPath = SceneFolder + "/NavMesh_" + roomName + ".asset";
+        UnityEngine.AI.NavMeshData existing = AssetDatabase.LoadAssetAtPath<UnityEngine.AI.NavMeshData>(navPath);
+        if (existing == null) AssetDatabase.CreateAsset(surface.navMeshData, navPath);
+        else
+        {
+            surface.RemoveData();
+            EditorUtility.CopySerialized(surface.navMeshData, existing);
+            surface.navMeshData = existing;
+            surface.AddData();
+        }
     }
 
     private static void AddLabel(string text, DoorInfo exit)

@@ -715,6 +715,7 @@ GameObject:
   - component: {fileID: 1159246143}
   - component: {fileID: 1159246142}
   - component: {fileID: 1159246141}
+  - component: {fileID: 1159246145}
   m_Layer: 0
   m_Name: "\u4E24\u95E8\u95F4\u8FDE\u63A5\u5730\u677F"
   m_TagString: Untagged
@@ -792,7 +793,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1159246140}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: c3dd630775e862747b0892a9faa01dcc, type: 2}
 --- !u!4 &1159246144
 Transform:
   m_ObjectHideFlags: 0
@@ -802,12 +803,27 @@ Transform:
   m_GameObject: {fileID: 1159246140}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0.000000029802326}
-  m_LocalPosition: {x: 80.000015, y: -6.65, z: -105.54881}
-  m_LocalScale: {x: 7.5000005, y: 0.3, z: 15.195295}
+  m_LocalPosition: {x: 80.000015, y: -6.65, z: -103.49998}
+  m_LocalScale: {x: 7.5000005, y: 0.3, z: 0.99998474}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1159246145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1159246140}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_01
+  _ownerOnlyMesh: {fileID: 4300000, guid: c3dd630775e862747b0892a9faa01dcc, type: 2}
+  _withNeighborMesh: {fileID: 4300000, guid: e984fd6cf51a5d74abef7d7463d8b4db, type: 2}
 --- !u!1 &1481023024
 GameObject:
   m_ObjectHideFlags: 0
@@ -820,6 +836,7 @@ GameObject:
   - component: {fileID: 1481023028}
   - component: {fileID: 1481023027}
   - component: {fileID: 1481023026}
+  - component: {fileID: 1481023029}
   m_Layer: 0
   m_Name: "\u5165\u53E3\u95E8\u69DB"
   m_TagString: Untagged
@@ -837,7 +854,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071067}
   m_LocalPosition: {x: 60.686478, y: 21.052507, z: -27.087112}
-  m_LocalScale: {x: 7.5000014, y: 0.3, z: 12.195324}
+  m_LocalScale: {x: 7.5000005, y: 0.3, z: 10.195322}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8387408561818956250}
@@ -903,7 +920,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1, y: 1, z: 1.1961684}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!33 &1481023028
 MeshFilter:
@@ -912,7 +929,22 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1481023024}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: b9c670569235d5e43bad3514c7d22d7c, type: 2}
+--- !u!114 &1481023029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1481023024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_01
+  _ownerOnlyMesh: {fileID: 4300000, guid: b9c670569235d5e43bad3514c7d22d7c, type: 2}
+  _withNeighborMesh: {fileID: 4300000, guid: c8ad20788260db8468310a7a5c625cb7, type: 2}
 --- !u!1 &1750125756
 GameObject:
   m_ObjectHideFlags: 0
@@ -925,6 +957,7 @@ GameObject:
   - component: {fileID: 1750125760}
   - component: {fileID: 1750125759}
   - component: {fileID: 1750125758}
+  - component: {fileID: 1750125761}
   m_Layer: 0
   m_Name: "\u51FA\u53E3\u95E8\u69DB"
   m_TagString: Untagged
@@ -942,7 +975,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071067, z: -0, w: -0.7071068}
   m_LocalPosition: {x: -47.31351, y: 21.052507, z: 52.91288}
-  m_LocalScale: {x: 7.5000014, y: 0.3, z: 12.195324}
+  m_LocalScale: {x: 7.5000005, y: 0.3, z: 10.195322}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8387408561818956250}
@@ -1008,7 +1041,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Size: {x: 1, y: 1, z: 1.1961684}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!33 &1750125760
 MeshFilter:
@@ -1017,7 +1050,22 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1750125756}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: ca0a5f0c21bdfeb499b7e1e5384c1881, type: 2}
+--- !u!114 &1750125761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1750125756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_03
+  _ownerOnlyMesh: {fileID: 4300000, guid: ca0a5f0c21bdfeb499b7e1e5384c1881, type: 2}
+  _withNeighborMesh: {fileID: 4300000, guid: 65060bea6d58dc547a56e25b1d41e653, type: 2}
 --- !u!1 &1910056304
 GameObject:
   m_ObjectHideFlags: 0
@@ -1117,8 +1165,8 @@ Transform:
   m_GameObject: {fileID: 1910056304}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0.000000029802326}
-  m_LocalPosition: {x: 83.85001, y: -4.5, z: -105.54881}
-  m_LocalScale: {x: 0.2, y: 4, z: 15.195295}
+  m_LocalPosition: {x: 83.85001, y: -4.5, z: -103.49998}
+  m_LocalScale: {x: 0.2, y: 4, z: 0.99998474}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1253,8 +1301,8 @@ Transform:
   m_GameObject: {fileID: 1991834507}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0.000000029802326}
-  m_LocalPosition: {x: 76.15002, y: -4.5, z: -105.54881}
-  m_LocalScale: {x: 0.2, y: 4, z: 15.195295}
+  m_LocalPosition: {x: 76.15002, y: -4.5, z: -103.49998}
+  m_LocalScale: {x: 0.2, y: 4, z: 0.99998474}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -9390,6 +9438,7 @@ GameObject:
   - component: {fileID: 5492846440733062993}
   - component: {fileID: 7325125532648122274}
   - component: {fileID: 3781040572807754665}
+  - component: {fileID: 7871775237320754194}
   m_Layer: 0
   m_Name: Cube (5)
   m_TagString: Untagged
@@ -9458,6 +9507,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8387408561818956250}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7871775237320754194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7706884329336450128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78ed9018c48504ca8f88f80818bb69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _neighborSceneName: Whitebox_Room_03
+  _ownerOnlyMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  _withNeighborMesh: {fileID: 4300000, guid: 83b92410fbf18fa4ea01ec0febb992ca, type: 2}
 --- !u!23 &7874445151948001767
 MeshRenderer:
   m_ObjectHideFlags: 0
