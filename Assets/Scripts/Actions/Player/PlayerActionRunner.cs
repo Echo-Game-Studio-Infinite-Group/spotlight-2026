@@ -105,7 +105,10 @@ namespace GameJam.Actions
             _inputTime = TimeManager.UnscaledTime;
             LastSimulatedSeconds = 0;
             if (!_alive) sample = new ActionInputSample(sample.Tick);
-            _player.Tick(sample, playerDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop);
+            ActionSequencePlayer player = _player;
+            player.Tick(sample, playerDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop);
+            // 移动回调可能触发布娃娃并断开接线，旧 tick 不能继续操作角色。
+            if (!_connected || _player != player) return;
             ActionExecutionState current = _player.State;
             if (current.Action != null && current.Action.CompleteOnLanding && _actionHasJumped &&
                 _motor.IsGrounded && current.Action.TryResolve(current.Action.LandingCompletionStart, out int earliestLanding) &&
@@ -228,7 +231,9 @@ namespace GameJam.Actions
         public void OnStateSampled(ActionExecutionState state) => _animation.Sample(state, 0f);
         public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames)
         {
+            ActionSequencePlayer player = _player;
             SimulateMovement(from.Segment.Control, frames);
+            if (!_connected || _player != player || player.State.InstanceId != to.InstanceId) return;
             _animation.Sample(to, (float)(frames / ActionSequencePlayer.FramesPerSecond));
             _combat.SampleSequenceHitbox(from, to, _motionPath);
             _motionPath.Clear();
@@ -243,7 +248,9 @@ namespace GameJam.Actions
         }
         public void OnIdleSimulation(double frames)
         {
+            ActionSequencePlayer player = _player;
             SimulateMovement(null, frames);
+            if (!_connected || _player != player) return;
             _animation.Sample(default, (float)(frames / ActionSequencePlayer.FramesPerSecond));
         }
         private void SimulateMovement(ActionControlPolicy control, double frames)
