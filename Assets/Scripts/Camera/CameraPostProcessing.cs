@@ -84,7 +84,8 @@ public sealed class CameraPostProcessing : MonoBehaviour
         RadialRedshiftFeature.SetSpeed(0f, 0f, 0f);
         // 跟随臂要还回基准距离，否则效果被关掉时会卡在贴脸状态。
         _distance = _baseDistance;
-        _follow.CameraDistance = _baseDistance;
+        // 场景卸载时跟随臂可能先被销毁，初始化失败时也必须能安全清理。
+        if (_follow != null) _follow.CameraDistance = _baseDistance;
         if (_chromatic != null) _chromatic.intensity.value = 0f;
         if (_motionBlur != null) _motionBlur.intensity.value = 0f;
     }
