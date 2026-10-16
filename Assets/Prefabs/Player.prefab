@@ -22914,6 +22914,7 @@ GameObject:
   - component: {fileID: 2805868951403254720}
   - component: {fileID: 7612907096352858083}
   - component: {fileID: 7296055474667861831}
+  - component: {fileID: 910010001}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -23728,3 +23729,25 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   _params: {fileID: 11400000, guid: a5c6ce7901388054faedd3621b28fdbf, type: 2}
   _movementParams: {fileID: 11400000, guid: 0a744fae14afc52429ffb97b42039bed, type: 2}
+--- !u!114 &910010001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d94f126e4b2647f0ae8b3b8662faa0ab, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _input: {fileID: 3277439423563062544}
+  _motor: {fileID: 90014127479559784}
+  _range: 3
+  _radius: 0.65
+  _highSpeedThreshold: 15
+  _highSpeedRange: 4.5
+  _highSpeedRadius: 1
+  _queryMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
