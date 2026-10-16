@@ -1,0 +1,93 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public sealed class AudioDebugOverlay : MonoBehaviour
+{
+    public bool Visible { get; set; } = true;
+
+    private GUIStyle _title;
+    private GUIStyle _label;
+
+    private void EnsureStyles()
+    {
+        if (_title != null) return;
+        _title = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(0.95f, 0.88f, 0.45f) }
+        };
+        _label = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 11,
+            normal = { textColor = Color.white }
+        };
+    }
+
+    private void OnGUI()
+    {
+        if (!Visible) return;
+        EnsureStyles();
+        GUILayout.BeginArea(new Rect(Screen.width - 350f, 12f, 338f, 520f), GUI.skin.box);
+        GUILayout.Label("Audio System · F3", _title);
+        GUILayout.Label("Continuous actions", _title);
+
+        int visible = 0;
+        WwiseActionDriver[] wwiseDrivers =
+            FindObjectsOfType<WwiseActionDriver>();
+        for (int i = 0; i < wwiseDrivers.Length; i++)
+        {
+            WwiseActionDriver driver = wwiseDrivers[i];
+            IReadOnlyList<WwiseActionDriver.DebugSnapshot> snapshots =
+                driver.DebugSnapshots;
+            for (int j = 0; j < snapshots.Count; j++)
+            {
+                DrawWwiseSnapshot(snapshots[j], ref visible);
+            }
+        }
+
+        if (visible == 0) GUILayout.Label("no active action voice", _label);
+
+        GUILayout.Space(6f);
+        GUILayout.Label("Keyboard: F3 via PlayerInputReader", _label);
+        GUILayout.EndArea();
+    }
+
+    private void DrawWwiseSnapshot(
+        WwiseActionDriver.DebugSnapshot snapshot,
+        ref int visible)
+    {
+        if (!snapshot.Active) return;
+        visible++;
+        GUILayout.Label(
+            $"[Wwise {snapshot.Name}] {snapshot.State}  " +
+            $"t={snapshot.Elapsed:0.00}  v={snapshot.NormalizedSpeed:0.00}",
+            _label);
+        DrawMeter(
+            "Gain",
+            snapshot.EnvelopeGain,
+            new Color(0.3f, 0.9f, 0.45f));
+    }
+
+    private void DrawMeter(string label, float value, Color color)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(label, _label, GUILayout.Width(92f));
+        Rect rect = GUILayoutUtility.GetRect(180f, 10f, GUILayout.ExpandWidth(false));
+        EditorGUIDrawMeter(rect, value, color);
+        GUILayout.Label(value.ToString("0.00"), _label, GUILayout.Width(36f));
+        GUILayout.EndHorizontal();
+    }
+
+    private static void EditorGUIDrawMeter(Rect rect, float value, Color color)
+    {
+        Color previous = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.65f);
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        GUI.color = color;
+        Rect fill = rect;
+        fill.width = Mathf.Clamp01(value) * rect.width;
+        GUI.DrawTexture(fill, Texture2D.whiteTexture);
+        GUI.color = previous;
+    }
+}

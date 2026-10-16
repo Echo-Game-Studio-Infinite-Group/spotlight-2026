@@ -8,12 +8,12 @@ public enum E_GameRate
     Running = 1,
 }
 
-// 三层时间：game（总闸）/ world / player
+// game 是暂停总闸；global、world、player 的效果取最小倍率，避免重复减速。
 // 每层一个速率，层内可以有多个"时间来源"（时停 / 时缓 / 顿帧），同层取最小值
 [DefaultExecutionOrder(-100)]
 public sealed class TimeManager : MonoBehaviour
 {
-    public enum TimeLayer { Game, World, Player }
+    public enum TimeLayer { Game, World, Player, Global }
 
     private static TimeManager _instance;
 
@@ -31,6 +31,7 @@ public sealed class TimeManager : MonoBehaviour
     // world / player 的速率来源（时停、时缓、顿帧往这里登记）
     private readonly List<Source> _worldSources = new List<Source>();
     private readonly List<Source> _playerSources = new List<Source>();
+    private readonly List<Source> _globalSources = new List<Source>();
 
     // 一个时间来源：压到多快 + 什么时候自动恢复（Until = 0 表示不自动恢复）+ 是谁登记的
     private struct Source
@@ -44,6 +45,10 @@ public sealed class TimeManager : MonoBehaviour
     private static readonly object SlowOwner = new object();
     private static readonly object HitStopOwner = new object();
     private static readonly object TimeStopOwner = new object();
+
+    // 除玩家顿帧外，还可能有实体为自己登记的顿帧来源（例如敌人冻自己的受击动画）。
+    // InHitStop 只认这张表，所以调用方必须真的登记过，不能用一次性对象冒充。
+    private readonly List<object> _hitStopOwners = new List<object> { HitStopOwner };
 
     private bool _paused;
 
@@ -74,6 +79,8 @@ public sealed class TimeManager : MonoBehaviour
                 return instance._worldSources;
             case TimeLayer.Player:
                 return instance._playerSources;
+            case TimeLayer.Global:
+                return instance._globalSources;
         }
         return null;
     }
@@ -84,6 +91,7 @@ public sealed class TimeManager : MonoBehaviour
         float min = 1f;
         foreach (Source source in sources)
         {
+            if (source.Until > 0f && Time.unscaledTime >= source.Until) continue;
             min = source.Rate < min ? source.Rate : min;
         }
         return min;
@@ -97,10 +105,11 @@ public sealed class TimeManager : MonoBehaviour
 
     // 对外只读入口 
     public static float GameRate => Resolve() != null ? (float)Resolve()._gameRate : 1f;
-    public static float WorldRate => Resolve() != null ? MinRate(Resolve()._worldSources) : 1f;
-    public static float PlayerRate => Resolve() != null ? MinRate(Resolve()._playerSources) : 1f;
+    public static float GlobalRate => Resolve() != null ? MinRate(Resolve()._globalSources) : 1f;
+    public static float WorldRate => Resolve() != null ? Mathf.Min(GlobalRate, MinRate(Resolve()._worldSources)) : 1f;
+    public static float PlayerRate => Resolve() != null ? Mathf.Min(GlobalRate, MinRate(Resolve()._playerSources)) : 1f;
 
-    public static float GameDeltaTime => Time.unscaledDeltaTime * GameRate;
+    public static float GameDeltaTime => Time.unscaledDeltaTime * GlobalRate * GameRate;
     public static float WorldDeltaTime => Time.unscaledDeltaTime * WorldRate * GameRate;
     public static float PlayerDeltaTime => Time.unscaledDeltaTime * PlayerRate * GameRate;
 
@@ -119,6 +128,20 @@ public sealed class TimeManager : MonoBehaviour
 
     // 表现层用：任一层被压慢就是"减速中"，倍率取最慢的那层
     public static bool InSlowMotion => Mathf.Min(WorldRate, PlayerRate) < 1f;
+    public static bool InHitStop
+    {
+        get
+        {
+            TimeManager instance = Resolve();
+            if (instance == null) return false;
+            foreach (object owner in instance._hitStopOwners)
+            {
+                foreach (Source source in instance._playerSources)
+                    if (ReferenceEquals(source.Owner, owner) && (source.Until == 0f || Time.unscaledTime < source.Until)) return true;
+            }
+            return false;
+        }
+    }
     public static float SlowRate => Mathf.Min(WorldRate, PlayerRate);
 
     // 暂停：game 层速率归 0，并写进 Time.timeScale 让物理/粒子/动画一起停。
@@ -150,38 +173,53 @@ public sealed class TimeManager : MonoBehaviour
         SourcesOf(layer)?.RemoveAll(source => source.Owner == owner);
     }
 
-    // 顿帧 / 命中减速：命中那一刻短促一压，world 和 player 一起压，到点自动恢复
-    public static void HitStop(float seconds = -1f, float rate = -1f)
+    // 顿帧 / 命中减速：命中那一刻短促一压，world 和 player 一起压，到点自动恢复。
+    // owner 留空＝玩家侧那套默认顿帧；实体要为自己登记顿帧就传自己的来源标识，
+    // 这样它与玩家顿帧互不覆盖（各按各的时长恢复），InHitStop 也认得出是谁发起的。
+    public static void HitStop(float seconds = -1f, float rate = -1f, object owner = null)
     {
         TimeManager instance = Resolve();
         if (instance == null) return;
 
         if (seconds < 0f) seconds = instance.HitStopSeconds;
         if (rate < 0f) rate = instance.HitStopRateValue;
+        if (owner == null) owner = HitStopOwner;
+        else instance.RegisterHitStopOwner(owner);
 
-        Apply(TimeLayer.World, rate, seconds, HitStopOwner);
-        Apply(TimeLayer.Player, rate, seconds, HitStopOwner);
+        Apply(TimeLayer.World, rate, seconds, owner);
+        Apply(TimeLayer.Player, rate, seconds, owner);
+    }
+
+    // 登记一个顿帧来源标识，让它进得住 InHitStop 的判定表
+    private void RegisterHitStopOwner(object owner)
+    {
+        if (!_hitStopOwners.Contains(owner)) _hitStopOwners.Add(owner);
     }
 
     // 把时缓和顿帧的来源都清掉（自检脚本复位用）
+    // 实体自己登记的顿帧来源也要一起清，否则自检/测试之间会互相残留。
     public static void ClearSlowMotion()
     {
         Release(TimeLayer.World, SlowOwner);
         Release(TimeLayer.Player, SlowOwner);
-        Release(TimeLayer.World, HitStopOwner);
-        Release(TimeLayer.Player, HitStopOwner);
+        TimeManager instance = Resolve();
+        if (instance == null) return;
+        foreach (object owner in instance._hitStopOwners)
+        {
+            Release(TimeLayer.World, owner);
+            Release(TimeLayer.Player, owner);
+        }
     }
 
-    // 时停：只冻 world，玩家照常动。按住调 true，松开调 false，没有秒数
-    public static void SetTimeStop(bool on)
+    // 保持真实时间的 60Hz 固定采样，只缩放逻辑推进量，避免减速后漏采输入。
+    // 按住型全局减速由调用方持有来源；重复登记只更新自身，不累积或覆盖顿帧。
+    public static void SetTimeStop(bool on, float rate = 0.2f, object owner = null)
     {
+        object sourceOwner = owner ?? TimeStopOwner;
+        Release(TimeLayer.Global, sourceOwner);
         if (on)
         {
-            Apply(TimeLayer.World, 0f, 0f, TimeStopOwner);
-        }
-        else
-        {
-            Release(TimeLayer.World, TimeStopOwner);
+            Apply(TimeLayer.Global, rate, 0f, sourceOwner);
         }
     }
 
@@ -230,10 +268,11 @@ public sealed class TimeManager : MonoBehaviour
         float now = Time.unscaledTime;
         _worldSources.RemoveAll(source => source.Until > 0f && now >= source.Until);
         _playerSources.RemoveAll(source => source.Until > 0f && now >= source.Until);
+        _globalSources.RemoveAll(source => source.Until > 0f && now >= source.Until);
 
         if (_paused) return;   // 暂停时时间轴不推进
 
-        _gameTime += Time.unscaledDeltaTime * GameRate;
+        _gameTime += GameDeltaTime;
         _worldTime += Time.unscaledDeltaTime * WorldRate;
         _playerTime += Time.unscaledDeltaTime * PlayerRate;
     }

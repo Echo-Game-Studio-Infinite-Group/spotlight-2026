@@ -27,8 +27,8 @@ public sealed class DebugHUD : MonoBehaviour
     {
         if (!_visible || _motor.Params == null) return;
         if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-        GUI.Box(new Rect(8f, 8f, 370f, 250f), GUIContent.none);
-        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 230f));
+        GUI.Box(new Rect(8f, 8f, 370f, 300f), GUIContent.none);
+        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 280f));
         GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
@@ -38,16 +38,21 @@ public sealed class DebugHUD : MonoBehaviour
             ? $"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}"
             : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
-        GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
-        GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击 · Esc 鼠标锁定 · F3 面板", _style);
+        GUILayout.Label("W 直接奔跑 · Shift 普通冲刺 · Ctrl 滑铲", _style);
+        GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击", _style);
+        GUILayout.Label("右键+Space 高跳 · Shift+右键 能量冲刺", _style);
+        GUILayout.Label("长按右键 时缓 · Esc 鼠标锁定 · F3 面板", _style);
         GUILayout.EndArea();
     }
 
     // 战斗数值单独一段：血量与减速是「打击感是否生效」最直接的两个观察点
     private void DrawCombatLines()
     {
-        PlayerData health = GameManager.Instance.Player;
-        GUILayout.Label($"玩家血量 {health.Health:F0} / {health.MaxHealth:F0}", _style);
+        // 玩家血量走场景级注册点；读不到时明确写出来，避免把"没接上"误看成"血量是 0"
+        HealthComponent playerHealth = Player.Current != null ? Player.Current.Health : null;
+        GUILayout.Label(playerHealth != null
+            ? $"玩家血量 {playerHealth.Health:F0} / {playerHealth.MaxHealth:F0}"
+            : "玩家血量 未接入 HealthComponent", _style);
 
         Enemy enemy = null;
         float nearest = float.PositiveInfinity;
@@ -67,8 +72,10 @@ public sealed class DebugHUD : MonoBehaviour
             GUILayout.Label($"敌人 {enemy.name} 血量 {enemy.Health:F0} / {enemy.MaxHealth:F0}", _style);
         }
 
-        GUILayout.Label(TimeManager.InSlowMotion
-            ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
-            : $"常速 {TimeManager.PlayerRate:0.##}", _style);
+        GUILayout.Label(TimeManager.GlobalRate < 1f
+            ? $"全局减速 {TimeManager.GlobalRate:0.##}x · 玩家 {TimeManager.PlayerRate:0.##}x · 世界 {TimeManager.WorldRate:0.##}x"
+            : TimeManager.InSlowMotion
+                ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
+                : $"常速 {TimeManager.PlayerRate:0.##}", _style);
     }
 }

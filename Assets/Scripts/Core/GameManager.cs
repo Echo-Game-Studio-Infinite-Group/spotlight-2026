@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,53 +9,9 @@ public enum GameState
     End
 }
 
-[Serializable]
-public class PlayerData
-{
-    public PlayerMotor Target;
-
-    public float MaxHealth = 100f;
-    public float Health;
-    [SerializeField, Min(0f)] private float _invulnerableTime = 0.6f;
-    [NonSerialized] private float _invulnerableUntil = float.NegativeInfinity;
-
-    public bool IsAlive => Health > 0f;
-    public bool IsInvulnerable => TimeManager.UnscaledTime < _invulnerableUntil;
-    public float InvulnerableTime => _invulnerableTime;
-
-    public void SetInvulnerableTime(float seconds)
-    {
-        _invulnerableTime = Mathf.Max(0f, seconds);
-    }
-
-    public float Speed
-    {
-        get { return Target != null ? Target.HorizontalSpeed : 0f; }
-    }
-
-    public void Reset()
-    {
-        Health = MaxHealth;
-        _invulnerableUntil = float.NegativeInfinity;
-    }
-
-    public float TakeDamage(float amount)
-    {
-        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
-
-        float applied = Mathf.Min(amount, Health);
-        Health -= applied;
-        // 所有玩家受击入口共享无敌帧，避免同一帧被多个碰撞体重复扣血。
-        _invulnerableUntil = TimeManager.UnscaledTime + _invulnerableTime;
-        return applied;
-    }
-
-    public void Heal(float amount)
-    {
-        Health = Mathf.Min(MaxHealth, Health + amount);
-    }
-}
-
+// 局内流程：只负责开始/暂停/恢复/结束与重载场景，不持有任何场景对象。
+// 玩家的状态（血量等）归场景里的 Player 与 HealthComponent，
+// 这里只保留「跨场景仍然成立」的东西，避免 DontDestroyOnLoad 对象握着已销毁的场景引用。
 public class GameManager : MonoBehaviour
 {
     private static GameManager _instance = null;
@@ -77,8 +32,6 @@ public class GameManager : MonoBehaviour
     public GameState State { get; private set; } = GameState.Start;
     public bool InputAllowed = true;
 
-    public PlayerData Player = new PlayerData();
-
     private void Awake()
     {
         if (_instance && _instance != this)
@@ -89,33 +42,17 @@ public class GameManager : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        Player.Reset();
-        FindPlayer();
-        SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
     private void OnDestroy()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (_instance == this) _instance = null;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        FindPlayer();
-    }
-
-    private void FindPlayer()
-    {
-        GameObject player = GameObject.FindWithTag("Player");
-        // 模型子节点也可能带 Player 标签，沿父级找到唯一运动组件。
-        Player.Target = player != null ? player.GetComponentInParent<PlayerMotor>() : null;
     }
 
     public void StartGame()
     {
-        FindPlayer();
-        Player.Reset();
+        Player player = Player.Current;
+        if (player != null) player.ResetForNewRun();
         InputAllowed = true;
         State = GameState.Playing;
     }
@@ -144,8 +81,6 @@ public class GameManager : MonoBehaviour
 
     public void RestartLevel()
     {
-        Player.Reset();
-
         Scene active = SceneManager.GetActiveScene();
 
         if (active.buildIndex < 0)
@@ -154,6 +89,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        // 玩家随场景重建，血量由新的 HealthComponent 从满开始，这里不再手动 Reset。
         SceneManager.LoadScene(active.buildIndex);
     }
 }

@@ -155,8 +155,9 @@ public sealed class GibPreviewWindow : EditorWindow
                 _animator.Update(0f);
             }
             if (_pose != null && _animator != null) _pose.SampleAnimation(_animator.gameObject, _poseTime);
-            var renderers = clone.GetComponentsInChildren<SkinnedMeshRenderer>();
-            if (renderers.Length == 0) throw new System.InvalidOperationException("该对象没有 SkinnedMeshRenderer。");
+            string error = _copy.GetSetupError();
+            if (error != null) throw new System.InvalidOperationException(error);
+            var renderers = _copy.GetModelRenderers();
             Bounds bounds = renderers[0].bounds;
             foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
             _floor = bounds.min.y;
@@ -164,7 +165,8 @@ public sealed class GibPreviewWindow : EditorWindow
             if (_distance <= 0f) _distance = Mathf.Max(1f, bounds.size.magnitude * 2.2f);
             if (!_copy.BeginPreview(Quaternion.Euler(0f, _hitAngle, 0f) * Vector3.forward))
                 throw new System.InvalidOperationException("无法生成 Gib，请检查 Cutout Shader 和模型渲染器。");
-            if (_animator != null && _animator.runtimeAnimatorController != null)
+            if (_animator != null && _animator.runtimeAnimatorController != null
+                && System.Array.Exists(_animator.parameters, p => p.name == "Dead" && p.type == AnimatorControllerParameterType.Bool))
                 _animator.SetBool("Dead", true);
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.hideFlags = HideFlags.HideAndDontSave;

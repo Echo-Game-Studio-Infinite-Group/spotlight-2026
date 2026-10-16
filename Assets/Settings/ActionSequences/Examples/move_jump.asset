@@ -24,11 +24,15 @@ MonoBehaviour:
     Control:
       AllowMove: 1
       AllowTurn: 1
+      AllowJump: 1
+      AllowSlide: 1
+      AllowSprint: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
     Animation:
       AnimatorState: 
+      Layer: 0
       Clip: {fileID: 0}
       NormalizedStart: 0
       NormalizedEnd: 1
@@ -41,11 +45,15 @@ MonoBehaviour:
     Control:
       AllowMove: 1
       AllowTurn: 1
+      AllowJump: 1
+      AllowSlide: 1
+      AllowSprint: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
     Animation:
       AnimatorState: 
+      Layer: 0
       Clip: {fileID: 0}
       NormalizedStart: 0
       NormalizedEnd: 1
@@ -55,18 +63,23 @@ MonoBehaviour:
     Phase: 1
     DurationFrames: 6
     Events:
-    - Frame: 0
+    - MotorCommand: 0
+      Frame: 0
       EventKey: action.active
       HitGroup: 1
       Value: 0
     Control:
       AllowMove: 1
       AllowTurn: 1
+      AllowJump: 1
+      AllowSlide: 1
+      AllowSprint: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
     Animation:
       AnimatorState: 
+      Layer: 0
       Clip: {fileID: 0}
       NormalizedStart: 0
       NormalizedEnd: 1
@@ -76,18 +89,23 @@ MonoBehaviour:
     Phase: 2
     DurationFrames: 14
     Events:
-    - Frame: 0
+    - MotorCommand: 0
+      Frame: 0
       EventKey: action.recovery
       HitGroup: 0
       Value: 0
     Control:
       AllowMove: 1
       AllowTurn: 1
+      AllowJump: 1
+      AllowSlide: 1
+      AllowSprint: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
     Animation:
       AnimatorState: 
+      Layer: 0
       Clip: {fileID: 0}
       NormalizedStart: 0
       NormalizedEnd: 1
@@ -115,3 +133,54 @@ MonoBehaviour:
   - non_stationary_jump
   EnergyCost: 0
   CooldownFrames: 0
+  CooldownGroup: 
+  RequestVariants: []
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
+  Combat:
+    Enabled: 0
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

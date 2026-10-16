@@ -23,9 +23,9 @@ public sealed class EnemyAnimationTests
     }
 
     [UnityTest]
-    public IEnumerator BothScenes_BakedEnemiesActuallyChase()
+    public IEnumerator BakedEnemiesActuallyChase()
     {
-        foreach (string scene in new[] { "AnimTestScene", "TestScene" })
+        foreach (string scene in new[] { "TestScene" })
         {
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode($"Assets/Scenes/{scene}.unity",
                 new LoadSceneParameters(LoadSceneMode.Single));
@@ -143,12 +143,15 @@ public sealed class EnemyAnimationTests
     [UnityTest]
     public IEnumerator Scene_Locomotion_Thresholds_Chase_Hitbox_Death()
     {
-        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/AnimTestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
-        var enemy = Object.FindObjectOfType<Enemy>();
+        yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/TestScene.unity", new LoadSceneParameters(LoadSceneMode.Single));
+        var enemy = PlayModeSceneSupport.CreateHumanoidEnemyFixture();
+        Assert.NotNull(enemy, "必须建立 Humanoid 动画测试靶子");
         var player = Object.FindObjectOfType<PlayerMotor>();
+        var playerHealth = player.GetComponent<HealthComponent>();
         var animator = enemy.GetComponentInChildren<Animator>();
         var hitbox = enemy.GetComponentInChildren<Hitbox>();
         Assert.NotNull(player);
+        Assert.NotNull(playerHealth, "玩家必须有 HealthComponent");
         Assert.IsTrue(animator.isHuman, "Enemy avatar");
         GameManager.Instance.StartGame();
         player.enabled = false;
@@ -157,8 +160,9 @@ public sealed class EnemyAnimationTests
         yield return new WaitForSeconds(.6f);
         enemy.enabled = false;
         enemy.SetInvulnerableTime(0);
-        Assert.AreEqual(2, enemy.WalkSpeed);
-        Assert.AreEqual(5, enemy.RunSpeed);
+        // 不再断言具体数值：那是场景配置，换了场景就该跟着变。
+        // 这里只锁住「跑得比走得快」这条不变量，阈值断言的数值由场景自己提供。
+        Assert.Greater(enemy.RunSpeed, enemy.WalkSpeed);
         Assert.IsFalse(hitbox.GetComponent<Collider>().enabled);
         var speed = typeof(Enemy).GetField("<Speed>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
         foreach (var test in new[]{(0f,"Idle"),(2f,"Walk"),(5f,"RunFast")})
@@ -168,12 +172,17 @@ public sealed class EnemyAnimationTests
             Assert.AreEqual(test.Item1, animator.GetFloat("Speed"), .05f);
             Assert.IsTrue(animator.GetCurrentAnimatorClipInfo(0).Any(c=>c.clip.name==test.Item2 && c.weight>.95f), test.Item2);
         }
-        enemy.TakeDamage(70, enemy.transform.position, Vector3.zero);
+        // 受伤阈值是按比例的（HealthRatio < 0.3），伤害值不能写死——换场景尺寸就对不上了。
+        // 打到恰好落在阈值上：这一格算健康，再掉 1 点才转受伤。
+        float healthy = enemy.MaxHealth * 0.3f;
+        enemy.enabled = true;
+        enemy.TakeDamage(enemy.MaxHealth - healthy, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(.6f);
-        Assert.AreEqual(30, animator.GetFloat("Hp"));
-        Assert.AreEqual(0f, animator.GetFloat("Injured"), "30% is healthy");
+        Assert.AreEqual(healthy, animator.GetFloat("Hp"), .05f);
+        Assert.AreEqual(0f, animator.GetFloat("Injured"), "恰好落在阈值上算健康");
         enemy.TakeDamage(1, enemy.transform.position, Vector3.zero);
         yield return new WaitForSeconds(1.3f);
+        enemy.enabled = false;
         foreach (var test in new[]{(0f,"IdleInjured"),(2f,"WalkInjured"),(5f,"RunInjured")})
         {
             speed.SetValue(enemy, test.Item1);
@@ -181,6 +190,7 @@ public sealed class EnemyAnimationTests
             Assert.AreEqual(1f, animator.GetFloat("Injured"));
             Assert.IsTrue(animator.GetCurrentAnimatorClipInfo(0).Any(c=>c.clip.name==test.Item2 && c.weight>.95f), test.Item2);
         }
+        enemy.enabled = true;
         enemy.SetMaxHealth(200);
         enemy.TakeDamage(140, enemy.transform.position, Vector3.zero);
         Assert.IsFalse(enemy.IsInjured);
@@ -204,8 +214,8 @@ public sealed class EnemyAnimationTests
         float deadline=Time.realtimeSinceStartup+5;
         while(!enemy.IsAttacking && Time.realtimeSinceStartup<deadline)
         {
-            ran |= Mathf.Abs(enemy.Speed-5)<.05f;
-            walked |= Mathf.Abs(enemy.Speed-2)<.05f;
+            ran |= Mathf.Abs(enemy.Speed - enemy.RunSpeed)<.05f;
+            walked |= Mathf.Abs(enemy.Speed - enemy.WalkSpeed)<.05f;
             yield return new WaitForFixedUpdate();
         }
         Assert.IsTrue(ran,"far chase runs");
@@ -213,10 +223,10 @@ public sealed class EnemyAnimationTests
         Assert.IsTrue(enemy.IsAttacking, $"arrived in attack range: enemy={enemy.transform.position}, player={player.transform.position}, "
             + $"remaining={agent.remainingDistance}, stop={agent.stoppingDistance}, velocity={agent.velocity}, "
             + $"path={agent.pathStatus}, speed={enemy.Speed}, canAttack={enemy.GetComponentInChildren<EnemyAnimation>().CanAttack}");
-        Assert.AreEqual(100, GameManager.Instance.Player.Health,"proximity must not cause damage");
+        Assert.AreEqual(100, playerHealth.Health,"proximity must not cause damage");
         enemy.SetChasePlayer(false);
         yield return new WaitForSeconds(1.9f);
-        Assert.AreEqual(92, GameManager.Instance.Player.Health,"animation hitbox hits once");
+        Assert.AreEqual(92, playerHealth.Health,"animation hitbox hits once");
         Assert.IsFalse(enemy.IsAttacking,"attack finishes");
         Assert.IsFalse(hitbox.GetComponent<Collider>().enabled,"attack window closes");
 
@@ -248,10 +258,10 @@ public sealed class EnemyAnimationTests
         Assert.IsTrue(agent.isStopped, "死亡立即停止导航");
         Assert.IsTrue(gib.IsSliced, "导航敌人的致命伤正常触发断肢");
         Assert.IsFalse(agent.hasPath, "死亡清除旧路径");
-        float hp=GameManager.Instance.Player.Health;
+        float hp=playerHealth.Health;
         Vector3 position=enemy.transform.position;
         yield return new WaitForSeconds(5);
-        Assert.AreEqual(hp,GameManager.Instance.Player.Health,"dead enemy cannot damage");
+        Assert.AreEqual(hp,playerHealth.Health,"dead enemy cannot damage");
         Assert.AreEqual(position,enemy.transform.position,"dead enemy cannot chase");
         Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(0).loop);
         Assert.GreaterOrEqual(animator.GetCurrentAnimatorStateInfo(0).normalizedTime,1);

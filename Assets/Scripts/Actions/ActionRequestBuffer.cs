@@ -27,6 +27,9 @@ namespace GameJam.Actions
                 if (old.TriggerId == request.TriggerId) return false;
                 if (!string.IsNullOrEmpty(policy.BufferGroup) && old.Target.Input.BufferGroup == policy.BufferGroup)
                 {
+                    // 同一设备采样中的组合输入按语义优先级仲裁，不能由回调先后决定多放一招。
+                    if (policy.ReplacePolicy == ActionInputPolicy.Replacement.LatestInGroup &&
+                        old.CreatedTick == request.CreatedTick && old.Target.Input.Priority > policy.Priority) return false;
                     if (policy.ReplacePolicy == ActionInputPolicy.Replacement.EarliestInGroup) return false;
                     if (policy.ReplacePolicy == ActionInputPolicy.Replacement.LatestInGroup) _entries.RemoveAt(i);
                 }

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{CF32416A-F7E9-46EE-9FEA-D27F9D8A3915}" SchemaVersion="123">
+	<SoundBanks>
+		<WorkUnit Name="Default Work Unit" ID="{CF32416A-F7E9-46EE-9FEA-D27F9D8A3915}" PersistMode="Standalone">
+			<ChildrenList>
+				<SoundBank Name="DynamicAction" ID="{B49D2BF1-5842-4E65-B843-D36DD4DEF6BE}">
+					<ObjectInclusionList>
+						<ObjectRef Name="Play_SlideSinePlugin" ID="{C61B2BB5-4D3F-4B92-964E-A24B1BF770A4}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+				<SoundBank Name="OneTimeAction" ID="{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}">
+					<ObjectInclusionList>
+						<ObjectRef Name="Land_Normal" ID="{624F0B3F-D241-402C-B30E-898433EA07C9}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Jump_Normal" ID="{304CC152-DB75-4FE2-8385-3C1513AC44D9}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+			</ChildrenList>
+		</WorkUnit>
+	</SoundBanks>
+</WwiseDocument>

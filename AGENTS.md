@@ -111,3 +111,4 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 - 不升级 Unity 版本、不碰 Unity ProjectSettings（`ProjectVersion.txt`、Package 版本、渲染管线相关设置除外——管线切换是已批准的决策）
 - 不删除 `.gitignore` 覆盖的内容（Library/ 等是本地产物）
 - Git 提交不含 Unity 的 Library/Temp/Logs 目录与大二进制
+- Awake里面不要再判断Compoenent是否为null，就加载一次的东西

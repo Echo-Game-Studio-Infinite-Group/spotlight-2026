@@ -1,0 +1,49 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "154",
+  "SoundBanks": [
+   {
+    "Id": "1385318098",
+    "Type": "User",
+    "GUID": "{B49D2BF1-5842-4E65-B843-D36DD4DEF6BE}",
+    "Language": "SFX",
+    "Hash": "{5AF9DD43-513E-E988-9612-8A17F493AF5C}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\DynamicAction",
+    "ShortName": "DynamicAction",
+    "Path": "DynamicAction.bnk",
+    "Plugins": {
+     "Custom": [
+      {
+       "Id": "99229470",
+       "Name": "SpotlightActionSource",
+       "ObjectPath": "\\Actor-Mixer Hierarchy\\Default Work Unit\\DynamicAction\\SlideSinePlugin\\SpotlightActionSource",
+       "GUID": "{9F4F67C6-C230-48DF-B3B1-512D81065551}",
+       "LibName": "Wwise Spotlight Action Source",
+       "LibId": "278003714"
+      }
+     ]
+    },
+    "Events": [
+     {
+      "Id": "3933638459",
+      "Name": "Play_SlideSinePlugin",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_SlideSinePlugin",
+      "GUID": "{C61B2BB5-4D3F-4B92-964E-A24B1BF770A4}",
+      "DurationType": "Unknown",
+      "PluginRefs": {
+       "Custom": [
+        {
+         "Id": "99229470"
+        }
+       ]
+      }
+     }
+    ]
+   }
+  ],
+  "FileHash": "{9F0A5249-F7BC-9EEA-5148-8EC3C9D0D689}"
+ }
+}

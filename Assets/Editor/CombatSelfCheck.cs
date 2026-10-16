@@ -100,7 +100,7 @@ public static class CombatSelfCheck
             Debug.Log($"[CombatSelfCheck] 敌人血量 {healthBefore} → {healthAfter}（单次命中预期 {expected}）");
             Debug.Log($"[CombatSelfCheck] 受伤={damaged} 减速={slowed} 倍率={slowRate:0.##}"
                 + $"（冲击 {combat.ImpactTimeScale:0.##} / 尾巴 {combat.HitTimeScale:0.##}）"
-                + $" 震屏通道已接={Camera.main != null && Camera.main.GetComponent<CameraShaker>() != null}");
+                + $" 震屏通道已接={Object.FindObjectOfType<CameraShaker>() != null}");
 
             bool passed = started && damaged && slowed;
 
@@ -167,16 +167,16 @@ public static class CombatSelfCheck
             Debug.Log($"[CombatSelfCheck] 敌人世界位置={enemy.transform.position}");
         }
 
-        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
+        HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         Debug.Log($"[CombatSelfCheck] 玩家血量={(health != null ? health.Health : -1)}/"
-            + $"{(health != null ? health.MaxHealth : -1)} 玩家数据={(health != null)}");
+            + $"{(health != null ? health.MaxHealth : -1)} 玩家血量组件={(health != null)}");
         Debug.Log($"[CombatSelfCheck] 减速中={TimeManager.InSlowMotion} 倍率={TimeManager.SlowRate} "
             + $"玩家速率={TimeManager.PlayerRate} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
 
         // 无敌帧实测：玩家与敌人两侧都做「前后对比」。
         // 只打印配置时长证明不了它真的在挡伤害，所以连续打两次看数值（期望 首次>0 / 第二次=0）。
         // 直接调 TakeDamage 而不是等敌人来打，是为了不受攻击冷却与 AI 状态影响，结果可复现。
-        PlayerData playerHealth = Object.FindObjectOfType<GameManager>()?.Player;
+        HealthComponent playerHealth = Player.Current != null ? Player.Current.Health : null;
         Enemy enemyUnderTest = Object.FindObjectOfType<Enemy>();
 
         if (enemyUnderTest != null)
@@ -210,7 +210,7 @@ public static class CombatSelfCheck
         }
         else
         {
-            Debug.LogWarning("[CombatSelfCheck] 场景里没有 GameManager.Player，跳过玩家侧无敌帧实测");
+            Debug.LogWarning("[CombatSelfCheck] 场景里没有 Player / HealthComponent，跳过玩家侧无敌帧实测");
         }
 
         Debug.Log($"[CombatSelfCheck] 无敌帧配置: 玩家={(playerHealth != null ? playerHealth.InvulnerableTime : -1)}s "
@@ -276,7 +276,7 @@ public static class CombatSelfCheck
     private static string DescribeWorld()
     {
         Enemy enemy = Object.FindObjectOfType<Enemy>();
-        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
+        HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         return $"敌人血量={(enemy != null ? enemy.Health : -1)} "
             + $"敌人位置={(enemy != null ? enemy.transform.position.ToString() : "无")} "
             + $"玩家血量={(health != null ? health.Health : -1)} "
@@ -294,7 +294,7 @@ public static class CombatSelfCheck
         }
 
         Enemy enemy = Object.FindObjectOfType<Enemy>();
-        PlayerData health = Object.FindObjectOfType<GameManager>()?.Player;
+        HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         Debug.Log($"[CombatSelfCheck] 实机复查: 敌人血量={(enemy != null ? enemy.Health : -1)}"
             + $"/{(enemy != null ? enemy.MaxHealth : -1)} 已受击次数={(enemy != null ? enemy.DamagedCount : -1)} "
             + $"玩家血量={(health != null ? health.Health : -1)} "
@@ -586,20 +586,25 @@ public static class CombatSelfCheck
 
         GameObject clockHost = new GameObject("SelfCheckTimeManager");
         GameObject enemyHost = new GameObject("SelfCheckEnemy");
+        GameObject playerHost = new GameObject("SelfCheckPlayerHealth");
         // 先禁用再装配：Enemy.Awake 里会 GetComponent<CharacterController>()，
         // 若在组件没加全时就激活，Awake 立刻跑并拿到 null（实测抛 NullReferenceException）。
         enemyHost.SetActive(false);
+        playerHost.SetActive(false);
         try
         {
             clockHost.AddComponent<TimeManager>();
 
             enemyHost.AddComponent<CharacterController>();
+            enemyHost.AddComponent<HealthComponent>();
             Enemy enemy = enemyHost.AddComponent<Enemy>();
             enemy.ConfigureStats(120f, 8f, 4f);
             enemyHost.SetActive(true);
             enemy.ResetHealth();
 
-            PlayerData health = new PlayerData();
+            // 血量归 HealthComponent 后，玩家侧自检也造一个宿主对象来挂它。
+            HealthComponent health = playerHost.AddComponent<HealthComponent>();
+            playerHost.SetActive(true);
             health.Reset();
 
             // ===== 敌人侧 =====
@@ -634,6 +639,7 @@ public static class CombatSelfCheck
         finally
         {
             Object.DestroyImmediate(enemyHost);
+            Object.DestroyImmediate(playerHost);
             Object.DestroyImmediate(clockHost);
         }
     }

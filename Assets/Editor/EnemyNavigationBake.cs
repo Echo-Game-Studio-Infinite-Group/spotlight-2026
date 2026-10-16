@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 
 public static class EnemyNavigationBake
 {
-    [MenuItem("超高速行者/导航/烘焙两个测试场景")]
+    [MenuItem("超高速行者/导航/烘焙测试场景")]
     public static void BakeBoth()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -24,7 +24,6 @@ public static class EnemyNavigationBake
         var setup = EditorSceneManager.GetSceneManagerSetup();
         try
         {
-            Bake("Assets/Scenes/AnimTestScene.unity");
             Bake("Assets/Scenes/TestScene.unity");
         }
         finally { EditorSceneManager.RestoreSceneManagerSetup(setup); }

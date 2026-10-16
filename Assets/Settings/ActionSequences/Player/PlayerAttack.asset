@@ -1,0 +1,248 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: PlayerAttack
+  m_EditorClassIdentifier: 
+  ActionId: player_attack
+  DisplayName: "\u73A9\u5BB6\u5F53\u524D\u653B\u51FB"
+  Description: "\u8FC1\u79FB\u73B0\u6709 Attack \u7D20\u6750\u548C\u4F24\u5BB3\uFF1B\u652F\u6301\u5E38\u6001\u666E\u653B\u7684\u79FB\u52A8\u8DF3\u8DC3\u6536\u62DB\u53D6\u6D88\u3002\u9AD8\u901F\u653B\u51FB\u5DEE\u5206\u53CA\u901F\u5EA6\u4F24\u5BB3\u7531\u540E\u7EED\u52A8\u4F5C\u8868\u6269\u5145\u3002"
+  Timeline:
+  - SegmentId: startup_a
+    DisplayName: "\u8D77\u52BF"
+    Phase: 0
+    DurationFrames: 33
+    Events: []
+    Control:
+      AllowMove: 0
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0
+      NormalizedEnd: 0.33333334
+      BlendFrames: 5
+  - SegmentId: startup_b
+    DisplayName: "\u5F15\u5200"
+    Phase: 0
+    DurationFrames: 6
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: vfx.attack
+      HitGroup: 0
+      Value: 1
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.33333334
+      NormalizedEnd: 0.3939394
+      BlendFrames: 5
+  - SegmentId: active
+    DisplayName: "\u6325\u780D\u547D\u4E2D"
+    Phase: 1
+    DurationFrames: 30
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: combat.hitbox.open
+      HitGroup: 1
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.3939394
+      NormalizedEnd: 0.6969697
+      BlendFrames: 5
+  - SegmentId: recovery
+    DisplayName: "\u6536\u62DB"
+    Phase: 2
+    DurationFrames: 30
+    Events:
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: combat.hitbox.close
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerAttack
+      Layer: 0
+      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      NormalizedStart: 0.6969697
+      NormalizedEnd: 1
+      BlendFrames: 5
+  CancelWindows:
+  - WindowId: ac64d5182b4340a4af8907183d2c5b3e
+    DisplayName: "\u6536\u62DB\u63A5\u79FB\u52A8\u8DF3\u8DC3"
+    Start:
+      SegmentId: recovery
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 26b5f44d095014b46a9b5782c2890ace, type: 2}
+    - {fileID: 11400000, guid: 3f64d60bf1c896d43af60063379a9c15, type: 2}
+    - {fileID: 11400000, guid: ac0e4003a88ca0147b3821560f899641, type: 2}
+    RequireAll:
+    - non_stationary_jump
+    - speed_low
+    RequireAny: []
+    Priority: 0
+    IgnoreCooldown: 0
+  Input:
+    Steps:
+    - Button: 1
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 2
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    AlternativeTriggers: []
+    MaxStepGapFrames: 0
+    PreInputFrames: 8
+    BufferGroup: main
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 0
+    RequireAll: []
+    RequireAny: []
+  StartConditions:
+  - speed_low
+  EnergyCost: 0
+  EnergyCostSource: 0
+  EnergyParameters: {fileID: 0}
+  TimeEffect:
+    UsesVectorConverter: 0
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 0
+  LandingCompletionStart:
+    SegmentId: 
+    RelativeTo: 0
+    OffsetFrames: 0
+  CooldownFrames: 21
+  CooldownGroup: player_basic_attack
+  RequestVariants:
+  - {fileID: 11400000, guid: 044d0c829662f594490b299bde1fc2db, type: 2}
+  - {fileID: 11400000, guid: 530332b0c25b4fa4d962f37ea2d007c2, type: 2}
+  - {fileID: 11400000}
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
+  Combat:
+    Enabled: 1
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

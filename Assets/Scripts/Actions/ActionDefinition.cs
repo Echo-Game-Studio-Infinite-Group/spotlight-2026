@@ -14,9 +14,34 @@ namespace GameJam.Actions
         public ActionInputPolicy Input = new ActionInputPolicy();
         public List<string> StartConditions = new List<string>();
         [Min(0f)] public float EnergyCost;
+        public ActionEnergyCostSource EnergyCostSource;
+        public EnergyParams EnergyParameters;
+        public ActionTimeEffectSettings TimeEffect = new ActionTimeEffectSettings();
+        public ActionAirborneAnimationSettings AirborneAnimation = new ActionAirborneAnimationSettings();
+        // 落地收招与取消窗口使用同一子段锚点，调整硬直段时不需要同步修改另一份帧数。
+        public bool CompleteOnLanding;
+        public ActionFrameAnchor LandingCompletionStart = new ActionFrameAnchor();
         [Min(0)] public int CooldownFrames;
+        public string CooldownGroup;
+        // 输入缓存保存意图；速度条件与差分在实际提交时才选择，避免预输入锁死旧速度档。
+        public List<ActionDefinition> RequestVariants = new List<ActionDefinition>();
+        public ActionMotionSettings Motion = new ActionMotionSettings();
+        public ActionCombatSettings Combat = new ActionCombatSettings();
 
         public string Label => string.IsNullOrEmpty(DisplayName) ? name : DisplayName;
+        public float ResolvedEnergyCost
+        {
+            get
+            {
+                switch (EnergyCostSource)
+                {
+                    case ActionEnergyCostSource.Fixed: return EnergyCost;
+                    case ActionEnergyCostSource.HighJump: return EnergyParameters != null ? EnergyParameters.HighJumpCost : float.NaN;
+                    case ActionEnergyCostSource.Accelerate: return EnergyParameters != null ? EnergyParameters.AccelerateCost : float.NaN;
+                    default: return float.NaN;
+                }
+            }
+        }
         public int TotalFrames
         {
             get

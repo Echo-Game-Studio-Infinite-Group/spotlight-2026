@@ -64,6 +64,28 @@ public sealed class ActionSequenceTests
         CollectionAssert.AreEqual(new[] { "first@0", "second@2", "hit@5" }, _host.Events);
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void SimulationCallbackEndingActionStopsOldTimeline(bool reset)
+    {
+        ActionDefinition action = Make("collision");
+        action.Timeline[0].Events.Add(new ActionFrameEvent { Frame = 1, EventKey = "stale_hit" });
+        ActionSequencePlayer player = Player();
+        _host.SimulationCallback = () => { if (reset) player.Reset(); else player.Interrupt(); };
+        player.Queue(action, 0);
+        Assert.DoesNotThrow(() => player.Tick(new ActionInputSample(0), 3));
+        Assert.IsFalse(player.IsRunning);
+        Assert.That(_host.SimulationSteps, Has.Count.EqualTo(1));
+        Assert.IsEmpty(_host.IdleSteps);
+        Assert.IsEmpty(_host.Events);
+        CollectionAssert.AreEqual(new[] { reset ? ActionExitReason.Reset : ActionExitReason.Interrupted }, _host.Exits);
+        _host.SimulationCallback = null;
+        player.Queue(action, 1);
+        player.Tick(new ActionInputSample(1), 1);
+        Assert.IsTrue(player.IsRunning);
+        CollectionAssert.AreEqual(new[] { "stale_hit@1" }, _host.Events);
+    }
+
     [Test]
     public void AnchorFollowsSegmentWhenEarlierDurationChanges()
     {
@@ -73,6 +95,30 @@ public sealed class ActionSequenceTests
         Assert.IsTrue(action.TryResolve(anchor, out int before)); Assert.AreEqual(33, before);
         action.Timeline[0].DurationFrames += 7;
         Assert.IsTrue(action.TryResolve(anchor, out int after)); Assert.AreEqual(40, after);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void FloatTailPreservesElapsedTimeWithoutExtraSimulationStep(bool completes)
+    {
+        ActionDefinition action = Make("float_tail", completes ? 1 : 3);
+        if (!completes) action.Timeline[0].Events.Add(new ActionFrameEvent { Frame = 1, EventKey = "boundary" });
+        ActionSequencePlayer player = Player(); player.Queue(action, 0);
+        const double elapsed = 1.00000005;
+        player.Tick(new ActionInputSample(0), elapsed);
+        Assert.That(_host.SimulationSteps, Has.Count.EqualTo(1));
+        Assert.That(_host.SimulationSteps[0], Is.EqualTo(elapsed).Within(0.000000000001));
+        Assert.IsEmpty(_host.IdleSteps);
+        Assert.AreEqual(!completes, player.IsRunning);
+        if (!completes)
+        {
+            Assert.AreEqual(1d, player.State.FrameProgress);
+            CollectionAssert.AreEqual(new[] { "boundary@1" }, _host.Events);
+            player.Tick(new ActionInputSample(1), 0.05);
+            Assert.That(player.State.FrameProgress, Is.EqualTo(1.05d).Within(0.000000000001));
+            Assert.That(_host.SimulationSteps[1], Is.EqualTo(0.05d).Within(0.000000000001));
+            Assert.That(_host.Events, Has.Count.EqualTo(1));
+        }
     }
 
     [TestCase(2, true)]
@@ -306,4 +352,109 @@ public sealed class ActionSequenceTests
         Assert.IsTrue(issues.Exists(issue => issue.Message.Contains("锚点")));
         Assert.IsTrue(issues.Exists(issue => issue.Message.Contains("不在当前动作集")));
     }
+
+    [Test]
+    public void BufferedIntentChoosesSpeedVariantAtCommitAndAlternatesOnlyOnSuccess()
+    {
+        ActionDefinition normal = Make("normal"), a = Make("A"), b = Make("B");
+        normal.RequestVariants.AddRange(new[] { a, b, normal });
+        normal.StartConditions.Add("low"); a.StartConditions.Add("high"); b.StartConditions.Add("high");
+        Allow(a, b, 3, 30).RequireAll.Add("high"); Allow(b, a, 3, 30).RequireAll.Add("high");
+        ActionSequencePlayer player = Player();
+        player.Queue(normal, 0); player.Tick(new ActionInputSample(0), 0);
+        _host.Conditions.Add("high"); player.Tick(new ActionInputSample(1), 1);
+        Assert.AreSame(a, player.State.Action);
+        player.Queue(normal, 2); _host.CommitSucceeds = false;
+        player.Tick(new ActionInputSample(2), 3); Assert.AreSame(a, player.State.Action);
+        _host.CommitSucceeds = true; player.Tick(new ActionInputSample(3), 1);
+        Assert.AreSame(b, player.State.Action);
+        player.Queue(normal, 4); player.Tick(new ActionInputSample(4), 3);
+        Assert.AreSame(a, player.State.Action);
+    }
+
+    [Test]
+    public void LosingHighSpeedBeforeCancelRejectsBufferedNextVariant()
+    {
+        ActionDefinition intent = Make("intent"), a = Make("A"), b = Make("B");
+        intent.RequestVariants.AddRange(new[] { a, b }); a.StartConditions.Add("high"); b.StartConditions.Add("high");
+        Allow(a, b, 3, 30).RequireAll.Add("high"); _host.Conditions.Add("high");
+        ActionSequencePlayer player = Player(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), 1);
+        player.Queue(intent, 1); _host.Conditions.Clear(); player.Tick(new ActionInputSample(1), 4);
+        Assert.AreSame(a, player.State.Action); Assert.AreEqual(1, player.PendingCount);
+        _host.Conditions.Add("high"); player.Tick(new ActionInputSample(2), 1);
+        Assert.AreSame(b, player.State.Action);
+    }
+
+    [Test]
+    public void SharedCooldownCanOnlyBeBypassedByExplicitCancelWindow()
+    {
+        ActionDefinition a = Make("A", 2), b = Make("B", 2);
+        a.CooldownGroup = b.CooldownGroup = "attack"; a.CooldownFrames = b.CooldownFrames = 100;
+        ActionCancelWindow window = Allow(a, b, 0, 2);
+        ActionSequencePlayer player = Player(); player.Queue(a, 0); player.Tick(new ActionInputSample(0), .25);
+        player.Queue(b, 1); player.Tick(new ActionInputSample(1), .25); Assert.AreSame(a, player.State.Action);
+        window.IgnoreCooldown = true; player.Tick(new ActionInputSample(2), .25); Assert.AreSame(b, player.State.Action);
+        player.Tick(new ActionInputSample(3), 2); Assert.IsFalse(player.IsRunning);
+        player.Queue(a, 4); player.Tick(new ActionInputSample(4), 1); Assert.IsFalse(player.IsRunning);
+    }
+
+    [Test]
+    public void ResetRestartsVariantAlternationAndDoesNotConsumeHeldInputTwice()
+    {
+        ActionDefinition intent = Make("intent"), a = Make("A", 1), b = Make("B", 1);
+        intent.RequestVariants.AddRange(new[] { a, b });
+        ActionSequencePlayer player = Player(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), .25);
+        Assert.AreSame(a, player.State.Action);
+        player.Tick(new ActionInputSample(1), 1); player.Queue(intent, 2); player.Tick(new ActionInputSample(2), .25);
+        Assert.AreSame(b, player.State.Action);
+        player.Reset(); player.Queue(intent, 0); player.Tick(new ActionInputSample(0), .25);
+        Assert.AreSame(a, player.State.Action);
+    }
+    [Test]
+    public void SlowClockKeepsEventsUniqueAndAllowsBufferedCancelAtActionFrameBoundary()
+    {
+        ActionDefinition source = Make("slow_source", 30), target = Make("slow_target", 30);
+        source.Timeline[0].Events.Add(new ActionFrameEvent { Frame = 4, EventKey = "hit" });
+        Allow(source, target, 12, 14);
+        ActionSequencePlayer player = Player(); player.Queue(source, 0);
+        for (int tick = 0; tick < 55; tick++) player.Tick(new ActionInputSample(tick), .2);
+        Assert.That(player.State.FrameProgress, Is.EqualTo(11d).Within(.000001));
+        CollectionAssert.AreEqual(new[] { "hit@4" }, _host.Events);
+        Assert.IsTrue(player.Queue(target, 55));
+        for (int tick = 55; tick < 60; tick++) player.Tick(new ActionInputSample(tick), .2);
+        Assert.AreSame(target, player.State.Action);
+        Assert.AreEqual(0, player.PendingCount);
+        CollectionAssert.AreEqual(new[] { ActionExitReason.Cancelled }, _host.Exits);
+    }
+
+    [Test]
+    public void SlowClockDoesNotFreezeInputExpiryUnlessHitStopRequestsIt()
+    {
+        ActionDefinition source = Make("slow_source", 30), target = Make("slow_target", 30, 2);
+        Allow(source, target, 4, 6);
+        ActionSequencePlayer player = Player(); player.Queue(source, 0);
+        player.Tick(new ActionInputSample(0), .2);
+        player.Queue(target, 1);
+        for (int tick = 1; tick < 25; tick++) player.Tick(new ActionInputSample(tick), .2);
+        Assert.AreSame(source, player.State.Action);
+        Assert.AreEqual(0, player.PendingCount);
+    }
+
+    [Test]
+    public void ZeroPlayerTimePreservesActionAndBufferUntilHitStopEnds()
+    {
+        ActionDefinition source = Make("frozen_source", 30), target = Make("frozen_target", 30, 2);
+        Allow(source, target, 2, 3);
+        ActionSequencePlayer player = Player(); player.Queue(source, 0);
+        player.Tick(new ActionInputSample(0), 1);
+        player.Queue(target, 1);
+        for (int tick = 1; tick < 21; tick++) player.Tick(new ActionInputSample(tick), 0, true);
+        Assert.AreEqual(1d, player.State.FrameProgress);
+        Assert.AreEqual(1, player.PendingCount);
+        player.Tick(new ActionInputSample(21), .2);
+        player.Tick(new ActionInputSample(22), .2);
+        Assert.AreSame(source, player.State.Action);
+        Assert.AreEqual(0, player.PendingCount);
+    }
+
 }
