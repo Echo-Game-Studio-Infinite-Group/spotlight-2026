@@ -1,28 +1,27 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+
 // *Warning* 使用Time.timeScale，需后续更改
 public class PauseUIManager : MonoBehaviour
 {
     private bool _isPause;
 
-    // 暂停菜单
-    public GameObject pauseMenuPanel;
-    public Button btnResume;
-    public Button btnRetry;
-    public Button btnReturn;
-
-    public PlayerCameraRig mouseScript;
+    [SerializeField] private GameObject _pauseMenuPanel;
+    private Button _btnRetry;
+    private Button _btnReturn;
+    private object _pauseUIOwner = new object();
 
     private void Awake()
     {
         _isPause = false;
 
-        pauseMenuPanel.SetActive(false);
-        btnResume.onClick.AddListener(ResumeGame);
-        btnRetry.onClick.AddListener(RetryGame);
-        btnReturn.onClick.AddListener(ReturnToTitle);
-
+        _pauseMenuPanel.SetActive(false);
+        Button[] btns = _pauseMenuPanel.GetComponentsInChildren<Button>();
+        _btnRetry = btns[0];
+        _btnReturn = btns[1];
+        _btnRetry.onClick.AddListener(RetryGame);
+        _btnReturn.onClick.AddListener(ReturnToTitle);
     }
 
     private void Update()
@@ -43,44 +42,50 @@ public class PauseUIManager : MonoBehaviour
     public void PauseGame()
     {
         _isPause = true;
-        Time.timeScale = 0.0f; // *Warning*
-        mouseScript.enabled = false;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+
+        TimeManager.Apply(TimeManager.TimeLayer.Game, 0.0f, 0.0f, _pauseUIOwner);
+        TimeManager.Apply(TimeManager.TimeLayer.Player, 0.0f, 0.0f, _pauseUIOwner);
+        TimeManager.Apply(TimeManager.TimeLayer.World, 0.0f, 0.0f, _pauseUIOwner);
+
         AudioListener.pause = true;
-        pauseMenuPanel.SetActive(true);
+        _pauseMenuPanel.SetActive(true);
     }
 
     public void ResumeGame()
     {
         _isPause = false;
-        Time.timeScale = 1.0f; // *Warning*
-        mouseScript.enabled = true;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+
+        TimeManager.Release(TimeManager.TimeLayer.Game, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.Player, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.World, _pauseUIOwner);
+
         AudioListener.pause = false;
-        pauseMenuPanel.SetActive(false);
+        _pauseMenuPanel.SetActive(false);
     }
 
     public void RetryGame()
     {
         _isPause = false;
-        Time.timeScale = 1.0f; // *Warning*
-        mouseScript.enabled = true;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+
+        TimeManager.Release(TimeManager.TimeLayer.Game, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.Player, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.World, _pauseUIOwner);
+
         AudioListener.pause = false;
-        pauseMenuPanel.SetActive(false);
+        _pauseMenuPanel.SetActive(false);
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
     }
 
     public void ReturnToTitle()
     {
         _isPause = false;
-        Time.timeScale = 1.0f; // *Warning*
-        mouseScript.enabled = true;
+
+        TimeManager.Release(TimeManager.TimeLayer.Game, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.Player, _pauseUIOwner);
+        TimeManager.Release(TimeManager.TimeLayer.World, _pauseUIOwner);
+
         AudioListener.pause = false;
-        pauseMenuPanel.SetActive(false);
+        _pauseMenuPanel.SetActive(false);
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenuScene");
     }
 }
