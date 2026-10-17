@@ -1,19 +1,23 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PauseUIManager : MonoBehaviour
 {
     [SerializeField] private GameObject _pauseMenuPanel;
+    [SerializeField] private Button _resumeButton;
+    [SerializeField] private Button _retryButton;
+    [SerializeField] private Button _returnButton;
     private PlayerInputReader _input;
     private bool _isPause;
 
     private void Awake()
     {
         _input = FindObjectOfType<PlayerInputReader>();
-        Button[] buttons = _pauseMenuPanel.GetComponentsInChildren<Button>(true);
-        buttons[0].onClick.AddListener(RetryGame);
-        buttons[1].onClick.AddListener(ReturnToTitle);
+        _resumeButton.onClick.AddListener(ResumeGame);
+        _retryButton.onClick.AddListener(RetryGame);
+        _returnButton.onClick.AddListener(ReturnToTitle);
         _pauseMenuPanel.SetActive(false);
     }
 
@@ -38,6 +42,7 @@ public class PauseUIManager : MonoBehaviour
         _input.SetGameplayEnabled(false);
         AudioListener.pause = true;
         _pauseMenuPanel.SetActive(true);
+        EventSystem.current.SetSelectedGameObject(_resumeButton.gameObject);
     }
 
     public void ResumeGame()
@@ -51,7 +56,7 @@ public class PauseUIManager : MonoBehaviour
     }
 
     public void RetryGame() => LoadScene(SceneManager.GetActiveScene().path);
-    public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenuScene.unity");
+    public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenu.unity");
 
     private void LoadScene(string path)
     {

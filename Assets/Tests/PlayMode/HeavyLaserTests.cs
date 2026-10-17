@@ -71,6 +71,34 @@ public sealed class HeavyLaserTests
     }
 
     [Test]
+    public void ChargePreviewUsesCoverSurfaceWithoutDamageAndFreezesWithLogic()
+    {
+        GameObject wall = Create("PreviewCover", _origin + Vector3.forward * 5f);
+        wall.AddComponent<BoxCollider>().size = new Vector3(10f, 10f, 1f);
+        Physics.SyncTransforms();
+        _laser.Simulate(.1f, _target);
+        Assert.IsTrue(_laser.HasBeamHit);
+        Assert.That(_laser.ChargeProgress, Is.EqualTo(.5f).Within(.001f));
+        Assert.That(_laser.ImpactPoint.z, Is.EqualTo(_origin.z + 4.5f).Within(.01f));
+        Assert.That(Vector3.Dot(_laser.ImpactNormal, Vector3.back), Is.GreaterThan(.99f));
+        Assert.AreEqual(100f, _target.Health);
+        Assert.IsFalse(_line.enabled);
+        Vector3 end = _laser.BeamEnd;
+        wall.transform.position += Vector3.forward;
+        Physics.SyncTransforms();
+        _laser.Simulate(0f, _target);
+        Assert.AreEqual(end, _laser.BeamEnd);
+        Assert.That(_laser.ChargeProgress, Is.EqualTo(.5f).Within(.001f));
+        _laser.Simulate(.11f, _target);
+        Assert.IsTrue(_laser.IsFiring);
+        Assert.That(_laser.ImpactPoint.z, Is.EqualTo(_origin.z + 5.5f).Within(.01f));
+        Assert.AreEqual(0f, _laser.FireProgress);
+        Assert.AreEqual(100f, _target.Health);
+        _laser.enabled = false;
+        Assert.IsFalse(_laser.HasBeamHit);
+    }
+
+    [Test]
     public void OneAttackOnlyDamagesOnceAndCooldownAllowsNextAttack()
     {
         Fire();
@@ -263,6 +291,53 @@ public sealed class HeavyLaserTests
     }
 
 #if UNITY_EDITOR
+    [UnityTest]
+    public IEnumerator ProceduralVisualsSwitchPhasesReuseGeometryAndClearOnDisable()
+    {
+        LaserAttackVisuals visuals = _laser.gameObject.AddComponent<LaserAttackVisuals>();
+        Material material = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
+            "Assets/Art/Materials/ProceduralLaser.mat");
+        Assert.IsNotNull(material);
+        Assert.AreEqual("GameJam/ProceduralLaser", material.shader.name);
+        Set(visuals, "_material", material);
+        Set(visuals, "_core", _line);
+        yield return null;
+
+        FirePreview();
+        yield return null;
+        LineRenderer aim = _laser.transform.Find("Laser Aim").GetComponent<LineRenderer>();
+        LineRenderer marker = _laser.transform.Find("Laser Lock").GetComponent<LineRenderer>();
+        Assert.IsTrue(aim.enabled);
+        Assert.IsTrue(marker.enabled);
+        Assert.IsFalse(_line.enabled);
+        Assert.AreEqual(_laser.BeamEnd, aim.GetPosition(1));
+        int count = _laser.GetComponentsInChildren<LineRenderer>(true).Length;
+
+        _laser.Simulate(.11f, _target);
+        yield return null;
+        Assert.IsTrue(_line.enabled);
+        Assert.IsFalse(aim.enabled);
+        Assert.IsFalse(marker.enabled);
+        Assert.IsTrue(_laser.transform.Find("Laser Halo").GetComponent<LineRenderer>().enabled);
+        Assert.IsTrue(_laser.transform.Find("Laser Impact").GetComponent<LineRenderer>().enabled);
+        Assert.AreEqual(_laser.BeamEnd, _line.GetPosition(1));
+
+        _laser.Simulate(.6f, _target);
+        yield return null;
+        foreach (LineRenderer line in _laser.GetComponentsInChildren<LineRenderer>(true))
+            Assert.IsFalse(line.enabled);
+        _laser.Simulate(.41f, _target);
+        FirePreview();
+        yield return null;
+        Assert.AreEqual(count, _laser.GetComponentsInChildren<LineRenderer>(true).Length);
+        Assert.IsTrue(aim.enabled);
+        visuals.enabled = false;
+        foreach (LineRenderer line in _laser.GetComponentsInChildren<LineRenderer>(true))
+            Assert.IsFalse(line.enabled);
+    }
+
+    private void FirePreview() => _laser.Simulate(.1f, _target);
+
     [UnityTest]
     public IEnumerator ActualHeavyFrontalCollisionTriggersRagdoll() => CheckHeavyCollision();
 

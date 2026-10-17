@@ -2,17 +2,16 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.SceneManagement;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.SceneManagement;
 
 // 复用普通敌人的接线；模型、体型和战斗数值作为重型敌人的独立配置落盘。
 [InitializeOnLoad]
 public static class EnemyHeavyPrefabBuilder
 {
     private const string PrefabPath = "Assets/Prefabs/EnemyHeavy.prefab";
-    private const string ScenePath = "Assets/Scenes/CombatTest.unity";
+    private const string ModelFolder = "Assets/Art/Models/EnemyHeavy/";
     private const string RequestPath = "Library/EnemyHeavyBuild.request";
     private const string ResultPath = "Library/EnemyHeavyBuild.result";
 
@@ -42,13 +41,10 @@ public static class EnemyHeavyPrefabBuilder
         }
     }
 
-    [MenuItem("超高速行者/创建重型敌人预制体并放入 CombatTest")]
+    [MenuItem("超高速行者/更新重型敌人模型与动画")]
     public static void Build()
     {
-        Scene scene = SceneManager.GetSceneByPath(ScenePath);
-        // 不把用户尚未保存的其他场景编辑一并写盘。
-        if (scene.IsValid() && scene.isDirty)
-            throw new InvalidOperationException("CombatTest 有未保存修改，请先保存场景后重新运行菜单。");
+        PrepareModel();
         if (!File.Exists(PrefabPath))
         {
             string seed = File.ReadAllText("Assets/Prefabs/EnemyTest.prefab")
@@ -71,13 +67,17 @@ public static class EnemyHeavyPrefabBuilder
             root.name = "EnemyHeavy";
             root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             root.SetActive(true);
-            var source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Models/EnemyHeavyTmp/NPC_01.fbx");
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(ModelFolder + "combat-mech_idle.fbx");
+            if (source == null) throw new InvalidOperationException("缺少重型敌人的新模型。");
             var model = (GameObject)PrefabUtility.InstantiatePrefab(source, root.transform);
             model.name = "HeavyModel";
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
             model.transform.localScale = Vector3.one;
             Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+            Material mechMaterial = CreateMaterial();
+            foreach (Renderer renderer in renderers)
+                renderer.sharedMaterials = renderer.sharedMaterials.Select(_ => mechMaterial).ToArray();
             Bounds bounds = BoundsOf(renderers);
             const float height = 2.5f;
             model.transform.localScale *= height / bounds.size.y;
@@ -86,6 +86,10 @@ public static class EnemyHeavyPrefabBuilder
             foreach (Transform child in model.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = root.layer;
 
             Animator animator = model.GetComponentInChildren<Animator>(true);
+            // 独立导出的机甲 FBX 没有 Animator，预制体装配时显式补齐。
+            if (animator == null) animator = model.AddComponent<Animator>();
+            animator.avatar = AssetDatabase.LoadAllAssetsAtPath(ModelFolder + "combat-mech_idle.fbx")
+                .OfType<Avatar>().FirstOrDefault();
             animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>("Assets/Animations/EnemyHeavy.controller");
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -108,10 +112,8 @@ public static class EnemyHeavyPrefabBuilder
             SetFloat(enemy, "_runSpeed", 1.5f);
             SetFloat(enemy, "_attackRange", 1.7f);
             SetFloat(root.GetComponent<HealthComponent>(), "_maxHealth", 300f);
-            SetFloat(root.GetComponent<CombatComponent>(), "_damage", 20f);
-            SetFloat(root.GetComponent<CombatComponent>(), "_cooldown", 1.6f);
             Transform hitbox = root.GetComponentInChildren<Hitbox>(true).transform;
-        hitbox.localPosition = new Vector3(0f, 0f, 1.6f);
+            hitbox.localPosition = new Vector3(0f, 0f, 1.6f);
             hitbox.localScale = new Vector3(1.5f, 1.5f, 1f);
             root.transform.Find("AttackTelegraph").localPosition = new Vector3(0f, 1.55f, 0f);
             root.transform.Find("MarkIndicator").localPosition = new Vector3(0f, 1.5f, 0f);
@@ -124,25 +126,86 @@ public static class EnemyHeavyPrefabBuilder
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
 
-        bool opened = !scene.IsValid();
-        if (opened) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
-        try
+        AssetDatabase.SaveAssets();
+        Debug.Log("[EnemyHeavy] 已替换新机甲模型、材质和动画，场景未写盘。");
+    }
+
+    private static void PrepareModel()
+    {
+        string[] files = { "idle", "walk", "handgun-fire", "being-attacked", "disable" };
+        foreach (string file in files)
         {
-            if (!scene.GetRootGameObjects().Any(go => go.GetComponentInChildren<EnemyHeavy>(true) != null))
-            {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
-                Vector3 position = new Vector3(9f, 0f, -9f);
-                if (NavMesh.SamplePosition(position, out NavMeshHit hit, 5f, NavMesh.AllAreas)) position = hit.position;
-                instance.transform.position = position + Vector3.up * 1.25f;
-                instance.SetActive(true);
-                PrefabUtility.RecordPrefabInstancePropertyModifications(instance.transform);
-                EditorSceneManager.MarkSceneDirty(scene);
-                EditorSceneManager.SaveScene(scene);
-            }
+            string path = ModelFolder + "combat-mech_" + file + ".fbx";
+            var importer = (ModelImporter)AssetImporter.GetAtPath(path);
+            importer.animationType = ModelImporterAnimationType.Generic;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            importer.isReadable = true;
+            var clips = importer.defaultClipAnimations;
+            foreach (var clip in clips) clip.loopTime = file == "idle" || file == "walk";
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
         }
-        finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
-        Debug.Log("[EnemyHeavy] 预制体已创建并放入 CombatTest。");
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/Animations/EnemyHeavy.controller");
+        foreach (var layer in controller.layers) RemapStates(layer.stateMachine);
+        EditorUtility.SetDirty(controller);
+    }
+
+    private static void RemapStates(AnimatorStateMachine machine)
+    {
+        foreach (var child in machine.states)
+        {
+            string clipName;
+            switch (child.state.name)
+            {
+                case "Idle": clipName = "idle"; break;
+                case "Move": clipName = "walk"; break;
+                case "Attack": clipName = "handgun-fire"; break;
+                case "Hurt": clipName = "being-attacked"; break;
+                case "Dead": clipName = "disable"; break;
+                default: continue;
+            }
+            child.state.motion = AssetDatabase.LoadAllAssetsAtPath(ModelFolder + "combat-mech_" + clipName + ".fbx")
+                .OfType<AnimationClip>().First(clip => !clip.name.StartsWith("__preview__"));
+        }
+        foreach (var child in machine.stateMachines) RemapStates(child.stateMachine);
+    }
+
+    private static Material CreateMaterial()
+    {
+        const string path = "Assets/Art/Materials/EnemyHeavy.mat";
+        var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (material == null)
+        {
+            material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(material, path);
+        }
+        material.SetTexture("_BaseMap", Texture("Mech_baseColor.jpg"));
+        material.SetTexture("_BumpMap", Texture("Mech_normal.png", true));
+        material.EnableKeyword("_NORMALMAP");
+        material.SetTexture("_OcclusionMap", Texture("Mech_occlusion.jpg"));
+        material.SetTexture("_MetallicGlossMap", Texture("Mech_metallic.jpg"));
+        material.EnableKeyword("_METALLICSPECGLOSSMAP");
+        material.SetFloat("_Smoothness", 0.35f);
+        material.SetTexture("_EmissionMap", Texture("Mech_emissive.jpg"));
+        material.SetColor("_EmissionColor", Color.white);
+        material.EnableKeyword("_EMISSION");
+        EditorUtility.SetDirty(material);
+        return material;
+    }
+
+    private static Texture2D Texture(string file, bool normal = false)
+    {
+        string path = ModelFolder + "textures/" + file;
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
+        bool srgb = file == "Mech_baseColor.jpg" || file == "Mech_emissive.jpg";
+        if (importer.textureType != type || importer.sRGBTexture != srgb)
+        {
+            importer.textureType = type;
+            importer.sRGBTexture = srgb;
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
     private static Bounds BoundsOf(Renderer[] renderers)

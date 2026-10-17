@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-// 激光只保存有限线段和一次命中资格；LineRenderer 是可替换的占位表现，不参与伤害判定。
+// 预警与实弹共用碰撞查询，表现只读结果，不能另算一条穿过遮挡的瞄准线。
 [DisallowMultipleComponent]
 [RequireComponent(typeof(HealthComponent), typeof(CombatComponent))]
 public sealed class LaserAttack : MonoBehaviour
@@ -37,6 +37,11 @@ public sealed class LaserAttack : MonoBehaviour
     public Vector3 BeamEnd { get; private set; }
     public Vector3 BeamDirection => _direction;
     public float Remaining => _remaining;
+    public float ChargeProgress => IsCharging ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.001f, _chargeSeconds)) : 0f;
+    public float FireProgress => IsFiring ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.01f, _beamSeconds)) : 0f;
+    public bool HasBeamHit { get; private set; }
+    public Vector3 ImpactPoint { get; private set; }
+    public Vector3 ImpactNormal { get; private set; }
 
     private void Awake()
     {
@@ -97,7 +102,13 @@ public sealed class LaserAttack : MonoBehaviour
             _telegraph?.Play();
         }
         _remaining -= dt;
-        if (_remaining > 0f) return;
+        if (_remaining > 0f)
+        {
+            _origin = Muzzle.position;
+            _direction = Muzzle.forward.normalized;
+            TraceBeam(target, false);
+            return;
+        }
         Phase = AttackPhase.Firing;
         _remaining = Mathf.Max(.01f, _beamSeconds);
         _damageAttempted = false;
@@ -107,11 +118,12 @@ public sealed class LaserAttack : MonoBehaviour
         TraceBeam(target);
     }
 
-    private void TraceBeam(HealthComponent target)
+    private void TraceBeam(HealthComponent target, bool applyDamage = true)
     {
         float distance = _range;
         Collider closest = null;
         Vector3 point = _origin + _direction * distance;
+        Vector3 normal = -_direction;
         // Cast 不报告起点内部的碰撞体，补一次重叠查询，避免贴身玩家或贴脸墙被漏掉。
         int overlaps = Physics.OverlapSphereNonAlloc(_origin, Mathf.Max(.0001f, _hitRadius), _overlaps,
             _hitMask, QueryTriggerInteraction.Ignore);
@@ -136,11 +148,15 @@ public sealed class LaserAttack : MonoBehaviour
             distance = hit.distance;
             closest = hit.collider;
             point = hit.point;
+            normal = hit.normal;
         }
         // 拥挤场景填满查询缓冲时保守截断，不能拿可能漏掉最近遮挡的结果穿墙攻击。
         if (count == _hits.Length || overlaps == _overlaps.Length) { distance = 0f; closest = null; }
         BeamEnd = _origin + _direction * distance;
-        if (_beam != null)
+        HasBeamHit = closest != null;
+        ImpactPoint = point;
+        ImpactNormal = normal;
+        if (_beam != null && applyDamage)
         {
             _beam.useWorldSpace = true;
             _beam.positionCount = 2;
@@ -148,7 +164,7 @@ public sealed class LaserAttack : MonoBehaviour
             _beam.SetPosition(1, BeamEnd);
             _beam.enabled = true;
         }
-        if (_damageAttempted || closest == null || target == null || !target.IsAlive
+        if (!applyDamage || _damageAttempted || closest == null || target == null || !target.IsAlive
             || closest.GetComponentInParent<HealthComponent>() != target) return;
         // 一轮只结算一次，命中无敌帧也消耗本轮资格；不经过 Hitbox 的 Parry 判定入口。
         _damageAttempted = true;
@@ -175,6 +191,7 @@ public sealed class LaserAttack : MonoBehaviour
         Phase = AttackPhase.Idle;
         _remaining = 0f;
         _damageAttempted = false;
+        HasBeamHit = false;
         _telegraph?.Stop();
         if (_beam != null) _beam.enabled = false;
     }
