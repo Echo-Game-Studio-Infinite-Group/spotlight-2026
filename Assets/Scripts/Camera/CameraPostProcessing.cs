@@ -23,8 +23,10 @@ public sealed class CameraPostProcessing : MonoBehaviour
     [Tooltip("镜头拉近与弹回的响应速度，越大越跟手")]
     [SerializeField, Min(0.01f)] private float _wallSlideResponse = 8f;
     [SerializeField, Range(0f, 1f)] private float _chromaticIntensity = 0.5f;
-    [SerializeField, Range(0f, 1f)] private float _motionBlurIntensity = 0.5f;
-    [SerializeField] private float _customMotionBlur = 2.5f;
+    [Tooltip("URP 相机运动模糊的满速强度；0 为关闭。")]
+    [SerializeField, Range(0f, 1f)] private float _motionBlurIntensity = 0f;
+    [Tooltip("运动向量拖影的满速强度；0 为关闭，与 URP 运动模糊独立。")]
+    [SerializeField, Min(0f)] private float _customMotionBlur = 0f;
     [SerializeField] private float _customRadial;
     private ChromaticAberration _chromatic;
     private MotionBlur _motionBlur;

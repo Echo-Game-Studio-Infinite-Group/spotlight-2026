@@ -8,12 +8,15 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateIdle = 0;            // 0：站立/待机
     public const int MotionStateMove = 1;            // 1：移动（复用现有移动动画）
     public const int MotionStateJump = 2;            // 2：空中/下落
-    public const int MotionStateSlide = 3;           // 3：滑铲（Soccer Tackle）
+    public const int MotionStateSlide = 3;           // 3：滑铲（Running Slide）
     public const int MotionStateAttack = 4;          // 4：攻击（Attack）
     public const int MotionStateWallDashLeft = 5;    // 5：左侧贴墙冲刺
     public const int MotionStateWallDashRight = 6;   // 6：右侧贴墙冲刺
     public const int MotionStateHurtSmall = 7;       // 7：小受击
     public const int MotionStateHurtBig = 8;         // 8：大受击（被敌人重击或扣血太多）
+
+    public const string SlideTimeParameter = "SlideTime";
+    private static readonly int SlideTimeId = Animator.StringToHash(SlideTimeParameter);
 
     private static readonly int MotionStateId = Animator.StringToHash("MotionState");
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
@@ -38,6 +41,10 @@ public sealed class PlayerAnimation : MonoBehaviour
     [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
     [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
+    [Header("滑铲动画")]
+    [SerializeField] private AnimationClip _slideClip;
+    [Tooltip("播放到完全铲下的姿态后保持；退出物理滑铲后继续播放剩余起身段。")]
+    [SerializeField, Range(0f, 1f)] private float _slideHoldNormalizedTime = 0.3f;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
     private PlayerInputReader _input;
@@ -46,6 +53,10 @@ public sealed class PlayerAnimation : MonoBehaviour
     private float _hurtElapsed;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
+    private bool _hasSlideTime;
+    private bool _wasSliding;
+    private int _slideStartJumpCount;
+    private float _slideProgress;
 
     // 受伤状态：_hurtKind 是当前受击类型，_hurtLockRemaining 是「还不许取消」的剩余时间
     private int _hurtKind = HurtKindNone;
@@ -56,6 +67,10 @@ public sealed class PlayerAnimation : MonoBehaviour
     public int CurrentMotionState { get; private set; }
     public Animator Animator => _animator;
     public bool IsSequenceDriven { get; private set; }
+    public bool IsSlideRecovering { get; private set; }
+    public bool IsHoldingSlidePose => _wasSliding && _slideProgress >= _slideHoldNormalizedTime;
+    public float SlideNormalizedTime => _slideProgress;
+    public float SlideHoldNormalizedTime => _slideHoldNormalizedTime;
     public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
     /// <summary>正在受击（受击动作还没播完，或还没被取消）。</summary>
     public bool IsHurting => _hurtKind != HurtKindNone;
@@ -85,6 +100,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         _animator = animator;
         _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
         DisableRootMotion();
+        CacheSlideParameter();
     }
 
     private void DisableRootMotion()
@@ -101,8 +117,48 @@ public sealed class PlayerAnimation : MonoBehaviour
         _actionRunner = GetComponentInParent<GameJam.Actions.PlayerActionRunner>();
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         DisableRootMotion();
+        CacheSlideParameter();
         _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
     }
+
+    private void CacheSlideParameter()
+    {
+        _hasSlideTime = false;
+        foreach (AnimatorControllerParameter parameter in _animator.parameters)
+            if (parameter.nameHash == SlideTimeId && parameter.type == AnimatorControllerParameterType.Float)
+            { _hasSlideTime = true; break; }
+    }
+
+    private void UpdateSlide(float deltaTime)
+    {
+        if (!_hasSlideTime || _slideClip == null || _slideClip.length <= 0f) return;
+        if (_motor.IsSliding)
+        {
+            if (!_wasSliding) { _slideProgress = 0f; _slideStartJumpCount = _motor.JumpCount; }
+            IsSlideRecovering = false;
+            _slideProgress = Mathf.Min(_slideHoldNormalizedTime, _slideProgress + deltaTime / _slideClip.length);
+        }
+        else
+        {
+            if (_wasSliding)
+            {
+                IsSlideRecovering = _motor.IsGrounded && _motor.JumpCount == _slideStartJumpCount;
+                // 提前松键也直接进入起身段，不再把铲下段补播一遍。
+                if (IsSlideRecovering) _slideProgress = Mathf.Max(_slideProgress, _slideHoldNormalizedTime);
+            }
+            if (!_motor.IsGrounded || _motor.JumpCount != _slideStartJumpCount) IsSlideRecovering = false;
+            if (IsSlideRecovering)
+            {
+                _slideProgress = Mathf.Min(1f, _slideProgress + deltaTime / _slideClip.length);
+                if (_slideProgress >= 1f) IsSlideRecovering = false;
+            }
+        }
+        _wasSliding = _motor.IsSliding;
+        _motor.SetSlidePoseActive(_wasSliding || IsSlideRecovering);
+        // 退出时保留源姿态的采样时间，让过渡从铲下姿态开始；下次进入再归零。
+        _animator.SetFloat(SlideTimeId, _slideProgress);
+    }
+
 
     // Unity 只把动画事件发给 Animator 同节点组件。
     public void EnableHitbox() { if (_combat != null) _combat.EnableHitbox(); }
@@ -121,6 +177,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
         if (_combat == null) _combat = GetComponentInParent<PlayerCombat>();
         if (_motor == null || _animator == null || _motor.Params == null) return;
+        UpdateSlide(deltaTime);
 
         // 移动不能取消受击，否则上身受击与腿部行走无法同时存在。
         if (IsHurting)
@@ -148,7 +205,7 @@ public sealed class PlayerAnimation : MonoBehaviour
             else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
         }
         else _wallMotionState = MotionStateWallDashLeft;
-        int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding ? MotionStateSlide : airborne ? MotionStateJump :
+        int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding || IsSlideRecovering ? MotionStateSlide : airborne ? MotionStateJump :
             _motor.HasForwardInput ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，
@@ -226,6 +283,9 @@ public sealed class PlayerAnimation : MonoBehaviour
 
     private void OnDisable()
     {
+        if (_motor != null) _motor.SetSlidePoseActive(false);
+        _wasSliding = IsSlideRecovering = false;
+        _slideProgress = 0f;
         // 组件被关掉时不能把输入门控留在打开状态，否则玩家的移动会永久失效。
         if (_motor != null) _motor.InputSuppressed = false;
         _hurtKind = HurtKindNone;

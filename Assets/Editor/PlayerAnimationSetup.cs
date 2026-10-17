@@ -13,7 +13,7 @@ public static class PlayerAnimationSetup
     private const string IdleClipPath = "Assets/Animations/fbx/Idle.fbx";
     private const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
     private const string JumpClipPath = "Assets/Animations/fbx/Jump.fbx";
-    private const string SlideClipPath = "Assets/Animations/fbx/Tackle.fbx";
+    private const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
     private const string AttackParameterName = "IsAttacking";
 
     private static readonly string[] RequiredStates = { "Idle", "Move", "Jump", "Trackle", "Attack", "WallDashLeft", "WallDashRight" };
@@ -42,6 +42,7 @@ public static class PlayerAnimationSetup
         if (!RequiredStates.All(name => machine.states.Any(child => child.state.name == name))) return false;
 
         return HasParameter(controller, "MotionState") && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasRun(controller)
+            && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasSlide(controller)
             && HasParameter(controller, "IsAttacking")
             && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasWallDash(controller);
     }
@@ -69,6 +70,7 @@ public static class PlayerAnimationSetup
                 if (catalog != null) GameJam.Actions.Editor.ActionPlayerSetup.EnsureAnimator(controller, catalog);
                 else GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
                 GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureRun(controller);
+                GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureSlide(controller);
                 EditorUtility.SetDirty(controller); AssetDatabase.SaveAssets();
                 Debug.Log("[PlayerAnimationSetup] 保留已接入的 Actions 子状态机与手工状态，按动作表增量装配");
                 return controller;
@@ -116,6 +118,7 @@ public static class PlayerAnimationSetup
         AddExitTransition(attack, idle, AttackParameterName);
         GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureWallDash(controller);
         GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureRun(controller);
+        GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.EnsureSlide(controller);
 
         EditorUtility.SetDirty(machine);
         EditorUtility.SetDirty(controller);

@@ -12,9 +12,68 @@ namespace GameJam.Actions.Editor
         public const string LeftClipPath = "Assets/Animations/Player/LoWall_LDash_Loop_InPlace.anim";
         public const string RightClipPath = "Assets/Animations/Player/LoWall_RDash_Loop_InPlace.anim";
         public const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
+        public const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
         private const string LeftSourcePath = "Assets/Animations/Player/LoWall_LDash_Loop_Root.anim";
         private const string RightSourcePath = "Assets/Animations/Player/LoWall_RDash_Loop_Root.anim";
         private const int DefaultBlendFrames = 6;
+
+        [MenuItem("超高速行者/动作序列/装配滑铲保持与起身")]
+        public static void InstallSlide()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                EditorApplication.isPlaying = false;
+                EditorApplication.delayCall += InstallSlide;
+                return;
+            }
+            AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ActionPlayerSetup.ControllerPath);
+            EnsureSlide(controller);
+            GameObject player = PrefabUtility.LoadPrefabContents(ActionPlayerSetup.PlayerPath);
+            try
+            {
+                PlayerAnimation animation = player.GetComponentInChildren<PlayerAnimation>(true);
+                var serialized = new SerializedObject(animation);
+                serialized.FindProperty("_slideClip").objectReferenceValue =
+                    AssetDatabase.LoadAllAssetsAtPath(SlideClipPath).OfType<AnimationClip>()
+                        .First(clip => !clip.name.StartsWith("__preview__", StringComparison.Ordinal));
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(animation);
+                PrefabUtility.SaveAsPrefabAsset(player, ActionPlayerSetup.PlayerPath);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(player); }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PlayerLocomotionAnimatorSetup] 滑铲使用独立 SlideTime；铲下后保持，物理停止后播放起身。");
+        }
+
+        public static void EnsureSlide(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length == 0)
+                throw new InvalidOperationException("Controller 至少需要一个基础动画层");
+            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(SlideClipPath).OfType<AnimationClip>()
+                .FirstOrDefault(value => !value.name.StartsWith("__preview__", StringComparison.Ordinal));
+            if (clip == null || !clip.isHumanMotion)
+                throw new InvalidOperationException("滑铲片段必须是 Humanoid 动画：" + SlideClipPath);
+            EnsureParameter(controller, PlayerAnimation.SlideTimeParameter, AnimatorControllerParameterType.Float);
+            AnimatorStateMachine machine = controller.layers[0].stateMachine;
+            AnimatorState state = machine.states.FirstOrDefault(child => child.state.name == "Trackle").state;
+            if (state == null) throw new InvalidOperationException("Controller 缺少基础滑铲状态 Trackle");
+            state.motion = clip;
+            state.iKOnFeet = true;
+            state.timeParameter = PlayerAnimation.SlideTimeParameter;
+            state.timeParameterActive = true;
+            EditorUtility.SetDirty(state);
+            EditorUtility.SetDirty(controller);
+        }
+
+        public static bool HasSlide(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length == 0) return false;
+            AnimatorState state = controller.layers[0].stateMachine.states.FirstOrDefault(child => child.state.name == "Trackle").state;
+            return state != null && state.iKOnFeet && state.timeParameterActive && state.timeParameter == PlayerAnimation.SlideTimeParameter
+                && AssetDatabase.GetAssetPath(state.motion) == SlideClipPath
+                && controller.parameters.Any(parameter => parameter.name == PlayerAnimation.SlideTimeParameter
+                    && parameter.type == AnimatorControllerParameterType.Float);
+        }
 
         public static void EnsureRun(AnimatorController controller)
         {

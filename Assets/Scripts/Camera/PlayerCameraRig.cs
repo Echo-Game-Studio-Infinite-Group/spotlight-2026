@@ -21,6 +21,13 @@ public sealed class PlayerCameraRig : MonoBehaviour
 
     public void Configure(PlayerMotor motor, PlayerInputReader input, Transform target, CinemachineVirtualCamera camera)
     { _motor = motor; _input = input; _target = target; _virtualCamera = camera; }
+    public Quaternion ViewRotation => Quaternion.Euler(_pitch, _yaw, 0f);
+    public void SetViewRotation(Quaternion rotation)
+    {
+        _yaw = rotation.eulerAngles.y;
+        _pitch = Mathf.Clamp(Mathf.DeltaAngle(0f, rotation.eulerAngles.x), _pitchLimits.x, _pitchLimits.y);
+        if (_target != null) _target.rotation = ViewRotation;
+    }
     private void OnEnable()
     {
         ResolvePlayer();

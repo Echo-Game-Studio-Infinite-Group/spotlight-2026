@@ -85,6 +85,8 @@ public sealed class PlayerAfterimageTests
         for (int i = 0; i < ticks; i++) Tick();
     }
 
+    private void AdvancePastLifetime() => Advance(Mathf.CeilToInt(_effect.Settings.Lifetime * 60f) + 1);
+
     private void StartEnergyDash() => Tick(ActionInputButtons.Skill | ActionInputButtons.Sprint);
 
     private TimeStopController PrepareTimeStop(float balance = 200f, float costPerTick = 0f)
@@ -108,7 +110,8 @@ public sealed class PlayerAfterimageTests
         var enabledProperty = controller.GetType().GetProperty("EffectEnabled");
         Assert.IsFalse((bool)enabledProperty.GetValue(controller));
         Assert.Greater(_effect.Settings.BodyColor.b, _effect.Settings.BodyColor.r);
-        Assert.AreEqual(4, _effect.Settings.MaxSnapshots);
+        Assert.That(_effect.Settings.MaxSnapshots, Is.InRange(1, PlayerAfterimageSettings.MaximumPoolSize));
+        Assert.AreEqual(_effect.Settings.MaxSnapshots, _effect.Snapshots.Count);
         foreach (ActionDefinition action in _runner.Catalog.Actions)
         {
             int starts = action.Timeline.Sum(segment => segment.Events.Count(e => e.EventKey == PlayerAfterimageEffect.StartEventKey));
@@ -145,7 +148,7 @@ public sealed class PlayerAfterimageTests
         Assert.IsFalse(_effect.IsEmitting, "收招首帧停止生成");
         Assert.Greater(_effect.ActiveSnapshotCount, 0, "已留下的残影继续淡出");
         int captures = _effect.CaptureCount;
-        Advance(14);
+        AdvancePastLifetime();
         Assert.AreEqual(captures, _effect.CaptureCount);
         Assert.AreEqual(0, _effect.ActiveSnapshotCount);
     }
@@ -177,7 +180,7 @@ public sealed class PlayerAfterimageTests
         controller.SimulateTick(false, 1, 0f);
         Assert.IsFalse(_effect.IsEmitting);
         Assert.Greater(_effect.ActiveSnapshotCount, 0);
-        Advance(14);
+        AdvancePastLifetime();
         Assert.AreEqual(0, _effect.ActiveSnapshotCount);
     }
 
@@ -280,7 +283,7 @@ public sealed class PlayerAfterimageTests
         Assert.LessOrEqual(_motor.Velocity.y, 0f);
         Assert.IsFalse(_effect.IsEmitting);
         int captures = _effect.CaptureCount;
-        Advance(15);
+        AdvancePastLifetime();
         Assert.AreEqual(captures, _effect.CaptureCount);
         Assert.AreEqual(0, _effect.ActiveSnapshotCount);
     }
@@ -298,7 +301,10 @@ public sealed class PlayerAfterimageTests
     [Test]
     public void SnapshotsKeepWorldPoseAndReuseBoundedMeshPool()
     {
-        StartEnergyDash();
+        // 持续时停覆盖完整的一轮网格复用，避免依赖冲刺长度和配表池容量的巧合。
+        PrepareTimeStop().BeginTimeStop();
+        _motor.SetHorizontalSpeed(20f);
+        Tick();
         PlayerAfterimageSnapshot first = _effect.Snapshots.First(snapshot => snapshot.IsActive);
         Matrix4x4 matrix = first.GetMatrix(0);
         Vector3 position = first.Position;
@@ -310,7 +316,13 @@ public sealed class PlayerAfterimageTests
         Assert.Greater(Vector3.Distance(position, _root.transform.position), .1f);
         Assert.AreEqual(matrix, first.GetMatrix(0));
         CollectionAssert.AreEqual(vertices, first.GetMesh(0).vertices);
-        Advance(12);
+        int ticksPerSnapshot = Mathf.CeilToInt(Mathf.Max(_effect.Settings.SampleInterval,
+            _effect.Settings.MinDistance / 20f) * 60f) + 1;
+        for (int i = 0; i < ticksPerSnapshot * (_effect.Settings.MaxSnapshots + 1); i++)
+        {
+            _motor.SetHorizontalSpeed(20f);
+            Tick();
+        }
         Assert.Greater(_effect.CaptureCount, _effect.Settings.MaxSnapshots);
         Assert.LessOrEqual(_effect.ActiveSnapshotCount, _effect.Settings.MaxSnapshots);
         CollectionAssert.AreEqual(meshIds, _effect.Snapshots.SelectMany(snapshot => Enumerable.Range(0, snapshot.PartCount)
@@ -342,7 +354,7 @@ public sealed class PlayerAfterimageTests
         Assert.AreEqual("player_attack", _runner.Player.State.Action.ActionId);
         Assert.IsFalse(_effect.IsEmitting);
         Assert.Greater(_effect.ActiveSnapshotCount, 0);
-        Advance(14);
+        AdvancePastLifetime();
         Assert.AreEqual(0, _effect.ActiveSnapshotCount);
     }
 

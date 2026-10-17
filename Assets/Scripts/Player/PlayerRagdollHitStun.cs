@@ -1,16 +1,8 @@
 using GameJam.Actions;   // PlayerActionRunner 在这个命名空间里
 using UnityEngine;
 
-// 撞击布娃娃硬直（预研版：先手动触发，接在场景里的 Player 实例上）
-//
-//   进入：关掉角色控制（Animator / CharacterController / 输入 / 移动 / 动作序列），把骨骼交给物理
-//   保持：硬直时长（Inspector 可调）
-//   退出：收起布娃娃 → 根节点对齐到 Hips → 重开 Animator 并 Rebind → 恢复所有控制
-//
-// 预研阶段刻意不做：撞击判定、速度清零、伤害、起身动画、相机处理。
-//
-// 用法：Inspector 里组件右上角 ⋮ → "测试: 进入撞击硬直"；预研阶段按 P 键触发，再按一次提前结束。
-// ⚠️ 前置：先在 Player 上用 Unity 自带的 Ragdoll Wizard（GameObject → 3D Object → Ragdoll…）把骨骼配好。
+// 布娃娃阶段由骨骼物理接管；起身阶段由 PlayerMotor 恢复重力和胶囊碰撞。
+// 输入、动作与常规动画要等起身播完再恢复，避免硬直期间重新执行招式。
 [DisallowMultipleComponent]
 public sealed class PlayerRagdollHitStun : MonoBehaviour
 {
@@ -45,7 +37,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     [Tooltip("触发瞬间先沿墙面法线把人挪出去的距离。贴墙激活布娃娃会挂在墙上，靠这个挪开。")]
     [SerializeField, Min(0f)] private float _impactPushOut = 0.6f;
 
-    [Tooltip("起身前向下探地面的距离。找到就把根节点落到地面上（在空中撞墙时避免半空起身）；找不到就保持原高度。")]
+    [Tooltip("起身前向下探地面的距离。找到就把根节点落到地面上；找不到就从布娃娃当前位置继续下落。")]
     [SerializeField, Min(0f)] private float _groundProbeDistance = 3f;
 
     [Header("引用")]
@@ -79,6 +71,15 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private float _getUpEndAt;
     private bool _inGetUp;
     private int _getUpUsedLayer = -1;   // 这次起身实际用的是哪一层（结束时把权重还原）
+    private float _hipsRootHeight;
+    private readonly ActionControlPolicy _getUpControl = new ActionControlPolicy
+    {
+        AllowMove = false,
+        AllowTurn = false,
+        AllowJump = false,
+        AllowSlide = false,
+        AllowSprint = false
+    };
 
     private bool _active;
 
@@ -168,6 +169,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
         _active = true;
         _inGetUp = false;
+        _hipsRootHeight = _hips != null ? _hips.position.y - transform.position.y : 0f;
         _ragdollEndAt = Time.time + _ragdollSeconds;
 
         // 顺序很要紧：先把所有会「碰 Animator」的东西关掉，最后才关 Animator。
@@ -209,11 +211,25 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         if (_hips != null)
         {
             Vector3 p = _hips.position;
-            float y = transform.position.y;
+            float y = p.y - _hipsRootHeight;
             if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out RaycastHit ground,
                     _groundProbeDistance, ~0, QueryTriggerInteraction.Ignore))
                 y = ground.point.y;
             transform.position = new Vector3(p.x, y, p.z);
+        }
+
+        // 骨骼已冻结，必须在起身时把碰撞与重力交回 Motor，不能让两套运动都停着。
+        // 只恢复进入硬直前启用的 Motor；输入、动作与常规动画仍保持关闭。
+        if (_controller != null) _controller.enabled = true;
+        if (_motor != null)
+        {
+            _motor.SetActionControl(_getUpControl);
+            for (int i = 0; i < _controls.Length; i++)
+                if (_controls[i] == _motor)
+                {
+                    _motor.enabled = _controlsWasEnabled[i];
+                    break;
+                }
         }
 
         if (_animator != null) _animator.enabled = true;
@@ -262,6 +278,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         SetRagdollActive(false);
         if (_controller != null) _controller.enabled = true;
         SetOtherColliders(true);
+        if (_motor != null) _motor.SetActionControl(null);
         SetControlsEnabled(true);
         if (_input != null) _input.SetGameplayEnabled(true);
 
@@ -313,7 +330,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     }
 
     // ---------- 撞击触发 ----------
-    // 判定条件不在这里：移动层判「能不能划墙」的那一处，角度不够时抛 WallImpact（同一个接触、同一个门槛）。
+    // 移动层统一报告正撞接触，保护规则只过滤伤害，不能屏蔽碰撞本身。
     // 这里只负责数值与后果：够不够快、扣多少血、清不清速度、进不进硬直。
     private void OnEnable()
     {
@@ -342,10 +359,17 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         float speed = MovementMath.Horizontal(contact.IncomingVelocity).magnitude;
         if (speed < _minSpeedFactor * threshold) return;      // 不够快 → 不吃撞击惩罚
 
+        // 低顶下无法安全播放站立起身；保留低姿态与撞墙事件，允许玩家主动低速退出通道。
+        if (contact.WasSliding && _motor.IsSlideHeadBlocked)
+        {
+            if (_zeroSpeedOnImpact) _motor.SetHorizontalSpeed(0f);
+            return;
+        }
+
         _nextImpactAt = Time.time + _impactCooldown;
 
         // 伤害按「地速阈值的倍数」换算，和策划案里速度/能量用的是同一套单位
-        float damage = threshold > 0.0001f ? _damagePerSpeed * (speed / threshold) : 0f;
+        float damage = !contact.WasSliding && threshold > 0.0001f ? _damagePerSpeed * (speed / threshold) : 0f;
         if (_zeroSpeedOnImpact) _motor.SetHorizontalSpeed(0f);
 
         HealthComponent health = GetComponent<HealthComponent>();
