@@ -142,6 +142,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     {
         if (_input is PlayerInputReader reader) reader.Cleared += ClearPendingInput;
     }
+    public bool InputSuppressed { get; set; }
+
     private void ClearPendingInput()
     {
         _jumpUntil = float.NegativeInfinity;
@@ -164,6 +166,14 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             if (!_actionControl.AllowSprint) input.SprintHeld = false;
             if (!_actionControl.AllowJump) { input.JumpPressed = false; ClearPendingInput(); }
             if (!_actionControl.AllowSlide) input.SlidePressed = false;
+        }
+        if (InputSuppressed)
+        {
+            input.Move = Vector2.zero;
+            input.SprintHeld = false;
+            input.JumpPressed = false;
+            input.SlidePressed = false;
+            ClearPendingInput();
         }
         if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
         HasForwardInput = input.Move.y > 0f;

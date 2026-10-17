@@ -30,6 +30,7 @@ namespace GameJam.Actions
         private int _flightStartJumpCount;
         private bool _hasLeftGround;
         public Animator Animator => _animator;
+        public PlayerAnimation Locomotion => _locomotion;
         public bool IsOwned => _owner != null;
         public bool IsHoldingAirbornePose => _airborneSettings != null && _instance == 0;
 

@@ -5,30 +5,64 @@ using UnityEngine;
 public sealed class PlayerAnimation : MonoBehaviour
 {
     // 编号与装配工具的 MotionState 条件保持一致；动作状态使用完整路径，不依赖状态数组下标。
-    public const int MotionStateIdle = 0;    // 0：站立/待机
-    public const int MotionStateMove = 1;    // 1：奔跑
-    public const int MotionStateJump = 2;    // 2：空中/下落
-    public const int MotionStateSlide = 3;   // 3：滑铲（Soccer Tackle）
-    public const int MotionStateAttack = 4;  // 4：攻击（Attack）
-    public const int MotionStateWallDashLeft = 5;
-    public const int MotionStateWallDashRight = 6;
+    public const int MotionStateIdle = 0;            // 0：站立/待机
+    public const int MotionStateMove = 1;            // 1：移动（复用现有移动动画）
+    public const int MotionStateJump = 2;            // 2：空中/下落
+    public const int MotionStateSlide = 3;           // 3：滑铲（Soccer Tackle）
+    public const int MotionStateAttack = 4;          // 4：攻击（Attack）
+    public const int MotionStateWallDashLeft = 5;    // 5：左侧贴墙冲刺
+    public const int MotionStateWallDashRight = 6;   // 6：右侧贴墙冲刺
+    public const int MotionStateHurtSmall = 7;       // 7：小受击
+    public const int MotionStateHurtBig = 8;         // 8：大受击（被敌人重击或扣血太多）
 
     private static readonly int MotionStateId = Animator.StringToHash("MotionState");
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
+    private static readonly int IsHurtId = Animator.StringToHash("IsHurt");
+    private static readonly int HurtId = Animator.StringToHash("Hurt");
+    public const string HurtLegLayerName = "HurtLegs";
+
+    // 受伤专用参数，不复用动作序列的 ActionPlaying / ActionTime：
+    // 那两个由 PlayerActionRunner 的装配层独占写入，两条线抢同一个参数会互相把状态顶掉。
+    // Hurt 记录受击类型（0 无 / 1 小 / 2 大），入口显式播放对应片段；
+    // IsHurt 是「正在受击」标志，受伤状态只能由它退出，因此播放期间不会被自己重复进入。
+    private const int HurtKindNone = 0;
+    private const int HurtKindSmall = 1;
+    private const int HurtKindBig = 2;
+
+    [Header("受伤")]
+    [Tooltip("受击后禁止移动和攻击取消的秒数；解锁后移动只覆盖腿部。")]
+    [SerializeField, Min(0f)] private float _hurtLockSeconds = 0.1f;
+    [SerializeField, Min(0.1f)] private float _hurtMaxSeconds = 1.6f;
 
     [SerializeField] private Animator _animator;
+    [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
     [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
+    private PlayerInputReader _input;
+    private GameJam.Actions.PlayerActionRunner _actionRunner;
+    private int _hurtLegLayer = -1;
+    private float _hurtElapsed;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
+
+    // 受伤状态：_hurtKind 是当前受击类型，_hurtLockRemaining 是「还不许取消」的剩余时间
+    private int _hurtKind = HurtKindNone;
+    private float _hurtLockRemaining;
+    private int _lastIsHurt = -1;
 
     // 供测试与诊断读取当前实际下发给动画机的状态编号
     public int CurrentMotionState { get; private set; }
     public Animator Animator => _animator;
     public bool IsSequenceDriven { get; private set; }
     public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
+    /// <summary>正在受击（受击动作还没播完，或还没被取消）。</summary>
+    public bool IsHurting => _hurtKind != HurtKindNone;
+    /// <summary>受击锁还没走完，此时不接受操作取消。</summary>
+    public bool IsHurtLocked => IsHurting && _hurtLockRemaining > 0f;
+    /// <summary>当前受击动作的状态名（诊断用）。</summary>
+    public string CurrentHurtState => IsHurting ? LocomotionStateName(CurrentMotionState) : string.Empty;
 
     // 收招与自动过渡共用状态名称；MotionState 编号不依赖 Animator 编辑器中的排列顺序。
     public static string LocomotionStateName(int motionState)
@@ -40,6 +74,8 @@ public sealed class PlayerAnimation : MonoBehaviour
             case MotionStateSlide: return "Trackle";
             case MotionStateWallDashLeft: return "WallDashLeft";
             case MotionStateWallDashRight: return "WallDashRight";
+            case MotionStateHurtSmall: return "HitStomach";
+            case MotionStateHurtBig: return "HitBody";
             default: return "Idle";
         }
     }
@@ -47,6 +83,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     public void Configure(Animator animator)
     {
         _animator = animator;
+        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
         DisableRootMotion();
     }
 
@@ -60,8 +97,11 @@ public sealed class PlayerAnimation : MonoBehaviour
     {
         _motor = GetComponentInParent<PlayerMotor>();
         _combat = GetComponentInParent<PlayerCombat>();
+        _input = GetComponentInParent<PlayerInputReader>();
+        _actionRunner = GetComponentInParent<GameJam.Actions.PlayerActionRunner>();
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         DisableRootMotion();
+        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
     }
 
     // Unity 只把动画事件发给 Animator 同节点组件。
@@ -81,6 +121,21 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_motor == null) _motor = GetComponentInParent<PlayerMotor>();
         if (_combat == null) _combat = GetComponentInParent<PlayerCombat>();
         if (_motor == null || _animator == null || _motor.Params == null) return;
+
+        // 移动不能取消受击，否则上身受击与腿部行走无法同时存在。
+        if (IsHurting)
+        {
+            _hurtElapsed += deltaTime;
+            if (_hurtLockRemaining > 0f) _hurtLockRemaining -= deltaTime;
+            _motor.InputSuppressed = IsHurtLocked;
+            AnimatorStateInfo hurtState = _animator.GetCurrentAnimatorStateInfo(0);
+            bool finished = hurtState.IsName(CurrentHurtState) && hurtState.normalizedTime >= 1f
+                && !_animator.IsInTransition(0);
+            if (finished || _hurtElapsed >= _hurtMaxSeconds) CancelHurt();
+            else { PushHurtState(); UpdateHurtLegs(); return; }
+        }
+        else _motor.InputSuppressed = false;
+        UpdateHurtLegs();
 
         // CharacterController 在贴地移动时可能短暂丢失 Grounded，延迟进入下落动画；主动起跳立即播放。
         _airborneTime = _motor.IsGrounded ? 0f : _airborneTime + deltaTime;
@@ -106,5 +161,80 @@ public sealed class PlayerAnimation : MonoBehaviour
         // 显式的攻击布尔：状态机的进/出边由它驱动，语义比复用 MotionState 编号清晰，
         // 也不会被每帧重写的移动编号互相干扰。
         _animator.SetBool(IsAttackingId, attacking);
+    }
+
+    /// <summary>
+    /// 受击入口：big = true 播大受击（HitBody），否则播小受击（HitStomach）。
+    /// 伤害来源只管按伤害大小调这个，不用关心状态机怎么切。
+    /// </summary>
+    public void PlayHurt(bool big)
+    {
+        if (_animator == null) return;
+        // 先结束旧动作的回调，再建立新受击，避免回调读取旧片段进度并提前解除新受击。
+        _actionRunner?.Interrupt();
+        _hurtKind = big ? HurtKindBig : HurtKindSmall;
+        _hurtLockRemaining = _hurtLockSeconds;
+        _hurtElapsed = 0f;
+        if (_motor != null) _motor.InputSuppressed = IsHurtLocked;
+        PushHurtState();
+        if (_combat != null && !_combat.IsSequenceDriven) _combat.FinishAttack();
+        _animator.SetBool(IsAttackingId, false);
+        // 连续同类型命中也必须从头重播。
+        _animator.Play("Base Layer." + CurrentHurtState, 0, 0f);
+        UpdateHurtLegs();
+    }
+
+    /// <summary>
+    /// 结束受伤状态：播放结束、攻击取消或死亡/重生时调用。
+    /// </summary>
+    public void CancelHurt()
+    {
+        if (_hurtKind == HurtKindNone) return;
+        _hurtKind = HurtKindNone;
+        _hurtLockRemaining = 0f;
+        if (_motor != null) _motor.InputSuppressed = false;
+        UpdateHurtLegs();
+        // 先摘 IsHurt：控制器里受伤状态的唯一出口就是 IsHurt == false，
+        // 摘掉之后状态机下一帧自己回移动状态，这里不需要再指定目标状态。
+        PushHurtState();
+    }
+
+    // 类型参数与受击标志保持同步，供状态退出和诊断使用。
+    private void PushHurtState()
+    {
+        _animator.SetInteger(HurtId, _hurtKind);
+        int isHurt = _hurtKind == HurtKindNone ? 0 : 1;
+        if (isHurt != _lastIsHurt)
+        {
+            _animator.SetBool(IsHurtId, isHurt != 0);
+            _lastIsHurt = isHurt;
+        }
+        if (_hurtKind == HurtKindNone) return;
+        CurrentMotionState = _hurtKind == HurtKindBig ? MotionStateHurtBig : MotionStateHurtSmall;
+        _animator.SetInteger(MotionStateId, CurrentMotionState);
+    }
+
+    private void UpdateHurtLegs()
+    {
+        if (_hurtLegLayer < 0) return;
+        bool moving = _input != null && _input.MoveInput.sqrMagnitude > 0f;
+        // 正常走跑必须完全使用基础层；空中/滑铲也不能叠加地面踏步。
+        bool active = IsHurting && !IsHurtLocked && moving && _motor != null
+            && _motor.IsGrounded && !_motor.IsSliding && _motor.HorizontalSpeed > _idleSpeed;
+        _animator.SetLayerWeight(_hurtLegLayer, active ? 1f : 0f);
+    }
+
+    private void OnDisable()
+    {
+        // 组件被关掉时不能把输入门控留在打开状态，否则玩家的移动会永久失效。
+        if (_motor != null) _motor.InputSuppressed = false;
+        _hurtKind = HurtKindNone;
+        _hurtLockRemaining = 0f;
+        _lastIsHurt = -1;
+        if (_animator != null)
+        {
+            PushHurtState();
+            UpdateHurtLegs();
+        }
     }
 }

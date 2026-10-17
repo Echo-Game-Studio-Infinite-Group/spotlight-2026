@@ -111,7 +111,7 @@ public static class EnemyHeavyPrefabBuilder
             SetFloat(root.GetComponent<CombatComponent>(), "_damage", 20f);
             SetFloat(root.GetComponent<CombatComponent>(), "_cooldown", 1.6f);
             Transform hitbox = root.GetComponentInChildren<Hitbox>(true).transform;
-            hitbox.localPosition = new Vector3(0f, 0f, 1f);
+        hitbox.localPosition = new Vector3(0f, 0f, 1.6f);
             hitbox.localScale = new Vector3(1.5f, 1.5f, 1f);
             root.transform.Find("AttackTelegraph").localPosition = new Vector3(0f, 1.55f, 0f);
             root.transform.Find("MarkIndicator").localPosition = new Vector3(0f, 1.5f, 0f);

@@ -32,6 +32,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public event Action<bool> SkillHeldChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
+    public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
     public bool GameplayEnabled => _gameplayEnabled && _focused;
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
