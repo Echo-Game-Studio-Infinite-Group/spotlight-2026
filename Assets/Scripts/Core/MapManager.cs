@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
-public sealed class MapManager : MonoBehaviour
+public sealed partial class MapManager : MonoBehaviour
 {
     private static MapManager _instance;
     private readonly Dictionary<string, AsyncOperation> _loads = new Dictionary<string, AsyncOperation>();

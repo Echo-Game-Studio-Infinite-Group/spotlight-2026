@@ -37,9 +37,15 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
 
     /// <summary>返回实际扣掉的血；被无敌帧、已死亡或非正伤害挡下时返回 0。</summary>
     public float TakeDamage(float amount, Vector3 hitPoint, Vector3 hitDirection)
+        => ApplyDamage(amount, hitPoint, hitDirection, false);
+
+    // 裂隙惩罚不能被战斗无敌帧抵消，但仍走同一套受伤与死亡通知。
+    public float TakeEnvironmentalDamage(float amount) => ApplyDamage(amount, Vector3.zero, Vector3.zero, true);
+
+    private float ApplyDamage(float amount, Vector3 hitPoint, Vector3 hitDirection, bool bypassInvulnerability)
     {
         EnsureStarted();
-        if (!IsAlive || amount <= 0f || IsInvulnerable) return 0f;
+        if (!IsAlive || amount <= 0f || (!bypassInvulnerability && IsInvulnerable)) return 0f;
 
         float applied = Mathf.Min(amount, _health);
         _health -= applied;
@@ -72,6 +78,15 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
     {
         _maxHealth = Mathf.Max(1f, value);
         Reset();
+    }
+
+    public void RestoreHealth(float amount)
+    {
+        EnsureStarted();
+        bool wasDead = _health <= 0f;
+        _health = Mathf.Clamp(amount, 1f, _maxHealth);
+        _invulnerableUntil = float.NegativeInfinity;
+        if (wasDead) Revived?.Invoke(this);
     }
 
     public void SetInvulnerableTime(float seconds) => _invulnerableTime = Mathf.Max(0f, seconds);

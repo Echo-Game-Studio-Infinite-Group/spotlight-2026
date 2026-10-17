@@ -169,6 +169,11 @@ public class GameManager : MonoBehaviour
 
     public void RestartLevel()
     {
+        if (GameJam.Flow.RunFlowController.Current != null)
+        {
+            GameJam.Flow.RunFlowController.Current.RestartRun();
+            return;
+        }
         // 流式房间不是整局入口；重开要回到常驻场景，重建玩家并重新加载首房。
         if (MapManager.Exists && !string.IsNullOrEmpty(MapManager.Instance.BootstrapSceneName))
         {

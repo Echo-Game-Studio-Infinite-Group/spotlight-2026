@@ -15,6 +15,7 @@ public sealed class TeamWhiteboxTests
         "Whitebox_Tutorial", "Whitebox_Room_01", "Whitebox_Room_02", "Whitebox_Room_03", "Whitebox_Room_04"
     };
     private MapManager _manager;
+    private MovementParams _originalMovement, _speedMovement;
 
     [UnitySetUp]
     public IEnumerator SetUp()
@@ -32,6 +33,10 @@ public sealed class TeamWhiteboxTests
     [UnityTearDown]
     public IEnumerator TearDown()
     {
+        var player = Object.FindObjectOfType<PlayerMotor>();
+        if (player != null && _originalMovement != null) player.SetParams(_originalMovement);
+        if (_speedMovement != null) Object.Destroy(_speedMovement);
+        _originalMovement = _speedMovement = null;
         if (_manager != null) Object.Destroy(_manager.gameObject);
         yield return null;
     }
@@ -132,6 +137,9 @@ public sealed class TeamWhiteboxTests
     public IEnumerator EveryAuthoredDoorCanBeCrossedAt120MetresPerSecondWithoutLosingPlayerOrVelocity()
     {
         PlayerMotor player = Object.FindObjectOfType<PlayerMotor>();
+        // 高速验收独立于策划正在调整的速度上限，不修改共享参数资产。
+        _originalMovement = player.Params; _speedMovement = Object.Instantiate(_originalMovement);
+        _speedMovement.MaxSpeed = 120f; player.SetParams(_speedMovement);
         int playerId = player.GetInstanceID();
         int cameraId = Camera.main.GetInstanceID();
         player.GetComponent<PlayerActionRunner>().enabled = false;
