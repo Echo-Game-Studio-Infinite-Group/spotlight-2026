@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Platform_Surface
+  m_Shader: {fileID: 4800000, guid: d865d9bc4f09480c99c125b495ba343e, type: 3}
+  m_Parent: {fileID: 2100000, guid: 6a61caaab86230f4b97210ff2170f9d9, type: 2}
+  m_ModifiedSerializedProperties: 2
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _EMISSIONENABLED_ON
+  - _OUTLINEENABLED_ON
+  - _OUTLINEGEOMETRYEDGES_ON
+  - _OVERRIDEOUTLINECOLOR_ON
+  - _OVERRIDEOUTLINE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 24, y: 32}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _HatchScale: 14
+    - _Hatching: 0
+    - _EmissionEnabled: 0
+    - _Metallic: 0.088
+    - _OutlineBrightness: 1.1
+    - _OutlineEnabled: 1
+    - _OutlineGeometryEdges: 1
+    - _OutlineWidth: 1.05
+    - _OverrideOutline: 1
+    - _ShadowPattern: 0
+    - _Smoothness: 0.86
+    - _ToonSpecular: 0.015
+    m_Colors:
+    - _BaseColor: {r: 0.055, g: 0.16, b: 0.18, a: 1}
+    - _OutlineColor: {r: 0.42, g: 0.76, b: 0.8, a: 1}
+  m_BuildTextureStacks: []

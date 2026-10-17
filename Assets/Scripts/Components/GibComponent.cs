@@ -31,7 +31,6 @@ public sealed class GibComponent : MonoBehaviour
     private readonly List<Piece> _pieces = new List<Piece>();
     private readonly List<AnimatedLower> _animatedLowers = new List<AnimatedLower>();
     private bool _rolled;
-    private float _age;
     public bool IsSliced { get; private set; }
     public float DeathChance => _deathChance;
 
@@ -45,6 +44,8 @@ public sealed class GibComponent : MonoBehaviour
         public bool Settled;
         public Rigidbody Body;
         public float Rate = 1f;
+        // 碎块自己的生存计时，挂在碎块 GameObject 上。
+        public GibPieceLifetime Lifetime;
         public readonly List<GibMeshBatch> Batches = new List<GibMeshBatch>();
     }
 
@@ -225,7 +226,6 @@ public sealed class GibComponent : MonoBehaviour
             upper.Body.velocity = upper.Velocity;
             upper.Body.angularVelocity = upper.Spin * Mathf.Deg2Rad;
         }
-        _age = 0f;
         return true;
     }
 
@@ -316,7 +316,11 @@ public sealed class GibComponent : MonoBehaviour
         root.transform.position = pivot;
         // 留在敌人所在场景；由组件显式持有，避免敌人缩放二次作用于烘焙后的世界坐标。
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, gameObject.scene);
-        var piece = new Piece { Root = root.transform, Velocity = velocity, Spin = spin };
+        // 生存计时交给碎块自己：敌人被对象池回收时会失活，计时若挂在敌人身上
+        // 就会跟着停摆或把碎块一起销毁。这里只把策划配的 _lifetime 注入进去。
+        var lifetime = root.AddComponent<GibPieceLifetime>();
+        lifetime.Configure(_lifetime);
+        var piece = new Piece { Root = root.transform, Velocity = velocity, Spin = spin, Lifetime = lifetime };
         _pieces.Add(piece);
         return piece;
     }
@@ -343,6 +347,19 @@ public sealed class GibComponent : MonoBehaviour
         child.AddComponent<MeshFilter>().sharedMesh = mesh;
         var renderer = child.AddComponent<MeshRenderer>();
         renderer.sharedMaterials = materials;
+        // 把渲染用到的资源所有权转交碎块自己：敌人被池复用时会跑 ResetEffect，
+        // 若资源还挂在敌人身上就会被那一刻释放，碎块随即变成空白。
+        // 用 _ownedAssets.Remove 的返回值做"首个认领者"判定——
+        // 材质在 GetMaterial 里是缓存共享的，同一份可能被上下半身同时引用，
+        // Remove 成功才说明是本碎块第一个拿到它，避免重复销毁。
+        if (piece.Lifetime != null)
+        {
+            if (_ownedAssets.Remove(mesh)) piece.Lifetime.Own(mesh);
+            foreach (Material material in materials)
+            {
+                if (material != null && _ownedAssets.Remove(material)) piece.Lifetime.Own(material);
+            }
+        }
         if (source != null)
         {
             renderer.shadowCastingMode = source.shadowCastingMode;
@@ -451,8 +468,8 @@ public sealed class GibComponent : MonoBehaviour
     private void Simulate(float dt, float? previewFloor = null)
     {
         if (!IsSliced || _pieces.Count == 0 || dt <= 0f) return;
-        _age += dt;
-        if (_lifetime > 0f && _age >= _lifetime) { ReleasePieces(); return; }
+        // 这里不再计时销毁：生存计时已交给每块碎块自己的 GibPieceLifetime，
+        // 两处同时倒计时会互相打架（敌人还活着时碎块就被这里提前销毁）。
         foreach (Piece piece in _pieces)
         {
             if (piece.Settled || piece.Body != null) continue;
@@ -489,17 +506,41 @@ public sealed class GibComponent : MonoBehaviour
         IsSliced = false;
     }
 
+    // 解除对碎块的驱动，但**不销毁它们**。
+    //
+    // 碎块的存亡由各自的 GibPieceLifetime 决定（到点自己消失；生存时间配 0 就常驻）。
+    // 这里原先会 Destroy 掉所有碎块，导致敌人被对象池复用时（ResetHealth → ResetEffect）
+    // 把场上还活着的碎块一并清掉——表现就是"碎块过一会儿突然全部消失"。
+    //
+    // 解除驱动前必须把重力交还给物理引擎：上半身的 Rigidbody 是 useGravity = false，
+    // 重力一直靠本组件 FixedUpdate 每帧 AddForce 喂；本组件一旦不再驱动它
+    // （失活或解除引用），它就会带着当前速度永远飘在空中。
     private void ReleasePieces()
     {
-        _animatedLowers.Clear();
         foreach (Piece piece in _pieces)
-            if (piece.Root != null) { piece.Root.gameObject.SetActive(false); Release(piece.Root.gameObject); }
+        {
+            // 交还重力后，上半身由物理引擎自然落地；下半身没有刚体，
+            // 本来就是静止的死亡姿态，解除驱动即冻结在原地，符合预期。
+            if (piece.Body != null) piece.Body.useGravity = true;
+        }
         _pieces.Clear();
+        _animatedLowers.Clear();
+        // 渲染用的 Mesh/Material 已在 AddRenderer 里转交给各碎块持有，
+        // 留在 _ownedAssets 里的都是中间产物（切面封口网格、烘焙网格等），此处释放是安全的。
         foreach (Object asset in _ownedAssets) if (asset != null) Release(asset);
         _ownedAssets.Clear();
     }
 
-    private void OnDisable() => ResetEffect();
+    // 敌人失活（被对象池回收）时：解除驱动，但保留碎块。
+    //
+    // 为什么不能沿用原来的 OnDisable → ResetEffect：那会销毁场上还活着的碎块。
+    // 也不能简单清空引用就完事——上半身的重力靠本组件 FixedUpdate 喂，
+    // 清引用而不交还重力会让它带着速度永远飘在空中（实机踩过这个坑）。
+    // ReleasePieces 现在同时做这两件事：交还重力 + 解除引用，且不销毁碎块。
+    private void OnDisable()
+    {
+        ReleasePieces();
+    }
 
     private static void Release(Object asset)
     {

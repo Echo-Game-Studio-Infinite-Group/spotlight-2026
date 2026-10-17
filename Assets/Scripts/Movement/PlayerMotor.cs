@@ -390,6 +390,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void FaceWallTangent()
     {
+        // 离墙后的切线仍用于蹬墙保护，不能再把它应用为角色朝向。
+        if (!IsWallSliding) return;
         _facingAngularVelocity = 0f;
         if (_wallTangent != Vector3.zero) transform.rotation = Quaternion.LookRotation(_wallTangent, Vector3.up);
     }

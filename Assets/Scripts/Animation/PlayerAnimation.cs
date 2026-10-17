@@ -10,6 +10,8 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateJump = 2;    // 2：空中/下落
     public const int MotionStateSlide = 3;   // 3：滑铲（Soccer Tackle）
     public const int MotionStateAttack = 4;  // 4：攻击（Attack）
+    public const int MotionStateWallDashLeft = 5;
+    public const int MotionStateWallDashRight = 6;
 
     private static readonly int MotionStateId = Animator.StringToHash("MotionState");
     private static readonly int RunBlendId = Animator.StringToHash("RunBlend");
@@ -19,16 +21,32 @@ public sealed class PlayerAnimation : MonoBehaviour
     [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
     [SerializeField, Min(0f)] private float _blendResponse = 10f;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
+    [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
     private PlayerMotor _motor;
     private PlayerCombat _combat;
     private float _runBlend;
     private float _airborneTime;
+    private int _wallMotionState = MotionStateWallDashLeft;
 
     // 供测试与诊断读取当前实际下发给动画机的状态编号
     public int CurrentMotionState { get; private set; }
     public Animator Animator => _animator;
     public bool IsSequenceDriven { get; private set; }
     public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
+
+    // 收招与自动过渡共用状态名称；MotionState 编号不依赖 Animator 编辑器中的排列顺序。
+    public static string LocomotionStateName(int motionState)
+    {
+        switch (motionState)
+        {
+            case MotionStateMove: return "Move";
+            case MotionStateJump: return "Jump";
+            case MotionStateSlide: return "Trackle";
+            case MotionStateWallDashLeft: return "WallDashLeft";
+            case MotionStateWallDashRight: return "WallDashRight";
+            default: return "Idle";
+        }
+    }
 
     public void Configure(Animator animator)
     {
@@ -70,8 +88,16 @@ public sealed class PlayerAnimation : MonoBehaviour
 
         // CharacterController 在贴地移动时可能短暂丢失 Grounded，延迟进入下落动画；主动起跳立即播放。
         _airborneTime = _motor.IsGrounded ? 0f : _airborneTime + deltaTime;
-        bool airborne = _motor.IsWallSliding || _motor.Velocity.y > 0f || _airborneTime >= _fallGrace;
-        int state = _motor.IsSliding ? MotionStateSlide : airborne ? MotionStateJump :
+        bool airborne = _motor.Velocity.y > 0f || _airborneTime >= _fallGrace;
+        if (_motor.IsWallSliding)
+        {
+            // 法线从墙指向角色；用角色右侧判断，避免相机转动导致左右动画翻转。
+            float side = Vector3.Dot(_motor.WallNormal, _motor.transform.right);
+            if (side > _wallSideDeadZone) _wallMotionState = MotionStateWallDashLeft;
+            else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
+        }
+        else _wallMotionState = MotionStateWallDashLeft;
+        int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding ? MotionStateSlide : airborne ? MotionStateJump :
             _motor.HorizontalSpeed > _idleSpeed ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，

@@ -45,6 +45,10 @@ public sealed class TimeManager : MonoBehaviour
     private static readonly object HitStopOwner = new object();
     private static readonly object TimeStopOwner = new object();
 
+    // 除玩家顿帧外，还可能有实体为自己登记的顿帧来源（例如敌人冻自己的受击动画）。
+    // InHitStop 只认这张表，所以调用方必须真的登记过，不能用一次性对象冒充。
+    private readonly List<object> _hitStopOwners = new List<object> { HitStopOwner };
+
     private bool _paused;
 
     [Header("时缓")]
@@ -125,8 +129,11 @@ public sealed class TimeManager : MonoBehaviour
         {
             TimeManager instance = Resolve();
             if (instance == null) return false;
-            foreach (Source source in instance._playerSources)
-                if (ReferenceEquals(source.Owner, HitStopOwner) && (source.Until == 0f || Time.unscaledTime < source.Until)) return true;
+            foreach (object owner in instance._hitStopOwners)
+            {
+                foreach (Source source in instance._playerSources)
+                    if (ReferenceEquals(source.Owner, owner) && (source.Until == 0f || Time.unscaledTime < source.Until)) return true;
+            }
             return false;
         }
     }
@@ -161,26 +168,42 @@ public sealed class TimeManager : MonoBehaviour
         SourcesOf(layer)?.RemoveAll(source => source.Owner == owner);
     }
 
-    // 顿帧 / 命中减速：命中那一刻短促一压，world 和 player 一起压，到点自动恢复
-    public static void HitStop(float seconds = -1f, float rate = -1f)
+    // 顿帧 / 命中减速：命中那一刻短促一压，world 和 player 一起压，到点自动恢复。
+    // owner 留空＝玩家侧那套默认顿帧；实体要为自己登记顿帧就传自己的来源标识，
+    // 这样它与玩家顿帧互不覆盖（各按各的时长恢复），InHitStop 也认得出是谁发起的。
+    public static void HitStop(float seconds = -1f, float rate = -1f, object owner = null)
     {
         TimeManager instance = Resolve();
         if (instance == null) return;
 
         if (seconds < 0f) seconds = instance.HitStopSeconds;
         if (rate < 0f) rate = instance.HitStopRateValue;
+        if (owner == null) owner = HitStopOwner;
+        else instance.RegisterHitStopOwner(owner);
 
-        Apply(TimeLayer.World, rate, seconds, HitStopOwner);
-        Apply(TimeLayer.Player, rate, seconds, HitStopOwner);
+        Apply(TimeLayer.World, rate, seconds, owner);
+        Apply(TimeLayer.Player, rate, seconds, owner);
+    }
+
+    // 登记一个顿帧来源标识，让它进得住 InHitStop 的判定表
+    private void RegisterHitStopOwner(object owner)
+    {
+        if (!_hitStopOwners.Contains(owner)) _hitStopOwners.Add(owner);
     }
 
     // 把时缓和顿帧的来源都清掉（自检脚本复位用）
+    // 实体自己登记的顿帧来源也要一起清，否则自检/测试之间会互相残留。
     public static void ClearSlowMotion()
     {
         Release(TimeLayer.World, SlowOwner);
         Release(TimeLayer.Player, SlowOwner);
-        Release(TimeLayer.World, HitStopOwner);
-        Release(TimeLayer.Player, HitStopOwner);
+        TimeManager instance = Resolve();
+        if (instance == null) return;
+        foreach (object owner in instance._hitStopOwners)
+        {
+            Release(TimeLayer.World, owner);
+            Release(TimeLayer.Player, owner);
+        }
     }
 
     // 时停：只冻 world，玩家照常动。按住调 true，松开调 false，没有秒数

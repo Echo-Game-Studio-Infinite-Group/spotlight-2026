@@ -150,6 +150,7 @@ namespace GameJam.Actions.Editor
             if (recordUndo) Undo.RecordObject(controller, "装配动作动画参数");
             EnsureParameter(controller, ActionAnimatorBridge.TimeParameter, AnimatorControllerParameterType.Float);
             EnsureParameter(controller, ActionAnimatorBridge.PlayingParameter, AnimatorControllerParameterType.Bool);
+            PlayerLocomotionAnimatorSetup.EnsureWallDash(controller, recordUndo);
             AnimatorStateMachine root = controller.layers[0].stateMachine;
             if (recordUndo) Undo.RecordObject(root, "装配动作动画状态机");
             AnimatorStateMachine actions = root.stateMachines.FirstOrDefault(value => value.stateMachine.name == "Actions").stateMachine;

@@ -75,12 +75,19 @@ TestResults*.xml
 !Tools/**/*.csproj
 !Tools/**/*.sln
 
-# Wwise 集成中的帮助文档、Debug 运行库和调试符号不参与编辑器运行。
-# Windows Profile/AkUnitySoundEngine.dll 是编辑器实际加载的原生运行库，需要提交。
+# Wwise Windows/x86_64/Profile/不能被ignore
+
+# Wwise 文档（不参与运行，体积大）
 Assets/Wwise/Documentation/
-Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
-Assets/Wwise/API/Runtime/Plugins/Mac/Profile/
-Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/
+
+# Wwise 调试符号文件（不参与运行，体积大）
 Assets/Wwise/**/*.pdb
 Assets/Wwise/**/*.pdb.meta
 Assets/Wwise/**/*.dSYM/
+
+# Mac 不参与本期运行，Debug / Profile 运行库都忽略
+Assets/Wwise/API/Runtime/Plugins/Mac/Debug/
+Assets/Wwise/API/Runtime/Plugins/Mac/Profile/
+
+# Windows 下的 Debug 构建（带完整调试信息，体积大）
+Assets/Wwise/API/Runtime/Plugins/Windows/x86_64/Debug/
