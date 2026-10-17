@@ -26,6 +26,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private bool _gameplayEnabled = true;
     private bool _focused = true;
     public event Action ToggleHUD;
+    public event Action PauseRequested;
     public event Action Cleared;
     public event Action<bool> SkillHeldChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
@@ -185,7 +186,11 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         return _actionSnapshot;
     }
     private void OnToggleHUD(InputAction.CallbackContext context) => ToggleHUD?.Invoke();
-    private void OnToggleCursor(InputAction.CallbackContext context) => SetGameplayEnabled(!_gameplayEnabled);
+    private void OnToggleCursor(InputAction.CallbackContext context)
+    {
+        if (PauseRequested != null) PauseRequested.Invoke();
+        else SetGameplayEnabled(!_gameplayEnabled);
+    }
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
     private void ApplyGameplay()
