@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // 回调只采集碰撞，Motor 在 Move 完成后统一决定状态，避免同一帧的回调顺序重复授予蹬墙。
 public sealed class MovementContacts
@@ -16,6 +16,8 @@ public sealed class MovementContacts
 
     public bool Grounded { get; private set; }
     public bool HasWall { get; private set; }
+    // 不可滑接触会结束划墙；是否触发撞击惩罚由表面标签分别决定。
+    public bool HasNonSlideWall { get; private set; }
     public Vector3 WallNormal { get; private set; }
     public Vector3 WallPoint { get; private set; }
     public Vector3 WallIncoming { get; private set; }
@@ -31,11 +33,14 @@ public sealed class MovementContacts
     {
         if (_normalCount < _normals.Length) _normals[_normalCount++] = hit.normal;
         if (!IsWall(hit.normal) || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
-        RecordWall(hit.point, hit.normal);
+        RecordWall(hit.point, hit.normal, hit.collider);
     }
 
-    private void RecordWall(Vector3 point, Vector3 hitNormal)
+    private void RecordWall(Vector3 point, Vector3 hitNormal, Collider surface)
     {
+        if (!AllowsWallSlide(surface)) HasNonSlideWall = true;
+        // 轻型敌人仍阻挡位移，但不能授予划墙或触发撞墙瘫倒；滑铲前伸检测也走此入口。
+        if (HasTagInParents(surface, "NoWallInteraction")) return;
         Vector3 normal = MovementMath.Horizontal(hitNormal).normalized;
         float angle = MovementMath.ApproachAngle(_incoming, normal);
         // 同一面墙会在分段 Move 中反复回调；保留不同法线，避免旧墙覆盖墙角接触。
@@ -66,6 +71,7 @@ public sealed class MovementContacts
         bool sliding = false, float slideForwardExtent = 0f)
     {
         HasWall = false;
+        HasNonSlideWall = false;
         WallAngle = -1f;
         _wallContactCount = 0;
         _sliding = sliding;
@@ -108,6 +114,7 @@ public sealed class MovementContacts
             Vector3 direction = horizontal / distance;
             float allowed = distance;
             Vector3 normal = Vector3.zero, point = Vector3.zero;
+            Collider surface = null;
             int count = Physics.CapsuleCastNonAlloc(start, end, radius, direction, _hits,
                 distance + _controller.skinWidth, _params.CollisionMask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
@@ -127,6 +134,7 @@ public sealed class MovementContacts
                 allowed = travel;
                 normal = MovementMath.Horizontal(hitNormal).normalized;
                 point = hitPoint;
+                surface = hit.collider;
             }
             // 起手或转向后前伸部分可能已接触墙；补重叠查询，并使用真实外法线允许后退脱困。
             count = Physics.OverlapCapsuleNonAlloc(start, end, radius, _overlaps,
@@ -142,9 +150,10 @@ public sealed class MovementContacts
                 allowed = 0f;
                 normal = MovementMath.Horizontal(outward).normalized;
                 point = closest;
+                surface = collider;
             }
             if (normal == Vector3.zero) break;
-            RecordWall(point, normal);
+            RecordWall(point, normal, surface);
             Vector3 remainder = horizontal * (1f - allowed / distance);
             horizontal -= remainder;
             horizontal += MovementMath.ClipIntoSurface(remainder, normal);
@@ -279,6 +288,19 @@ public sealed class MovementContacts
         for (int i = 0; i < count; i++)
             if (!_overlaps[i].transform.IsChildOf(_controller.transform)) return false;
         return true;
+    }
+
+    public static bool AllowsWallSlide(Collider surface)
+    {
+        // 根物体的标记覆盖子碰撞体，保留 Enemy Layer 供战斗和索敌使用。
+        return !HasTagInParents(surface, "NoWallInteraction") && !HasTagInParents(surface, "NoWallSlide");
+    }
+
+    private static bool HasTagInParents(Collider surface, string tag)
+    {
+        for (Transform current = surface.transform; current != null; current = current.parent)
+            if (current.CompareTag(tag)) return true;
+        return false;
     }
 
     private bool IsWall(Vector3 normal) => Mathf.Abs(normal.y) <= _params.WallNormalMaxUpDot;
