@@ -1,4 +1,4 @@
-using Cinemachine;
+﻿using Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -36,7 +36,7 @@ public class EnemyBase : MonoBehaviour
     [SerializeField, Min(0f)] private float _runDistance = 6f;
     [SerializeField, Min(0f)] private float _runHysteresis = 0.5f;
     [SerializeField, Range(0f, 1f)] private float _injuredThreshold = 0.3f;
-    public float Speed { get; private set; }
+    public float Speed { get; protected set; }
     public float WalkSpeed => _walkSpeed;
     public float RunSpeed => _runSpeed;
     // 比较比例，避免 100 * 0.3f 的舍入把恰好 30 血误判为受伤。
@@ -239,7 +239,7 @@ public class EnemyBase : MonoBehaviour
             + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
-    private void Chase()
+    protected virtual void Chase()
     {
         Player player = Player.Current;
         PlayerMotor target = player != null ? player.Motor : null;
@@ -282,7 +282,7 @@ public class EnemyBase : MonoBehaviour
     // 这样策划只填一个值，敌人自己的停步位置就跟着变，不会出现"站在射程外干等"。
     private float StopDistance => _ranged != null && _ranged.CanFire ? _ranged.Range : _attackRange;
 
-    private void StopMoving()
+    protected void StopMoving()
     {
         Speed = 0f;
         if (!AgentReady) return;
@@ -290,7 +290,7 @@ public class EnemyBase : MonoBehaviour
         _agent.velocity = Vector3.zero;
     }
 
-    private void TryAttack(PlayerMotor target)
+    protected void TryAttack(PlayerMotor target)
     {
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;

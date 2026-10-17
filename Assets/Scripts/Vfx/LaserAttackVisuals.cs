@@ -122,14 +122,15 @@ public sealed class LaserAttackVisuals : MonoBehaviour
         _clock += dt;
         _phaseTime += dt;
         Hide();
-        if (!_attack.isActiveAndEnabled || (!_attack.IsCharging && !_attack.IsFiring)) return;
+        if (!_attack.isActiveAndEnabled || (!_attack.IsCharging && !_attack.IsConverging && !_attack.IsFiring)) return;
 
         Vector3 start = _attack.BeamStart;
         Vector3 end = _attack.BeamEnd;
         Vector3 forward = _attack.BeamDirection;
         float pulse = 1f + Mathf.Sin(_clock * _pulseFrequency * Mathf.PI * 2f) * _pulseStrength;
         float angle = _clock * _rotationSpeed * Mathf.Deg2Rad;
-        float charge = _attack.ChargeProgress;
+        float convergence = _attack.ConvergenceProgress;
+        float charge = _attack.IsConverging ? 1f : _attack.ChargeProgress;
         bool firing = _attack.IsFiring;
         Color color = firing ? _fireColor : _warningColor;
 
@@ -139,7 +140,7 @@ public sealed class LaserAttackVisuals : MonoBehaviour
             // 锁定标记始终位于真实截断点；命中时贴合法线，空射时垂直于瞄准方向。
             Vector3 normal = _attack.HasBeamHit ? _attack.ImpactNormal : -forward;
             Vector3 center = _attack.HasBeamHit ? _attack.ImpactPoint + normal * _surfaceOffset : end;
-            Ring(_lockRing, center, normal, Mathf.Lerp(_lockRadius, _lockedRadius, charge),
+            Ring(_lockRing, center, normal, Mathf.Lerp(_lockRadius, _lockedRadius, convergence),
                 _ringWidth, color, angle, .82f);
         }
         else
@@ -155,7 +156,7 @@ public sealed class LaserAttackVisuals : MonoBehaviour
             if (_attack.HasBeamHit) DrawImpact(angle, pulse);
         }
 
-        float radius = firing ? _muzzleRadius : Mathf.Lerp(_muzzleRadius, _lockedRadius * .5f, charge);
+        float radius = firing ? _muzzleRadius : Mathf.Lerp(_muzzleRadius, _lockedRadius * .5f, convergence);
         Ring(_muzzleRing, start, forward, radius * pulse, _ringWidth * (firing ? 2f : 1f), color, -angle, .9f);
     }
 

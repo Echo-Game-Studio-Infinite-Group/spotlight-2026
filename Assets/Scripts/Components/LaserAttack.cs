@@ -5,10 +5,12 @@
 [RequireComponent(typeof(HealthComponent), typeof(CombatComponent))]
 public sealed class LaserAttack : MonoBehaviour
 {
-    public enum AttackPhase { Idle, Charging, Firing, Cooldown }
+    public enum AttackPhase { Idle, Charging, Firing, Cooldown, Converging }
 
     [Header("激光时序（伤害与冷却使用同物体的 CombatComponent）")]
     [SerializeField, Min(0f)] private float _chargeSeconds = 1.2f;
+    [Tooltip("红线追踪结束后固定方向，汇聚期间给玩家躲避窗口；设为 0 立即开火。")]
+    [SerializeField, Min(0f)] private float _convergenceSeconds = .5f;
     [SerializeField, Min(.01f)] private float _beamSeconds = .5f;
     [SerializeField, Min(.1f)] private float _range = 30f;
     [Tooltip("光束的命中半径，设为 0 使用细射线。")]
@@ -31,6 +33,7 @@ public sealed class LaserAttack : MonoBehaviour
 
     public AttackPhase Phase { get; private set; }
     public bool IsCharging => Phase == AttackPhase.Charging;
+    public bool IsConverging => Phase == AttackPhase.Converging;
     public bool IsFiring => Phase == AttackPhase.Firing;
     public Transform Muzzle => _muzzle != null ? _muzzle : transform;
     public Vector3 BeamStart => _origin;
@@ -38,6 +41,7 @@ public sealed class LaserAttack : MonoBehaviour
     public Vector3 BeamDirection => _direction;
     public float Remaining => _remaining;
     public float ChargeProgress => IsCharging ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.001f, _chargeSeconds)) : 0f;
+    public float ConvergenceProgress => IsConverging ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.001f, _convergenceSeconds)) : 0f;
     public float FireProgress => IsFiring ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.01f, _beamSeconds)) : 0f;
     public bool HasBeamHit { get; private set; }
     public Vector3 ImpactPoint { get; private set; }
@@ -88,7 +92,7 @@ public sealed class LaserAttack : MonoBehaviour
         }
         if (target == null || !target.IsAlive || !canCharge)
         {
-            if (IsCharging) BeginCooldown();
+            if (IsCharging || IsConverging) BeginCooldown();
             return;
         }
         if (Phase == AttackPhase.Idle)
@@ -101,19 +105,27 @@ public sealed class LaserAttack : MonoBehaviour
             _remaining = _chargeSeconds;
             _telegraph?.Play();
         }
-        _remaining -= dt;
-        if (_remaining > 0f)
+        if (IsCharging)
         {
+            _remaining -= dt;
             _origin = Muzzle.position;
             _direction = Muzzle.forward.normalized;
+            if (_remaining <= 0f)
+            {
+                // 汇聚起点即锁定点，后续不能重新读取炮口朝向，否则玩家没有稳定的躲避窗口。
+                Phase = AttackPhase.Converging;
+                _remaining = Mathf.Max(0f, _convergenceSeconds);
+            }
+        }
+        else if (IsConverging) _remaining -= dt;
+        if (_remaining > 0f)
+        {
             TraceBeam(target, false);
             return;
         }
         Phase = AttackPhase.Firing;
         _remaining = Mathf.Max(.01f, _beamSeconds);
         _damageAttempted = false;
-        _origin = Muzzle.position;
-        _direction = Muzzle.forward.normalized;
         _telegraph?.Stop();
         TraceBeam(target);
     }
@@ -174,7 +186,7 @@ public sealed class LaserAttack : MonoBehaviour
     private void OnDamaged(HealthComponent source, float applied, Vector3 point, Vector3 direction)
     {
         if (!source.IsAlive) ResetAttack();
-        else if (IsCharging) BeginCooldown();
+        else if (IsCharging || IsConverging) BeginCooldown();
     }
 
     private void OnRevived(HealthComponent source) => ResetAttack();

@@ -31,6 +31,7 @@ public sealed class HeavyLaserTests
         _line.transform.SetParent(root.transform, true);
         Set(_laser, "_beam", _line);
         Set(_laser, "_chargeSeconds", .2f);
+        Set(_laser, "_convergenceSeconds", 0f);
         Set(_laser, "_beamSeconds", .5f);
         Set(_laser, "_range", 20f);
         Set(_laser, "_hitRadius", .1f);
@@ -68,6 +69,35 @@ public sealed class HeavyLaserTests
         Assert.IsTrue(_laser.IsCharging);
         _laser.Simulate(.11f, _target);
         Assert.IsTrue(_laser.IsFiring);
+    }
+
+    [Test]
+    public void ConvergenceFreezesAimAndLetsTargetEvadeBeforeFiring()
+    {
+        Set(_laser, "_convergenceSeconds", .5f);
+        _laser.Simulate(.21f, _target);
+        Assert.IsTrue(_laser.IsConverging);
+        Assert.AreEqual(0f, _laser.ConvergenceProgress);
+        Assert.AreEqual(100f, _target.Health);
+        Assert.IsFalse(_line.enabled);
+        Vector3 origin = _laser.BeamStart;
+        Vector3 direction = _laser.BeamDirection;
+        _laser.transform.SetPositionAndRotation(_origin + Vector3.right, Quaternion.Euler(0f, 45f, 0f));
+        _target.transform.position += Vector3.right * 5f;
+        Physics.SyncTransforms();
+        _laser.Simulate(.25f, _target);
+        Assert.IsTrue(_laser.IsConverging);
+        Assert.That(_laser.ConvergenceProgress, Is.EqualTo(.5f).Within(.001f));
+        _laser.Simulate(0f, _target);
+        Assert.That(_laser.Remaining, Is.EqualTo(.25f).Within(.001f));
+        Assert.AreEqual(origin, _laser.BeamStart);
+        Assert.AreEqual(direction, _laser.BeamDirection);
+        Assert.AreEqual(100f, _target.Health);
+        _laser.Simulate(.26f, _target);
+        Assert.IsTrue(_laser.IsFiring);
+        Assert.AreEqual(origin, _laser.BeamStart);
+        Assert.AreEqual(direction, _laser.BeamDirection);
+        Assert.AreEqual(100f, _target.Health);
     }
 
     [Test]
@@ -294,6 +324,7 @@ public sealed class HeavyLaserTests
     [UnityTest]
     public IEnumerator ProceduralVisualsSwitchPhasesReuseGeometryAndClearOnDisable()
     {
+        Set(_laser, "_convergenceSeconds", .5f);
         LaserAttackVisuals visuals = _laser.gameObject.AddComponent<LaserAttackVisuals>();
         Material material = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
             "Assets/Art/Materials/ProceduralLaser.mat");
@@ -314,6 +345,18 @@ public sealed class HeavyLaserTests
         int count = _laser.GetComponentsInChildren<LineRenderer>(true).Length;
 
         _laser.Simulate(.11f, _target);
+        yield return null;
+        Assert.IsTrue(_laser.IsConverging);
+        Assert.IsTrue(aim.enabled);
+        Assert.IsTrue(marker.enabled);
+        Assert.IsFalse(_line.enabled);
+        float initialSpan = Vector3.Distance(marker.GetPosition(0), marker.GetPosition(marker.positionCount / 2));
+        _laser.Simulate(.25f, _target);
+        yield return null;
+        Assert.Less(Vector3.Distance(marker.GetPosition(0), marker.GetPosition(marker.positionCount / 2)), initialSpan);
+        Assert.AreEqual(_laser.BeamEnd, aim.GetPosition(1));
+        Assert.AreEqual(100f, _target.Health);
+        _laser.Simulate(.26f, _target);
         yield return null;
         Assert.IsTrue(_line.enabled);
         Assert.IsFalse(aim.enabled);

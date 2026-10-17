@@ -28,10 +28,11 @@ public static class EnemyHeavyPrefabBuilder
             EditorApplication.delayCall += RunRequested;
             return;
         }
+        string request = File.ReadAllText(RequestPath).Trim();
         File.Delete(RequestPath);
         try
         {
-            Build();
+            if (request == "combat") ConfigureCombat(); else Build();
             File.WriteAllText(ResultPath, "SUCCESS: " + PrefabPath);
         }
         catch (Exception error)
@@ -126,8 +127,73 @@ public static class EnemyHeavyPrefabBuilder
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
 
+        ConfigureCombat();
         AssetDatabase.SaveAssets();
         Debug.Log("[EnemyHeavy] 已替换新机甲模型、材质和动画，场景未写盘。");
+    }
+
+    [MenuItem("超高速行者/接线重型敌人战斗动作")]
+    public static void ConfigureCombat()
+    {
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/Animations/EnemyHeavy.controller");
+        var machine = controller.layers[0].stateMachine;
+        string[] states = { "Idle", "Move", "Attack", "Hurt", "RangeStart", "RangeStop" };
+        string[] clips = { "Idle", "Walk", "Fire", "Hurt", "RangeStart", "RangeStop" };
+        for (int i = 0; i < states.Length; i++)
+        {
+            var state = machine.states.Select(s => s.state).FirstOrDefault(s => s.name == states[i])
+                ?? machine.AddState(states[i]);
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/EnemyHeavy/" + clips[i] + ".anim");
+            if (clip == null) throw new InvalidOperationException("缺少动作：" + clips[i]);
+            state.motion = clip;
+            state.tag = states[i] == "Attack" ? "Attack" : "";
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = i < 2;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            if (states[i] == "Attack") AnimationUtility.SetAnimationEvents(clip, new[] {
+                new AnimationEvent { time = 0.8f, functionName = "EnableHitbox" },
+                new AnimationEvent { time = 1.2f, functionName = "DisableHitbox" },
+                new AnimationEvent { time = clip.length - 0.02f, functionName = "FinishAttack" }
+            });
+            EditorUtility.SetDirty(clip);
+            EditorUtility.SetDirty(state);
+        }
+        var idle = machine.states.First(s => s.state.name == "Idle").state;
+        var move = machine.states.First(s => s.state.name == "Move").state;
+        var attack = machine.states.First(s => s.state.name == "Attack").state;
+        if (!move.transitions.Any(t => t.destinationState == attack))
+        {
+            var transition = move.AddTransition(attack);
+            transition.hasExitTime = false;
+            transition.duration = 0.1f;
+            transition.AddCondition(AnimatorConditionMode.If, 0f, "Attack");
+        }
+        var stop = machine.states.First(s => s.state.name == "RangeStop").state;
+        if (!stop.transitions.Any(t => t.destinationState == idle))
+        {
+            var transition = stop.AddTransition(idle);
+            transition.hasExitTime = true;
+            transition.exitTime = 1f;
+            transition.duration = 0.1f;
+        }
+        var hurt = machine.states.First(s => s.state.name == "Hurt").state;
+        foreach (var transition in hurt.transitions) { transition.hasExitTime = true; transition.exitTime = 1f; }
+        EditorUtility.SetDirty(controller);
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            var agent = root.GetComponent<NavMeshAgent>();
+            agent.enabled = true;
+            root.GetComponent<EnemyHeavy>().SetChasePlayer(true);
+            var hitbox = root.GetComponentInChildren<Hitbox>(true).transform;
+            hitbox.localPosition = new Vector3(0f, 0.25f, 1.4f);
+            hitbox.localScale = Vector3.one;
+            hitbox.GetComponent<BoxCollider>().size = new Vector3(2.1f, 0.5f, 2f);
+            SetFloat(root.GetComponent<GibComponent>(), "_deathChance", 0f);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+        AssetDatabase.SaveAssets();
     }
 
     private static void PrepareModel()

@@ -16,7 +16,7 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private Button _fullscreenButton;
     [SerializeField] private float _buttonTop = -35;
     [SerializeField] private float _buttonSpacing = 105;
-    [SerializeField] private string _gameScenePath = "Assets/Scenes/TestScene.unity";
+    [SerializeField] private string _gameScenePath = "Assets/Scenes/FlowGame.unity";
     private UnityAction _resume;
 
     private void Awake()

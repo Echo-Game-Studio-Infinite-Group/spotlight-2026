@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -26,8 +26,13 @@ public static class NasaPunkMenuBuilder
 
     private static void Poll()
     {
-        if ((!File.Exists(Request) && !File.Exists(CRTRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating ||
-            EditorApplication.isPlayingOrWillChangePlaymode) return;
+        if ((!File.Exists(Request) && !File.Exists(CRTRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        // 请求保留到编辑模式稳定后再执行，避免播放状态下保存场景。
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            EditorApplication.isPlaying = false;
+            return;
+        }
         if (File.Exists(CRTRequest)) { File.Delete(CRTRequest); BuildCRT(); }
         else { File.Delete(Request); Build(); }
     }
@@ -122,7 +127,7 @@ public static class NasaPunkMenuBuilder
         RawImage fill = CRTImage(rect, "Shutter", new Vector2(460, 80), Vector2.zero, shutter);
         fill.texture = Texture2D.whiteTexture; fill.color = Hex("64161E");
         fill.rectTransform.localScale = new Vector3(0, 1, 1);
-        CRTImage(rect, name, new Vector2(360, 60), Vector2.zero, text);
+        CRTImage(rect, name, new Vector2(440, 74), Vector2.zero, text);
         var motion = rect.gameObject.AddComponent<CRTMenuButton>(); Wire(motion, "_shutter", fill.rectTransform);
         var so = new SerializedObject(motion); so.FindProperty("_phase").floatValue = phase; so.ApplyModifiedPropertiesWithoutUndo();
         return button;
@@ -137,9 +142,15 @@ public static class NasaPunkMenuBuilder
             importer.mipmapEnabled = false; importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.maxTextureSize = 2048; importer.SaveAndReimport();
         }
-        Material titleMaterial = CRTMaterial("TitleCRT", "UI/CRT/Text");
-        Material textMaterial = CRTMaterial("ButtonCRT", "UI/CRT/Text", 30);
-        Material shutterMaterial = CRTMaterial("ShutterCRT", "UI/CRT/Text", 32);
+        Material titleMaterial = CRTMaterial("TitleCRT", "UI/CRT/Text", 38);
+        Material textMaterial = CRTMaterial("ButtonCRT", "UI/CRT/Text", 14);
+        textMaterial.SetFloat("_GlowRadius", 24);
+        textMaterial.SetFloat("_GlowBreathPeriod", 3);
+        textMaterial.SetFloat("_GlowBreathDepth", .75f);
+        textMaterial.SetFloat("_GlowStrength", .85f);
+        textMaterial.SetColor("_GlowColor", new Color(.78f, .22f, .26f, 1f));
+        EditorUtility.SetDirty(textMaterial);
+        Material shutterMaterial = CRTMaterial("ShutterCRT", "UI/CRT/Text", 16);
         Material tideMaterial = CRTMaterial("PerspectiveTide", "UI/CRT/Perspective Tide");
         Scene previous = SceneManager.GetActiveScene();
         Scene scene = SceneManager.GetSceneByPath("Assets/Scenes/MainMenu.unity");
@@ -188,7 +199,8 @@ public static class NasaPunkMenuBuilder
             var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
             if (!EditorSceneManager.SaveScene(scene, "Assets/Scenes/MainMenu.unity")) throw new IOException("主菜单保存失败。");
-            Snapshot(root, "MainMenu"); Snapshot(root, "MainMenu-Hover"); Snapshot(root, "MainMenu-Entry");
+            MenuVisualSettingsExport.Export(root);
+            Snapshot(root, "MainMenu"); Snapshot(root, "MainMenu-Hover"); Snapshot(root, "MainMenu-Entry"); Snapshot(root, "MainMenu-Glitch"); Snapshot(root, "MainMenu-TravelStart"); Snapshot(root, "MainMenu-TravelMiddle");
         }
         finally
         {
@@ -298,7 +310,7 @@ public static class NasaPunkMenuBuilder
     private static void Label(Transform p, string text, float x, float y, float w, float h, int size, Color color, bool bold = false)
     {
         Text label = Rect(p, text.Replace('\n', ' '), x, y, w, h).AddComponent<Text>();
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.font = AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/UI/Fonts/NanoDotSong.ttf");
         label.text = text; label.fontSize = size; label.color = color;
         label.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
         label.raycastTarget = false;
@@ -407,7 +419,7 @@ public static class NasaPunkMenuBuilder
             CRTMenuPresentation presentation = copy.GetComponent<CRTMenuPresentation>();
             if (presentation != null)
             {
-                float clock = name.EndsWith("Entry") ? .9f : 5f;
+                float clock = name.EndsWith("TravelStart") ? .55f : name.EndsWith("TravelMiddle") ? 1.75f : name.EndsWith("Glitch") ? .2f : name.EndsWith("Entry") ? .9f : 5f;
                 presentation.Preview(clock);
                 var buttons = copy.GetComponentsInChildren<CRTMenuButton>();
                 if (name.EndsWith("Hover")) buttons[0].OnPointerEnter(null);
