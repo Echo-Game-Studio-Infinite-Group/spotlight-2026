@@ -59,9 +59,16 @@
 										<MediaID ID="580249535"/>
 									</MediaIDList>
 								</AudioFileSource>
+								<AudioFileSource Name="jump_hard" ID="{9756FE2A-97B1-4D85-8294-ECCCF87EC57F}">
+									<Language>SFX</Language>
+									<AudioFile>Jump\jump_hard.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="727117255"/>
+									</MediaIDList>
+								</AudioFileSource>
 							</ChildrenList>
 							<ActiveSourceList>
-								<ActiveSource Name="jump_low" ID="{7B7A273C-EC30-411E-830F-CA6A7255DF19}" Platform="Linked"/>
+								<ActiveSource Name="jump_hard" ID="{9756FE2A-97B1-4D85-8294-ECCCF87EC57F}" Platform="Linked"/>
 							</ActiveSourceList>
 						</Sound>
 						<Sound Name="LandNormal" ID="{262FEEF8-FC75-4187-8D76-5C119AD11AB3}" ShortID="474445389">
@@ -88,9 +95,16 @@
 										<MediaID ID="1046760588"/>
 									</MediaIDList>
 								</AudioFileSource>
+								<AudioFileSource Name="land_2" ID="{CFD03865-DD1D-4F8B-8D44-7575E8D34F55}">
+									<Language>SFX</Language>
+									<AudioFile>Land\land_2.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="638996786"/>
+									</MediaIDList>
+								</AudioFileSource>
 							</ChildrenList>
 							<ActiveSourceList>
-								<ActiveSource Name="land_1" ID="{C602371A-7E05-401C-BCF4-3E2A6A93F665}" Platform="Linked"/>
+								<ActiveSource Name="land_2" ID="{CFD03865-DD1D-4F8B-8D44-7575E8D34F55}" Platform="Linked"/>
 							</ActiveSourceList>
 						</Sound>
 					</ChildrenList>

@@ -1,0 +1,69 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "154",
+  "SoundBanks": [
+   {
+    "Id": "448873674",
+    "Type": "User",
+    "GUID": "{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}",
+    "Language": "SFX",
+    "Hash": "{BDFCED93-1671-53B6-4C94-5643BEF32234}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\OneTimeAction",
+    "ShortName": "OneTimeAction",
+    "Path": "OneTimeAction.bnk",
+    "Media": [
+     {
+      "Id": "638996786",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Land\\land_2.wav",
+      "CachePath": "24/{241D740F-F463-74CE-6F7B-C1AFA097514F}.wem"
+     },
+     {
+      "Id": "727117255",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Jump\\jump_hard.wav",
+      "CachePath": "81/{8137CC10-43DF-2462-6871-106E26284CA9}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3892339301",
+      "Name": "Jump_Normal",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Jump_Normal",
+      "GUID": "{304CC152-DB75-4FE2-8385-3C1513AC44D9}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.8557708",
+      "DurationMax": "0.8557708",
+      "MediaRefs": [
+       {
+        "Id": "727117255"
+       }
+      ]
+     },
+     {
+      "Id": "2412175904",
+      "Name": "Land_Normal",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Land_Normal",
+      "GUID": "{624F0B3F-D241-402C-B30E-898433EA07C9}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.0961459",
+      "DurationMax": "1.0961459",
+      "MediaRefs": [
+       {
+        "Id": "638996786"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{5C8D2B44-8E63-E714-9627-FBB3C0B6CD61}"
+ }
+}
