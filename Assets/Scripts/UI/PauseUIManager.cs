@@ -21,7 +21,7 @@ public class PauseUIManager : MonoBehaviour
 
     private void OnDisable()
     {
-        _input.PauseRequested -= TogglePause;
+        if (_input != null) _input.PauseRequested -= TogglePause;
         if (_isPause) ResumeGame();
     }
 
@@ -44,7 +44,8 @@ public class PauseUIManager : MonoBehaviour
     {
         _isPause = false;
         TimeManager.SetPaused(false);
-        _input.SetGameplayEnabled(true);
+        // 场景卸载时玩家可能先于 UI 被销毁，仍需解除全局暂停。
+        if (_input != null) _input.SetGameplayEnabled(true);
         AudioListener.pause = false;
         _pauseMenuPanel.SetActive(false);
     }

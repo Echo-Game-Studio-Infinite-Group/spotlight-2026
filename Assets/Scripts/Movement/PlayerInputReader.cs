@@ -27,6 +27,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action PauseRequested;
+    public event Action MarkPressed;
     public event Action Cleared;
     public event Action<bool> SkillHeldChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
@@ -66,6 +67,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _slide = _gameplay.FindAction("Slide", true);
         _skill = _gameplay.FindAction("Skill", true);
         _attack = _gameplay.FindAction("Attack", true);
+        _gameplay.FindAction("Mark", true).performed += context => { if (GameplayEnabled) MarkPressed?.Invoke(); };
         _move.performed += OnMove;
         _move.canceled += OnMove;
         _sprint.performed += OnSprint;
