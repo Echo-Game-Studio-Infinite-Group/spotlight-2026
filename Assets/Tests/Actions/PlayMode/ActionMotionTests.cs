@@ -12,6 +12,8 @@ public sealed class ActionMotionTests
     public void SetUp()
     {
         _parameters = ScriptableObject.CreateInstance<MovementParams>();
+        // 此夹具覆盖超过当前调参上限的惯性与碰撞，不让正式默认值截断测试输入。
+        _parameters.MaxSpeed = 120f;
         _parameters.Gravity = 20f; _parameters.GroundFriction = 0f; _parameters.AirControl = 0f;
         _parameters.CapsuleBaseHeight = _parameters.CapsuleFastHeight = 2f;
         _parameters.CapsuleBaseRadius = _parameters.CapsuleMinRadius = .3f;

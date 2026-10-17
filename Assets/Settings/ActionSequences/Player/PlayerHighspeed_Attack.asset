@@ -115,12 +115,15 @@ MonoBehaviour:
       OffsetFrames: 0
     Targets:
     - {fileID: 11400000, guid: 26b5f44d095014b46a9b5782c2890ace, type: 2}
+    - {fileID: 11400000, guid: 3f64d60bf1c896d43af60063379a9c15, type: 2}
+    - {fileID: 11400000, guid: ac0e4003a88ca0147b3821560f899641, type: 2}
     RequireAll: []
     RequireAny: []
     Priority: 0
     IgnoreCooldown: 0
   Input:
     Steps: []
+    AlternativeTriggers: []
     MaxStepGapFrames: 0
     PreInputFrames: 8
     BufferGroup: main
@@ -133,6 +136,40 @@ MonoBehaviour:
   StartConditions:
   - speed_high
   EnergyCost: 0
+  EnergyCostSource: 0
+  EnergyParameters: {fileID: 0}
+  TimeEffect:
+    UsesVectorConverter: 0
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 0
+  LandingCompletionStart:
+    SegmentId: 
+    RelativeTo: 0
+    OffsetFrames: 0
   CooldownFrames: 21
   CooldownGroup: player_basic_attack
   RequestVariants: []

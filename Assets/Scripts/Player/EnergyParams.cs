@@ -12,7 +12,7 @@ public class EnergyParams : ScriptableObject
     public float EnergyPerTickPerExcessSpeed = 1f;
 
     [Header("机动技能耗能")]
-    [Tooltip("加速：右键 + W（+Shift），快速加速至地速阈值")]
+    [Tooltip("冲刺：Shift + 右键，补速倍率由动作序列配置")]
     public float AccelerateCost = 50f;
 
     [Tooltip("高跳：右键 + 空格，跳跃高度约为常态两倍")]
@@ -22,6 +22,6 @@ public class EnergyParams : ScriptableObject
     public float ReverseCost = 50f;
 
     [Header("时停耗能")]
-    [Tooltip("长按右键期间每 tick 消耗；满能量 200 / 本值 = 可维持的 tick 数（按 60tick/秒 约 3.33 秒）")]
+    [Tooltip("长按右键期间每个玩家逻辑 tick 消耗；按实际模拟时间计费，全局减速时每现实秒消耗相应减少")]
     public float TimeStopCostPerTick = 1f;
 }

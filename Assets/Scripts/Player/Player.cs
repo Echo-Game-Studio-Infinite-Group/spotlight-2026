@@ -24,6 +24,8 @@ public sealed class Player : MonoBehaviour
     private HealthComponent _health;
 
     private PlayerActionRunner _runner;
+    private PlayerAnimation _animation;
+    [SerializeField, Min(0f)] private float _bigHurtDamageThreshold = 30f;
 
     public PlayerMotor Motor { get { EnsureReferences(); return _motor; } }
     public HealthComponent Health { get { EnsureReferences(); return _health; } }
@@ -40,12 +42,12 @@ public sealed class Player : MonoBehaviour
     {
         EnsureReferences();
         // 血量与动作系统的耦合点放在实体自己的组装层，不让 HealthComponent 反向认识动作系统。
-        if (_health != null) { _health.Died += OnDied; _health.Revived += OnRevived; }
+        if (_health != null) { _health.Damaged += OnDamaged; _health.Died += OnDied; _health.Revived += OnRevived; }
     }
 
     private void OnDisable()
     {
-        if (_health != null) { _health.Died -= OnDied; _health.Revived -= OnRevived; }
+        if (_health != null) { _health.Damaged -= OnDamaged; _health.Died -= OnDied; _health.Revived -= OnRevived; }
     }
 
     private void OnDestroy()
@@ -57,18 +59,26 @@ public sealed class Player : MonoBehaviour
     public void ResetForNewRun()
     {
         EnsureReferences();
+        _animation?.CancelHurt();
         if (_health != null) _health.Reset();
         // 满血时 Reset 不会发 Revived，但动作系统仍需要无条件复位一次。
         if (_runner != null) { _runner.SetAlive(true); _runner.ResetActions(); }
     }
 
+    private void OnDamaged(HealthComponent source, float applied, Vector3 point, Vector3 direction)
+    {
+        if (applied > 0f) _animation?.PlayHurt(applied > _bigHurtDamageThreshold);
+    }
+
     private void OnDied(HealthComponent source)
     {
+        _animation?.CancelHurt();
         if (_runner != null) _runner.SetAlive(false);
     }
 
     private void OnRevived(HealthComponent source)
     {
+        _animation?.CancelHurt();
         if (_runner == null) return;
         _runner.SetAlive(true);
         _runner.ResetActions();
@@ -80,5 +90,6 @@ public sealed class Player : MonoBehaviour
         if (_motor == null) _motor = GetComponent<PlayerMotor>();
         if (_health == null) _health = GetComponent<HealthComponent>();
         if (_runner == null) _runner = GetComponent<PlayerActionRunner>();
+        if (_animation == null) _animation = GetComponentInChildren<PlayerAnimation>();
     }
 }

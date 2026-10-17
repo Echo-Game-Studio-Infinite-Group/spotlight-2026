@@ -47,6 +47,17 @@ namespace GameJam.Actions
         {
             if (action == null) return;
             if (action.EnergyCost < 0 || !Finite(action.EnergyCost) || action.CooldownFrames < 0) Error(issues, action, "耗能和冷却必须为非负有限值");
+            if (!Finite(action.ResolvedEnergyCost) || action.ResolvedEnergyCost < 0f) Error(issues, action, "耗能来源无效或缺少 EnergyParams");
+            if (action.CompleteOnLanding && (!action.TryResolve(action.LandingCompletionStart, out int landingFrame) || landingFrame >= action.TotalFrames))
+                Error(issues, action, "落地收招锚点必须位于动作时间轴内");
+            if (action.TimeEffect == null || !Finite(action.TimeEffect.GlobalRate) || action.TimeEffect.GlobalRate < 0f ||
+                action.TimeEffect.GlobalRate > 1f || !Finite(action.TimeEffect.DurationSeconds) || action.TimeEffect.DurationSeconds < 0f)
+                Error(issues, action, "全局时间效果的倍率或时长无效");
+            if (action.AirborneAnimation == null) Error(issues, action, "缺少空中动画接口");
+            else foreach (ActionAnimationBinding binding in new[] { action.AirborneAnimation.Airborne, action.AirborneAnimation.Descending, action.AirborneAnimation.Landing })
+                if (binding == null || !Finite(binding.NormalizedStart) || !Finite(binding.NormalizedEnd) || binding.NormalizedStart < 0f ||
+                    binding.NormalizedEnd > 1f || binding.NormalizedStart >= binding.NormalizedEnd || binding.BlendFrames < 0 || binding.Layer < 0)
+                    Error(issues, action, "空中动画接口区间或混合帧无效");
             if (action.Combat != null && (!Finite(action.Combat.Damage) || action.Combat.Damage < 0)) Error(issues, action, "伤害必须为非负有限值");
             if (action.Timeline == null || action.Timeline.Count == 0) Error(issues, action, "至少配置一个子段；零时长阶段可直接省略");
             var segmentIds = new HashSet<string>(StringComparer.Ordinal);
@@ -67,9 +78,17 @@ namespace GameJam.Actions
                         Error(issues, action, "动画区间需满足 0 ≤ 起点 < 终点 ≤ 1，混合帧非负：" + segment.DisplayName);
                     if (segment.Events == null) continue;
                     foreach (ActionFrameEvent frameEvent in segment.Events)
+                    {
                         if (frameEvent == null || frameEvent.Frame < 0 || frameEvent.Frame >= segment.DurationFrames ||
                             string.IsNullOrWhiteSpace(frameEvent.EventKey) || !Finite(frameEvent.Value) || frameEvent.HitGroup < 0 || !Enum.IsDefined(typeof(MotorCommandKind), frameEvent.MotorCommand))
                             Error(issues, action, "帧事件需位于子段 [0, 时长)，且事件键非空：" + segment.DisplayName);
+                        else if (frameEvent.EventKey == "motor.command" && frameEvent.MotorCommand == MotorCommandKind.HighJump && frameEvent.Value <= 0f)
+                            Error(issues, action, "高跳命令的高度倍率必须大于零");
+                        else if (frameEvent.EventKey == "motor.command" && frameEvent.MotorCommand == MotorCommandKind.Accelerate && frameEvent.Value <= 0f)
+                            Error(issues, action, "冲刺命令的地速阈值倍率必须大于零");
+                        else if (frameEvent.EventKey == "motor.command" && frameEvent.MotorCommand == MotorCommandKind.SprintBoost && frameEvent.Value <= 0f)
+                            Error(issues, action, "普通冲刺命令的低速阈值倍率必须大于零");
+                    }
                 }
             if (total >= int.MaxValue) Error(issues, action, "动作总帧数溢出");
             ActionMotionSettings motion = action.Motion;
@@ -109,17 +128,27 @@ namespace GameJam.Actions
             if (input.PreInputFrames < 0 || input.MaxStepGapFrames < 0) Error(issues, action, "预输入与序列间隔必须非负");
             ValidateKeys(input.RequireAll, issues, action, "输入全部资格");
             ValidateKeys(input.RequireAny, issues, action, "输入任一资格");
-            if (input.Steps == null || input.Steps.Count == 0) Warn(issues, action, "未配置输入序列，仅可从外部 Queue 接口请求");
-            else
-                for (int i = 0; i < input.Steps.Count; i++)
-                {
-                    ActionInputStep step = input.Steps[i];
-                    if (step == null || !ActionInputRecognizer.IsSingleButton(step.Button)) { Error(issues, action, "每个输入步骤必须指定一个语义按键"); continue; }
-                    if ((step.RequireHeld & step.ForbidHeld) != 0) Error(issues, action, "输入步骤同时要求和禁止同一修饰键");
-                    if (step.MinHoldFrames < 0 || step.MaxHoldFrames < 0 || step.MaxHoldFrames > 0 && step.MaxHoldFrames < step.MinHoldFrames) Error(issues, action, "输入按住时长范围无效；最大值 0 表示不限");
-                    if (step.Trigger == ActionInputStep.Edge.Held && (i != input.Steps.Count - 1 || step.MinHoldFrames < 1)) Error(issues, action, "长按只用于序列最后一步，阈值至少为 1 采样帧");
-                    if (step.Trigger == ActionInputStep.Edge.Pressed && step.MinHoldFrames != 0) Error(issues, action, "按下沿不能要求已经按住若干帧，请使用长按或松开沿");
-                }
+            if ((input.Steps == null || input.Steps.Count == 0) && (input.AlternativeTriggers == null || input.AlternativeTriggers.Count == 0))
+                Warn(issues, action, "未配置输入序列，仅可从外部 Queue 接口请求");
+            ValidateSteps(input.Steps, issues, action);
+            if (input.AlternativeTriggers != null)
+                foreach (ActionInputStep alternative in input.AlternativeTriggers)
+                    ValidateSteps(new List<ActionInputStep> { alternative }, issues, action);
+        }
+
+        private static void ValidateSteps(List<ActionInputStep> steps, List<ActionValidationIssue> issues, ActionDefinition action)
+        {
+            if (steps == null) return;
+            for (int i = 0; i < steps.Count; i++)
+            {
+                ActionInputStep step = steps[i];
+                if (step == null || !ActionInputRecognizer.IsSingleButton(step.Button)) { Error(issues, action, "每个输入步骤必须指定一个语义按键"); continue; }
+                if ((step.RequireHeld & step.ForbidHeld) != 0) Error(issues, action, "输入步骤同时要求和禁止同一修饰键");
+                if (step.MinHoldFrames < 0 || step.MaxHoldFrames < 0 || step.MaxHoldFrames > 0 && step.MaxHoldFrames < step.MinHoldFrames) Error(issues, action, "输入按住时长范围无效；最大值 0 表示不限");
+                if (!Enum.IsDefined(typeof(ActionInputStep.Edge), step.Trigger)) Error(issues, action, "输入触发方式无效");
+                if (step.Trigger == ActionInputStep.Edge.Held && (i != steps.Count - 1 || step.MinHoldFrames < 1)) Error(issues, action, "长按只用于序列最后一步，阈值至少为 1 采样帧");
+                if (step.Trigger == ActionInputStep.Edge.Pressed && step.MinHoldFrames != 0) Error(issues, action, "按下沿不能要求已经按住若干帧，请使用长按或松开沿");
+            }
         }
 
         private static void ValidateKeys(List<string> keys, List<ActionValidationIssue> issues, ActionDefinition action, string label, int window = -1)

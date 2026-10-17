@@ -44,6 +44,7 @@ namespace GameJam.Actions.Editor
                 PlayerAnimation animation = player.GetComponentInChildren<PlayerAnimation>(true);
                 if (animation == null) animation = animator.gameObject.AddComponent<PlayerAnimation>();
                 animation.Configure(animator);
+                if (player.GetComponent<PlayerGroundPose>() == null) player.AddComponent<PlayerGroundPose>();
                 ActionAnimatorBridge bridge = player.GetComponent<ActionAnimatorBridge>() ?? player.AddComponent<ActionAnimatorBridge>();
                 bridge.Configure(animator, animation, player.GetComponentInChildren<PlayerVFXManager>(true));
                 PlayerActionRunner runner = player.GetComponent<PlayerActionRunner>() ?? player.AddComponent<PlayerActionRunner>();
@@ -168,9 +169,8 @@ namespace GameJam.Actions.Editor
                 EditorUtility.SetDirty(transition);
             }
             foreach (ActionDefinition action in catalog.Actions)
-                foreach (ActionSegment segment in action.Timeline)
+                foreach (ActionAnimationBinding binding in AnimationBindings(action))
                 {
-                    ActionAnimationBinding binding = segment.Animation;
                     if (string.IsNullOrWhiteSpace(binding.AnimatorState)) continue;
                     const string prefix = "Base Layer.Actions.";
                     if (binding.Layer != 0 || !binding.AnimatorState.StartsWith(prefix, StringComparison.Ordinal)) continue;
@@ -190,6 +190,14 @@ namespace GameJam.Actions.Editor
                 }
             EditorUtility.SetDirty(actions); EditorUtility.SetDirty(root); EditorUtility.SetDirty(controller);
             ActionAnimatorAuthoring.Invalidate();
+        }
+        private static IEnumerable<ActionAnimationBinding> AnimationBindings(ActionDefinition action)
+        {
+            foreach (ActionSegment segment in action.Timeline) yield return segment.Animation;
+            if (action.AirborneAnimation == null) yield break;
+            yield return action.AirborneAnimation.Airborne;
+            yield return action.AirborneAnimation.Descending;
+            yield return action.AirborneAnimation.Landing;
         }
         private static void EnsureParameter(AnimatorController controller, string name, AnimatorControllerParameterType type)
         {

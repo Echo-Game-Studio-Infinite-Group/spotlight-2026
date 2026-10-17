@@ -1,0 +1,635 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ded3423200be64547be19f4a284970c6, type: 3}
+  m_Name: RuinsFireConfig
+  m_EditorClassIdentifier: 
+  sheets:
+  - kind: 0
+    fileName: T_FireFlame_A.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 160
+      gutter: 6
+      puffs: 30
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.78
+      spread: 0.23
+      tallStretch: 2.15
+      sizeMin: 0.045
+      sizeMax: 0.115
+      swayAmp: 0.05
+      erosion: 0.3
+      contrast: 1.25
+      coreHot: 0.85
+      baseV: 0.09
+      tempSpread: 1
+      hotspot: 0.3
+      sideTaper: 0.3
+      topTaper: 0.86
+    seed: 1011
+    pixelSize: 256
+    importMaxSize: 2048
+    colorTexture: 0
+  - kind: 0
+    fileName: T_FireFlame_B.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 160
+      gutter: 6
+      puffs: 30
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.78
+      spread: 0.23
+      tallStretch: 2.15
+      sizeMin: 0.045
+      sizeMax: 0.115
+      swayAmp: 0.05
+      erosion: 0.3
+      contrast: 1.25
+      coreHot: 0.85
+      baseV: 0.09
+      tempSpread: 1
+      hotspot: 0.3
+      sideTaper: 0.3
+      topTaper: 0.86
+    seed: 2027
+    pixelSize: 256
+    importMaxSize: 2048
+    colorTexture: 0
+  - kind: 0
+    fileName: T_FireFlame_C.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 160
+      gutter: 6
+      puffs: 30
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.78
+      spread: 0.23
+      tallStretch: 2.15
+      sizeMin: 0.045
+      sizeMax: 0.115
+      swayAmp: 0.05
+      erosion: 0.3
+      contrast: 1.25
+      coreHot: 0.85
+      baseV: 0.09
+      tempSpread: 1
+      hotspot: 0.3
+      sideTaper: 0.3
+      topTaper: 0.86
+    seed: 3041
+    pixelSize: 256
+    importMaxSize: 2048
+    colorTexture: 0
+  - kind: 0
+    fileName: T_FireLingerFlame.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 224
+      gutter: 8
+      puffs: 34
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.82
+      spread: 0.26
+      tallStretch: 2.3
+      sizeMin: 0.042
+      sizeMax: 0.11
+      swayAmp: 0.065
+      erosion: 0.28
+      contrast: 1.35
+      coreHot: 1
+      baseV: 0.07
+      tempSpread: 1
+      hotspot: 0.36
+      sideTaper: 0.32
+      topTaper: 0.88
+    seed: 4099
+    pixelSize: 256
+    importMaxSize: 2048
+    colorTexture: 0
+  - kind: 1
+    fileName: T_FireSmoke.png
+    style:
+      cols: 6
+      rows: 6
+      tile: 128
+      gutter: 6
+      puffs: 14
+      maxCycles: 1
+      swayHarmonics: 1
+      rise: 0.85
+      spread: 0.34
+      tallStretch: 1.35
+      sizeMin: 0.14
+      sizeMax: 0.3
+      swayAmp: 0.09
+      erosion: 0.26
+      contrast: 0.8
+      coreHot: 0
+      baseV: 0.22
+      tempSpread: 0.25
+      hotspot: 0
+      sideTaper: 0.36
+      topTaper: 0.55
+    seed: 5077
+    pixelSize: 256
+    importMaxSize: 2048
+    colorTexture: 0
+  - kind: 2
+    fileName: T_FireGlow.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 160
+      gutter: 6
+      puffs: 30
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.78
+      spread: 0.23
+      tallStretch: 2.15
+      sizeMin: 0.045
+      sizeMax: 0.115
+      swayAmp: 0.05
+      erosion: 0.3
+      contrast: 1.25
+      coreHot: 0.85
+      baseV: 0.09
+      tempSpread: 1
+      hotspot: 0.3
+      sideTaper: 0.3
+      topTaper: 0.86
+    seed: 1011
+    pixelSize: 256
+    importMaxSize: 256
+    colorTexture: 0
+  - kind: 3
+    fileName: T_FireEmber.png
+    style:
+      cols: 8
+      rows: 8
+      tile: 160
+      gutter: 6
+      puffs: 30
+      maxCycles: 2
+      swayHarmonics: 2
+      rise: 0.78
+      spread: 0.23
+      tallStretch: 2.15
+      sizeMin: 0.045
+      sizeMax: 0.115
+      swayAmp: 0.05
+      erosion: 0.3
+      contrast: 1.25
+      coreHot: 0.85
+      baseV: 0.09
+      tempSpread: 1
+      hotspot: 0.3
+      sideTaper: 0.3
+      topTaper: 0.86
+    seed: 1011
+    pixelSize: 96
+    importMaxSize: 128
+    colorTexture: 1
+  flameMaterials:
+  - fileName: M_RuinsFire_FlameA.mat
+    sheet: T_FireFlame_A.png
+    cols: 8
+    rows: 8
+    speed: 26
+    brightness: 1.65
+    opacity: 1
+    densityPower: 1.35
+    baseColor: {r: 1, g: 1, b: 1, a: 1}
+    emissionColor: {r: 1, g: 0.93, b: 0.85, a: 1}
+    colorMode: 0
+    kelvinLow: 950
+    kelvinHigh: 2400
+    saturation: 1.35
+    hotspotBoost: 1.6
+    randomPhase: 1
+    windStrength: 0.35
+    swayAmp: 0.06
+    swaySpeed: 1.7
+    softNear: 0.05
+    softFar: 1.6
+    cameraNearFade: 1.2
+    cameraFarFade: 1
+    fadeStart: 70
+    fadeEnd: 120
+    renderQueue: 3000
+  - fileName: M_RuinsFire_FlameB.mat
+    sheet: T_FireFlame_B.png
+    cols: 8
+    rows: 8
+    speed: 31
+    brightness: 1.45
+    opacity: 1
+    densityPower: 1.35
+    baseColor: {r: 1, g: 1, b: 1, a: 1}
+    emissionColor: {r: 1, g: 0.93, b: 0.85, a: 1}
+    colorMode: 0
+    kelvinLow: 950
+    kelvinHigh: 2400
+    saturation: 1.35
+    hotspotBoost: 1.6
+    randomPhase: 1
+    windStrength: 0.35
+    swayAmp: 0.06
+    swaySpeed: 1.7
+    softNear: 0.05
+    softFar: 1.6
+    cameraNearFade: 1.2
+    cameraFarFade: 1
+    fadeStart: 60
+    fadeEnd: 105
+    renderQueue: 3000
+  - fileName: M_RuinsFire_FlameC.mat
+    sheet: T_FireFlame_C.png
+    cols: 8
+    rows: 8
+    speed: 22
+    brightness: 1.8
+    opacity: 1
+    densityPower: 1.35
+    baseColor: {r: 1, g: 1, b: 1, a: 1}
+    emissionColor: {r: 1, g: 0.93, b: 0.85, a: 1}
+    colorMode: 0
+    kelvinLow: 950
+    kelvinHigh: 2400
+    saturation: 1.35
+    hotspotBoost: 1.6
+    randomPhase: 1
+    windStrength: 0.35
+    swayAmp: 0.06
+    swaySpeed: 1.7
+    softNear: 0.05
+    softFar: 1.6
+    cameraNearFade: 1.2
+    cameraFarFade: 1
+    fadeStart: 80
+    fadeEnd: 135
+    renderQueue: 3000
+  - fileName: M_RuinsFire_LingerFlame.mat
+    sheet: T_FireLingerFlame.png
+    cols: 8
+    rows: 8
+    speed: 19
+    brightness: 1.95
+    opacity: 1
+    densityPower: 1.35
+    baseColor: {r: 1, g: 1, b: 1, a: 1}
+    emissionColor: {r: 1, g: 0.93, b: 0.85, a: 1}
+    colorMode: 0
+    kelvinLow: 950
+    kelvinHigh: 2400
+    saturation: 1.35
+    hotspotBoost: 1.6
+    randomPhase: 1
+    windStrength: 0.35
+    swayAmp: 0.06
+    swaySpeed: 1.7
+    softNear: 0.05
+    softFar: 1.6
+    cameraNearFade: 1.2
+    cameraFarFade: 1
+    fadeStart: 90
+    fadeEnd: 150
+    renderQueue: 3000
+  glowMaterials:
+  - fileName: M_RuinsFire_Glow.mat
+    sheet: T_FireGlow.png
+    billboard: 1
+    emissionColor: {r: 2, g: 0.72, b: 0.26, a: 1}
+    opacity: 0.15
+    densityPower: 1
+    cameraNearFade: 0.6
+    cameraFarFade: 1
+    fadeStart: 70
+    fadeEnd: 120
+    renderQueue: 3010
+  - fileName: M_RuinsFire_GroundGlow.mat
+    sheet: T_FireGlow.png
+    billboard: 0
+    emissionColor: {r: 0.62, g: 0.23, b: 0.075, a: 1}
+    opacity: 0.17
+    densityPower: 1
+    cameraNearFade: 0.6
+    cameraFarFade: 1
+    fadeStart: 70
+    fadeEnd: 120
+    renderQueue: 2995
+  smokeMaterials:
+  - fileName: M_RuinsFire_Smoke.mat
+    sheet: T_FireSmoke.png
+    emissionColor: {r: 0.17, g: 0.165, b: 0.18, a: 1}
+    opacity: 0.3
+    densityPower: 1.1
+    cols: 6
+    rows: 6
+    speed: 9
+    windStrength: 1.1
+    swayAmp: 0.12
+    swaySpeed: 0.9
+    softNear: 0.1
+    softFar: 1.2
+    cameraNearFade: 1.5
+    cameraFarFade: 1
+    fadeStart: 55
+    fadeEnd: 100
+    renderQueue: 3005
+  emberMaterials:
+  - fileName: M_RuinsFire_Ember.mat
+    sheet: T_FireEmber.png
+    baseColor: {r: 1, g: 0.72, b: 0.34, a: 1}
+    surface: 1
+    blend: 2
+    queueOffset: 12
+    colorMode: 0
+    softParticlesEnabled: 0
+    cameraFadingEnabled: 0
+    flipbookBlending: 0
+    alphaClip: 0
+    softNearFadeDistance: 0
+    softFarFadeDistance: 1
+  roadside:
+    cards:
+    - name: Flame_A
+      material: M_RuinsFire_FlameA.mat
+      position: {x: 0, y: 0, z: 0}
+      euler: {x: 0, y: 0, z: 0}
+      scale: {x: 0.9, y: 1.15, z: 1}
+    - name: Flame_B
+      material: M_RuinsFire_FlameB.mat
+      position: {x: 0.1, y: 0, z: 0.05}
+      euler: {x: 0, y: 0, z: 4}
+      scale: {x: 0.62, y: 0.82, z: 1}
+    - name: GroundGlow
+      material: M_RuinsFire_GroundGlow.mat
+      position: {x: 0, y: 0.03, z: -0.9}
+      euler: {x: 90, y: 0, z: 0}
+      scale: {x: 1.8, y: 1.8, z: 1}
+    embers: 0
+    light: 0
+    emberSpec:
+      duration: 5
+      lifetimeMin: 1.3
+      lifetimeMax: 2.6
+      speedMin: 0.55
+      speedMax: 1.5
+      sizeMin: 0.028
+      sizeMax: 0.075
+      colorA: {r: 1, g: 0.62, b: 0.22, a: 1}
+      colorB: {r: 1, g: 0.86, b: 0.5, a: 1}
+      gravityModifier: -0.03
+      maxParticles: 40
+      rateOverTime: 7
+      shapeAngle: 15
+      shapeRadius: 0.14
+      gradColorA: {r: 1, g: 0.85, b: 0.5, a: 1}
+      gradColorB: {r: 0.9, g: 0.35, b: 0.1, a: 1}
+      alphaHold: 0.55
+      sizeEnd: 0.25
+    lightSpec:
+      color: {r: 1, g: 0.56, b: 0.22, a: 1}
+      height: 0.75
+      intensity: 0.85
+      range: 3.2
+      flickerSpeed: 1.15
+      intensityAmplitude: 0.22
+      rangeAmplitude: 0.08
+      phaseOffset: 1.7
+    lod:
+      detailDistance: 45
+      cullDistance: 130
+      detailObjects: []
+      runtimeOnly: 1
+  linger:
+    cards:
+    - name: Flame_Main
+      material: M_RuinsFire_LingerFlame.mat
+      position: {x: 0, y: 0, z: 0}
+      euler: {x: 0, y: 0, z: 0}
+      scale: {x: 1.05, y: 1.55, z: 1}
+    - name: Flame_A
+      material: M_RuinsFire_FlameA.mat
+      position: {x: -0.16, y: 0, z: 0.06}
+      euler: {x: 0, y: 12, z: 0}
+      scale: {x: 0.78, y: 1.05, z: 1}
+    - name: Flame_B
+      material: M_RuinsFire_FlameB.mat
+      position: {x: 0.18, y: 0, z: -0.05}
+      euler: {x: 0, y: -9, z: 5}
+      scale: {x: 0.66, y: 0.9, z: 1}
+    - name: GroundGlow
+      material: M_RuinsFire_GroundGlow.mat
+      position: {x: 0, y: 0.03, z: -1.2}
+      euler: {x: 90, y: 0, z: 0}
+      scale: {x: 2.4, y: 2.4, z: 1}
+    - name: Smoke
+      material: M_RuinsFire_Smoke.mat
+      position: {x: 0, y: 1.55, z: 0.2}
+      euler: {x: 0, y: 0, z: 0}
+      scale: {x: 1.35, y: 2.6, z: 1}
+    embers: 1
+    light: 1
+    emberSpec:
+      duration: 5
+      lifetimeMin: 1.3
+      lifetimeMax: 2.6
+      speedMin: 0.55
+      speedMax: 1.5
+      sizeMin: 0.028
+      sizeMax: 0.075
+      colorA: {r: 1, g: 0.62, b: 0.22, a: 1}
+      colorB: {r: 1, g: 0.86, b: 0.5, a: 1}
+      gravityModifier: -0.03
+      maxParticles: 40
+      rateOverTime: 7
+      shapeAngle: 15
+      shapeRadius: 0.14
+      gradColorA: {r: 1, g: 0.85, b: 0.5, a: 1}
+      gradColorB: {r: 0.9, g: 0.35, b: 0.1, a: 1}
+      alphaHold: 0.55
+      sizeEnd: 0.25
+    lightSpec:
+      color: {r: 1, g: 0.56, b: 0.22, a: 1}
+      height: 0.75
+      intensity: 0.85
+      range: 3.2
+      flickerSpeed: 1.15
+      intensityAmplitude: 0.22
+      rangeAmplitude: 0.08
+      phaseOffset: 1.7
+    lod:
+      detailDistance: 45
+      cullDistance: 130
+      detailObjects:
+      - Smoke
+      - Embers
+      - Light
+      runtimeOnly: 1
+  combatSparks:
+    maxPerKind: 10
+    hitDamageFullScale: 40
+    hitPop:
+      sizeX: 0.22
+      sizeY: 0.28
+      lifetime: 0.055
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.82, b: 0.55, a: 1}
+        extinct: {r: 1, g: 0.6, b: 0.25, a: 1}
+    hitSparks:
+      count: 28
+      coneAngle: 40
+      speedMin: 6
+      speedMax: 15
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.12
+      lifeMax: 0.28
+      gravity: 1.8
+      stretch: 0.035
+      drag: 0
+      bounce: 0.45
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 1, g: 0.98, b: 0.92, a: 1}
+        mid: {r: 1, g: 0.66, b: 0.26, a: 1}
+        extinct: {r: 0.85, g: 0.28, b: 0.05, a: 1}
+    parryPop:
+      sizeX: 0.5
+      sizeY: 0.58
+      lifetime: 0.06
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parryRing:
+      size: 0.72
+      lifetime: 0.18
+      expandEnd: 2.4
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parrySpray:
+      count: 40
+      coneAngle: 0
+      speedMin: 3.5
+      speedMax: 9
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.14
+      lifeMax: 0.3
+      gravity: 2
+      stretch: 0.03
+      drag: 0
+      bounce: 0.4
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 1, g: 1, b: 0.97, a: 1}
+        mid: {r: 1, g: 0.85, b: 0.6, a: 1}
+        extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parryLight:
+      color: {r: 1, g: 0.92, b: 0.78, a: 1}
+      intensity: 5
+      range: 6
+      duration: 0.12
+    parryProjectilePop:
+      sizeX: 0.42
+      sizeY: 0.5
+      lifetime: 0.06
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    parryProjectileRing:
+      size: 0.64
+      lifetime: 0.16
+      expandEnd: 2.4
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    parryProjectileSpray:
+      count: 28
+      coneAngle: 26
+      speedMin: 5
+      speedMax: 12
+      sizeMin: 0.018
+      sizeMax: 0.04
+      lifeMin: 0.12
+      lifeMax: 0.26
+      gravity: 0.5
+      stretch: 0.03
+      drag: 0.8
+      bounce: 0
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 0.96, g: 1, b: 1, a: 1}
+        mid: {r: 0.42, g: 0.86, b: 1, a: 1}
+        extinct: {r: 0.16, g: 0.42, b: 1, a: 1}
+    arcs:
+      count: 6
+      speedMin: 0.6
+      speedMax: 1.8
+      sizeX: 0.6
+      sizeY: 0.95
+      lifeMin: 0.07
+      lifeMax: 0.12
+      color:
+        hot: {r: 0.9, g: 0.98, b: 1, a: 1}
+        mid: {r: 0.45, g: 0.88, b: 1, a: 1}
+        extinct: {r: 0.25, g: 0.6, b: 1, a: 1}
+    parryProjectileLight:
+      color: {r: 0.6, g: 0.9, b: 1, a: 1}
+      intensity: 6
+      range: 7
+      duration: 0.14
+    slide:
+      speedThresholdFactor: 1
+      slideBoost: 2
+      sparksPerMeter: 1.2
+      maxSparksPerMeter: 8
+      lifeMin: 0.18
+      lifeMax: 0.36
+      speedMin: 2.5
+      speedMax: 5
+      sizeMin: 0.03
+      sizeMax: 0.06
+      gravity: 2.2
+      maxParticles: 240
+      coneAngle: 22
+      coneTiltX: 24
+      stretch: 0.045
+      lengthScale: 2.2
+      bounce: 0.4
+      dampen: 0.25
+      lifetimeLoss: 0.4
+      color:
+        hot: {r: 1, g: 0.98, b: 0.92, a: 1}
+        mid: {r: 1, g: 0.66, b: 0.26, a: 1}
+        extinct: {r: 0.85, g: 0.28, b: 0.05, a: 1}

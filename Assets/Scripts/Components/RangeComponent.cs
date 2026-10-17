@@ -33,6 +33,17 @@ public sealed class RangeComponent : MonoBehaviour
     // 子弹归还走 ObjectPool.TryReturnToOwningPool，所以发射方不必记录"这颗子弹来自哪个池"。
     private ObjectPool _pool;
 
+    [Header("预警窗口")]
+    // 开枪前先亮提示的时长。策划要的是「开枪前给一段判定区间」；0 = 退回老规矩：秒发。
+    [SerializeField, Min(0f)] private float _telegraphSeconds = 0.4f;
+
+    [Tooltip("提示组件。留空则自动找同物体上的 AttackTelegraph。")]
+    [SerializeField] private AttackTelegraph _telegraph;
+
+    // 预警窗口的终点。用调用方传进来的时钟算，组件自己不取时钟。
+    private float _chargeUntil;
+    private bool _charging;
+
     /// <summary>命中且真的扣了血时触发：目标、命中点、方向、实际伤害。</summary>
     public event Action<HealthComponent, Vector3, Vector3, float> Landed;
 
@@ -55,6 +66,13 @@ public sealed class RangeComponent : MonoBehaviour
         if (_projectilePrefab != null && _prewarm > 0) _pool.Prewarm(_projectilePrefab.gameObject, 4);
     }
 
+    private void OnDisable()
+    {
+        // 回收进池：别把预警留着，下次复用会带着亮着的提示出场。
+        _charging = false;
+        StopTelegraph();
+    }
+
     /// <summary>
     /// 尝试开火：查冷却、射程、目标存活，全过才生成子弹。
     /// now 由持有者按自己的时钟传（敌人传 TimeManager.WorldTime）。
@@ -62,29 +80,70 @@ public sealed class RangeComponent : MonoBehaviour
     /// </summary>
     public bool TryFire(float now, Transform target, HealthComponent targetHealth)
     {
+        // 第二段：预警窗口到点 → 真正出膛。
+        // Enemy 每个逻辑步都会再调一次这里，所以不需要额外的 Update / Tick。
+        if (_charging)
+        {
+            if (now < _chargeUntil) return false;           // 还在预警，等着
+
+            _charging = false;
+            // 预警期间目标死了 / 丢了 → 这一次作废，别打空气
+            if (target == null || targetHealth == null || !targetHealth.IsAlive)
+            {
+                StopTelegraph();
+                return false;
+            }
+            return Fire(target);
+        }
+
         if (target == null || targetHealth == null || !targetHealth.IsAlive) return false;
         if (!CanFire) return false;
         if (now < _readyAt) return false;
 
-        Vector3 origin = Muzzle.position;
-        Vector3 aimPoint = AimPoint(target);
-        Vector3 toTarget = aimPoint - origin;
-        // 射程按「水平距离」算（与敌人的近战判定同口径），方向用完整三维（要能打高处的玩家）
-        Vector3 flat = new Vector3(toTarget.x, 0f, toTarget.z);
+        // 射程按「水平距离」算（与敌人的近战判定同口径）
+        Vector3 flat = AimPoint(target) - Muzzle.position;
+        flat.y = 0f;
         if (flat.magnitude > _range) return false;
 
         _readyAt = now + Mathf.Max(0.01f, _cooldown);
 
-        // 朝「此刻目标位置」锁定：子弹有飞行时间，玩家靠速度躲开是设计的一部分，不做追踪。
+        // 第一段：先开预警窗口（亮提示、扣冷却），窗口到点才出膛。
+        // 没配预警时长（0）就按老规矩秒发。
+        if (_telegraphSeconds > 0f)
+        {
+            _chargeUntil = now + _telegraphSeconds;
+            _charging = true;
+            PlayTelegraph();
+            return false;
+        }
+
+        return Fire(target);
+    }
+
+    // 真正生成子弹：秒发路径和预警路径共用的出口。
+    // 瞄准点在「出膛这一刻」重算 —— 策划案写的是「始终瞄准发射时人物所在位置」，不做追踪。
+    private bool Fire(Transform target)
+    {
+        Vector3 origin = Muzzle.position;
+        Vector3 toTarget = AimPoint(target) - origin;
         Vector3 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : transform.forward;
 
         // 从池里取。池返回的实例一定是 active 的，且已回调过 IPooledObject.OnSpawnedFromPool。
         GameObject instance = _pool.Spawn(_projectilePrefab.gameObject, origin, Quaternion.identity);
         if (instance == null) return false;
         instance.GetComponent<Projectile>().Launch(direction, this);
+        StopTelegraph();
         return true;
     }
 
+    // 提示组件按需解析：编辑模式装配 / 自检用 AddComponent 搭的对象不跑 Awake。
+    private void EnsureTelegraph()
+    {
+        if (_telegraph == null) _telegraph = GetComponent<AttackTelegraph>();
+    }
+
+    private void PlayTelegraph() { EnsureTelegraph(); _telegraph?.Play(); }
+    private void StopTelegraph() { EnsureTelegraph(); _telegraph?.Stop(); }
     // 瞄准点：优先取目标身上「非触发」碰撞体的包围盒中心。
     // 不能直接用 target.position —— 角色的原点通常在脚底，直接瞄会朝地面打。
     // 用碰撞体中心还能自动适配不同体型，不必为每个角色填高度。
