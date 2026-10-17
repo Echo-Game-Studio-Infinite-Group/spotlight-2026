@@ -53,7 +53,7 @@ public static class EnemyNavigationBake
             EditorUtility.SetDirty(modifier);
             PrefabUtility.RecordPrefabInstancePropertyModifications(modifier);
         }
-        var enemies = UnityEngine.Object.FindObjectsOfType<Enemy>();
+        var enemies = UnityEngine.Object.FindObjectsOfType<EnemyBase>();
         foreach (var enemy in enemies)
         {
             var agent = enemy.GetComponent<NavMeshAgent>();

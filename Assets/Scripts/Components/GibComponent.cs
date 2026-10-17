@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 上半身定格击飞，下半身跟随原骨骼；在模型插值之后同步网格，不复制 AI 或攻击事件。
-[DefaultExecutionOrder(100), DisallowMultipleComponent, RequireComponent(typeof(Enemy))]
+[DefaultExecutionOrder(100), DisallowMultipleComponent, RequireComponent(typeof(EnemyBase))]
 public sealed class GibComponent : MonoBehaviour
 {
     [SerializeField] private Shader _cutoutShader;
@@ -64,7 +64,7 @@ public sealed class GibComponent : MonoBehaviour
 
     public bool TrySlice(Vector3 hitDirection)
     {
-        if (!isActiveAndEnabled || GetComponent<Enemy>().IsAlive || _rolled) return false;
+        if (!isActiveAndEnabled || GetComponent<EnemyBase>().IsAlive || _rolled) return false;
         _rolled = true;
         return Random.value < _deathChance && CreatePieces(hitDirection);
     }

@@ -26,6 +26,8 @@ public sealed class WallDashAnimationTests
         _root = Object.Instantiate(prefab); _created.Add(_root);
         foreach (Camera camera in _root.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
         _motor = _root.GetComponent<PlayerMotor>();
+        MovementParams parameters = Object.Instantiate(_motor.Params); _created.Add(parameters);
+        _motor.SetParams(parameters);
         _bridge = _root.GetComponent<ActionAnimatorBridge>();
         _runner = _root.GetComponent<PlayerActionRunner>();
         // 实例的 OnEnable 已连接原动作表，必须先释放，测试副本才会被新的执行器采用。
@@ -35,6 +37,18 @@ public sealed class WallDashAnimationTests
         _attack.RequestVariants.Clear();
         _attack.CooldownGroup = "";
         _catalog.Actions[0] = _attack;
+        var isolated = new Dictionary<string, ActionDefinition> { { _attack.ActionId, _attack } };
+        for (int i = 1; i < _catalog.Actions.Count; i++)
+        {
+            ActionDefinition clone = Object.Instantiate(_catalog.Actions[i]); _created.Add(clone);
+            _catalog.Actions[i] = clone; isolated[clone.ActionId] = clone;
+        }
+        foreach (ActionDefinition action in _catalog.Actions)
+        {
+            foreach (ActionCancelWindow window in action.CancelWindows)
+                for (int i = 0; i < window.Targets.Count; i++) window.Targets[i] = isolated[window.Targets[i].ActionId];
+            for (int i = 0; i < action.RequestVariants.Count; i++) action.RequestVariants[i] = isolated[action.RequestVariants[i].ActionId];
+        }
         _runner.Configure(_catalog, _root.GetComponent<PlayerInputReader>(), _motor,
             _root.GetComponent<PlayerCombat>(), _bridge);
         Assert.IsTrue(_runner.Connect());

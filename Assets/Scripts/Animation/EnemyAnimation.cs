@@ -1,10 +1,10 @@
 using UnityEngine;
 
-// 与 Animator 同节点接收动画事件；Enemy 只负责决策、血量与移动。
+// 与 Animator 同节点接收动画事件；EnemyBase 只负责决策、血量与移动。
 [RequireComponent(typeof(Animator))]
 public sealed class EnemyAnimation : MonoBehaviour
 {
-    private Enemy _enemy;
+    private EnemyBase _enemy;
     private Animator _animator;
     private bool _enteredAttack;
     // 直接读状态，不另存等待标记，避免标签漏配或过渡被打断后永久锁住 AI。
@@ -50,7 +50,7 @@ public sealed class EnemyAnimation : MonoBehaviour
 
     private void Awake()
     {
-        _enemy = GetComponentInParent<Enemy>();
+        _enemy = GetComponentInParent<EnemyBase>();
         _animator = GetComponent<Animator>();
         _animator.applyRootMotion = false;
         _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -123,7 +123,7 @@ public sealed class EnemyAnimation : MonoBehaviour
     }
 
     // 冻住自己的受击/死亡动画；与玩家侧顿帧互不覆盖（各按各的时长恢复）。
-    // 只登记 Player 层：顿帧若连 World 一起压，Enemy.FixedUpdate 拿到的 WorldFixedDeltaTime 会趋近 0，
+    // 只登记 Player 层：顿帧若连 World 一起压，EnemyBase.FixedUpdate 拿到的 WorldFixedDeltaTime 会趋近 0，
     // AI 的位置积分跟着一起冻结，恢复瞬间会和 LateUpdate 的模型插值位置脱节。
     public void FreezeFor(float seconds, float rate) => BeginHold(seconds, rate);
 

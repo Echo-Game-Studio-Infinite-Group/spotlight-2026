@@ -1,0 +1,210 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: PlayerHighJump
+  m_EditorClassIdentifier: 
+  ActionId: player_high_jump
+  DisplayName: "\u77E2\u91CF\u9AD8\u8DF3"
+  Description: "\u53F3\u952E+\u7A7A\u683C\uFF1B\u56DB\u500D\u57FA\u7840\u9AD8\u5EA6\uFF0C\u65E0\u9AD8\u5EA6\u8BB0\u5FC6\u3002\u7A7A\u4E2D\u53EA\u9884\u8F93\u5165\uFF0C\u8D77\u8DF3\u540E\u516D\u4E2A\u73A9\u5BB6\u5E27\u4E0D\u53EF\u4E3B\u52A8\u53D6\u6D88\u3002"
+  Timeline:
+  - SegmentId: takeoff_lock
+    DisplayName: "\u8D77\u8DF3\u786C\u76F4"
+    Phase: 0
+    DurationFrames: 6
+    Events:
+    - MotorCommand: 9
+      Frame: 0
+      EventKey: motor.command
+      HitGroup: 0
+      Value: 4
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: audio.player_jump
+      HitGroup: 0
+      Value: 0
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: vfx.afterimage.start
+      HitGroup: 0
+      Value: 1
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerHighJump
+      Layer: 0
+      Clip: {fileID: 7400000, guid: 2823d53f8a99c8e49a177a6765087de7, type: 2}
+      NormalizedStart: 0
+      NormalizedEnd: 0.12
+      BlendFrames: 3
+  - SegmentId: jump_up
+    DisplayName: "\u8D77\u8DF3\u8868\u73B0\u4E0E\u53EF\u53D6\u6D88\u6BB5"
+    Phase: 2
+    DurationFrames: 44
+    Events:
+    - MotorCommand: 0
+      Frame: 43
+      EventKey: vfx.afterimage.stop
+      HitGroup: 0
+      Value: 0
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerHighJump
+      Layer: 0
+      Clip: {fileID: 7400000, guid: 2823d53f8a99c8e49a177a6765087de7, type: 2}
+      NormalizedStart: 0.12
+      NormalizedEnd: 1
+      BlendFrames: 3
+  CancelWindows:
+  - WindowId: b0de4b7c569e4e0d830d4afa355c60e3
+    DisplayName: "\u673A\u52A8\u63A5\u62DB"
+    Start:
+      SegmentId: jump_up
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 478064918a1346c449814486ee1af4bd, type: 2}
+    - {fileID: 11400000, guid: 26b5f44d095014b46a9b5782c2890ace, type: 2}
+    - {fileID: 11400000, guid: d4cae6b5797dc6b4684caf4cf82b9f3f, type: 2}
+    - {fileID: 11400000, guid: 044d0c829662f594490b299bde1fc2db, type: 2}
+    - {fileID: 11400000, guid: 530332b0c25b4fa4d962f37ea2d007c2, type: 2}
+    - {fileID: 11400000, guid: ea8d9fc74729c534b9279e0534f4ce48, type: 2}
+    - {fileID: 11400000, guid: ac0e4003a88ca0147b3821560f899641, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+    IgnoreCooldown: 0
+  Input:
+    Steps:
+    - Button: 4
+      Trigger: 0
+      RequireHeld: 2
+      ForbidHeld: 0
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    AlternativeTriggers: []
+    MaxStepGapFrames: 0
+    PreInputFrames: 8
+    BufferGroup: mobility
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 30
+    RequireAll: []
+    RequireAny: []
+  StartConditions:
+  - can_high_jump
+  EnergyCost: 0
+  EnergyCostSource: 1
+  EnergyParameters: {fileID: 11400000, guid: a5c6ce7901388054faedd3621b28fdbf, type: 2}
+  TimeEffect:
+    UsesVectorConverter: 1
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 1
+  LandingCompletionStart:
+    SegmentId: jump_up
+    RelativeTo: 0
+    OffsetFrames: 0
+  CooldownFrames: 0
+  CooldownGroup: 
+  RequestVariants: []
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
+  Combat:
+    Enabled: 0
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

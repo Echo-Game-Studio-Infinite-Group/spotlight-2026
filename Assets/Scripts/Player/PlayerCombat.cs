@@ -258,6 +258,8 @@ public sealed class PlayerCombat : MonoBehaviour
     private void OnLandedHit(HealthComponent target, Vector3 point, Vector3 direction, float applied)
     {
         if (applied <= 0f) return;
+        // 命中火花：喷向命中方向的来路，力度随实际伤害变化（表意打得越重火花越猛）
+        CombatSparks.PlayHit(point, direction, applied);
         if (_logHits)
         {
             Debug.Log($"[PlayerCombat] 命中 {target.name} 伤害 {applied:0.#}，剩余 {target.Health:0.#}/{target.MaxHealth:0.#}");

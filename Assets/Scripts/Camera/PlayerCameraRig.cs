@@ -18,18 +18,32 @@ public sealed class PlayerCameraRig : MonoBehaviour
     [SerializeField] private float _slideHeight = 0.6f;
     [SerializeField] private float _heightResponse = 12f;
     private float _yaw, _pitch;
+    private PlayerMotor _subscribedMotor;
+    private float _stepOffset, _stepSmoothVelocity, _poseHeight;
 
     public void Configure(PlayerMotor motor, PlayerInputReader input, Transform target, CinemachineVirtualCamera camera)
     { _motor = motor; _input = input; _target = target; _virtualCamera = camera; }
+    public Quaternion ViewRotation => Quaternion.Euler(_pitch, _yaw, 0f);
+    public void SetViewRotation(Quaternion rotation)
+    {
+        _yaw = rotation.eulerAngles.y;
+        _pitch = Mathf.Clamp(Mathf.DeltaAngle(0f, rotation.eulerAngles.x), _pitchLimits.x, _pitchLimits.y);
+        if (_target != null) _target.rotation = ViewRotation;
+    }
     private void OnEnable()
     {
         ResolvePlayer();
-        if (_motor != null) _motor.Teleported += OnTeleport;
+        _poseHeight = _target != null ? _target.localPosition.y : _standHeight;
         if (_target != null) { _yaw = _target.eulerAngles.y; _pitch = Mathf.DeltaAngle(0f, _target.eulerAngles.x); }
     }
     private void OnDisable()
     {
-        if (_motor != null) _motor.Teleported -= OnTeleport;
+        if (_subscribedMotor != null)
+        {
+            _subscribedMotor.Teleported -= OnTeleport;
+            _subscribedMotor.GroundStepped -= OnGroundStepped;
+        }
+        _subscribedMotor = null;
     }
     // 场景刚加载时 Awake 顺序不保证，玩家可能还没注册；这里每帧兜一次，拿到即止。
     private void ResolvePlayer()
@@ -37,6 +51,10 @@ public sealed class PlayerCameraRig : MonoBehaviour
         if (_motor == null) _motor = PlayerMotor.Active;
         if (_motor == null) return;
         if (_input == null) _input = _motor.GetComponent<PlayerInputReader>();
+        if (_subscribedMotor == _motor) return;
+        _subscribedMotor = _motor;
+        _motor.Teleported += OnTeleport;
+        _motor.GroundStepped += OnGroundStepped;
     }
     private void Update()
     {
@@ -46,9 +64,24 @@ public sealed class PlayerCameraRig : MonoBehaviour
         _yaw += look.x * _mouseSensitivity;
         _pitch = Mathf.Clamp(_pitch - look.y * _mouseSensitivity, _pitchLimits.x, _pitchLimits.y);
         _target.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        UpdateHeight(TimeManager.UnscaledDeltaTime);
+    }
+    public void UpdateHeight(float dt)
+    {
+        if (_target == null || _motor == null || dt <= 0f) return;
         float height = _motor.IsSliding ? _slideHeight : _standHeight;
-        _target.localPosition = Vector3.Lerp(_target.localPosition, Vector3.up * height,
-            1f - Mathf.Exp(-_heightResponse * TimeManager.UnscaledDeltaTime));
+        _poseHeight = Mathf.Lerp(_poseHeight, height, 1f - Mathf.Exp(-_heightResponse * dt));
+        _stepOffset = _motor.Params.StepVisualSmoothTime > 0f
+            ? Mathf.SmoothDamp(_stepOffset, 0f, ref _stepSmoothVelocity, _motor.Params.StepVisualSmoothTime, Mathf.Infinity, dt) : 0f;
+        _target.localPosition = Vector3.up * (_poseHeight + _stepOffset);
+    }
+    private void OnGroundStepped(float delta)
+    {
+        if (_motor.Params.StepVisualSmoothTime <= 0f) return;
+        float limit = _motor.Params.MaxStepUp + _motor.Params.MaxStepDown;
+        float previous = _stepOffset;
+        _stepOffset = Mathf.Clamp(_stepOffset - delta, -limit, limit);
+        if (_target != null) _target.localPosition += Vector3.up * (_stepOffset - previous);
     }
     private void LateUpdate()
     {
@@ -56,5 +89,9 @@ public sealed class PlayerCameraRig : MonoBehaviour
         if (_target != null) _target.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
     private void OnTeleport(Vector3 delta)
-    { if (_virtualCamera != null && _target != null) _virtualCamera.OnTargetObjectWarped(_target, delta); }
+    {
+        if (_target != null) _target.localPosition -= Vector3.up * _stepOffset;
+        _stepOffset = _stepSmoothVelocity = 0f;
+        if (_virtualCamera != null && _target != null) _virtualCamera.OnTargetObjectWarped(_target, delta);
+    }
 }

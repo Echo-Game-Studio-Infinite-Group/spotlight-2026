@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8783149193402161627}
   - component: {fileID: 4516944546851851908}
   - component: {fileID: 7502630052054163153}
-  m_Layer: 6
+  m_Layer: 8
   m_Name: SavePoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -43,7 +43,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3176358334919481879}
-  m_Mesh: {fileID: -5495902117074765545, guid: 27abcc081f4bb1c44b0be19f139887dd, type: 3}
+  m_Mesh: {fileID: -5495902117074765545, guid: ec93ef646f920de428cfdb40fbe0aa08, type: 3}
 --- !u!114 &6745370075473811085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -77,7 +77,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: b13bbb0722db50b4cbd903f4223e22b5, type: 2}
+  - {fileID: 2100000, guid: d64692c8523144f43af927b80f100a9e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -118,7 +118,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 3, z: 1}
+  m_Size: {x: 0.1, y: 0.1, z: 0.19}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &7502630052054163153
 MonoBehaviour:

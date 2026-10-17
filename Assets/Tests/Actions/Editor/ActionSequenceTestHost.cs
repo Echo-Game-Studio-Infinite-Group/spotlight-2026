@@ -12,6 +12,7 @@ public sealed class ActionSequenceTestHost : IActionSequenceHost, IActionSequenc
     public readonly List<long> Instances = new List<long>();
     public readonly List<double> SimulationSteps = new List<double>();
     public readonly List<double> IdleSteps = new List<double>();
+    public System.Action SimulationCallback;
 
     public bool CheckCondition(string key, ActionExecutionState source, ActionInputRequest request) => Conditions.Contains(key);
     public bool CanStart(ActionExecutionState source, ActionInputRequest request, out string reason)
@@ -30,7 +31,11 @@ public sealed class ActionSequenceTestHost : IActionSequenceHost, IActionSequenc
     public void OnFrameEvent(ActionExecutionState state, ActionFrameEvent frameEvent) => Events.Add(frameEvent.EventKey + "@" + state.ActionFrame);
     public void OnActionEnded(ActionExecutionState state, ActionExitReason reason) => Exits.Add(reason);
     public void OnStateSampled(ActionExecutionState state) { }
-    public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames) => SimulationSteps.Add(frames);
+    public void OnSimulationStep(ActionExecutionState from, ActionExecutionState to, double frames)
+    {
+        SimulationSteps.Add(frames);
+        SimulationCallback?.Invoke();
+    }
     public void OnFrameBoundary(ActionExecutionState state) { }
     public void OnIdleSimulation(double frames) => IdleSteps.Add(frames);
 }

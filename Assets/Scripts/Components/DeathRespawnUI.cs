@@ -1,16 +1,20 @@
 using UnityEngine;
 using UnityEngine.UI;
-using GameJam.Actions;
 
+// 挑战失败面板：玩家死亡（HealthComponent.Died）或按 R 键（SaveManager 转发）时弹出。
+// 复活：传送回存档点、血量回满、能量清零。
+// 暂停走 dev 的 TimeManager.SetPaused，不直接散写 Time.timeScale（dev 工程规范）。
 public class DeathRespawnUI : MonoBehaviour
 {
-    public static DeathRespawnUI Instance;
+    public static DeathRespawnUI Instance { get; private set; }
 
     public Button respawnButton;
     public Transform panelRoot;
-    private HealthComponent playerHealth;
 
-    void Awake()
+    private HealthComponent playerHealth;
+    private VectorEnergy playerEnergy;
+
+    private void Awake()
     {
         Instance = this;
 
@@ -18,26 +22,39 @@ public class DeathRespawnUI : MonoBehaviour
         {
             panelRoot.gameObject.SetActive(false);
         }
-
-        GameObject player = Object.FindObjectOfType<PlayerMotor>().gameObject;
-        if (player != null)
-        {
-            playerHealth = player.GetComponent<HealthComponent>();
-            playerHealth.Damaged += OnPlayerTakeDamage;
-        }
-
         if (respawnButton != null)
         {
             respawnButton.onClick.AddListener(OnClickRespawn);
         }
+
+        TryBindPlayer();
     }
 
-    private void OnPlayerTakeDamage(HealthComponent health, float damage, Vector3 point, Vector3 dir)
+    private void Update()
     {
-        if (health.Health <= 0)
+        // 玩家可能晚于 UI 加载，未绑定时每帧重试一次。
+        if (playerHealth == null)
         {
-            OpenPanel();
+            TryBindPlayer();
         }
+    }
+
+    private void TryBindPlayer()
+    {
+        PlayerMotor motor = PlayerMotor.Active;
+        if (motor == null) return;
+
+        playerHealth = motor.GetComponent<HealthComponent>();
+        playerEnergy = motor.GetComponent<VectorEnergy>();
+        if (playerHealth != null)
+        {
+            playerHealth.Died += OnPlayerDied;
+        }
+    }
+
+    private void OnPlayerDied(HealthComponent health)
+    {
+        OpenPanel();
     }
 
     public void OpenPanel()
@@ -46,10 +63,9 @@ public class DeathRespawnUI : MonoBehaviour
         {
             panelRoot.gameObject.SetActive(true);
         }
-        Time.timeScale = 0;
+        TimeManager.SetPaused(true);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        Debug.Log("��������Ѿ���");
     }
 
     public void ClosePanel()
@@ -58,23 +74,27 @@ public class DeathRespawnUI : MonoBehaviour
         {
             panelRoot.gameObject.SetActive(false);
         }
-        Time.timeScale = 1;
+        TimeManager.SetPaused(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
     private void OnClickRespawn()
     {
-        Debug.Log("���ť�������");
         SaveManager.LoadPlayer();
+        // Reset 满血并在死亡时触发 Revived，dev 侧 Player 据此复位动作系统。
         if (playerHealth != null)
         {
             playerHealth.Reset();
         }
+        if (playerEnergy != null)
+        {
+            playerEnergy.ResetEnergy();
+        }
         ClosePanel();
     }
 
-    void OnDestroy()
+    private void OnDestroy()
     {
         if (Instance == this)
         {
@@ -82,7 +102,7 @@ public class DeathRespawnUI : MonoBehaviour
         }
         if (playerHealth != null)
         {
-            playerHealth.Damaged -= OnPlayerTakeDamage;
+            playerHealth.Died -= OnPlayerDied;
         }
     }
 }

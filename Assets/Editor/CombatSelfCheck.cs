@@ -77,8 +77,8 @@ public static class CombatSelfCheck
             float expected = healthBefore - combat.AttackDamage;
             // 内部一致性检查：自检持有的引用必须就是场景里那个受击对象。
             // 早先这里读到 120 而实际已扣到 45，正是「读的不是同一个实例」造成的假失败。
-            Enemy liveEnemy = Object.FindObjectOfType<Enemy>();
-            Enemy[] allEnemies = Object.FindObjectsOfType<Enemy>();
+            EnemyBase liveEnemy = Object.FindObjectOfType<EnemyBase>();
+            EnemyBase[] allEnemies = Object.FindObjectsOfType<EnemyBase>();
             string roster = string.Join(" | ", System.Array.ConvertAll(allEnemies,
                 candidate => $"{candidate.name}#{candidate.GetInstanceID()}:{candidate.Health}"));
             Debug.Log($"[CombatSelfCheck] 引用一致性: 自检引用={enemy.name}#{enemy.GetInstanceID()} "
@@ -86,7 +86,7 @@ public static class CombatSelfCheck
                 + $"场景对象血量={liveEnemy?.Health} 存活={enemy.IsAlive} 比例={enemy.HealthRatio:0.###} "
                 + $"上限={enemy.MaxHealth} 受到伤害次数={enemy.DamagedCount}");
             Debug.Log($"[CombatSelfCheck] 场景中的敌人共 {allEnemies.Length} 个: {roster}");
-            // 断言用「命中是否造成伤害」，不断言精确数值：Enemy 同时会给所有重叠碰撞体结算，
+            // 断言用「命中是否造成伤害」，不断言精确数值：EnemyBase 同时会给所有重叠碰撞体结算，
             // 数值可能随碰撞体数量变化；「一次挥砍只扣一次」这条契约由 _hitThisSwing 保证，另有测试覆盖。
             bool damaged = healthAfter < healthBefore;
             // 两段减速里更强的一档会生效（冲击 0.35），因此判定「至少压到了冲击档或尾巴档」，
@@ -156,10 +156,10 @@ public static class CombatSelfCheck
             return;
         }
 
-        Enemy enemy = Object.FindObjectOfType<Enemy>();
+        EnemyBase enemy = Object.FindObjectOfType<EnemyBase>();
         if (enemy == null)
         {
-            Debug.LogWarning("[CombatSelfCheck] 场景里没有 Enemy 实例");
+            Debug.LogWarning("[CombatSelfCheck] 场景里没有 EnemyBase 实例");
         }
         else
         {
@@ -177,7 +177,7 @@ public static class CombatSelfCheck
         // 只打印配置时长证明不了它真的在挡伤害，所以连续打两次看数值（期望 首次>0 / 第二次=0）。
         // 直接调 TakeDamage 而不是等敌人来打，是为了不受攻击冷却与 AI 状态影响，结果可复现。
         HealthComponent playerHealth = Player.Current != null ? Player.Current.Health : null;
-        Enemy enemyUnderTest = Object.FindObjectOfType<Enemy>();
+        EnemyBase enemyUnderTest = Object.FindObjectOfType<EnemyBase>();
 
         if (enemyUnderTest != null)
         {
@@ -194,7 +194,7 @@ public static class CombatSelfCheck
         }
         else
         {
-            Debug.LogWarning("[CombatSelfCheck] 场景里没有 Enemy，跳过敌人侧无敌帧实测");
+            Debug.LogWarning("[CombatSelfCheck] 场景里没有 EnemyBase，跳过敌人侧无敌帧实测");
         }
 
         if (playerHealth != null)
@@ -275,7 +275,7 @@ public static class CombatSelfCheck
 
     private static string DescribeWorld()
     {
-        Enemy enemy = Object.FindObjectOfType<Enemy>();
+        EnemyBase enemy = Object.FindObjectOfType<EnemyBase>();
         HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         return $"敌人血量={(enemy != null ? enemy.Health : -1)} "
             + $"敌人位置={(enemy != null ? enemy.transform.position.ToString() : "无")} "
@@ -293,7 +293,7 @@ public static class CombatSelfCheck
             return;
         }
 
-        Enemy enemy = Object.FindObjectOfType<Enemy>();
+        EnemyBase enemy = Object.FindObjectOfType<EnemyBase>();
         HealthComponent health = Player.Current != null ? Player.Current.Health : null;
         Debug.Log($"[CombatSelfCheck] 实机复查: 敌人血量={(enemy != null ? enemy.Health : -1)}"
             + $"/{(enemy != null ? enemy.MaxHealth : -1)} 已受击次数={(enemy != null ? enemy.DamagedCount : -1)} "
@@ -441,7 +441,7 @@ public static class CombatSelfCheck
                 + $"阵营={hitbox.Camp}");
         }
 
-        Enemy enemy = Object.FindObjectOfType<Enemy>();
+        EnemyBase enemy = Object.FindObjectOfType<EnemyBase>();
         if (enemy != null)
         {
             Vector3 toEnemy = enemy.transform.position - combat.transform.position;
@@ -544,7 +544,7 @@ public static class CombatSelfCheck
         }
     }
 
-    // 跳字接线诊断：直接把 Enemy 的运行时状态打出来。
+    // 跳字接线诊断：直接把 EnemyBase 的运行时状态打出来。
     // 「跳字不显示」的根因可能是引用为空、池为空、实例被销毁，只有把中间状态列出来才能定位。
     
     public static void DiagnosePopupWiring()
@@ -555,9 +555,9 @@ public static class CombatSelfCheck
             return;
         }
 
-        Enemy[] enemies = Object.FindObjectsOfType<Enemy>(true);
-        Debug.Log($"[PopupWire] 场景内 Enemy 数={enemies.Length}");
-        foreach (Enemy enemy in enemies)
+        EnemyBase[] enemies = Object.FindObjectsOfType<EnemyBase>(true);
+        Debug.Log($"[PopupWire] 场景内 EnemyBase 数={enemies.Length}");
+        foreach (EnemyBase enemy in enemies)
         {
             if (enemy == null) continue;
             DamagePopup template = enemy.DamagePopupTemplate;
@@ -587,8 +587,7 @@ public static class CombatSelfCheck
         GameObject clockHost = new GameObject("SelfCheckTimeManager");
         GameObject enemyHost = new GameObject("SelfCheckEnemy");
         GameObject playerHost = new GameObject("SelfCheckPlayerHealth");
-        // 先禁用再装配：Enemy.Awake 里会 GetComponent<CharacterController>()，
-        // 若在组件没加全时就激活，Awake 立刻跑并拿到 null（实测抛 NullReferenceException）。
+        // 先禁用再装配，确保激活时生命周期回调能拿到完整的组件配置。
         enemyHost.SetActive(false);
         playerHost.SetActive(false);
         try
