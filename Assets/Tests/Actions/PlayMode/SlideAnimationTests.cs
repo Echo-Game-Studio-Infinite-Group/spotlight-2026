@@ -90,14 +90,31 @@ public sealed class SlideAnimationTests
     {
         Advance(60);
         float lowest = float.PositiveInfinity;
-        foreach (SkinnedMeshRenderer renderer in _root.GetComponentsInChildren<SkinnedMeshRenderer>())
+        Transform leftFoot = _animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+        Transform rightFoot = _animator.GetBoneTransform(HumanBodyBones.RightFoot);
+        // 换装后保留的旧网格已停用，贴地检查只针对实际可见的模型。
+        foreach (SkinnedMeshRenderer renderer in _root.GetComponentsInChildren<SkinnedMeshRenderer>().Where(value => value.enabled))
         {
+            var feet = new HashSet<int>(Enumerable.Range(0, renderer.bones.Length).Where(index =>
+                renderer.bones[index].IsChildOf(leftFoot) || renderer.bones[index].IsChildOf(rightFoot)));
+            if (feet.Count == 0) continue;
             var mesh = new Mesh();
             try
             {
                 renderer.BakeMesh(mesh, false);
-                foreach (Vector3 vertex in mesh.vertices)
-                    lowest = Mathf.Min(lowest, renderer.transform.TransformPoint(vertex).y);
+                Vector3[] vertices = mesh.vertices;
+                BoneWeight[] weights = renderer.sharedMesh.boneWeights;
+                // 用脚部蒙皮识别鞋底，避免新模型的衣物或护膝影响贴地判定。
+                for (int index = 0; index < vertices.Length; index++)
+                {
+                    BoneWeight weight = weights[index];
+                    float footWeight = (feet.Contains(weight.boneIndex0) ? weight.weight0 : 0f)
+                        + (feet.Contains(weight.boneIndex1) ? weight.weight1 : 0f)
+                        + (feet.Contains(weight.boneIndex2) ? weight.weight2 : 0f)
+                        + (feet.Contains(weight.boneIndex3) ? weight.weight3 : 0f);
+                    if (footWeight >= .5f)
+                        lowest = Mathf.Min(lowest, renderer.transform.TransformPoint(vertices[index]).y);
+                }
             }
             finally { Object.DestroyImmediate(mesh); }
         }

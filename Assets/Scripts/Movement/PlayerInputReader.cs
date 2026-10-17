@@ -26,10 +26,13 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private bool _gameplayEnabled = true;
     private bool _focused = true;
     public event Action ToggleHUD;
+    public event Action PauseRequested;
+    public event Action MarkPressed;
     public event Action Cleared;
     public event Action<bool> SkillHeldChanged;
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
+    public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
     public bool GameplayEnabled => _gameplayEnabled && _focused;
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
@@ -65,6 +68,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _slide = _gameplay.FindAction("Slide", true);
         _skill = _gameplay.FindAction("Skill", true);
         _attack = _gameplay.FindAction("Attack", true);
+        _gameplay.FindAction("Mark", true).performed += context => { if (GameplayEnabled) MarkPressed?.Invoke(); };
         _move.performed += OnMove;
         _move.canceled += OnMove;
         _sprint.performed += OnSprint;
@@ -185,7 +189,11 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         return _actionSnapshot;
     }
     private void OnToggleHUD(InputAction.CallbackContext context) => ToggleHUD?.Invoke();
-    private void OnToggleCursor(InputAction.CallbackContext context) => SetGameplayEnabled(!_gameplayEnabled);
+    private void OnToggleCursor(InputAction.CallbackContext context)
+    {
+        if (PauseRequested != null) PauseRequested.Invoke();
+        else SetGameplayEnabled(!_gameplayEnabled);
+    }
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
     private void ApplyGameplay()

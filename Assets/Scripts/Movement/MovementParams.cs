@@ -12,7 +12,7 @@ public sealed class MovementParams : ScriptableObject
     [Min(0f)] public float GroundStopSpeed = 0.05f;
     [Min(0f)] public float FrictionExemptWindow = 0.2f;
     public PumpMode Pump = PumpMode.WindowPump;
-    [Min(0.01f)] public float MaxSpeed = 120f;
+    [Min(0.01f)] public float MaxSpeed = 30;
 
     [Header("空中与转向")]
     [Min(0f)] public float Gravity = 20f;

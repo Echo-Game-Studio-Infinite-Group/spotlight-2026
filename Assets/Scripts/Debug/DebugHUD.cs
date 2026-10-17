@@ -38,11 +38,31 @@ public sealed class DebugHUD : MonoBehaviour
             ? $"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}"
             : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
-        GUILayout.Label("W 直接奔跑 · Shift 普通冲刺 · Ctrl 滑铲", _style);
-        GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击", _style);
-        GUILayout.Label("右键+Space 高跳 · Shift+右键 能量冲刺", _style);
-        GUILayout.Label("长按右键 时缓 · Esc 鼠标锁定 · F3 面板", _style);
+        GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
+        GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击 · Esc 鼠标锁定 · F3 面板", _style);
+        GUILayout.Label("F5 parry 闪光演示 · F6 弹道parry闪光演示", _style);
         GUILayout.EndArea();
+        DrawVfxDemoKeys();
+    }
+
+    // parry 火花特效的演示键：parry 判定本体还没落地（dev 侧待移植），
+    // 先给一个肉眼可见的触发入口验证特效本身；判定移植后把调用接进判定处、删掉本方法。
+    private void DrawVfxDemoKeys()
+    {
+        Event e = Event.current;
+        if (e == null || e.type != EventType.KeyDown) return;
+        // 取胸前高度、面前一小段距离当演示原点；弹道 parry 假设子弹从玩家正面飞来
+        Vector3 chest = transform.position + Vector3.up * 1.1f + transform.forward * 0.7f;
+        if (e.keyCode == KeyCode.F5)
+        {
+            CombatSparks.PlayParry(chest);
+            e.Use();
+        }
+        else if (e.keyCode == KeyCode.F6)
+        {
+            CombatSparks.PlayParryProjectile(chest, -transform.forward);
+            e.Use();
+        }
     }
 
     // 战斗数值单独一段：血量与减速是「打击感是否生效」最直接的两个观察点
@@ -54,9 +74,9 @@ public sealed class DebugHUD : MonoBehaviour
             ? $"玩家血量 {playerHealth.Health:F0} / {playerHealth.MaxHealth:F0}"
             : "玩家血量 未接入 HealthComponent", _style);
 
-        Enemy enemy = null;
+        EnemyBase enemy = null;
         float nearest = float.PositiveInfinity;
-        foreach (Enemy candidate in FindObjectsOfType<Enemy>())
+        foreach (EnemyBase candidate in FindObjectsOfType<EnemyBase>())
         {
             float distance = (candidate.transform.position - transform.position).sqrMagnitude;
             if (distance >= nearest) continue;

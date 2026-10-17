@@ -157,6 +157,7 @@ namespace GameJam.Actions
         {
             reason = null;
             if (!_connected || !_alive || !_combat.enabled || !_motor.enabled) reason = "角色执行组件不可用或角色死亡";
+            else if (_animation.Locomotion.IsHurtLocked) reason = "受击硬直中";
             else if (request.Target.Combat?.Enabled == true && _combat.Hitbox == null) reason = "攻击缺少命中盒";
             else if (float.IsNaN(request.Target.ResolvedEnergyCost) || float.IsInfinity(request.Target.ResolvedEnergyCost) || request.Target.ResolvedEnergyCost < 0f) reason = "耗能参数无效";
             else if (request.Target.ResolvedEnergyCost > 0f && (_energy == null || _energy.CurrentEnergy < request.Target.ResolvedEnergyCost)) reason = "能量不足";
@@ -180,7 +181,9 @@ namespace GameJam.Actions
         public bool TryCommit(ActionExecutionState source, ActionInputRequest request)
         {
             if (!CanStart(source, request, out _)) return false;
-            return request.Target.ResolvedEnergyCost <= 0f || _energy != null && _energy.TrySpend(request.Target.ResolvedEnergyCost);
+            if (request.Target.ResolvedEnergyCost > 0f && (_energy == null || !_energy.TrySpend(request.Target.ResolvedEnergyCost))) return false;
+            _animation.Locomotion.CancelHurt();
+            return true;
         }
         private bool CanPlayAirborne(ActionDefinition action)
             => action.AirborneAnimation == null || _animation.CanPlay(action.AirborneAnimation.Airborne) &&
