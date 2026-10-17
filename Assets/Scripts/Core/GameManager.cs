@@ -81,6 +81,12 @@ public class GameManager : MonoBehaviour
 
     public void RestartLevel()
     {
+        // 流式房间不是整局入口；重开要回到常驻场景，重建玩家并重新加载首房。
+        if (MapManager.Exists && !string.IsNullOrEmpty(MapManager.Instance.BootstrapSceneName))
+        {
+            MapManager.Instance.TryRestartMap();
+            return;
+        }
         Scene active = SceneManager.GetActiveScene();
 
         if (active.buildIndex < 0)
