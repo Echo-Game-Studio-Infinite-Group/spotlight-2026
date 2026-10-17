@@ -1,0 +1,216 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2366f8a899b77f48b77e7060b3ddc40, type: 3}
+  m_Name: PlayerSprint
+  m_EditorClassIdentifier: 
+  ActionId: player_sprint
+  DisplayName: "\u666E\u901A\u51B2\u523A"
+  Description: "\u5355\u6309 Shift\uFF0C\u4E00\u6B21\u589E\u52A0\u4E24\u500D\u4F4E\u901F\u9608\u503C\u7684\u6C34\u5E73\u901F\u5EA6\uFF0C\u4E0D\u8017\u80FD\u3001\u4E0D\u51CF\u901F\u65F6\u95F4\uFF1B\u7EC4\u5408\u952E\u4F18\u5148\u89E6\u53D1\u80FD\u91CF\u51B2\u523A\u3002"
+  Timeline:
+  - SegmentId: startup
+    DisplayName: "\u51B2\u523A\u8D77\u624B"
+    Phase: 0
+    DurationFrames: 1
+    Events:
+    - MotorCommand: 11
+      Frame: 0
+      EventKey: motor.command
+      HitGroup: 0
+      Value: 2
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerSprint
+      Layer: 0
+      Clip: {fileID: 7400000, guid: e9e963fd41dae36448db0c762b516a2e, type: 2}
+      NormalizedStart: 0
+      NormalizedEnd: 0.033333335
+      BlendFrames: 3
+  - SegmentId: burst
+    DisplayName: "\u51B2\u523A\u8868\u73B0"
+    Phase: 1
+    DurationFrames: 17
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerSprint
+      Layer: 0
+      Clip: {fileID: 7400000, guid: e9e963fd41dae36448db0c762b516a2e, type: 2}
+      NormalizedStart: 0.033333335
+      NormalizedEnd: 0.6
+      BlendFrames: 3
+  - SegmentId: recovery
+    DisplayName: "\u51B2\u523A\u6536\u62DB"
+    Phase: 2
+    DurationFrames: 12
+    Events: []
+    Control:
+      AllowMove: 1
+      AllowTurn: 1
+      AllowJump: 0
+      AllowSlide: 0
+      AllowSprint: 1
+      GravityMultiplier: 1
+      MovementCommand: 
+      CommandValue: 0
+    Animation:
+      AnimatorState: Base Layer.Actions.PlayerSprint
+      Layer: 0
+      Clip: {fileID: 7400000, guid: e9e963fd41dae36448db0c762b516a2e, type: 2}
+      NormalizedStart: 0.6
+      NormalizedEnd: 1
+      BlendFrames: 3
+  CancelWindows:
+  - WindowId: bb6a02d9878d460d9ff64de45e9ab74e
+    DisplayName: "\u673A\u52A8\u63A5\u62DB"
+    Start:
+      SegmentId: burst
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    Targets:
+    - {fileID: 11400000, guid: 478064918a1346c449814486ee1af4bd, type: 2}
+    - {fileID: 11400000, guid: 26b5f44d095014b46a9b5782c2890ace, type: 2}
+    - {fileID: 11400000, guid: d4cae6b5797dc6b4684caf4cf82b9f3f, type: 2}
+    - {fileID: 11400000, guid: 044d0c829662f594490b299bde1fc2db, type: 2}
+    - {fileID: 11400000, guid: 530332b0c25b4fa4d962f37ea2d007c2, type: 2}
+    - {fileID: 11400000, guid: 3f64d60bf1c896d43af60063379a9c15, type: 2}
+    - {fileID: 11400000, guid: ea8d9fc74729c534b9279e0534f4ce48, type: 2}
+    RequireAll: []
+    RequireAny: []
+    Priority: 0
+    IgnoreCooldown: 0
+  Input:
+    Steps:
+    - Button: 8
+      Trigger: 0
+      RequireHeld: 0
+      ForbidHeld: 2
+      MinHoldFrames: 0
+      MaxHoldFrames: 0
+    AlternativeTriggers: []
+    MaxStepGapFrames: 0
+    PreInputFrames: 8
+    BufferGroup: mobility
+    ReplacePolicy: 0
+    KeepOnSourceCancel: 0
+    FreezeExpiryDuringHitStop: 1
+    Priority: 10
+    RequireAll: []
+    RequireAny: []
+  StartConditions:
+  - can_sprint
+  EnergyCost: 0
+  EnergyCostSource: 0
+  EnergyParameters: {fileID: 0}
+  TimeEffect:
+    UsesVectorConverter: 0
+    GlobalRate: 1
+    DurationSeconds: 0
+  AirborneAnimation:
+    HoldJumpUpPose: 0
+    Airborne:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Descending:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+    Landing:
+      AnimatorState: 
+      Layer: 0
+      Clip: {fileID: 0}
+      NormalizedStart: 0
+      NormalizedEnd: 1
+      BlendFrames: 0
+  CompleteOnLanding: 0
+  LandingCompletionStart:
+    SegmentId: 
+    RelativeTo: 0
+    OffsetFrames: 0
+  CooldownFrames: 30
+  CooldownGroup: ordinary_sprint
+  RequestVariants: []
+  Motion:
+    Enabled: 0
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    ForwardImpulse: 3
+    BoostSpeedLimit: 15
+    DiveInAir: 1
+    DiveAngle: 35
+    MaxDiveSpeed: 25
+    DiveResponse: 25
+    ClearMomentumOnCompletion: 0
+  Combat:
+    Enabled: 0
+    Damage: 25
+    HitMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    ScaleDamageWithSpeed: 0
+    SpeedDamage:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 2
+        value: 2
+        inSlope: 0.5
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    HitVolumes: []

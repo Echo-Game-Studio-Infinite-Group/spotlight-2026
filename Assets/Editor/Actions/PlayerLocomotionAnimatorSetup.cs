@@ -11,9 +11,42 @@ namespace GameJam.Actions.Editor
     {
         public const string LeftClipPath = "Assets/Animations/Player/LoWall_LDash_Loop_InPlace.anim";
         public const string RightClipPath = "Assets/Animations/Player/LoWall_RDash_Loop_InPlace.anim";
+        public const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
         private const string LeftSourcePath = "Assets/Animations/Player/LoWall_LDash_Loop_Root.anim";
         private const string RightSourcePath = "Assets/Animations/Player/LoWall_RDash_Loop_Root.anim";
         private const int DefaultBlendFrames = 6;
+
+        public static void EnsureRun(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length == 0)
+                throw new InvalidOperationException("Controller 至少需要一个基础动画层");
+            AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath(RunClipPath).OfType<AnimationClip>()
+                .FirstOrDefault(value => !value.name.StartsWith("__preview__", StringComparison.Ordinal));
+            if (clip == null || !clip.isHumanMotion || !clip.isLooping)
+                throw new InvalidOperationException("奔跑片段必须是可用于玩家 Avatar 的 Humanoid 循环：" + RunClipPath);
+            AnimatorStateMachine machine = controller.layers[0].stateMachine;
+            AnimatorState state = machine.states.FirstOrDefault(child => child.state.name == "Move").state;
+            if (state == null) state = machine.AddState("Move", new Vector3(500f, 0f));
+            Motion previous = state.motion;
+            state.motion = clip;
+            state.timeParameterActive = false;
+            // 仅迁移基础移动状态，不重建手工配置的动作与左右划墙状态。
+            if (previous is BlendTree tree && tree.name == "Walk Run") UnityEngine.Object.DestroyImmediate(tree, true);
+            for (int i = controller.parameters.Length - 1; i >= 0; i--)
+                if (controller.parameters[i].name == "RunBlend") controller.RemoveParameter(i);
+            EditorUtility.SetDirty(state);
+            EditorUtility.SetDirty(machine);
+            EditorUtility.SetDirty(controller);
+        }
+
+        public static bool HasRun(AnimatorController controller)
+        {
+            if (controller == null || controller.layers.Length == 0) return false;
+            AnimatorState state = controller.layers[0].stateMachine.states.FirstOrDefault(child => child.state.name == "Move").state;
+            return state != null && state.motion is AnimationClip clip && clip.isHumanMotion && clip.isLooping
+                && AssetDatabase.GetAssetPath(clip) == RunClipPath && !state.timeParameterActive
+                && !controller.parameters.Any(parameter => parameter.name == "RunBlend");
+        }
 
         [MenuItem("超高速行者/动作序列/接入左右 WallDash 动画")]
         public static void InstallWallDash()

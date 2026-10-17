@@ -15,6 +15,7 @@ public sealed class CameraPostProcessing : MonoBehaviour
     [SerializeField] private float _normalFov = 60f;
     [SerializeField] private float _fastFov = 85f;
     [SerializeField] private float _fullEffectSpeed = 25f;
+    [SerializeField, Min(0f)] private float _effectStartSpeed = 3f;
     [SerializeField] private float _response = 5f;
     [SerializeField] private float _wallRoll = 20f;
     [Tooltip("贴墙滑行时镜头拉近到的距离；必须小于 vcam 上的基准距离，否则按基准距离处理")]
@@ -60,7 +61,7 @@ public sealed class CameraPostProcessing : MonoBehaviour
     {
         if (_motor == null) return;
         float blend = 1f - Mathf.Exp(-_response * TimeManager.UnscaledDeltaTime);
-        float target = Mathf.InverseLerp(_motor.Params.WalkSpeed, _fullEffectSpeed, _motor.HorizontalSpeed);
+        float target = Mathf.InverseLerp(_effectStartSpeed, _fullEffectSpeed, _motor.HorizontalSpeed);
         _intensity = Mathf.Lerp(_intensity, target, blend);
         float side = Vector3.Dot(_motor.WallNormal, _virtualCamera.transform.right);
         _roll = Mathf.Lerp(_roll, _motor.IsWallSliding ? -Mathf.Sign(side) * _wallRoll : 0f, blend);
@@ -83,7 +84,8 @@ public sealed class CameraPostProcessing : MonoBehaviour
         RadialRedshiftFeature.SetSpeed(0f, 0f, 0f);
         // 跟随臂要还回基准距离，否则效果被关掉时会卡在贴脸状态。
         _distance = _baseDistance;
-        _follow.CameraDistance = _baseDistance;
+        // 场景卸载时跟随臂可能先被销毁，初始化失败时也必须能安全清理。
+        if (_follow != null) _follow.CameraDistance = _baseDistance;
         if (_chromatic != null) _chromatic.intensity.value = 0f;
         if (_motionBlur != null) _motionBlur.intensity.value = 0f;
     }

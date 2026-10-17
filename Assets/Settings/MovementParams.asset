@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a03557ae5052b94c8238f2e14fde2a7, type: 3}
   m_Name: MovementParams
   m_EditorClassIdentifier: 
-  GroundSpeedThreshold: 10
-  WalkSpeed: 3
-  RunAccel: 10
+  GroundSpeedThreshold: 7
+  LowSpeedRatio: 0.8
+  RunAccel: 5
   GroundFriction: 2
   GroundStopSpeed: 0.05
   FrictionExemptWindow: 0.2
   Pump: 1
-  MaxSpeed: 120
+  MaxSpeed: 30
   Gravity: 20
-  JumpSpeed: 8
+  JumpSpeed: 7
   AirControl: 0
   JumpBufferWindow: 0.12
   FacingSmoothTime: 0.12
@@ -31,10 +31,10 @@ MonoBehaviour:
   SlideCapsuleHeight: 1
   WallMaxApproachAngle: 70
   WallNormalMaxUpDot: 0.3
-  WallGraceTime: 3.5
+  WallGraceTime: 2.5
   WallVerticalFriction: 2
   WallVerticalStopSpeed: 0.01
-  WallFriction: 1
+  WallFriction: 2.5
   WallStopSpeed: 0.01
   WallGravityScale: 0.6
   WallMaxFallSpeed: 1

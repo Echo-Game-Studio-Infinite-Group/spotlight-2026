@@ -178,6 +178,8 @@ namespace GameJam.Actions
                 _actorFrame += step;
                 remaining -= step;
                 (_sink as IActionSequenceSimulationSink)?.OnSimulationStep(before, State, step);
+                // 碰撞回调可同步重置或中断动作，不能再读取旧时间轴或补算剩余移动。
+                if (_instanceId != before.InstanceId) return;
                 if (boundary - _progress > FrameTolerance) break;
                 _progress = boundary;
                 if (_progress >= _action.TotalFrames)
@@ -218,6 +220,11 @@ namespace GameJam.Actions
             _action = null;
             _instanceId = 0;
             _sink?.OnActionEnded(ended, reason);
+        }
+
+        public void Complete()
+        {
+            if (IsRunning) End(ActionExitReason.Completed);
         }
 
         private static bool HasExecutableTimeline(ActionDefinition target)

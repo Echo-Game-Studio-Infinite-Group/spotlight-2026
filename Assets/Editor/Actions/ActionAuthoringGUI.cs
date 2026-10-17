@@ -12,11 +12,17 @@ namespace GameJam.Actions.Editor
             {"ActionId", "动作 ID"}, {"DisplayName", "显示名称"}, {"Description", "说明"},
             {"Timeline", "分段时间轴"}, {"CancelWindows", "取消窗口（权限叠加）"}, {"Input", "输入与预输入"},
             {"StartConditions", "起招条件（全部满足）"}, {"EnergyCost", "起招耗能（接入方结算）"}, {"CooldownFrames", "冷却（玩家帧）"},
+            {"EnergyCostSource", "耗能来源"}, {"EnergyParameters", "能量参数资产"},
+            {"TimeEffect", "招式时间效果"}, {"UsesVectorConverter", "发动后结束主动时缓"},
+            {"GlobalRate", "全局时间倍率"}, {"DurationSeconds", "时间效果持续秒数（真实时间）"},
+            {"CompleteOnLanding", "实际落地后提前收招"}, {"LandingCompletionStart", "最早落地收招锚点（保护硬直）"},
+            {"AirborneAnimation", "起跳后的空中表现接口"}, {"HoldJumpUpPose", "起跳动画结束后保持姿态"},
+            {"Airborne", "滞空动画（空则保持起跳末帧）"}, {"Descending", "下降动画（可空）"}, {"Landing", "落地动画（可空）"},
             {"SegmentId", "稳定子段 ID"}, {"Phase", "阶段"}, {"DurationFrames", "时长（玩家帧）"},
             {"Events", "帧事件"}, {"Control", "移动控制接口"}, {"Animation", "动画绑定接口"},
             {"Frame", "段内帧"}, {"EventKey", "事件键"}, {"HitGroup", "命中段编号"}, {"Value", "数值参数"},
             {"AllowMove", "允许移动输入"}, {"AllowTurn", "允许转向输入"}, {"GravityMultiplier", "重力倍率"},
-            {"AllowJump", "允许原始跳跃输入"}, {"AllowSlide", "允许原始滑铲起手"}, {"AllowSprint", "允许冲刺输入"},
+            {"AllowJump", "允许原始跳跃输入"}, {"AllowSlide", "允许原始滑铲起手"}, {"AllowSprint", "允许奔跑输入"},
             {"Combat", "攻击判定"}, {"Enabled", "启用攻击上下文"}, {"Damage", "基础伤害"}, {"HitMask", "命中查询层"},
             {"MotorCommand", "运动命令类型"}, {"Layer", "动画层索引"},
             {"MovementCommand", "移动命令键"}, {"CommandValue", "命令数值"},
@@ -26,6 +32,7 @@ namespace GameJam.Actions.Editor
             {"RelativeTo", "参照边界"}, {"OffsetFrames", "偏移（玩家帧）"}, {"Targets", "允许转入的动作"},
             {"RequireAll", "全部条件键"}, {"RequireAny", "任一条件键（空则不限）"}, {"Priority", "选择优先级"},
             {"Steps", "有序输入步骤"}, {"MaxStepGapFrames", "步骤最大间隔（采样帧）"},
+            {"AlternativeTriggers", "备选单步触发（任一匹配）"},
             {"PreInputFrames", "预输入（采样帧，0 仅立即）"}, {"BufferGroup", "预输入竞争组"},
             {"ReplacePolicy", "同组替换策略"}, {"KeepOnSourceCancel", "原动作取消后仍保留"},
             {"FreezeExpiryDuringHitStop", "顿帧暂停预输入过期"}, {"Button", "触发语义键"}, {"Trigger", "触发方式"},
@@ -47,10 +54,12 @@ namespace GameJam.Actions.Editor
             {"SegmentStart", "子段开始"}, {"SegmentEnd", "子段结束"}, {"ActionStart", "动作开始"}, {"ActionEnd", "动作结束"},
             {"Pressed", "按下"}, {"Released", "松开"}, {"Held", "长按"},
             {"LatestInGroup", "保留同组最新"}, {"EarliestInGroup", "保留同组最早"}, {"Queue", "有限队列"},
-            {"None", "无"}, {"Attack", "攻击"}, {"Skill", "技能修饰键"}, {"Jump", "跳跃"}, {"Sprint", "冲刺"},
+            {"None", "无"}, {"Attack", "攻击"}, {"Skill", "技能修饰键"}, {"Jump", "跳跃"}, {"Sprint", "普通冲刺（Shift）"},
             {"Slide", "下蹲/滑铲"}, {"Forward", "前"}, {"Backward", "后"}, {"Left", "左"}, {"Right", "右"},
             {"EnterSlide", "进入滑铲"}, {"ExitSlide", "退出滑铲"}, {"SetHorizontalSpeed", "设置水平速度"},
-            {"LaunchVertical", "设置向上速度"}, {"ReverseHorizontal", "水平反向"}, {"AddForwardImpulse", "叠加向前速度"}, {"ClearHorizontal", "清空水平动量"}
+            {"LaunchVertical", "设置向上速度"}, {"ReverseHorizontal", "水平反向"}, {"AddForwardImpulse", "叠加向前速度"}, {"ClearHorizontal", "清空水平动量"},
+            {"HighJump", "高跳（数值为高度倍率）"}, {"Accelerate", "能量冲刺（数值为地速阈值倍率，保留更高速度）"},
+            {"SprintBoost", "普通冲刺（数值为低速阈值倍率，增加水平速度）"}, {"Fixed", "动作自身固定耗能"}
         };
 
         public static string PhaseLabel(ActionPhase phase) => EnumLabels.TryGetValue(phase.ToString(), out string label) ? label : "无效阶段";
@@ -68,6 +77,8 @@ namespace GameJam.Actions.Editor
             }
             bool changed = serialized.ApplyModifiedProperties();
             if (changed) EditorUtility.SetDirty(serialized.targetObject);
+            if (action != null && action.EnergyCostSource != ActionEnergyCostSource.Fixed)
+                EditorGUILayout.LabelField("当前生效耗能", action.ResolvedEnergyCost.ToString("0.##"));
             return changed;
         }
 

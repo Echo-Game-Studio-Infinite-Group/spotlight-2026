@@ -5,13 +5,14 @@ public sealed class MovementParams : ScriptableObject
 {
     [Header("地面")]
     [Min(0.01f)] public float GroundSpeedThreshold = 10f;
-    [Min(0f)] public float WalkSpeed = 3f;
+    [Tooltip("普通冲刺与低速/高速动作判定共用的地速阈值比例")]
+    [Range(0f, 1f)] public float LowSpeedRatio = 0.8f;
     [Min(0f)] public float RunAccel = 10f;
     [Min(0f)] public float GroundFriction = 6f;
     [Min(0f)] public float GroundStopSpeed = 0.05f;
     [Min(0f)] public float FrictionExemptWindow = 0.2f;
     public PumpMode Pump = PumpMode.WindowPump;
-    [Min(0.01f)] public float MaxSpeed = 120f;
+    [Min(0.01f)] public float MaxSpeed = 30;
 
     [Header("空中与转向")]
     [Min(0f)] public float Gravity = 20f;
@@ -61,6 +62,8 @@ public sealed class MovementParams : ScriptableObject
     public LayerMask CollisionMask = ~0;
     [Range(0.1f, 1f)] public float MoveSegmentRadiusRatio = 0.5f;
     [Min(1)] public int MaxMoveSegments = 128;
+
+    public float LowSpeedThreshold => GroundSpeedThreshold * LowSpeedRatio;
 
     private void OnValidate()
     {

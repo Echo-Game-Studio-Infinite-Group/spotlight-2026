@@ -31,6 +31,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private object _simulationOwner;
     private ActionControlPolicy _actionControl;
     private bool _commandJump;
+    private float _commandJumpHeightRatio;
+    private float _commandAccelerateSpeedRatio;
+    private float _commandSprintBoostRatio;
     private ActionMotionSettings _actionMotion;
     private long _motionInstance;
     public event Action<Vector3> MotionPathPoint;
@@ -59,7 +62,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public bool IsGrounded => State == MovementState.Grounded;
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
-    public bool IsSprinting { get; private set; }
+    public bool HasForwardInput { get; private set; }
     public int JumpCount { get; private set; }
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
@@ -70,6 +73,11 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public event Action<Vector3> Teleported;
     // 只报告不合格的新墙接触；反弹、伤害等撞墙反馈留给后续系统。
     public event Action<WallContact> WallCollision;
+    /// <summary>
+    /// 撞上「不可划的墙」时触发：用的是和划墙同一份接触数据、同一个角度门槛，只是没划进去。
+    /// 去重交给消费方（同一面墙可能连续多帧命中）。
+    /// </summary>
+    public event Action<WallContact> WallImpact;
 
     // 场景里玩家是唯一的，表现层（相机、音频）不必各自找一遍引用。
     // 不进 Inspector 手填：预制体实例换位置后手填的引用最容易悄悄指错。
@@ -96,6 +104,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _simulationOwner = null;
         _actionControl = null;
         _commandJump = false;
+        _commandJumpHeightRatio = 0f;
+        _commandAccelerateSpeedRatio = 0f;
+        _commandSprintBoostRatio = 0f;
         ClearPendingInput();
     }
     public void SetActionControl(ActionControlPolicy policy)
@@ -131,7 +142,11 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     {
         if (_input is PlayerInputReader reader) reader.Cleared += ClearPendingInput;
     }
-    private void ClearPendingInput() => _jumpUntil = float.NegativeInfinity;
+    private void ClearPendingInput()
+    {
+        _jumpUntil = float.NegativeInfinity;
+        HasForwardInput = false;
+    }
 
     private void FixedUpdate()
     {
@@ -151,11 +166,11 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             if (!_actionControl.AllowSlide) input.SlidePressed = false;
         }
         if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
+        HasForwardInput = input.Move.y > 0f;
         if (dt == 0f) return;
         bool wallJumpFacingLocked = _clock - _lastWallJump < _params.WallJumpFacingLockTime;
         _clock += dt;
         Vector3 wish = WishDirection(input.Move);
-        IsSprinting = input.SprintHeld && input.Move.y > 0f;
         RearmWall();
         if (IsWallSliding)
         {
@@ -190,7 +205,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             SetHorizontal(Vector3.MoveTowards(MovementMath.Horizontal(_velocity), Vector3.zero, _params.SlideDecel * dt));
             if ((jump || !input.SlideHeld || HorizontalSpeed < _params.SlideEndSpeed) && TryStand())
             {
-                if (jump && IsGrounded) Jump(_params.JumpSpeed);
+                if (jump && IsGrounded) Jump(RequestedJumpSpeed);
             }
         }
         else if (IsWallSliding)
@@ -204,11 +219,14 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             UpdateFreeMovement(dt, drive);
             if (jump && IsGrounded)
             {
-                if (!IsSprinting && wish != Vector3.zero) SetHorizontal(drive * _params.WalkSpeed);
-                Jump(_params.JumpSpeed);
+                Jump(RequestedJumpSpeed);
             }
         }
 
+        if (_commandAccelerateSpeedRatio > 0f && !IsSliding && !IsWallSliding)
+            SetHorizontal(transform.forward * Mathf.Max(HorizontalSpeed, _params.GroundSpeedThreshold * _commandAccelerateSpeedRatio));
+        if (_commandSprintBoostRatio > 0f && !IsSliding && !IsWallSliding)
+            SetHorizontal(transform.forward * (HorizontalSpeed + _params.LowSpeedThreshold * _commandSprintBoostRatio));
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
         gravity *= _actionControl != null ? _actionControl.GravityMultiplier : 1f;
@@ -258,14 +276,19 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         }
         // 能量不在这里结算：唯一账户是 VectorEnergy（执行序 10，在本组件之后自动积能）
         _commandJump = false;
+        _commandJumpHeightRatio = 0f;
+        _commandAccelerateSpeedRatio = 0f;
+        _commandSprintBoostRatio = 0f;
     }
+
+    private float RequestedJumpSpeed => _params.JumpSpeed * Mathf.Sqrt(_commandJumpHeightRatio > 0f ? _commandJumpHeightRatio : 1f);
 
     private void UpdateFreeMovement(float dt, Vector3 wish)
     {
         Vector3 horizontal = MovementMath.Horizontal(_velocity);
         if (IsGrounded)
         {
-            float target = IsSprinting ? _params.GroundSpeedThreshold : _params.WalkSpeed;
+            float target = _params.GroundSpeedThreshold;
             if (!InFrictionWindow && _params.GroundFriction > 0f)
             {
                 horizontal *= Mathf.Max(0f, 1f - _params.GroundFriction * dt);
@@ -282,7 +305,13 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void TryEnterWall(Vector3 wish)
     {
         // 以入墙速度与墙切线的锐角判定；只接受确实向墙内运动且小于上限的接触。
-        if (!_contacts.HasWall || _contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle) return;
+        if (!_contacts.HasWall) return;
+        if (_contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle)
+        {
+            // 角度不够划墙 = 撞上了不可划的墙。口径与划墙完全一致，交给撞击惩罚/布娃娃消费。
+            WallImpact?.Invoke(new WallContact(_contacts.WallPoint, _contacts.WallNormal, _contacts.WallIncoming, _contacts.WallAngle));
+            return;
+        }
         bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
             Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
         if (sameWall) return;
@@ -437,6 +466,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         switch (command)
         {
             case MotorCommandKind.Jump: return (IsGrounded || IsWallSliding) && (!IsSliding || _contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius));
+            case MotorCommandKind.HighJump: return IsGrounded && (!IsSliding || _contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius));
+            case MotorCommandKind.Accelerate: return !IsSliding && !IsWallSliding;
+            case MotorCommandKind.SprintBoost: return !IsSliding && !IsWallSliding;
             case MotorCommandKind.EnterSlide: return IsGrounded && !IsSliding && HorizontalSpeed >= _params.GroundSpeedThreshold * _params.SlideSpeedRatio;
             case MotorCommandKind.ExitSlide: return !IsSliding || _contacts.CanResize(_params.CapsuleBaseHeight, _params.CapsuleBaseRadius);
             default: return Enum.IsDefined(typeof(MotorCommandKind), command);
@@ -450,6 +482,20 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             case MotorCommandKind.Jump:
                 // 跳跃在运动步内执行，保留原先先结算地面/墙面加速、再起跳的 bhop 顺序。
                 _commandJump = true;
+                _commandJumpHeightRatio = 0f;
+                break;
+            case MotorCommandKind.HighJump:
+                if (value <= 0f) return false;
+                _commandJump = true;
+                _commandJumpHeightRatio = value;
+                break;
+            case MotorCommandKind.Accelerate:
+                if (value <= 0f) return false;
+                _commandAccelerateSpeedRatio = value;
+                break;
+            case MotorCommandKind.SprintBoost:
+                if (value <= 0f) return false;
+                _commandSprintBoostRatio = value;
                 break;
             case MotorCommandKind.EnterSlide: IsSliding = true; SetCapsule(_params.SlideCapsuleHeight, _controller.radius); break;
             case MotorCommandKind.ExitSlide: return !IsSliding || TryStand();
@@ -461,7 +507,13 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         }
         return true;
     }
-    public void CancelActionCommands() => _commandJump = false;
+    public void CancelActionCommands()
+    {
+        _commandJump = false;
+        _commandJumpHeightRatio = 0f;
+        _commandAccelerateSpeedRatio = 0f;
+        _commandSprintBoostRatio = 0f;
+    }
     public void SetHorizontalSpeed(float speed)
     {
         if (_params == null) return;
@@ -488,10 +540,13 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _velocity = Vector3.zero;
         _actionMotion = null; _motionInstance = 0;
         _commandJump = false;
+        _commandJumpHeightRatio = 0f;
+        _commandAccelerateSpeedRatio = 0f;
+        _commandSprintBoostRatio = 0f;
         _facingAngularVelocity = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
-        IsSliding = IsSprinting = _wallLocked = _wallJumpExitProtected = false;
+        IsSliding = HasForwardInput = _wallLocked = _wallJumpExitProtected = false;
         _clock = _wallTime = _wallLastContactTime = _wallSpeed = WallApproachAngle = 0f;
         _landTime = _jumpUntil = _lastWallJump = float.NegativeInfinity;
         _wallNormal = _wallTangent = _lockedNormal = _lockedPoint = Vector3.zero;

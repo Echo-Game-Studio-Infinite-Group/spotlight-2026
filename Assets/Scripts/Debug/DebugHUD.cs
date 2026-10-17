@@ -27,8 +27,8 @@ public sealed class DebugHUD : MonoBehaviour
     {
         if (!_visible || _motor.Params == null) return;
         if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-        GUI.Box(new Rect(8f, 8f, 370f, 250f), GUIContent.none);
-        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 230f));
+        GUI.Box(new Rect(8f, 8f, 370f, 300f), GUIContent.none);
+        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 280f));
         GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
@@ -92,8 +92,10 @@ public sealed class DebugHUD : MonoBehaviour
             GUILayout.Label($"敌人 {enemy.name} 血量 {enemy.Health:F0} / {enemy.MaxHealth:F0}", _style);
         }
 
-        GUILayout.Label(TimeManager.InSlowMotion
-            ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
-            : $"常速 {TimeManager.PlayerRate:0.##}", _style);
+        GUILayout.Label(TimeManager.GlobalRate < 1f
+            ? $"全局减速 {TimeManager.GlobalRate:0.##}x · 玩家 {TimeManager.PlayerRate:0.##}x · 世界 {TimeManager.WorldRate:0.##}x"
+            : TimeManager.InSlowMotion
+                ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
+                : $"常速 {TimeManager.PlayerRate:0.##}", _style);
     }
 }

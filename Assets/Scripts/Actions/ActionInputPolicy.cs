@@ -9,6 +9,7 @@ namespace GameJam.Actions
     {
         public enum Replacement { LatestInGroup, EarliestInGroup, Queue }
         public List<ActionInputStep> Steps = new List<ActionInputStep>();
+        public List<ActionInputStep> AlternativeTriggers = new List<ActionInputStep>();
         [Min(0)] public int MaxStepGapFrames;
         [Min(0)] public int PreInputFrames;
         public string BufferGroup = "main";
@@ -19,5 +20,8 @@ namespace GameJam.Actions
         // 输入资格只负责分辨语义；资源不足不得让技能输入降级成普通攻击。
         public List<string> RequireAll = new List<string>();
         public List<string> RequireAny = new List<string>();
+        public bool ReferencesButton(ActionInputButtons button)
+            => Steps != null && Steps.Exists(step => step != null && step.Button == button) ||
+               AlternativeTriggers != null && AlternativeTriggers.Exists(step => step != null && step.Button == button);
     }
 }

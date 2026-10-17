@@ -125,19 +125,21 @@ namespace GameJam.Actions.Editor
         {
             if (conditionKey == "non_stationary_jump") return request.Direction.sqrMagnitude > 0;
             if (conditionKey == "forward_jump") return request.Direction.y > 0;
+            if (conditionKey == "can_high_jump") return _conditions.Contains("grounded") && (!_conditions.Contains("sliding") || request.Direction.y > 0f);
+            if (conditionKey == "can_accelerate" || conditionKey == "can_sprint") return !_conditions.Contains("sliding") && !_conditions.Contains("wall_sliding");
             if (conditionKey == "flash_available") return _conditions.Contains("parry") || _conditions.Contains("limb_break");
             return _conditions.Contains(conditionKey);
         }
         public bool CanStart(ActionExecutionState source, ActionInputRequest request, out string reason)
         {
-            bool enough = _energy >= request.Target.EnergyCost;
+            bool enough = _energy >= request.Target.ResolvedEnergyCost;
             reason = enough ? null : request.Target.Label + "：沙盒能量不足";
             return enough;
         }
         public bool TryCommit(ActionExecutionState source, ActionInputRequest request)
         {
-            if (_energy < request.Target.EnergyCost) return false;
-            _energy -= request.Target.EnergyCost;
+            if (!CanStart(source, request, out _)) return false;
+            _energy -= request.Target.ResolvedEnergyCost;
             if (request.Target.ActionId == "flash") { _conditions.Remove("parry"); _conditions.Remove("limb_break"); _flags = string.Join(",", _conditions); }
             return true;
         }
@@ -158,7 +160,7 @@ namespace GameJam.Actions.Editor
             foreach (string key in window.RequireAll) flags.Add(key);
             if (window.RequireAny.Count > 0) flags.Add(window.RequireAny[0]);
             _flags = string.Join(",", flags); ParseFlags();
-            _energy = Mathf.Max(_energy, source.EnergyCost + target.EnergyCost);
+            _energy = Mathf.Max(_energy, source.ResolvedEnergyCost + target.ResolvedEnergyCost);
             source.TryGetWindowRange(window, out _scheduledFrame, out _);
             _scheduledSource = source; _scheduledTarget = target;
             _player.Queue(source, _nextTick, _move);
