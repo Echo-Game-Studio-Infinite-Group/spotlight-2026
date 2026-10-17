@@ -2,13 +2,13 @@ using UnityEngine;
 
 // 让"被击杀的敌人"自动回到池里，而不是留在场上当尸体。
 //
-// 为什么单独一个组件、而不是把逻辑写进 Enemy：
-// Enemy 是战斗实体，不该知道"池"和"生成器"的存在（否则敌人预制体必须永远配池才能用，
+// 为什么单独一个组件、而不是把逻辑写进 EnemyBase：
+// EnemyBase 是战斗实体，不该知道"池"和"生成器"的存在（否则敌人预制体必须永远配池才能用，
 // CombatSelfCheck 之类只想要靶子的场合会被拖累）。这里做成附加的桥接层，
 // 想池化就挂，不想池化就不挂，两边都保持干净。
 //
 // 死亡处理的分工：
-//   - Enemy/GibComponent 负责表现（切碎、死亡动画）——本组件不插手。
+//   - EnemyBase/GibComponent 负责表现（切碎、死亡动画）——本组件不插手。
 //   - 本组件只负责"延迟一会儿，把实例还给池"。
 // 延迟是刻意的：生命值归零的同一帧就 SetActive(false) 会让死亡动画与碎块来不及播放，
 // 观感上是"敌人瞬间消失"。
@@ -110,14 +110,14 @@ public sealed class EnemyPooledLifecycle : MonoBehaviour, IPooledObject
     public void OnSpawnedFromPool()
     {
         // 复用前必须把上一轮的状态清干净：血量、攻击冷却、追击开关、碎块效果、死亡标志。
-        // Enemy.ResetHealth 已经把这些收拢在一处，这里只负责叫它。
-        var enemy = GetComponent<Enemy>();
+        // EnemyBase.ResetHealth 已经把这些收拢在一处，这里只负责叫它。
+        var enemy = GetComponent<EnemyBase>();
         if (enemy != null)
         {
             enemy.ResetHealth();
             return;
         }
-        // 池化的不是 Enemy（例如纯靶子）时，至少把血补满。
+        // 池化的不是 EnemyBase（例如纯靶子）时，至少把血补满。
         if (_health != null) _health.Reset();
     }
 
@@ -125,7 +125,7 @@ public sealed class EnemyPooledLifecycle : MonoBehaviour, IPooledObject
     {
         _pendingRecycle = false;
         // 归还瞬间就停掉 AI：留着 NavMeshAgent 在禁用对象上活动会刷警告。
-        var enemy = GetComponent<Enemy>();
+        var enemy = GetComponent<EnemyBase>();
         if (enemy != null) enemy.FinishAttack();
         var agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh) agent.ResetPath();

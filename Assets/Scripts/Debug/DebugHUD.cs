@@ -74,9 +74,9 @@ public sealed class DebugHUD : MonoBehaviour
             ? $"玩家血量 {playerHealth.Health:F0} / {playerHealth.MaxHealth:F0}"
             : "玩家血量 未接入 HealthComponent", _style);
 
-        Enemy enemy = null;
+        EnemyBase enemy = null;
         float nearest = float.PositiveInfinity;
-        foreach (Enemy candidate in FindObjectsOfType<Enemy>())
+        foreach (EnemyBase candidate in FindObjectsOfType<EnemyBase>())
         {
             float distance = (candidate.transform.position - transform.position).sqrMagnitude;
             if (distance >= nearest) continue;
