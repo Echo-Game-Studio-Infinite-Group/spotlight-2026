@@ -31,6 +31,7 @@ public sealed class DebugHUD : MonoBehaviour
         GUILayout.BeginArea(new Rect(16f, 16f, 350f, 280f));
         GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
         GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
+        GUILayout.Label($"支撑坡角 {_motor.GroundSupport.Angle:F1}° · 阶差 {_motor.GroundStepHeight:F3} m", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
         GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
         // 能量行改走能量账户，读不到时明确写出来，避免把"没接上"误看成"能量是 0"

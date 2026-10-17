@@ -8,17 +8,13 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 {
     [Header("硬直（两段：布娃娃 → 起身）")]
     [Tooltip("布娃娃段时长（秒）：从触发到开始播起身动画。")]
-    [SerializeField, Min(0f)] private float _ragdollSeconds = 0.8f;
+    [SerializeField, Min(0f)] private float _ragdollSeconds = 1f;
 
     [Tooltip("起身动画在 Animator 里的状态名（Base Layer）。留空或找不到该状态 → 退回占位（直接 Rebind 回 Idle）。")]
     [SerializeField] private string _getUpState = "GetUp";
 
     [Tooltip("起身段的目标时长（秒）。0 = 按动画原速；>0 时用 Animator.speed 缩放到这个时长。")]
     [SerializeField, Min(0f)] private float _getUpTargetSeconds = 0f;
-
-
-
-
 
 
     [Header("撞击触发（判定条件在移动层里，这里只管数值）")]
@@ -41,10 +37,10 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     [SerializeField, Min(0f)] private float _groundProbeDistance = 3f;
 
     [Header("引用")]
-    [Tooltip("布娃娃的根骨骼，Mixamo 骨架是 mixamorig:Hips。留空则按名字自动找，并用它下面所有刚体当布娃娃。")]
+    [Tooltip("Humanoid 优先使用当前 Avatar 的 Hips，避免换模型后选中残留的旧骨架。非 Humanoid 可显式指定根骨骼。")]
     [SerializeField] private Transform _hips;
 
-    [Tooltip("留空则自动找同物体上的 CharacterController / Animator。")]
+    [Tooltip("运行时统一使用根节点上的 CharacterController / Animator。")]
     [SerializeField] private CharacterController _controller;
     [SerializeField] private Animator _animator;
 
@@ -94,72 +90,60 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
     private void Cache()
     {
-        if (_controller == null) _controller = GetComponent<CharacterController>();
-        if (_animator == null) _animator = GetComponent<Animator>();
-        if (_input == null) _input = GetComponent<PlayerInputReader>();
-        if (_motor == null) _motor = GetComponent<PlayerMotor>();
+        _controller = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
+        _input = GetComponent<PlayerInputReader>();
+        _motor = GetComponent<PlayerMotor>();
+        _hips = FindHips();
 
-        if (_hips == null) _hips = FindHips();
-
-        if (_ragdollBodies == null || _ragdollBodies.Length == 0)
+        // 只收 Hips 底下的刚体：玩家 Hitbox 子物体上也有个 Rigidbody，不能一起当布娃娃。
+        _ragdollBodies = _hips != null
+            ? _hips.GetComponentsInChildren<Rigidbody>(true)
+            : new Rigidbody[0];
+        _ragdollColliders = _hips != null
+            ? _hips.GetComponentsInChildren<Collider>(true)
+            : new Collider[0];
+        Collider[] all = GetComponentsInChildren<Collider>(true);
+        var others = new System.Collections.Generic.List<Collider>(all.Length);
+        foreach (Collider c in all)
         {
-            // 只收 Hips 底下的刚体：玩家 Hitbox 子物体上也有个 Rigidbody，不能一起当布娃娃。
-            _ragdollBodies = _hips != null
-                ? _hips.GetComponentsInChildren<Rigidbody>(true)
-                : new Rigidbody[0];
+            // CharacterController 也是 Collider 的子类，别把它算进来：
+            // 它由 _controller 字段单独管，进来时先被关掉，若这里再"按记录还原"就会把它永远关在 off。
+            if (c == null || c is CharacterController || IsRagdollCollider(c)) continue;
+            others.Add(c);
         }
-        if (_ragdollColliders == null || _ragdollColliders.Length == 0)
+        _otherColliders = others.ToArray();
+        _otherWasEnabled = new bool[_otherColliders.Length];
+        // TODO: 等确认 PlayerMotor / 输入 / 动作序列有没有更安全的「暂停」入口，再决定是不是继续用 enabled = false。
+        _controls = new Behaviour[]
         {
-            _ragdollColliders = _hips != null
-                ? _hips.GetComponentsInChildren<Collider>(true)
-                : new Collider[0];
-        }
-        if (_otherColliders == null)
-        {
-            Collider[] all = GetComponentsInChildren<Collider>(true);
-            var others = new System.Collections.Generic.List<Collider>(all.Length);
-            foreach (Collider c in all)
-            {
-                // CharacterController 也是 Collider 的子类，别把它算进来：
-                // 它由 _controller 字段单独管，进来时先被关掉，若这里再"按记录还原"就会把它永远关在 off。
-                if (c == null || c is CharacterController || IsRagdollCollider(c)) continue;
-                others.Add(c);
-            }
-            _otherColliders = others.ToArray();
-            _otherWasEnabled = new bool[_otherColliders.Length];
-        }
-
-        if (_controls == null)
-        {
-            // TODO: 等确认 PlayerMotor / 输入 / 动作序列有没有更安全的「暂停」入口，再决定是不是继续用 enabled = false。
-            _controls = new Behaviour[]
-            {
-                GetComponent<PlayerMotor>(),
-                GetComponent<PlayerActionRunner>(),
-                GetComponent<ActionAnimatorBridge>(),
-                GetComponent<PlayerCombat>(),
-                // PlayerAnimation 每帧写 _animator.speed = TimeManager.PlayerRate：
-                // 受击的慢动作/命中停顿会把它压到 0.05，起身动画就变成「看着根本没播」。
-                GetComponent<PlayerAnimation>(),
-            };
-            _controlsWasEnabled = new bool[_controls.Length];
-        }
+            _motor,
+            GetComponent<PlayerActionRunner>(),
+            GetComponent<ActionAnimatorBridge>(),
+            GetComponent<PlayerCombat>(),
+            // PlayerAnimation 每帧写 _animator.speed = TimeManager.PlayerRate：
+            // 受击的慢动作/命中停顿会把它压到 0.05，起身动画就变成「看着根本没播」。
+            GetComponent<PlayerAnimation>(),
+        };
+        _controlsWasEnabled = new bool[_controls.Length];
     }
 
     private Transform FindHips()
     {
-        // Mixamo 骨架的根骨骼叫 mixamorig:Hips；找不到就退回 Animator 的第一层骨骼。
+        // 可见模型由当前 Avatar 驱动，不能让旧骨架的名字抢先匹配。
+        if (_animator != null && _animator.isHuman)
+            return _animator.GetBoneTransform(HumanBodyBones.Hips);
+        if (_hips != null) return _hips;
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
         {
             if (t.name == "mixamorig:Hips" || t.name == "Hips") return t;
         }
-        return _animator != null && _animator.isHuman ? _animator.GetBoneTransform(HumanBodyBones.Hips) : null;
+        return null;
     }
 
     public void EnterHitStun()
     {
         if (_active) return;
-        Cache();
 
         if (_ragdollBodies.Length == 0)
         {
@@ -190,6 +174,8 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
             _pendingPushOut = Vector3.zero;
         }
 
+        // Animator 和 Motor 可能刚移动过骨骼；先同步当前姿势，避免物理沿用上一帧的位置。
+        Physics.SyncTransforms();
         SetRagdollActive(true);
     }
 
@@ -334,7 +320,6 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     // 这里只负责数值与后果：够不够快、扣多少血、清不清速度、进不进硬直。
     private void OnEnable()
     {
-        Cache();
         if (_motor == null) return;
         _motor.WallImpact -= OnWallImpact;   // 幂等：OnEnable 可能被调多次
         _motor.WallImpact += OnWallImpact;

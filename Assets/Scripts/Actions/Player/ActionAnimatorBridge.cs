@@ -23,6 +23,7 @@ namespace GameJam.Actions
         private int _layer;
         private int _motionTimeId;
         private PlayerMotor _motor;
+        private PlayerGroundPose _groundPose;
         private ActionAirborneAnimationSettings _airborneSettings;
         private ActionAnimationBinding _jumpUpBinding;
         private ActionAnimationBinding _airborneBinding;
@@ -48,6 +49,8 @@ namespace GameJam.Actions
             if (_locomotion == null) _locomotion = GetComponentInChildren<PlayerAnimation>(true);
             if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>(true);
             _motor = GetComponent<PlayerMotor>();
+            _groundPose = GetComponent<PlayerGroundPose>();
+            if (!Application.isPlaying) _groundPose?.Configure(_animator, _motor, _locomotion);
             if (owner == null || _animator == null || _animator.runtimeAnimatorController == null || _locomotion == null)
             { reason = "缺少 Animator、Controller 或 PlayerAnimation"; return false; }
             if (!HasParameter(TimeParameter, AnimatorControllerParameterType.Float) || !HasParameter(PlayingParameter, AnimatorControllerParameterType.Bool))
@@ -133,6 +136,7 @@ namespace GameJam.Actions
                 _animator.SetFloat(_motionTimeId, state.AnimationNormalizedTime);
             }
             else if (_instance == 0) SampleAirborneVisual(deltaTime);
+            _groundPose?.Prepare(deltaTime);
             _animator.Update(deltaTime);
         }
         public void EndAction(long instanceId, bool stopEffects)

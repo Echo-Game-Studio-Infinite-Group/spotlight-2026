@@ -14,6 +14,14 @@ public sealed class MovementParams : ScriptableObject
     public PumpMode Pump = PumpMode.WindowPump;
     [Min(0.01f)] public float MaxSpeed = 30f;
 
+    [Header("台阶与坡面")]
+    [Min(0f)] public float MaxStepUp = 0.3f;
+    [Min(0f)] public float MaxStepDown = 0.35f;
+    [Range(0f, 80f)] public float MaxGroundAngle = 45f;
+    [Min(0.001f)] public float GroundTolerance = 0.03f;
+    [Tooltip("仅平滑台阶造成的高度修正，不延迟起跳和下落。")]
+    [Min(0f)] public float StepVisualSmoothTime = 0.08f;
+
     [Header("空中与转向")]
     [Min(0f)] public float Gravity = 20f;
     [Min(0f)] public float JumpSpeed = 8f;
@@ -75,5 +83,6 @@ public sealed class MovementParams : ScriptableObject
         CapsuleFastHeight = Mathf.Max(CapsuleFastHeight, CapsuleMinRadius * 2f);
         WallRearmDistance = Mathf.Max(WallRearmDistance, WallProbeDistance + 0.01f);
         MaxMoveSegments = Mathf.Max(1, MaxMoveSegments);
+        GroundTolerance = Mathf.Max(.001f, GroundTolerance);
     }
 }

@@ -1019,7 +1019,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6825769676076143557, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: CameraDistance
-      value: 5.999998
+      value: 5.999995
       objectReference: {fileID: 0}
     - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_Follow
@@ -1031,11 +1031,11 @@ PrefabInstance:
       objectReference: {fileID: 161910317}
     - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_Lens.Dutch
-      value: 0
+      value: -3.697695e-25
       objectReference: {fileID: 0}
     - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
       propertyPath: m_Lens.FieldOfView
-      value: 60
+      value: 60.00117
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1272,7 +1272,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 61.44329
+  field of view: 60.00117
   orthographic: 0
   orthographic size: 10
   m_Depth: 0
@@ -1646,6 +1646,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &761924066
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -2.9326992
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.0000019073486
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -40.816177
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
+      propertyPath: m_Name
+      value: combat-mech_idle
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 79c42d2148db8cd48b0b5b9e02ad5964, type: 3}
 --- !u!114 &847672077 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
@@ -2164,7 +2221,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 777957050568175645, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: field of view
-      value: 61.44329
+      value: 60.00117
       objectReference: {fileID: 0}
     - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: _volume
@@ -2460,15 +2517,17 @@ PrefabInstance:
       propertyPath: m_DefaultVelocity.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2805868951403254720, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: _ragdollSeconds
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2805868951403254720, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: _getUpTargetSeconds
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3935457739758834283, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_WarningMessage
-      value: "\nBinding warning: Some generic clip(s) animate transforms that are
-        already bound by a Humanoid avatar. These transforms can only be changed
-        by Humanoid clips.\n\tTransform 'mixamorig:Hips'\n\tTransform 'mixamorig:LeftFoot'\n\tTransform
-        'mixamorig:LeftHandThumb2'\n\tTransform 'mixamorig:LeftHandIndex1'\n\tTransform
-        'mixamorig:LeftHandPinky2'\n\tTransform 'mixamorig:RightHandRing2'\n\tTransform
-        'mixamorig:Spine1'\n\tTransform 'mixamorig:LeftToeBase'\n\tTransform 'mixamorig:RightArm'\n\tTransform
-        'mixamorig:LeftLeg'\n\tand more ...\n\tFrom animation clip 'T_Jump'"
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6952890567594264593, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2676,3 +2735,4 @@ SceneRoots:
   - {fileID: 4446090}
   - {fileID: 673717281}
   - {fileID: 643871755}
+  - {fileID: 761924066}

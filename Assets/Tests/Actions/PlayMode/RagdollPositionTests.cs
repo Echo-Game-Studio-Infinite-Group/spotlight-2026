@@ -130,7 +130,10 @@ public sealed class RagdollPositionTests
             .GetField("_hips", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_stun);
         FieldInfo gettingUp = typeof(PlayerRagdollHitStun).GetField("_inGetUp", BindingFlags.Instance | BindingFlags.NonPublic);
         Vector3 landing = hips.position;
-        for (int i = 0; i < 120 && !(bool)gettingUp.GetValue(_stun); i++)
+        // 无图形批测可在一秒内跑完上百渲染帧；等待真实计时，才能覆盖完整的一秒布娃娃。
+        float getUpDeadline = Time.time + 2f;
+        float timeout = Time.realtimeSinceStartup + 10f;
+        while (!(bool)gettingUp.GetValue(_stun) && Time.time < getUpDeadline && Time.realtimeSinceStartup < timeout)
         {
             landing = hips.position;
             yield return null;

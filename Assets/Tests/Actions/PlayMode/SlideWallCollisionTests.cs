@@ -30,6 +30,7 @@ public sealed class SlideWallCollisionTests
         _hitStun = _root.GetComponent<PlayerRagdollHitStun>(); _hitStun.enabled = false;
         _motor = _root.GetComponent<PlayerMotor>();
         _parameters = Object.Instantiate(_motor.Params); _created.Add(_parameters); _motor.SetParams(_parameters);
+        _parameters.MaxSpeed = 120f;
         _controller = _root.GetComponent<CharacterController>();
         _runner = _root.GetComponent<PlayerActionRunner>();
         _animation = _root.GetComponentInChildren<PlayerAnimation>();

@@ -32,6 +32,7 @@ namespace GameJam.Actions.Editor
             try
             {
                 PlayerAnimation animation = player.GetComponentInChildren<PlayerAnimation>(true);
+                if (player.GetComponent<PlayerGroundPose>() == null) player.AddComponent<PlayerGroundPose>();
                 var serialized = new SerializedObject(animation);
                 serialized.FindProperty("_slideClip").objectReferenceValue =
                     AssetDatabase.LoadAllAssetsAtPath(SlideClipPath).OfType<AnimationClip>()
@@ -54,6 +55,9 @@ namespace GameJam.Actions.Editor
             if (clip == null || !clip.isHumanMotion)
                 throw new InvalidOperationException("滑铲片段必须是 Humanoid 动画：" + SlideClipPath);
             EnsureParameter(controller, PlayerAnimation.SlideTimeParameter, AnimatorControllerParameterType.Float);
+            AnimatorControllerLayer[] layers = controller.layers;
+            layers[0].iKPass = true;
+            controller.layers = layers;
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
             AnimatorState state = machine.states.FirstOrDefault(child => child.state.name == "Trackle").state;
             if (state == null) throw new InvalidOperationException("Controller 缺少基础滑铲状态 Trackle");
@@ -69,7 +73,7 @@ namespace GameJam.Actions.Editor
         {
             if (controller == null || controller.layers.Length == 0) return false;
             AnimatorState state = controller.layers[0].stateMachine.states.FirstOrDefault(child => child.state.name == "Trackle").state;
-            return state != null && state.iKOnFeet && state.timeParameterActive && state.timeParameter == PlayerAnimation.SlideTimeParameter
+            return state != null && state.iKOnFeet && controller.layers[0].iKPass && state.timeParameterActive && state.timeParameter == PlayerAnimation.SlideTimeParameter
                 && AssetDatabase.GetAssetPath(state.motion) == SlideClipPath
                 && controller.parameters.Any(parameter => parameter.name == PlayerAnimation.SlideTimeParameter
                     && parameter.type == AnimatorControllerParameterType.Float);

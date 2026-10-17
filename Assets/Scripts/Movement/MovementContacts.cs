@@ -5,6 +5,7 @@ public sealed class MovementContacts
 {
     private readonly CharacterController _controller;
     private readonly MovementParams _params;
+    private readonly MovementGrounding _grounding;
     private readonly RaycastHit[] _hits = new RaycastHit[16];
     private readonly Collider[] _overlaps = new Collider[32];
     private readonly Vector3[] _normals = new Vector3[16];
@@ -13,6 +14,11 @@ public sealed class MovementContacts
     private int _wallContactCount;
     private Vector3 _incoming;
     private bool _sliding;
+    private bool _collectHits = true;
+    private bool _supported;
+    private GroundSupport _support;
+    private Vector3 _frontSupportFeet;
+    private bool _frontSupported;
 
     public bool Grounded { get; private set; }
     public bool HasWall { get; private set; }
@@ -22,15 +28,19 @@ public sealed class MovementContacts
     public Vector3 WallPoint { get; private set; }
     public Vector3 WallIncoming { get; private set; }
     public float WallAngle { get; private set; }
+    public GroundSupport Support => _support;
+    public float StepHeightDelta { get; private set; }
 
     public MovementContacts(CharacterController controller, MovementParams parameters)
     {
         _controller = controller;
         _params = parameters;
+        _grounding = new MovementGrounding(controller, parameters);
     }
 
     public void RecordHit(ControllerColliderHit hit)
     {
+        if (!_collectHits || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         if (_normalCount < _normals.Length) _normals[_normalCount++] = hit.normal;
         if (!IsWall(hit.normal) || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         RecordWall(hit.point, hit.normal, hit.collider);
@@ -68,13 +78,17 @@ public sealed class MovementContacts
     }
 
     public void Move(ref Vector3 velocity, float dt, System.Action<Vector3> pathPoint = null,
-        bool sliding = false, float slideForwardExtent = 0f)
+        bool sliding = false, float slideForwardExtent = 0f, bool wasGrounded = false)
     {
         HasWall = false;
         HasNonSlideWall = false;
         WallAngle = -1f;
         _wallContactCount = 0;
         _sliding = sliding;
+        StepHeightDelta = 0f;
+        float contactRange = _params.GroundTolerance + _controller.skinWidth;
+        _supported = wasGrounded && velocity.y <= 0f &&
+            _grounding.TrySupport(_controller.transform.position, contactRange, contactRange, out _support, _support);
         float segmentLength = Mathf.Max(0.01f, _controller.radius * _params.MoveSegmentRadiusRatio);
         int count = Mathf.Clamp(Mathf.CeilToInt(velocity.magnitude * dt / segmentLength), 1, _params.MaxMoveSegments);
         CollisionFlags last = CollisionFlags.None;
@@ -83,6 +97,19 @@ public sealed class MovementContacts
             _normalCount = 0;
             _incoming = velocity;
             Vector3 displacement = velocity * (dt / count);
+            if (_supported)
+            {
+                Vector3 horizontal = MovementMath.Horizontal(displacement);
+                displacement.y = -Vector3.Dot(horizontal, _support.Normal) / _support.Normal.y;
+                if (_grounding.TryStep(displacement, _controller.height, out float lift, out GroundSupport landing))
+                {
+                    float before = _controller.transform.position.y;
+                    AuxiliaryMove(Vector3.up * (lift + _params.GroundTolerance), pathPoint);
+                    StepHeightDelta += _controller.transform.position.y - before;
+                    displacement.y = 0f;
+                    _support = landing;
+                }
+            }
             if (slideForwardExtent > _controller.radius)
                 GuardSlideFront(ref displacement, ref velocity, slideForwardExtent);
             last = _controller.Move(displacement);
@@ -90,7 +117,7 @@ public sealed class MovementContacts
             for (int j = 0; j < _normalCount; j++)
             {
                 Vector3 normal = _normals[j];
-                if (IsWall(normal))
+                if (IsBlockingSurface(normal))
                 {
                     Vector3 clipped = MovementMath.ClipIntoSurface(MovementMath.Horizontal(velocity), MovementMath.Horizontal(normal).normalized);
                     velocity.x = clipped.x;
@@ -98,8 +125,32 @@ public sealed class MovementContacts
                 }
             }
             if ((last & CollisionFlags.Above) != 0 && velocity.y > 0f) velocity.y = 0f;
+            Vector3 feet = _controller.transform.position;
+            float drop = _supported ? _params.MaxStepDown : contactRange;
+            bool hasSupport = velocity.y <= 0f && _grounding.TrySupport(feet, contactRange, drop, out _support, _support);
+            if (hasSupport && _supported)
+            {
+                float correction = Mathf.Min(0f, _support.RootHeight - feet.y);
+                if (correction < 0f)
+                {
+                    AuxiliaryMove(Vector3.up * correction, pathPoint);
+                    // 坡面高度已经包含在运动位移里，只有离散阶差才交给表现层消抖。
+                    if (_support.Normal.y > .999f) StepHeightDelta += _controller.transform.position.y - feet.y;
+                }
+                hasSupport = _grounding.TrySupport(_controller.transform.position, contactRange, contactRange, out _support, _support);
+            }
+            _supported = hasSupport && (_supported || (last & CollisionFlags.Below) != 0);
         }
-        Grounded = (last & CollisionFlags.Below) != 0 && velocity.y <= 0f;
+        Grounded = _supported && velocity.y <= 0f;
+        if (!Grounded) _support = default;
+    }
+
+    private void AuxiliaryMove(Vector3 displacement, System.Action<Vector3> pathPoint)
+    {
+        _collectHits = false;
+        _controller.Move(displacement);
+        _collectHits = true;
+        pathPoint?.Invoke(_controller.transform.position);
     }
 
     private void GuardSlideFront(ref Vector3 displacement, ref Vector3 velocity, float extent)
@@ -127,7 +178,8 @@ public sealed class MovementContacts
                     hitPoint = hit.collider.ClosestPoint(start);
                     hitNormal = (start - hitPoint).normalized;
                 }
-                if (hitNormal == Vector3.zero || !IsWall(hitNormal)
+                if (TraversableFront(hit.collider, hitPoint)) continue;
+                if (hitNormal == Vector3.zero || !IsSlideBlockingSurface(hit.collider, hitPoint, hitNormal)
                     || Vector3.Dot(direction, hitNormal) >= -0.000001f) continue;
                 float travel = Mathf.Max(0f, hit.distance - _controller.skinWidth);
                 if (travel >= allowed) continue;
@@ -144,8 +196,9 @@ public sealed class MovementContacts
                 Collider collider = _overlaps[i];
                 if (collider.transform.IsChildOf(_controller.transform)) continue;
                 Vector3 closest = collider.ClosestPoint(start);
+                if (TraversableFront(collider, closest)) continue;
                 Vector3 outward = (start - closest).normalized;
-                if (outward == Vector3.zero || !IsWall(outward)
+                if (outward == Vector3.zero || !IsSlideBlockingSurface(collider, closest, outward)
                     || Vector3.Dot(direction, outward) >= -0.000001f) continue;
                 allowed = 0f;
                 normal = MovementMath.Horizontal(outward).normalized;
@@ -174,8 +227,10 @@ public sealed class MovementContacts
         {
             Collider collider = _overlaps[i];
             if (collider.transform.IsChildOf(_controller.transform)) continue;
-            Vector3 outward = (start - collider.ClosestPoint(start)).normalized;
-            if (outward == Vector3.zero || IsWall(outward)) return false;
+            Vector3 closest = collider.ClosestPoint(start);
+            if (TraversableFront(collider, closest)) continue;
+            Vector3 outward = (start - closest).normalized;
+            if (outward == Vector3.zero || IsSlideBlockingSurface(collider, closest, outward)) return false;
         }
         return true;
     }
@@ -185,6 +240,37 @@ public sealed class MovementContacts
         radius = _controller.radius;
         start = _controller.transform.position + Vector3.up * radius;
         end = start + _controller.transform.forward * Mathf.Max(0f, extent - radius);
+        _frontSupported = false;
+        Vector3 feet = _controller.transform.position;
+        float range = _params.GroundTolerance + _controller.skinWidth;
+        if (!_grounding.TrySupport(feet, range, range, out GroundSupport cursor, _support)) return;
+        feet.y = cursor.RootHeight;
+        float length = Mathf.Max(0f, extent - radius);
+        int samples = Mathf.Max(1, Mathf.CeilToInt(length / Mathf.Max(radius, .1f)));
+        for (int i = 1; i <= samples; i++)
+        {
+            Vector3 next = _controller.transform.position + _controller.transform.forward * (length * i / samples);
+            next.y = feet.y;
+            if (!_grounding.TrySupport(next, _params.MaxStepUp, _params.MaxStepDown, out GroundSupport support, cursor)) return;
+            if (support.RootHeight > feet.y + _params.MaxStepUp + .001f) return;
+            feet = new Vector3(next.x, support.RootHeight, next.z);
+            cursor = support;
+        }
+        _frontSupportFeet = feet;
+        _frontSupported = true;
+        end.y = feet.y + radius;
+    }
+
+    private bool TraversableFront(Collider collider, Vector3 point)
+    {
+        if (!_frontSupported) return false;
+        float top = Mathf.Max(_controller.transform.position.y, _frontSupportFeet.y) + _params.MaxStepUp;
+        Vector3 origin = point + _controller.transform.forward * _params.GroundTolerance;
+        origin.y = top + _params.GroundTolerance;
+        if (!_grounding.TrySurface(origin, top - point.y + _params.GroundTolerance * 2f, collider, out RaycastHit surface)
+            || !_grounding.IsWalkable(surface.normal)) return false;
+        Vector3 feet = new Vector3(origin.x, surface.point.y + _params.MaxStepUp + _params.GroundTolerance, origin.z);
+        return _grounding.CanOccupy(feet, _params.SlideCapsuleHeight);
     }
 
     public bool TryGetWallImpact(float minimumAngle, out WallContact impact)
@@ -304,6 +390,17 @@ public sealed class MovementContacts
     }
 
     private bool IsWall(Vector3 normal) => Mathf.Abs(normal.y) <= _params.WallNormalMaxUpDot;
+    private bool IsBlockingSurface(Vector3 normal) => IsWall(normal) || normal.y >= 0f && !_grounding.IsWalkable(normal);
+    private bool IsSlideBlockingSurface(Collider collider, Vector3 point, Vector3 normal)
+    {
+        if (IsWall(normal)) return true;
+        if (normal.y < 0f || _grounding.IsWalkable(normal)) return false;
+        // 胶囊在台阶棱边的分离方向可能很陡；陡坡阻挡只接受真实表面法线。
+        Vector3 origin = point - MovementMath.Horizontal(normal).normalized * _params.GroundTolerance
+            + Vector3.up * _params.GroundTolerance;
+        return _grounding.TrySurface(origin, _params.GroundTolerance * 3f, collider, out RaycastHit surface)
+            && !_grounding.IsWalkable(surface.normal);
+    }
 
     private void Capsule(float height, float radius, out Vector3 bottom, out Vector3 top, out float queryRadius)
     {

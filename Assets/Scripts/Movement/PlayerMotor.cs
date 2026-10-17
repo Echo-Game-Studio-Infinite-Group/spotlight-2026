@@ -61,6 +61,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public Vector3 Velocity => _velocity;
     public float HorizontalSpeed => MovementMath.Horizontal(_velocity).magnitude;
     public bool IsGrounded => State == MovementState.Grounded;
+    public GroundSupport GroundSupport => _contacts != null ? _contacts.Support : default;
+    public float GroundStepHeight => _contacts != null ? _contacts.StepHeightDelta : 0f;
+    public event Action<float> GroundStepped;
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
     public bool IsSlideHeadBlocked { get; private set; }
@@ -253,7 +256,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _velocity.y = IsGrounded ? -_params.Gravity * dt : _velocity.y - gravity * gravityDt;
         if (IsWallSliding && gravityDt > 0f) _velocity.y = Mathf.Max(_velocity.y, -_params.WallMaxFallSpeed);
         UpdateCapsule();
-        _controller.stepOffset = IsGrounded ? _groundStepOffset : 0f;
+        _controller.stepOffset = 0f;
+        _controller.slopeLimit = _params.MaxGroundAngle;
 
         bool wasGrounded = IsGrounded;
         bool wasWallSliding = IsWallSliding;
@@ -265,7 +269,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
                 Mathf.Lerp(_velocity.y, targetY, 1f - Mathf.Exp(-_actionMotion.DiveResponse * dt)));
         }
         _contacts.Move(ref _velocity, dt, point => MotionPathPoint?.Invoke(point), IsSliding,
-            protectSlideFront ? _params.SlideForwardExtent : 0f);
+            protectSlideFront ? _params.SlideForwardExtent : 0f, wasGrounded);
         bool hasImpact = _contacts.TryGetWallImpact(_params.WallMaxApproachAngle, out WallContact impact);
         // 同平面接缝也可能换成不可滑墙，不能只在法线变化的转角检查。
         if (IsWallSliding && _contacts.HasNonSlideWall) ExitWall();
@@ -302,6 +306,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _commandJumpHeightRatio = 0f;
         _commandAccelerateSpeedRatio = 0f;
         _commandSprintBoostRatio = 0f;
+        if (_contacts.StepHeightDelta != 0f) GroundStepped?.Invoke(_contacts.StepHeightDelta);
         // 消费方会关闭 Motor、切换布娃娃；所有状态结算完再上报，不能在回调后覆盖重置结果。
         if (hasImpact) WallImpact?.Invoke(impact);
     }
@@ -563,6 +568,19 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _facingAngularVelocity = 0f;
     }
     private void OnControllerColliderHit(ControllerColliderHit hit) => _contacts?.RecordHit(hit);
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        GroundSupport support = GroundSupport;
+        if (!Application.isPlaying || !support.IsValid) return;
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(support.Point, .04f);
+        Gizmos.DrawLine(support.Point, support.Point + support.Normal * .5f);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(transform.position, transform.position + Vector3.up * GroundStepHeight);
+    }
+#endif
 
     public void ResetState()
     {

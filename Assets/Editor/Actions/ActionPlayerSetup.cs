@@ -44,6 +44,7 @@ namespace GameJam.Actions.Editor
                 PlayerAnimation animation = player.GetComponentInChildren<PlayerAnimation>(true);
                 if (animation == null) animation = animator.gameObject.AddComponent<PlayerAnimation>();
                 animation.Configure(animator);
+                if (player.GetComponent<PlayerGroundPose>() == null) player.AddComponent<PlayerGroundPose>();
                 ActionAnimatorBridge bridge = player.GetComponent<ActionAnimatorBridge>() ?? player.AddComponent<ActionAnimatorBridge>();
                 bridge.Configure(animator, animation, player.GetComponentInChildren<PlayerVFXManager>(true));
                 PlayerActionRunner runner = player.GetComponent<PlayerActionRunner>() ?? player.AddComponent<PlayerActionRunner>();

@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Linq;
 using System.Reflection;
 using GameJam.Actions;
 using NUnit.Framework;
@@ -274,7 +275,7 @@ public sealed class ActionPlayerPlayModeTests
         PlayerMotor motor = _root.GetComponent<PlayerMotor>();
         PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
         Animator animator = _root.GetComponent<ActionAnimatorBridge>().Animator;
-        Assert.That(motor.HorizontalSpeed, Is.EqualTo(10f).Within(.001f));
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(motor.Params.GroundSpeedThreshold).Within(.001f));
         Assert.AreEqual(PlayerAnimation.MotionStateMove, animation.CurrentMotionState);
         Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Move"));
         Transform leg = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
@@ -292,7 +293,7 @@ public sealed class ActionPlayerPlayModeTests
     }
 
     [UnityTest]
-    public IEnumerator ShiftFromRunAddsSixteenOnceWithoutEnergyCostOrTimeEffect()
+    public IEnumerator ShiftFromRunAddsConfiguredBoostOnceWithoutEnergyCostOrTimeEffect()
     {
         yield return PrepareMobilityGround();
         for (int i = 0; i < 60; i++) yield return new WaitForFixedUpdate();
@@ -303,7 +304,11 @@ public sealed class ActionPlayerPlayModeTests
         InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.W, Key.LeftShift)); InputSystem.Update();
         yield return new WaitForFixedUpdate();
         Assert.AreEqual("player_sprint", _runner.Player.State.Action.ActionId);
-        Assert.That(_root.GetComponent<PlayerMotor>().HorizontalSpeed, Is.EqualTo(26f).Within(.001f));
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        float boostRatio = _runner.Player.State.Action.Timeline.SelectMany(segment => segment.Events)
+            .First(frameEvent => frameEvent.MotorCommand == MotorCommandKind.SprintBoost).Value;
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(Mathf.Min(motor.Params.MaxSpeed,
+            motor.Params.GroundSpeedThreshold + motor.Params.LowSpeedThreshold * boostRatio)).Within(.001f));
         Assert.AreEqual(0f, _mobilitySpentEnergy);
         Assert.AreEqual(1f, TimeManager.GlobalRate);
         for (int i = 0; i < 35; i++) yield return new WaitForFixedUpdate();

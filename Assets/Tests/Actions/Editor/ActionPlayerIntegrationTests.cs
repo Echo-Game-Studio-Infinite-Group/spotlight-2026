@@ -33,6 +33,10 @@ public sealed class ActionPlayerIntegrationTests
         _root.transform.position = new Vector3(2000f, 0f, 2000f);
         foreach (Camera camera in _root.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
         _motor = _root.GetComponent<PlayerMotor>();
+        // 集成夹具固定算法参照值，覆盖 40/55/120 m/s 惯性，不依赖正式配表的当前调参。
+        MovementParams parameters = Object.Instantiate(_motor.Params); _created.Add(parameters);
+        parameters.GroundSpeedThreshold = 10f; parameters.RunAccel = 10f; parameters.MaxSpeed = 120f;
+        _motor.SetParams(parameters);
         Invoke(_root.GetComponent<PlayerInputReader>(), "Awake");
         Invoke(_motor, "Awake");
         _combat = _root.GetComponent<PlayerCombat>();
@@ -194,7 +198,8 @@ public sealed class ActionPlayerIntegrationTests
         var end = new ActionExecutionState(_attack, 100, 0, 1, 0, default);
         _combat.SampleSequenceHitbox(start, end, new[] { _root.transform.position });
         Assert.AreEqual(1, target.DamagedCount);
-        Assert.That(target.Health, Is.EqualTo(1000f - _attack.Combat.Damage * 1.5f).Within(.001f));
+        float snapshotMultiplier = _attack.Combat.SpeedDamage.Evaluate(10f / _motor.Params.GroundSpeedThreshold);
+        Assert.That(target.Health, Is.EqualTo(1000f - _attack.Combat.Damage * snapshotMultiplier).Within(.001f));
     }
 
     [Test]

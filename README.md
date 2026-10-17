@@ -12,6 +12,8 @@
 
 ### 1. 打开 Unity 工程
 
+重型敌人的大贴图与 USDZ 源资产使用 Git LFS。安装 Git LFS 后，先在仓库根目录执行 `git lfs install` 和 `git lfs pull`，再打开 Unity，确保拿到完整资源。
+
 用 Unity Hub **打开这个仓库的根目录**（就是你现在看到的这一层，`Assets`、`Packages`、`ProjectSettings` 都在这儿）。
 
 注意：**仓库根目录本身就是 Unity 工程**，不是外面还有个壳。别去翻什么 `demo/unity/`，那个目录已经没有了。
