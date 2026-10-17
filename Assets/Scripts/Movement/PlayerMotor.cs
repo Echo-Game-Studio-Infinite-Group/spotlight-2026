@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using GameJam.Actions;
 using UnityEngine;
 
@@ -187,10 +187,11 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         RearmWall();
         if (IsWallSliding)
         {
-            bool closeToWall = _contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out _);
+            bool closeToWall = _contacts.ProbeWall(_wallNormal, _params.WallProbeDistance, out RaycastHit wall);
+            bool blockedWall = closeToWall && !MovementContacts.AllowsWallSlide(wall.collider);
             if (closeToWall) _wallLastContactTime = _clock;
             float separation = Vector3.Dot(transform.position - _lockedPoint, _lockedNormal) - _controller.radius;
-            if (separation > _params.WallProbeDistance + _controller.skinWidth * 2f ||
+            if (blockedWall || separation > _params.WallProbeDistance + _controller.skinWidth * 2f ||
                 _clock - _wallLastContactTime > _params.WallContactGraceTime)
                 ExitWall();
         }
@@ -266,6 +267,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _contacts.Move(ref _velocity, dt, point => MotionPathPoint?.Invoke(point), IsSliding,
             protectSlideFront ? _params.SlideForwardExtent : 0f);
         bool hasImpact = _contacts.TryGetWallImpact(_params.WallMaxApproachAngle, out WallContact impact);
+        // 同平面接缝也可能换成不可滑墙，不能只在法线变化的转角检查。
+        if (IsWallSliding && _contacts.HasNonSlideWall) ExitWall();
         if (IsWallSliding && _contacts.HasWall &&
             Vector3.Angle(_wallNormal, _contacts.WallNormal) <= _params.WallSeamAngle)
             _wallLastContactTime = _clock;
@@ -327,7 +330,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void TryEnterWall(Vector3 wish)
     {
         // 以入墙速度与墙切线的锐角判定；只接受确实向墙内运动且小于上限的接触。
-        if (!_contacts.HasWall) return;
+        if (!_contacts.HasWall || _contacts.HasNonSlideWall) return;
         if (_contacts.WallAngle + 0.01f >= _params.WallMaxApproachAngle) return;
         bool sameWall = _wallLocked && Vector3.Angle(_lockedNormal, _contacts.WallNormal) <= _params.WallSeamAngle &&
             Mathf.Abs(Vector3.Dot(_contacts.WallPoint - _lockedPoint, _lockedNormal)) < _params.WallRearmDistance;
