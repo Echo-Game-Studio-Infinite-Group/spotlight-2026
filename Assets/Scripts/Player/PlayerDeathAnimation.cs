@@ -24,10 +24,7 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
     private bool _dead, _inputWasEnabled, _animatorWasEnabled;
     private float _elapsed, _previousSpeed;
     private AnimatorCullingMode _previousCulling;
-    private Transform _hips, _bodyRoot, _rootFollower;
-    private SkinnedMeshRenderer[] _skins;
-    private Transform[][] _skinBones;
-    private Matrix4x4 _hipsToRoot;
+    private PlayerRootSkinFollow _rootSkin;
 
     public bool IsPlayingDeath => _dead && _clip != null && _elapsed < _clip.length;
     public bool IsDead => _dead;
@@ -50,11 +47,7 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         _controlsWereEnabled = new bool[_controls.Length];
         _layerWeights = new float[_animator.layerCount];
         _layer = _animator.GetLayerIndex(LayerName);
-        _hips = _animator.isHuman ? _animator.GetBoneTransform(HumanBodyBones.Hips) : null;
-        _bodyRoot = _hips != null ? _hips.parent : null;
-        _skins = GetComponentsInChildren<SkinnedMeshRenderer>(true);
-        _skinBones = new Transform[_skins.Length][];
-        for (int i = 0; i < _skins.Length; i++) _skinBones[i] = _skins[i].bones;
+        _rootSkin = new PlayerRootSkinFollow(_animator);
     }
 
     private void OnEnable()
@@ -95,11 +88,11 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         _animator.enabled = false;
         _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         _animator.speed = Mathf.Max(0.01f, _playbackSpeed);
-        BeginRootFollow();
+        _rootSkin.Begin();
         _animator.SetLayerWeight(_layer, 1f);
         _animator.Play(StateName, _layer, 0f);
         _animator.Update(0f);
-        UpdateRootFollow();
+        _rootSkin.UpdatePose();
     }
 
     private void Update()
@@ -111,7 +104,7 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         float dt = Mathf.Min(TimeManager.PlayerDeltaTime, (_clip.length - _elapsed) / speed);
         if (dt <= 0f) return;
         _animator.Update(dt);
-        UpdateRootFollow();
+        _rootSkin.UpdatePose();
         _elapsed = Mathf.Min(_clip.length, _elapsed + dt * speed);
     }
 
@@ -122,7 +115,7 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         if (!_dead) return;
         _dead = false;
         _elapsed = 0f;
-        RestoreRootBindings();
+        _rootSkin.Restore();
         _animator.Rebind();
         for (int i = 1; i < _layerWeights.Length; i++)
             _animator.SetLayerWeight(i, _layerWeights[i]);
@@ -134,46 +127,6 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         for (int i = 0; i < _controls.Length; i++)
             if (_controls[i] != null) _controls[i].enabled = _controlsWereEnabled[i];
         _input?.SetGameplayEnabled(_inputWasEnabled);
-    }
-
-    private void BeginRootFollow()
-    {
-        if (_hips == null || _bodyRoot == null || _bodyRoot == transform) return;
-        bool needed = false;
-        foreach (Transform[] bones in _skinBones)
-            foreach (Transform bone in bones) needed |= bone == _bodyRoot;
-        if (!needed) return;
-
-        // 当前模型部分披风顶点绑在整体根骨；仅在死亡时让这部分随髋骨倒下。
-        _hipsToRoot = _hips.worldToLocalMatrix * _bodyRoot.localToWorldMatrix;
-        _rootFollower = new GameObject("DeathRootFollow").transform;
-        _rootFollower.gameObject.hideFlags = HideFlags.HideAndDontSave;
-        _rootFollower.SetParent(_bodyRoot.parent, false);
-        _rootFollower.localScale = _bodyRoot.localScale;
-        UpdateRootFollow();
-        for (int i = 0; i < _skins.Length; i++)
-        {
-            Transform[] bones = (Transform[])_skinBones[i].Clone();
-            for (int j = 0; j < bones.Length; j++)
-                if (bones[j] == _bodyRoot) bones[j] = _rootFollower;
-            _skins[i].bones = bones;
-        }
-    }
-
-    private void UpdateRootFollow()
-    {
-        if (_rootFollower == null) return;
-        Matrix4x4 pose = _hips.localToWorldMatrix * _hipsToRoot;
-        _rootFollower.SetPositionAndRotation(pose.GetColumn(3), pose.rotation);
-    }
-
-    private void RestoreRootBindings()
-    {
-        if (_rootFollower == null) return;
-        for (int i = 0; i < _skins.Length; i++)
-            if (_skins[i] != null) _skins[i].bones = _skinBones[i];
-        Destroy(_rootFollower.gameObject);
-        _rootFollower = null;
     }
 
     private void OnDisable()

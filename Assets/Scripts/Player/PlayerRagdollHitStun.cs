@@ -58,6 +58,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     // 输入层单独处理：它 OnDisable 里会动光标状态，不该整个组件关掉。
     private PlayerInputReader _input;
     private PlayerMotor _motor;
+    private PlayerRootSkinFollow _rootSkin;
     private float _nextImpactAt;
     // 触发瞬间要先把人从墙里挪出来的位移（世界坐标），由 OnWallImpact 填、EnterHitStun 消费
     private Vector3 _pendingPushOut;
@@ -95,6 +96,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         _input = GetComponent<PlayerInputReader>();
         _motor = GetComponent<PlayerMotor>();
         _hips = FindHips();
+        _rootSkin = new PlayerRootSkinFollow(_animator);
 
         // 只收 Hips 底下的刚体：玩家 Hitbox 子物体上也有个 Rigidbody，不能一起当布娃娃。
         _ragdollBodies = _hips != null
@@ -158,6 +160,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
             return;
         }
 
+        _rootSkin.Begin();
         _active = true;
         _inGetUp = false;
         _hipsRootHeight = _hips != null ? _hips.position.y - transform.position.y : 0f;
@@ -248,6 +251,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
             _animator.SetLayerWeight(layer, 1f);
             _animator.Play(hash, layer, 0f);
             _animator.Update(0f);
+            _rootSkin.UpdatePose();
             float length = _animator.GetCurrentAnimatorStateInfo(layer).length;
             float seconds = _getUpTargetSeconds > 0f ? _getUpTargetSeconds : length;
             // 这一段里移动/动作都是停的，所以直接改 Animator 整体倍率来缩放到目标时长
@@ -267,6 +271,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         if (!_active) return;
         _active = false;
         _inGetUp = false;
+        _rootSkin.Restore();
 
         SetRagdollActive(false);
         if (_controller != null) _controller.enabled = true;
@@ -302,6 +307,12 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     }
 
 
+    // 自动 Animator 求值发生在 Update 之后；在渲染前同步，避免起身时披风落后一帧。
+    private void LateUpdate()
+    {
+        if (_active) _rootSkin.UpdatePose();
+    }
+
     private bool IsRagdollCollider(Collider col)
     {
         for (int i = 0; i < _ragdollColliders.Length; i++)
@@ -335,6 +346,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private void OnDisable()
     {
         if (_motor != null) _motor.WallImpact -= OnWallImpact;
+        _rootSkin?.Restore();
     }
 
     private void OnWallImpact(WallContact contact)
