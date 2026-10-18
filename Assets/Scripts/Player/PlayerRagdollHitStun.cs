@@ -1,4 +1,4 @@
-using GameJam.Actions;   // PlayerActionRunner 在这个命名空间里
+﻿using GameJam.Actions;   // PlayerActionRunner 在这个命名空间里
 using UnityEngine;
 
 // 布娃娃阶段由骨骼物理接管；起身阶段由 PlayerMotor 恢复重力和胶囊碰撞。
@@ -143,6 +143,13 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
     public void EnterHitStun()
     {
+        // 致死撞击已经交给死亡表现，不能再进入布娃娃与起身流程。
+        HealthComponent health = GetComponent<HealthComponent>();
+        if (health != null && !health.IsAlive)
+        {
+            _pendingPushOut = Vector3.zero;
+            return;
+        }
         if (_active) return;
 
         if (_ragdollBodies.Length == 0)

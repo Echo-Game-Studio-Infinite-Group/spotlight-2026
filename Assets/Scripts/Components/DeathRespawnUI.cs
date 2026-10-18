@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 // 挑战失败面板：玩家死亡（HealthComponent.Died）或按 R 键（SaveManager 转发）时弹出。
@@ -13,6 +13,8 @@ public class DeathRespawnUI : MonoBehaviour
 
     private HealthComponent playerHealth;
     private VectorEnergy playerEnergy;
+    private PlayerDeathAnimation playerDeath;
+    private bool waitingForDeathAnimation;
 
     private void Awake()
     {
@@ -37,28 +39,50 @@ public class DeathRespawnUI : MonoBehaviour
         {
             TryBindPlayer();
         }
+        if (!waitingForDeathAnimation || playerHealth == null) return;
+        if (playerHealth.IsAlive) { waitingForDeathAnimation = false; return; }
+        if (playerDeath != null && playerDeath.IsPlayingDeath) return;
+        waitingForDeathAnimation = false;
+        OpenPanel();
     }
 
     private void TryBindPlayer()
     {
-        PlayerMotor motor = PlayerMotor.Active;
+        // 死亡表现会停用 Motor；玩家实体在死亡与复活期间始终可用于绑定。
+        Player player = Player.Current;
+        PlayerMotor motor = player != null ? player.Motor : PlayerMotor.Active;
         if (motor == null) return;
 
         playerHealth = motor.GetComponent<HealthComponent>();
         playerEnergy = motor.GetComponent<VectorEnergy>();
+        playerDeath = motor.GetComponent<PlayerDeathAnimation>();
         if (playerHealth != null)
         {
             playerHealth.Died += OnPlayerDied;
+            playerHealth.Revived += OnPlayerRevived;
+            if (!playerHealth.IsAlive) waitingForDeathAnimation = true;
         }
     }
 
     private void OnPlayerDied(HealthComponent health)
     {
-        OpenPanel();
+        // 下一帧再检查，避免死亡事件订阅顺序让面板抢先暂停动画。
+        waitingForDeathAnimation = true;
+    }
+
+    private void OnPlayerRevived(HealthComponent health)
+    {
+        waitingForDeathAnimation = false;
+        if (panelRoot != null && panelRoot.gameObject.activeSelf) ClosePanel();
     }
 
     public void OpenPanel()
     {
+        if (playerHealth != null && !playerHealth.IsAlive && playerDeath != null && playerDeath.IsPlayingDeath)
+        {
+            waitingForDeathAnimation = true;
+            return;
+        }
         if (panelRoot != null)
         {
             panelRoot.gameObject.SetActive(true);
@@ -103,6 +127,7 @@ public class DeathRespawnUI : MonoBehaviour
         if (playerHealth != null)
         {
             playerHealth.Died -= OnPlayerDied;
+            playerHealth.Revived -= OnPlayerRevived;
         }
     }
 }
