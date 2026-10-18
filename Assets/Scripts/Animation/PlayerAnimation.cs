@@ -14,6 +14,14 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateWallDashRight = 6;   // 6：右侧贴墙冲刺
     public const int MotionStateHurtSmall = 7;       // 7：小受击
     public const int MotionStateHurtBig = 8;         // 8：大受击（被敌人重击或扣血太多）
+    public const int MotionStateWalk = 9;
+
+    public const string WalkXParameter = "WalkX";
+    public const string WalkZParameter = "WalkZ";
+    public const string WalkRateParameter = "WalkRate";
+    private static readonly int WalkXId = Animator.StringToHash(WalkXParameter);
+    private static readonly int WalkZId = Animator.StringToHash(WalkZParameter);
+    private static readonly int WalkRateId = Animator.StringToHash(WalkRateParameter);
 
     public const string SlideTimeParameter = "SlideTime";
     private static readonly int SlideTimeId = Animator.StringToHash(SlideTimeParameter);
@@ -54,6 +62,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
     private bool _hasSlideTime;
+    private bool _hasWalkParameters;
     private bool _wasSliding;
     private int _slideStartJumpCount;
     private float _slideProgress;
@@ -85,6 +94,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         switch (motionState)
         {
             case MotionStateMove: return "Move";
+            case MotionStateWalk: return "Walk";
             case MotionStateJump: return "Jump";
             case MotionStateSlide: return "Trackle";
             case MotionStateWallDashLeft: return "WallDashLeft";
@@ -124,9 +134,17 @@ public sealed class PlayerAnimation : MonoBehaviour
     private void CacheSlideParameter()
     {
         _hasSlideTime = false;
+        bool walkX = false, walkZ = false, walkRate = false;
         foreach (AnimatorControllerParameter parameter in _animator.parameters)
+        {
             if (parameter.nameHash == SlideTimeId && parameter.type == AnimatorControllerParameterType.Float)
-            { _hasSlideTime = true; break; }
+                _hasSlideTime = true;
+            if (parameter.type != AnimatorControllerParameterType.Float) continue;
+            walkX |= parameter.nameHash == WalkXId;
+            walkZ |= parameter.nameHash == WalkZId;
+            walkRate |= parameter.nameHash == WalkRateId;
+        }
+        _hasWalkParameters = walkX && walkZ && walkRate;
     }
 
     private void UpdateSlide(float deltaTime)
@@ -205,8 +223,17 @@ public sealed class PlayerAnimation : MonoBehaviour
             else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
         }
         else _wallMotionState = MotionStateWallDashLeft;
+        if (_hasWalkParameters && _motor.IsWalking)
+        {
+            Vector3 direction = _motor.transform.InverseTransformDirection(MovementMath.Horizontal(_motor.Velocity)).normalized;
+            _animator.SetFloat(WalkXId, direction.x);
+            _animator.SetFloat(WalkZId, direction.z);
+            _animator.SetFloat(WalkRateId, Mathf.Min(_motor.Params.WalkMaxAnimationRate,
+                _motor.HorizontalSpeed / _motor.Params.WalkSpeed));
+        }
         int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding || IsSlideRecovering ? MotionStateSlide : airborne ? MotionStateJump :
-            _motor.HasForwardInput ? MotionStateMove : MotionStateIdle;
+            _motor.IsWalking && _motor.HorizontalSpeed > _idleSpeed ? MotionStateWalk :
+            (_motor.IsBraking ? _motor.HorizontalSpeed > _idleSpeed : _motor.HasMovementInput) ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，
         // 不在动画侧另存一份计时器，否则两边的「攻击什么时候结束」会各说各话。

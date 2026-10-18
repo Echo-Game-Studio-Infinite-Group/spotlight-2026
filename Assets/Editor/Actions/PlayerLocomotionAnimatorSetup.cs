@@ -100,6 +100,7 @@ namespace GameJam.Actions.Editor
             EditorUtility.SetDirty(state);
             EditorUtility.SetDirty(machine);
             EditorUtility.SetDirty(controller);
+            PlayerWalkAnimatorSetup.Ensure(controller);
         }
 
         public static bool HasRun(AnimatorController controller)

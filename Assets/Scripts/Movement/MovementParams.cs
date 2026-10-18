@@ -14,6 +14,20 @@ public sealed class MovementParams : ScriptableObject
     public PumpMode Pump = PumpMode.WindowPump;
     [Min(0.01f)] public float MaxSpeed = 30f;
 
+    [Header("低速侧向与斜向行走")]
+    [Tooltip("A/D 与 W+A/W+D 的行走速度；不超过低速上限，高速动量继续使用跑步")]
+    [Min(0.01f)] public float WalkSpeed = 3f;
+    [Tooltip("行走接近目标速度的加减速度，单位 m/s²")]
+    [Min(0f)] public float WalkAcceleration = 12f;
+    [Min(1f)] public float WalkMaxAnimationRate = 2f;
+
+    [Header("地面刹车与速度回收")]
+    [Tooltip("按住 S 时额外扣除的水平速度，单位 m/s²；不包含地面、滑铲或划墙摩擦")]
+    [Min(0f)] public float BrakeDeceleration = 24f;
+    [Tooltip("回收摩擦停止后，跳跃仍可返还暂存速度的玩家时间")]
+    [Min(0f)] public float BrakeRecoveryWindow = 0.7f;
+    [Min(0f)] public float BrakeStopSpeed = 0.05f;
+
     [Header("台阶与坡面")]
     [Min(0f)] public float MaxStepUp = 0.3f;
     [Min(0f)] public float MaxStepDown = 0.35f;
@@ -79,6 +93,7 @@ public sealed class MovementParams : ScriptableObject
     private void OnValidate()
     {
         MaxSpeed = Mathf.Max(GroundSpeedThreshold, MaxSpeed);
+        WalkSpeed = Mathf.Clamp(WalkSpeed, .01f, Mathf.Max(.01f, LowSpeedThreshold));
         CapsuleBaseHeight = Mathf.Max(CapsuleBaseHeight, CapsuleBaseRadius * 2f);
         CapsuleFastHeight = Mathf.Max(CapsuleFastHeight, CapsuleMinRadius * 2f);
         WallRearmDistance = Mathf.Max(WallRearmDistance, WallProbeDistance + 0.01f);

@@ -28,9 +28,10 @@ public sealed class VCameraEffectsTests
         Assert.IsNotNull(_follow, "测试夹具需要 Cinemachine3rdPersonFollow 才能验跟随臂拉近");
         _follow.CameraDistance = 6f;
         _baseDistance = _follow.CameraDistance;
-        _baseFov = _vcam.m_Lens.FieldOfView;
         // Awake 会自己取 vcam / follow 并补 ImpulseListener
         _effects = host.AddComponent<VCameraEffects>();
+        // 效果组件使用自己的常态 FOV，新建 Cinemachine 机位的默认值不代表该基准。
+        _baseFov = _effects.CurrentFieldOfView;
     }
 
     [TearDown]

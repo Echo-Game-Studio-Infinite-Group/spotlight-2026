@@ -112,7 +112,8 @@ public sealed class VCameraEffects : MonoBehaviour
     {
         _instance = this;
         if (_virtualCamera == null) _virtualCamera = GetComponent<CinemachineVirtualCamera>();
-        _follow = GetComponent<Cinemachine3rdPersonFollow>();
+        // CM 2 的跟随组件位于隐藏管线子节点，同物体查询会让距离反馈失效。
+        _follow = _virtualCamera.GetCinemachineComponent<Cinemachine3rdPersonFollow>();
         if (_follow != null) _baseDistance = Mathf.Max(0.01f, _follow.CameraDistance);
         _fov = _normalFov;
         _distance = _baseDistance;

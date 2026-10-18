@@ -15,6 +15,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "Brake",
+                    "type": "Button",
+                    "id": "9328391a-801a-41c0-8bf2-756fc7427604",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
                     "name": "Look",
                     "type": "Value",
                     "id": "0422f5f7-f142-1c91-0f24-38da2b9ac0c4",
@@ -111,17 +120,6 @@
                     "isPartOfComposite": true
                 },
                 {
-                    "name": "down",
-                    "id": "85120636-af5d-2c49-90b0-e77fbed0e5f7",
-                    "path": "<Keyboard>/s",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Move",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
                     "name": "left",
                     "id": "9ec0523d-1bc3-3b5b-4bb8-0f611d2faa3c",
                     "path": "<Keyboard>/a",
@@ -142,6 +140,17 @@
                     "action": "Move",
                     "isComposite": false,
                     "isPartOfComposite": true
+                },
+                {
+                    "name": "",
+                    "id": "85120636-af5d-2c49-90b0-e77fbed0e5f7",
+                    "path": "<Keyboard>/s",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Brake",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",

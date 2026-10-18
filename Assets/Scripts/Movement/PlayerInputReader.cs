@@ -11,7 +11,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     [SerializeField] private InputActionAsset _actions;
     private InputActionAsset _runtime;
     private InputActionMap _gameplay;
-    private InputAction _move, _look, _sprint, _slide, _skill, _attack, _parry;
+    private InputAction _move, _brake, _look, _sprint, _slide, _skill, _attack, _parry;
     private readonly List<ActionInputEdge> _actionEdges = new List<ActionInputEdge>();
     private ActionInputButtons _heldButtons;
     private long _skillPressVersion;
@@ -34,6 +34,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
 
     public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
     public bool GameplayEnabled => _gameplayEnabled && _focused;
+    public bool BrakeHeld => isActiveAndEnabled && GameplayEnabled && _brake != null && _brake.IsPressed();
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
     public long SkillPressVersion => _skillPressVersion;
@@ -63,6 +64,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _runtime = Instantiate(_actions);
         _gameplay = _runtime.FindActionMap("Gameplay", true);
         _move = _gameplay.FindAction("Move", true);
+        _brake = _gameplay.FindAction("Brake", true);
         _look = _gameplay.FindAction("Look", true);
         _sprint = _gameplay.FindAction("Sprint", true);
         _slide = _gameplay.FindAction("Slide", true);
@@ -72,6 +74,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _gameplay.FindAction("Mark", true).performed += context => { if (GameplayEnabled) MarkPressed?.Invoke(); };
         _move.performed += OnMove;
         _move.canceled += OnMove;
+        _brake.performed += OnBrake;
+        _brake.canceled += OnBrake;
         _sprint.performed += OnSprint;
         _sprint.canceled += OnSprint;
         _gameplay.FindAction("Jump", true).performed += OnJump;
@@ -110,6 +114,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _sprintHeld = context.ReadValueAsButton();
         RecordEdge(ActionInputButtons.Sprint, _sprintHeld);
     }
+    private void OnBrake(InputAction.CallbackContext context)
+        => RecordEdge(ActionInputButtons.Brake, context.ReadValueAsButton());
     private void OnJump(InputAction.CallbackContext context)
     {
         _jumpPressed = true;
@@ -164,6 +170,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
                 bool skillHeld = SkillHeldOnDevice;
                 if (skillHeld) atEvent |= ActionInputButtons.Skill; else atEvent &= ~ActionInputButtons.Skill;
             }
+            if (BrakeHeld) atEvent |= ActionInputButtons.Brake; else atEvent &= ~ActionInputButtons.Brake;
             _actionEdges.Add(new ActionInputEdge(button, pressed ? ActionInputStep.Edge.Pressed : ActionInputStep.Edge.Released, atEvent, _moveValue));
         }
     }
@@ -228,7 +235,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         if (_runtime == null || !GameplayEnabled) return default;
         PlayerInputFrame frame = new PlayerInputFrame
         {
-            Move = _moveValue, SprintHeld = _sprintHeld, SlideHeld = _slideHeld,
+            Move = _moveValue, BrakeHeld = BrakeHeld, SprintHeld = _sprintHeld, SlideHeld = _slideHeld,
             SlidePressed = _slidePressed, JumpPressed = _jumpPressed, JumpTime = _jumpTime
         };
         _jumpPressed = _slidePressed = false;

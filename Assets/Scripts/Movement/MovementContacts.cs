@@ -87,8 +87,12 @@ public sealed class MovementContacts
         _sliding = sliding;
         StepHeightDelta = 0f;
         float contactRange = _params.GroundTolerance + _controller.skinWidth;
-        _supported = wasGrounded && velocity.y <= 0f &&
-            _grounding.TrySupport(_controller.transform.position, contactRange, contactRange, out _support, _support);
+        // 短暂离地后落回近地范围，也必须先恢复支撑，再处理台阶；否则同帧的立面接触会先裁速。
+        // 空中只接受脚下台面，不能借前方较高的台阶提前吸附。
+        bool moving = velocity.x != 0f || velocity.z != 0f;
+        _supported = (wasGrounded || moving) && velocity.y <= 0f &&
+            _grounding.TrySupport(_controller.transform.position, wasGrounded ? contactRange : 0f,
+                contactRange, out _support, _support);
         float segmentLength = Mathf.Max(0.01f, _controller.radius * _params.MoveSegmentRadiusRatio);
         int count = Mathf.Clamp(Mathf.CeilToInt(velocity.magnitude * dt / segmentLength), 1, _params.MaxMoveSegments);
         CollisionFlags last = CollisionFlags.None;

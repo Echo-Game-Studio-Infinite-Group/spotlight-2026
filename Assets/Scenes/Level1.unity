@@ -15729,6 +15729,14 @@ PrefabInstance:
       propertyPath: m_LookAt
       value: 
       objectReference: {fileID: 161910317}
+    - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
+      propertyPath: m_Lens.Dutch
+      value: -0.000004992968
+      objectReference: {fileID: 0}
+    - target: {fileID: 8284308069191134181, guid: 3dea6f4970773a84ab99432a33eb4e17, type: 3}
+      propertyPath: m_Lens.FieldOfView
+      value: 60.04031
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -25745,7 +25753,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 60.000004
+  field of view: 60.04031
   orthographic: 0
   orthographic size: 10
   m_Depth: 0
@@ -65091,6 +65099,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 777957050568175645, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
+      propertyPath: field of view
+      value: 60.04031
+      objectReference: {fileID: 0}
     - target: {fileID: 4380906888631322468, guid: a6f03ad6b7ab60b489e2b7b26db1daab, type: 3}
       propertyPath: _volume
       value: 
@@ -77158,15 +77170,17 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3935457739758834283, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_WarningMessage
-      value: "\nBinding warning: Some generic clip(s) animate transforms that are
-        already bound by a Humanoid avatar. These transforms can only be changed
-        by Humanoid clips.\n\tTransform 'mixamorig:Hips'\n\tTransform 'mixamorig:LeftFoot'\n\tTransform
-        'mixamorig:LeftHandThumb2'\n\tTransform 'mixamorig:LeftHandIndex1'\n\tTransform
-        'mixamorig:LeftHandPinky2'\n\tTransform 'mixamorig:RightHandRing2'\n\tTransform
-        'mixamorig:Spine1'\n\tTransform 'mixamorig:LeftToeBase'\n\tTransform 'mixamorig:RightArm'\n\tTransform
-        'mixamorig:LeftLeg'\n\tand more ...\n\tFrom animation clip 'T_Jump'"
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6952890567594264593, guid: b03acd9e0b3d740459df234fe245a1e4, type: 3}
       propertyPath: m_LocalPosition.x
