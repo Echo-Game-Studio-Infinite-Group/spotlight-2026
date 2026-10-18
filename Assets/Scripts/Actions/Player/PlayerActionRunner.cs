@@ -109,6 +109,7 @@ namespace GameJam.Actions
             if (!_connected) throw new InvalidOperationException("执行器尚未接线");
             _movementInput = movement;
             _movementInput.BrakeHeld = _alive && (movement.BrakeHeld || (sample.Held & ActionInputButtons.Brake) != 0);
+            sample = ResolveDirectionalSample(sample);
             bool jumpPressed = movement.JumpPressed;
             if (sample.Edges != null)
                 foreach (ActionInputEdge edge in sample.Edges)
@@ -161,8 +162,29 @@ namespace GameJam.Actions
             if (string.IsNullOrWhiteSpace(key)) return;
             if (value) _conditions.Add(key); else _conditions.Remove(key);
         }
-        private bool BrakingBlocks(MotorCommandKind command) => _movementInput.BrakeHeld && _motor.CanBrake &&
+        private bool BrakingBlocks(MotorCommandKind command) => _motor.ResolveDirectionalInput(_movementInput).BrakeHeld && _motor.CanBrake &&
             (command == MotorCommandKind.Accelerate || command == MotorCommandKind.SprintBoost);
+        private ActionInputSample ResolveDirectionalSample(ActionInputSample sample)
+        {
+            PlayerInputFrame directional = _motor.ResolveDirectionalInput(_movementInput);
+            ActionInputEdge[] edges = null;
+            if (sample.Edges != null)
+                for (int i = 0; i < sample.Edges.Count; i++)
+                {
+                    ActionInputEdge edge = sample.Edges[i];
+                    if ((edge.HeldAtEvent & ActionInputButtons.Brake) == 0) continue;
+                    PlayerInputFrame atEvent = _motor.ResolveDirectionalInput(new PlayerInputFrame { Move = edge.DirectionAtEvent, BrakeHeld = true });
+                    if (atEvent.Move == edge.DirectionAtEvent) continue;
+                    if (edges == null)
+                    {
+                        edges = new ActionInputEdge[sample.Edges.Count];
+                        for (int j = 0; j < edges.Length; j++) edges[j] = sample.Edges[j];
+                    }
+                    edges[i] = new ActionInputEdge(edge.Button, edge.Trigger, edge.HeldAtEvent, atEvent.Move);
+                }
+            return new ActionInputSample(sample.Tick, sample.Held,
+                _movementInput.BrakeHeld && !directional.BrakeHeld ? directional.Move : sample.Move, edges ?? sample.Edges);
+        }
         public void SetEnergyAccount(IEnergyAccount account) { _energyOverride = account; _energy = account; }
         public ActionInputButtons GetIgnoredForbiddenButtons(ActionInputEdge edge)
             => edge.Button == ActionInputButtons.Attack && _timeStop != null && _timeStop.IsTimeStopping

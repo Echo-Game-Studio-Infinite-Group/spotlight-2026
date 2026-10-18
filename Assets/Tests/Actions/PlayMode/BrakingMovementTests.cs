@@ -180,6 +180,21 @@ public sealed class BrakingMovementTests
     }
 
     [Test]
+    public void SHeldFromHighSpeedAirRemainsBrakeAfterLandingAtLowSpeed()
+    {
+        _motor.LaunchVertical(8f); Tick(brake: true);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(12f).Within(.002f));
+        _motor.SetHorizontalSpeed(3f);
+        for (int i = 0; i < 90; i++) Tick(brake: true);
+        Assert.IsTrue(_motor.IsGrounded);
+        Assert.IsTrue(_motor.IsBraking);
+        Assert.IsFalse(_motor.IsWalking);
+        Assert.That(_motor.HorizontalSpeed, Is.Zero.Within(.002f));
+        Assert.That(_motor.BrakeRecoverySpeed, Is.EqualTo(3f).Within(.002f));
+    }
+
+    [Test]
     public void SlideOnlyUsesSlideFrictionAndProducesNoRecovery()
     {
         _parameters.SlideDecel = 6f;

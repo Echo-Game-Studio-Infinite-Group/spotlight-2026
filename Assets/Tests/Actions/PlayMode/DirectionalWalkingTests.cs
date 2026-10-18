@@ -50,7 +50,10 @@ public sealed class DirectionalWalkingTests
     [TestCase(1f, 0f)]
     [TestCase(-1f, 1f)]
     [TestCase(1f, 1f)]
-    public void FourLowSpeedDirectionsWalkAtOneSpeedAndKeepForwardFacing(float x, float y)
+    [TestCase(0f, -1f)]
+    [TestCase(-1f, -1f)]
+    [TestCase(1f, -1f)]
+    public void SevenLowSpeedDirectionsWalkAtOneSpeedAndKeepForwardFacing(float x, float y)
     {
         Vector2 move = new Vector2(x, y);
         for (int i = 0; i < 60; i++) Tick(move);
@@ -79,6 +82,9 @@ public sealed class DirectionalWalkingTests
     [TestCase(1f, 0f)]
     [TestCase(-1f, 1f)]
     [TestCase(1f, 1f)]
+    [TestCase(0f, -1f)]
+    [TestCase(-1f, -1f)]
+    [TestCase(1f, -1f)]
     public void WalkDirectionsRemainRelativeToCameraRatherThanBodyTurn(float x, float y)
     {
         _reference.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
@@ -150,20 +156,23 @@ public sealed class DirectionalWalkingTests
     [TestCase(1f, 1f)]
     public void BrakeOverridesWalkingAndLocksFacing(float x, float y)
     {
-        _motor.SetHorizontalSpeed(3f);
+        _motor.SetHorizontalSpeed(12f);
         _reference.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
         Tick(new Vector2(x, y), brake: true);
         Assert.IsFalse(_motor.IsWalking);
         Assert.IsFalse(_motor.HasMovementInput);
         Assert.IsTrue(_motor.IsBraking);
         Assert.That(Vector3.Angle(_root.transform.forward, Vector3.forward), Is.LessThan(.01f));
-        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(3f - _parameters.BrakeDeceleration * Step).Within(.001f));
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(12f - _parameters.BrakeDeceleration * Step).Within(.001f));
     }
 
     [TestCase(-1f, 0f)]
     [TestCase(1f, 0f)]
     [TestCase(-1f, 1f)]
     [TestCase(1f, 1f)]
+    [TestCase(0f, -1f)]
+    [TestCase(-1f, -1f)]
+    [TestCase(1f, -1f)]
     public void WalkingJumpRetainsItsActualHorizontalDirection(float x, float y)
     {
         Vector2 move = new Vector2(x, y);
@@ -186,5 +195,65 @@ public sealed class DirectionalWalkingTests
         _motor.SetHorizontalSpeed(3f); Tick(Vector2.right, slide: true);
         Assert.IsTrue(_motor.IsSliding);
         Assert.IsFalse(_motor.IsWalking);
+    }
+
+    [TestCase(-1f)]
+    [TestCase(0f)]
+    [TestCase(1f)]
+    public void LowSpeedSUsesBackwardWalkingWithoutBankingBrakeSpeed(float x)
+    {
+        _parameters.WalkSpeed = 2f;
+        _reference.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        for (int i = 0; i < 60; i++) Tick(new Vector2(x, 0f), brake: true);
+        Vector3 expected = _reference.transform.right * x - _reference.transform.forward;
+        Assert.IsTrue(_motor.IsWalking);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.IsFalse(_motor.HasForwardInput);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(2f).Within(.001f));
+        Assert.That(Vector3.Angle(MovementMath.Horizontal(_motor.Velocity), expected), Is.LessThan(.01f));
+        Assert.That(Vector3.Angle(_root.transform.forward, _reference.transform.forward), Is.LessThan(.1f));
+        Assert.AreEqual(0f, _motor.BrakeRecoverySpeed);
+    }
+
+    [TestCase(-1f)]
+    [TestCase(0f)]
+    [TestCase(1f)]
+    public void HighSpeedSHoldsBrakeUntilReleaseThenWalksBackward(float x)
+    {
+        _motor.SetHorizontalSpeed(12f);
+        for (int i = 0; i < 90; i++) Tick(new Vector2(x, 0f), brake: true);
+        Assert.IsTrue(_motor.IsBraking);
+        Assert.IsFalse(_motor.IsWalking);
+        Assert.That(_motor.HorizontalSpeed, Is.Zero.Within(.001f));
+        Assert.That(_motor.BrakeRecoverySpeed, Is.EqualTo(12f).Within(.002f));
+        Assert.That(Vector3.Angle(_root.transform.forward, Vector3.forward), Is.LessThan(.01f));
+        Tick();
+        for (int i = 0; i < 60; i++) Tick(new Vector2(x, 0f), brake: true);
+        Assert.IsTrue(_motor.IsWalking);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(_parameters.WalkSpeed).Within(.001f));
+        Assert.That(Vector3.Angle(MovementMath.Horizontal(_motor.Velocity), new Vector3(x, 0f, -1f)), Is.LessThan(.01f));
+    }
+
+    [Test]
+    public void WalkThresholdIncludesItsBoundaryAndOppositeForwardKeysCancel()
+    {
+        _motor.SetHorizontalSpeed(_parameters.LowSpeedThreshold);
+        Tick(brake: true);
+        Assert.IsTrue(_motor.IsWalking);
+        Assert.IsFalse(_motor.IsBraking);
+        Tick(Vector2.up, brake: true);
+        Assert.IsFalse(_motor.HasMovementInput);
+        Assert.IsFalse(_motor.IsWalking);
+        Assert.IsFalse(_motor.IsBraking);
+    }
+
+    [Test]
+    public void ActionMoveLockCannotSynthesizeBackwardInput()
+    {
+        _motor.SetActionControl(new ActionControlPolicy { AllowMove = false });
+        for (int i = 0; i < 30; i++) Tick(brake: true);
+        Assert.IsFalse(_motor.IsWalking);
+        Assert.That(_motor.HorizontalSpeed, Is.Zero.Within(.001f));
     }
 }

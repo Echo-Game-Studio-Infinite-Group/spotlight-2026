@@ -43,7 +43,7 @@ public sealed class DebugHUD : MonoBehaviour
             ? $"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}"
             : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
-        GUILayout.Label("WAD 移动 · S 地面刹车 · Shift 奔跑 · Ctrl 滑铲", _style);
+        GUILayout.Label("WAD 移动 · S 低速后退/高速刹车 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · 左键 攻击 · E parry", _style);
         GUILayout.Label("Esc 鼠标锁定 · F3 面板", _style);
         GUILayout.EndArea();

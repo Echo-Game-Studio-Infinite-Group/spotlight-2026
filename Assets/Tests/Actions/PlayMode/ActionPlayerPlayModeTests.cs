@@ -77,6 +77,47 @@ public sealed class ActionPlayerPlayModeTests
     }
 
     [UnityTest]
+    public IEnumerator BackwardKeysUseJogThenKeepHighSpeedBrakeUntilRelease()
+    {
+        yield return PrepareMobilityGround();
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        _brakingParameters = Object.Instantiate(motor.Params);
+        _brakingParameters.GroundFriction = 0f; _brakingParameters.Pump = PumpMode.VerbatimQuake;
+        motor.SetParams(_brakingParameters);
+        _walkReference = new GameObject("BackwardInputCameraReference"); motor.SetMovementReference(_walkReference.transform);
+        Vector3 origin = _root.transform.position;
+        KeyboardState[] states = { new KeyboardState(Key.S), new KeyboardState(Key.S, Key.A), new KeyboardState(Key.S, Key.D) };
+        string[] clips = { "Mvm_Jog_Back", "Mvm_Jog_Back_L45", "Mvm_Jog_Back_R45" };
+        for (int i = 0; i < states.Length; i++)
+        {
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+            motor.Teleport(origin); _root.transform.rotation = Quaternion.identity;
+            for (int j = 0; j < 2; j++) yield return new WaitForFixedUpdate();
+            InputSystem.QueueStateEvent(_keyboard, states[i]); InputSystem.Update();
+            for (int j = 0; j < 30; j++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(motor.IsWalking, clips[i]);
+            Assert.IsFalse(motor.IsBraking);
+            Assert.That(motor.HorizontalSpeed, Is.EqualTo(motor.Params.WalkSpeed).Within(.002f));
+            Assert.That(Vector3.Angle(_root.transform.forward, Vector3.forward), Is.LessThan(.01f));
+            Assert.Less(motor.Velocity.z, 0f);
+            Assert.IsTrue(animation.Animator.GetCurrentAnimatorClipInfo(0).Any(value => value.clip.name == clips[i] && value.weight > .99f));
+            motor.SetHorizontalSpeed(12f);
+            for (int j = 0; j < 60; j++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(motor.IsBraking);
+            Assert.IsFalse(motor.IsWalking);
+            Assert.That(motor.HorizontalSpeed, Is.Zero.Within(.002f));
+            Assert.That(motor.BrakeRecoverySpeed, Is.EqualTo(12f).Within(.01f));
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+            yield return new WaitForFixedUpdate();
+            InputSystem.QueueStateEvent(_keyboard, states[i]); InputSystem.Update();
+            for (int j = 0; j < 30; j++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(motor.IsWalking);
+            Assert.IsFalse(motor.IsBraking);
+        }
+    }
+
+    [UnityTest]
     public IEnumerator RealSLocksFacingWhileCameraTurnsAndJumpReturnsStoredSpeed()
     {
         yield return PrepareMobilityGround();

@@ -28,11 +28,14 @@ public sealed class ActionPlayerIntegrationTests
     [TestCase(1f, 0f, false, "Front_R")]
     [TestCase(-1f, 1f, false, "Front_L45")]
     [TestCase(1f, 1f, false, "Front_R45")]
+    [TestCase(0f, -1f, false, "Back")]
+    [TestCase(-1f, -1f, false, "Back_L45")]
+    [TestCase(1f, -1f, false, "Back_R45")]
     [TestCase(-1f, 0f, true, "Front_L")]
     [TestCase(1f, 0f, true, "Front_R")]
     [TestCase(-1f, 1f, true, "Front_L45")]
     [TestCase(1f, 1f, true, "Front_R45")]
-    public void FourDirectionsUseJogAtLowSpeedAndRunningWithHighMomentum(float x, float y, bool highSpeed, string suffix)
+    public void WalkDirectionsUseJogAtLowSpeedAndRunningWithHighMomentum(float x, float y, bool highSpeed, string suffix)
     {
         Ground();
         _motor.Params.GroundFriction = 0f; _motor.Params.Pump = PumpMode.VerbatimQuake;
@@ -60,6 +63,8 @@ public sealed class ActionPlayerIntegrationTests
         PlayerWalkAnimatorSetup.Ensure(controller);
         AnimatorState walk = machine.states.Single(value => value.state.name == "Walk").state;
         BlendTree tree = (BlendTree)walk.motion;
+        tree.children = tree.children.Take(4).ToArray();
+        Assert.IsFalse(PlayerWalkAnimatorSetup.HasWalk(controller));
         PlayerWalkAnimatorSetup.Ensure(controller);
         PlayerLocomotionAnimatorSetup.EnsureRun(controller);
         ActionPlayerSetup.EnsureAnimator(controller, _catalog);
@@ -69,7 +74,52 @@ public sealed class ActionPlayerIntegrationTests
         Assert.AreSame(tree, walk.motion);
         Assert.AreEqual(1, AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(controller)).OfType<BlendTree>().Count());
         Assert.AreEqual(1.7f, authored.speed);
-        Assert.AreEqual(4, tree.children.Length);
+        Assert.AreEqual(7, tree.children.Length);
+    }
+
+    [TestCase(-1f, "Back_L45")]
+    [TestCase(0f, "Back")]
+    [TestCase(1f, "Back_R45")]
+    public void RawLowSpeedSUsesTheCorrespondingBackwardJog(float x, string suffix)
+    {
+        Ground(); _motor.Params.GroundFriction = 0f;
+        var reference = new GameObject("BackwardAnimationReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        for (int i = 0; i < 60; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake, new Vector2(x, 0f)),
+                new PlayerInputFrame { BrakeHeld = true, Move = new Vector2(x, 0f) }, 1f / 60f);
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        Assert.AreEqual(PlayerAnimation.MotionStateWalk, animation.CurrentMotionState);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(_motor.Params.WalkSpeed).Within(.002f));
+        string path = PlayerWalkAnimatorSetup.Folder + "CLazy@Mvm_Jog_" + suffix + ".FBX";
+        Assert.IsTrue(animation.Animator.GetCurrentAnimatorClipInfo(0).Any(value => AssetDatabase.GetAssetPath(value.clip) == path && value.weight > .99f), path);
+    }
+
+    [Test]
+    public void LowSpeedSJumpUsesTheBackwardMovingJumpInsteadOfTheStationaryJump()
+    {
+        Ground(); MobilityEnergy(); _motor.Params.GroundFriction = 0f;
+        var reference = new GameObject("BackwardJumpReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        for (int i = 0; i < 30; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+                new PlayerInputFrame { BrakeHeld = true }, 1f / 60f);
+        ActionInputButtons held = ActionInputButtons.Brake | ActionInputButtons.Jump;
+        var edge = new ActionInputEdge(ActionInputButtons.Jump, ActionInputStep.Edge.Pressed, held);
+        string jumpAction = null;
+        Vector2 jumpDirection = default;
+        _runner.FrameEvent += (state, frameEvent) =>
+        {
+            if (frameEvent.EventKey != "motor.command" || frameEvent.MotorCommand != MotorCommandKind.Jump) return;
+            jumpAction = state.Action.ActionId; jumpDirection = state.Input.Direction;
+        };
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { edge }),
+            new PlayerInputFrame { BrakeHeld = true, JumpPressed = true, JumpTime = TimeManager.UnscaledTime }, 1f / 60f);
+        Assert.AreEqual("player_jump", jumpAction);
+        Assert.AreEqual(Vector2.down, jumpDirection);
+        Assert.AreEqual(1, _motor.JumpCount);
+        Assert.Less(_motor.Velocity.z, 0f);
     }
 
     [Test]

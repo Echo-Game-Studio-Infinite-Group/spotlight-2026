@@ -37,6 +37,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private ActionMotionSettings _actionMotion;
     private long _motionInstance;
     private bool _slidePoseActive;
+    private bool _brakeHoldLocked;
     private float _brakeStoredSpeed;
     private float _brakeRecoveryUntil = float.NegativeInfinity;
     private float _brakeJumpSpeed;
@@ -165,10 +166,20 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public bool InputSuppressed
     {
         get => _inputSuppressed;
-        set { _inputSuppressed = value; if (value) ClearBrakeRecovery(); }
+        set { _inputSuppressed = value; if (value) { _brakeHoldLocked = false; ClearBrakeRecovery(); } }
     }
 
-    private void OnInputCleared() { ClearPendingInput(); ClearBrakeRecovery(); }
+    private void OnInputCleared() { _brakeHoldLocked = false; ClearPendingInput(); ClearBrakeRecovery(); }
+
+    // 保留 S 的原始独立按键；运动与动作预输入共用低速方向，不能把后退跳误判为原地跳。
+    public PlayerInputFrame ResolveDirectionalInput(PlayerInputFrame input)
+    {
+        if (!input.BrakeHeld || _brakeHoldLocked || InputSuppressed || !IsGrounded || IsSliding || _slidePoseActive ||
+            HorizontalSpeed > _params.LowSpeedThreshold || (_actionControl != null && !_actionControl.AllowMove)) return input;
+        input.Move = new Vector2(input.Move.x, input.Move.y > 0f ? 0f : -1f).normalized;
+        input.BrakeHeld = false;
+        return input;
+    }
 
     // 资格随这次跳跃预输入保留，速度只能在真正起跳时消费。
     public void BufferBrakeRecoveryJump(float bufferSeconds)
@@ -218,6 +229,10 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             ClearBrakeRecovery();
             ClearPendingInput();
         }
+        // 高速开始的这次 S 持续保持刹车，不能在跨过低速阈值后突然倒走。
+        if (!input.BrakeHeld) _brakeHoldLocked = false;
+        else if (HorizontalSpeed > _params.LowSpeedThreshold) _brakeHoldLocked = true;
+        input = ResolveDirectionalInput(input);
         if (input.JumpPressed)
         {
             _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
@@ -229,8 +244,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         bool wallJumpFacingLocked = _clock - _lastWallJump < _params.WallJumpFacingLockTime;
         _clock += dt;
         Vector3 wish = WishDirection(input.Move);
-        // 低速侧移保持面朝镜头前方；高速仍按旧规则转向位移方向并保留动量。
-        IsWalking = HasMovementInput && input.Move.x != 0f && input.Move.y >= 0f &&
+        // 低速侧移与后退保持面朝镜头前方；高速仍按旧规则转向位移方向并保留动量。
+        IsWalking = HasMovementInput && (input.Move.x != 0f || input.Move.y < 0f) &&
             IsGrounded && !IsSliding && !_slidePoseActive && HorizontalSpeed <= _params.LowSpeedThreshold;
         RearmWall();
         if (IsWallSliding)
@@ -653,6 +668,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     public void ResetState()
     {
+        _brakeHoldLocked = false;
         ClearBrakeRecovery();
         _velocity = Vector3.zero;
         _actionMotion = null; _motionInstance = 0;

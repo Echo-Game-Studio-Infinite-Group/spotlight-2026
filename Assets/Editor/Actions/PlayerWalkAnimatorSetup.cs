@@ -13,11 +13,16 @@ namespace GameJam.Actions.Editor
         public const string RightClipPath = Folder + "CLazy@Mvm_Jog_Front_R.FBX";
         public const string FrontLeftClipPath = Folder + "CLazy@Mvm_Jog_Front_L45.FBX";
         public const string FrontRightClipPath = Folder + "CLazy@Mvm_Jog_Front_R45.FBX";
-        private static readonly string[] ClipPaths = { LeftClipPath, RightClipPath, FrontLeftClipPath, FrontRightClipPath };
+        public const string BackClipPath = Folder + "CLazy@Mvm_Jog_Back.FBX";
+        public const string BackLeftClipPath = Folder + "CLazy@Mvm_Jog_Back_L45.FBX";
+        public const string BackRightClipPath = Folder + "CLazy@Mvm_Jog_Back_R45.FBX";
+        private static readonly string[] ClipPaths = { LeftClipPath, RightClipPath, FrontLeftClipPath, FrontRightClipPath,
+            BackClipPath, BackLeftClipPath, BackRightClipPath };
         private static readonly Vector2[] Directions = { Vector2.left, Vector2.right,
-            new Vector2(-1f, 1f).normalized, new Vector2(1f, 1f).normalized };
+            new Vector2(-1f, 1f).normalized, new Vector2(1f, 1f).normalized,
+            Vector2.down, new Vector2(-1f, -1f).normalized, new Vector2(1f, -1f).normalized };
 
-        [MenuItem("超高速行者/动作序列/接入四方向行走")]
+        [MenuItem("超高速行者/动作序列/接入七方向行走")]
         public static void Install()
         {
             if (EditorApplication.isPlaying)
@@ -28,7 +33,7 @@ namespace GameJam.Actions.Editor
             }
             Ensure(AssetDatabase.LoadAssetAtPath<AnimatorController>(ActionPlayerSetup.ControllerPath));
             AssetDatabase.SaveAssets();
-            Debug.Log("[PlayerWalkAnimatorSetup] 四方向 Jog 行走已接入；高速继续使用 Move 跑步状态。");
+            Debug.Log("[PlayerWalkAnimatorSetup] 七方向 Jog 行走已接入；高速转向与 S 刹车保持原规则。");
         }
 
         public static void Ensure(AnimatorController controller, int blendFrames = 6)
@@ -48,10 +53,11 @@ namespace GameJam.Actions.Editor
             BlendTree tree = state.motion as BlendTree;
             if (tree == null)
             {
-                tree = new BlendTree { name = "Four Direction Walk" };
+                tree = new BlendTree();
                 AssetDatabase.AddObjectToAsset(tree, controller);
                 state.motion = tree;
             }
+            tree.name = "Seven Direction Walk";
             tree.blendType = BlendTreeType.FreeformDirectional2D;
             tree.blendParameter = PlayerAnimation.WalkXParameter;
             tree.blendParameterY = PlayerAnimation.WalkZParameter;
