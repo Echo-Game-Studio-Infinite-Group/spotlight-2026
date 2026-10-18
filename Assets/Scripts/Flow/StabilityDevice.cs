@@ -4,8 +4,11 @@ namespace GameJam.Flow
 {
     public sealed class StabilityDevice : MonoBehaviour, IAttackDamageReceiver
     {
+        [Tooltip("同一箱庭内唯一的稳定装置编号，用于保存本次访问的破坏状态。")]
         [InspectorName("装置编号")] public string Id = "lamp";
+        [Tooltip("累计受到此数值的攻击伤害后击碎，混乱度增量由当前差分配置。")]
         [InspectorName("击碎所需伤害"), Min(0.01f)] public float BreakHealth = 1f;
+        [Tooltip("破坏后隐藏的外观物体；同一次访问死亡恢复后仍保留已破坏状态。")]
         [InspectorName("破坏后隐藏的外观")] public GameObject Visual;
         private RunFlowController _flow;
         private FlowRoomInstance _room;

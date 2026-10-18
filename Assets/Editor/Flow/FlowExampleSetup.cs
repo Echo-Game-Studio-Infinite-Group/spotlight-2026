@@ -85,9 +85,11 @@ namespace GameJam.FlowEditor
             string path = Folder + "/" + id + ".asset";
             RoomDefinition room = AssetDatabase.LoadAssetAtPath<RoomDefinition>(path);
             if (room != null) return room;
-            room = ScriptableObject.CreateInstance<RoomDefinition>(); room.Id = id; room.DisplayName = id; room.Template = template;
+            room = ScriptableObject.CreateInstance<RoomDefinition>(); room.Id = id; room.DisplayName = RoomName(id); room.Template = template;
             AssetDatabase.CreateAsset(room, path); return room;
         }
+        private static string RoomName(string id) => id == "tutorial" ? "教程箱庭" : id == "final" ? "最终箱庭" :
+            id.StartsWith("room", StringComparison.Ordinal) ? "示例箱庭" + id.Substring("room".Length) : "箱庭 " + id;
         private static RoomVariantDefinition Variant(RoomDefinition room, string id, int min, int max, int gain, string narrative)
         {
             string path = Folder + "/" + id + ".asset";

@@ -26,6 +26,7 @@ namespace GameJam.FlowEditor
         public static void Open() => GetWindow<FlowConfigWindow>("流程与地图配表");
         private void OnEnable()
         {
+            minSize = new Vector2(850f, 540f);
             if (_config == null) _config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>(FlowExampleSetup.ConfigPath);
             RefreshAssets(); EditorApplication.projectChanged += RefreshAssets;
         }
@@ -51,9 +52,9 @@ namespace GameJam.FlowEditor
             else
             {
                 EditorGUILayout.BeginHorizontal();
-                _listScroll = EditorGUILayout.BeginScrollView(_listScroll, GUILayout.Width(190));
+                _listScroll = EditorGUILayout.BeginScrollView(_listScroll, GUILayout.Width(250));
                 foreach (Object asset in _assets.Where(MatchesTab))
-                    if (GUILayout.Toggle(_selected == asset, asset.name, "Button")) _selected = asset;
+                    if (GUILayout.Toggle(_selected == asset, new GUIContent(FlowEditorLabels.Asset(asset), AssetDatabase.GetAssetPath(asset)), "Button")) _selected = asset;
                 EditorGUILayout.EndScrollView();
                 EditorGUILayout.BeginVertical();
                 if (_selected == null) _selected = _assets.FirstOrDefault(MatchesTab);
@@ -69,8 +70,8 @@ namespace GameJam.FlowEditor
             EditorGUILayout.EndScrollView();
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("保存配表")) { AssetDatabase.SaveAssets(); RefreshAssets(); }
-            if (GUILayout.Button("导出地图池CSV")) ExportCsv();
-            if (GUILayout.Button("导入地图池CSV")) ImportCsv();
+            if (GUILayout.Button("导出地图池表格（CSV）")) ExportCsv();
+            if (GUILayout.Button("导入地图池表格（CSV）")) ImportCsv();
             if (GUILayout.Button("打开流程白盒")) FlowExampleSetup.Open();
             EditorGUILayout.EndHorizontal();
         }
@@ -87,7 +88,7 @@ namespace GameJam.FlowEditor
             {
                 if (entry.Variant == null) continue;
                 double weight = entry.Enabled && entry.Variant.Supports(_chaos) ? planner.EffectiveWeight(entry) : 0;
-                EditorGUILayout.LabelField(entry.Variant.Id, "有效权重 " + weight.ToString("G4") + " / 概率 " + (total > 0 ? weight / total : 0).ToString("P1"));
+                EditorGUILayout.LabelField(new GUIContent(FlowEditorLabels.Asset(entry.Variant)), new GUIContent("有效权重 " + weight.ToString("G4") + " / 概率 " + (total > 0 ? weight / total : 0).ToString("P1")));
             }
         }
         private void DrawPreview()
@@ -106,7 +107,7 @@ namespace GameJam.FlowEditor
                 {
                     RoomVariantDefinition next = planner.Plan(_chaos);
                     if (next == null) { _preview.Add("错误：" + planner.LastError); break; }
-                    _preview.Add((i + 1) + ". " + next.Id + "　循环=" + planner.LoopId + " 槽位=" + planner.CycleIndex);
+                    _preview.Add((i + 1) + ". " + FlowEditorLabels.Asset(next) + "　循环=" + (string.IsNullOrEmpty(planner.LoopId) ? "无" : planner.LoopId) + " 序列位置=" + (planner.CycleIndex + 1));
                     planner.CommitSuccessor(); planner.RegisterEntry(next);
                     if (next == _config.FinalRoom) break;
                 }
@@ -118,13 +119,13 @@ namespace GameJam.FlowEditor
             if (GUILayout.Button("检查当前配置"))
             {
                 _messages = FlowConfigValidator.Validate(_config);
-                if (_messages.Count == 0) _messages.Add("通过：配置引用、编号、差分、地图池、循环和门接口检查。");
+                if (_messages.Count == 0) _messages.Add("通过：配置引用、编号、差分、地图池、循环、门接口、出生点与敌人预制体检查。");
             }
             foreach (string message in _messages) EditorGUILayout.HelpBox(message, message.StartsWith("通过") ? MessageType.Info : MessageType.Error);
         }
         private void ExportCsv()
         {
-            string path = EditorUtility.SaveFilePanel("导出地图池", "", "RoomPools", "csv");
+            string path = EditorUtility.SaveFilePanel("导出地图池", "", "地图池配表", "csv");
             if (!string.IsNullOrEmpty(path)) File.WriteAllText(path, RoomPoolCsv.Export(_config), new UTF8Encoding(true));
         }
         private void ImportCsv()

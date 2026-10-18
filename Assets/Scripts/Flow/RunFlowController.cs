@@ -10,8 +10,8 @@ namespace GameJam.Flow
     [DisallowMultipleComponent]
     public sealed class RunFlowController : MonoBehaviour
     {
-        [SerializeField] private RunFlowConfig _config;
-        [SerializeField] private PlayerMotor _motor;
+        [SerializeField, InspectorName("全局流程配置"), Tooltip("本场景使用的整局流程配表。")] private RunFlowConfig _config;
+        [SerializeField, InspectorName("玩家运动控制器"), Tooltip("流程切房、记录点恢复及掉落检测所使用的玩家。")] private PlayerMotor _motor;
         private MapManager _maps;
         private HealthComponent _health;
         private PlayerInputReader _input;

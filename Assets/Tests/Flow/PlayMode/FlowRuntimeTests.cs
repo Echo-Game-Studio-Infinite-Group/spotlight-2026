@@ -22,6 +22,8 @@ namespace GameJam.FlowTests
         private PlayerMotor _motor;
         private HealthComponent _health;
         private MovementParams _originalMovement, _speedMovement;
+        private readonly List<FlowRoomInstance> _spawnRooms = new List<FlowRoomInstance>();
+        private readonly List<Object> _spawnObjects = new List<Object>();
         [UnitySetUp]
         public IEnumerator SetUp()
         {
@@ -47,6 +49,15 @@ namespace GameJam.FlowTests
             if (_speedMovement != null) Object.Destroy(_speedMovement);
             _originalMovement = _speedMovement = null;
             if (_motor != null) _motor.ReleaseSimulation(this);
+            if (_spawnRooms.Count > 0)
+            {
+                MapManager maps = MapManager.Instance;
+                maps.ReleaseDetachedFlowRooms(_spawnRooms.ToArray());
+                foreach (FlowRoomInstance room in _spawnRooms) yield return Until(() => !maps.FlowRooms.Contains(room));
+                _spawnRooms.Clear();
+            }
+            foreach (Object item in _spawnObjects) if (item != null) Object.Destroy(item);
+            _spawnObjects.Clear();
             if (_flow != null) yield return _flow.ReleaseRooms();
             yield return null;
         }
@@ -68,6 +79,53 @@ namespace GameJam.FlowTests
             _motor.Teleport(checkpoint.transform.position);
             Assert.That(_flow.CommitCheckpoint(checkpoint), Is.True);
         }
+
+#if UNITY_EDITOR
+        [UnityTest]
+        public IEnumerator SpawnPointsFollowRealRoomNavigationVariantRebuildAndUnload()
+        {
+            MapManager maps = MapManager.Instance;
+            RoomDefinition definition = Object.Instantiate(_flow.CurrentRoom.Variant.Room); _spawnObjects.Add(definition);
+            GameObject source = Object.Instantiate(definition.Template.gameObject); source.SetActive(false); _spawnObjects.Add(source);
+            definition.Template = source.GetComponent<FlowRoomTemplate>();
+            var pointObject = new GameObject("集成出生点"); pointObject.transform.SetParent(source.transform, false);
+            FlowEnemySpawnPoint point = pointObject.AddComponent<FlowEnemySpawnPoint>(); point.Id = "integration";
+            RoomVariantDefinition first = Object.Instantiate(_flow.CurrentRoom.Variant); _spawnObjects.Add(first); first.Room = definition;
+            RoomVariantDefinition second = Object.Instantiate(first); _spawnObjects.Add(second);
+            first.EnemySpawns = new[] { new FlowEnemySpawnBinding { PointId = point.Id, Enabled = true,
+                EnemyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/EnemyTest.prefab") } };
+            second.EnemySpawns = new[] { new FlowEnemySpawnBinding { PointId = point.Id, Enabled = true,
+                EnemyPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/EnemyTestRange.prefab") } };
+            definition.Variants = new[] { first, second };
+            FlowRoomInstance room = maps.PreloadFlowRoom(first, new Pose(new Vector3(40000f, 0f, 40000f), Quaternion.Euler(0f, 90f, 0f)), _flow);
+            _spawnRooms.Add(room);
+            yield return Until(() => !room.IsLoading);
+            Assert.That(room.IsReady, Is.True, room.Error);
+            Assert.That(room.Root.Enemies.Instances, Is.Empty, "预加载不能提前启动敌人");
+            Vector3 candidate = room.Root.Entry.position + room.Root.Entry.forward * 5f;
+            Assert.That(NavMesh.SamplePosition(candidate, out NavMeshHit hit, 40f, NavMesh.AllAreas), Is.True);
+            Vector3 local = room.Root.transform.InverseTransformPoint(hit.position);
+            point.transform.localPosition = local;
+            room.Root.GetComponentsInChildren<FlowEnemySpawnPoint>(true).Single().transform.localPosition = local;
+            Assert.That(maps.TryActivateFlowRoom(room), Is.True);
+            GameObject firstEnemy = room.Root.Enemies.Instances[point.Id];
+            Assert.That(firstEnemy.GetComponent<NavMeshAgent>().isOnNavMesh, Is.True);
+            Assert.That(firstEnemy.GetComponent<RangeComponent>(), Is.Null);
+            yield return maps.RebuildFlowRoom(room, second, _flow);
+            yield return null;
+            Assert.That(room.Error, Is.Empty);
+            Assert.That(firstEnemy == null, Is.True, "重建应清理旧差分敌人");
+            GameObject secondEnemy = room.Root.Enemies.Instances[point.Id];
+            Assert.That(secondEnemy.GetComponent<RangeComponent>(), Is.Not.Null);
+            Assert.That(secondEnemy.GetComponent<NavMeshAgent>().isOnNavMesh, Is.True);
+            Assert.That(maps.TryActivateFlowRoom(_flow.CurrentRoom), Is.True);
+            Assert.That(secondEnemy.activeInHierarchy, Is.False, "离开当前房间应暂停敌人");
+            Assert.That(maps.TryUnloadFlowRoom(room), Is.True);
+            yield return Until(() => !room.IsUnloading);
+            Assert.That(secondEnemy == null, Is.True);
+            Assert.That(room.Scene.isLoaded, Is.False);
+        }
+#endif
 
         [UnityTest]
         public IEnumerator StartupKeepsOnePlayerAndOnlyCurrentAndSuccessor()
