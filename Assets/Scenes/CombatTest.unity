@@ -932,7 +932,7 @@ MonoBehaviour:
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
-    Dutch: 0
+    Dutch: 2.643265e-11
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
@@ -997,9 +997,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a860305d4974ec45ab7315bfeadb3e3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _virtualCamera: {fileID: 1056056692}
   _refDmg: 20
   _refAmp: 0.5
+  _normalFov: 60
+  _fastFov: 85
+  _effectStartSpeed: 3
+  _fullEffectSpeed: 25
+  _zoomResponse: 5
+  _wallSlideDistance: 3.5
+  _wallSlideResponse: 8
+  _parryFovPunch: 6
+  _parryDistanceScale: 0.88
+  _parryRoll: 2
+  _parryHoldSeconds: 0.4
+  _parryAttackResponse: 18
+  _parryReleaseResponse: 5
+  _wallRoll: 20
+  _rollResponse: 5
+  _virtualCamera: {fileID: 1056056692}
 --- !u!1 &1100700798
 GameObject:
   m_ObjectHideFlags: 0
@@ -2023,27 +2038,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50d49ce9a5ee4fbebb6ffc23e6d06a53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _motor: {fileID: 6292491704391676769}
-  _virtualCamera: {fileID: 1056056692}
   _volume: {fileID: 1710727688}
-  _normalFov: 60
-  _fastFov: 85
-  _fullEffectSpeed: 25
-  _effectStartSpeed: 3
-  _response: 5
-  _wallRoll: 20
-  _wallSlideDistance: 3.5
-  _wallSlideResponse: 8
   _chromaticIntensity: 0.5
   _motionBlurIntensity: 0.5
   _customMotionBlur: 2.5
   _customRadial: 0
+  _response: 5
+  _effectStartSpeed: 3
+  _fullEffectSpeed: 25
   _slowSaturation: -55
   _slowVignette: 0.45
   _slowRadial: 0.035
   _slowChromatic: 0.012
   _slowAttackResponse: 20
   _slowReleaseResponse: 6
+  _motor: {fileID: 6292491704391676769}
 --- !u!114 &1393982561
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2597,6 +2606,18 @@ PrefabInstance:
       propertyPath: _attackRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: -0.8061603
+      objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: 0.5185766
+      objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+      propertyPath: m_DefaultVelocity.z
+      value: -0.2849279
+      objectReference: {fileID: 0}
     - target: {fileID: 7287481027310862178, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
       propertyPath: m_LocalPosition.x
       value: 9
@@ -3070,6 +3091,18 @@ PrefabInstance:
     - target: {fileID: 6768101621955389463, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
       propertyPath: _deathHitStopSeconds
       value: 0.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6933992379520688310, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+      propertyPath: m_DefaultVelocity.z
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7287481027310862178, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
       propertyPath: m_LocalPosition.x
