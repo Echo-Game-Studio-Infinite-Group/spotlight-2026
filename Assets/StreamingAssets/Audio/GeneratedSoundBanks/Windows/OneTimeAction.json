@@ -10,11 +10,35 @@
     "Type": "User",
     "GUID": "{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}",
     "Language": "SFX",
-    "Hash": "{BDFCED93-1671-53B6-4C94-5643BEF32234}",
+    "Hash": "{27B3BD93-8EC5-CDC2-988D-C761A2BA7586}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\OneTimeAction",
     "ShortName": "OneTimeAction",
     "Path": "OneTimeAction.bnk",
     "Media": [
+     {
+      "Id": "361747846",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Footsteps\\footstep_normal_right_2.wav",
+      "CachePath": "D1/{D14CDFBC-C7EB-74E4-B5F1-A2706482CCF5}.wem"
+     },
+     {
+      "Id": "510201513",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Enemy\\Laser.wav",
+      "CachePath": "DD/{DDAF0FB8-D07F-B9D8-A34C-9CD9DA47A556}.wem"
+     },
+     {
+      "Id": "625423893",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Combat\\metal_hit_2.wav",
+      "CachePath": "9F/{9FC9B291-AC85-B154-0296-D06D17ADA2B5}.wem"
+     },
      {
       "Id": "638996786",
       "Language": "SFX",
@@ -24,15 +48,81 @@
       "CachePath": "24/{241D740F-F463-74CE-6F7B-C1AFA097514F}.wem"
      },
      {
+      "Id": "714536053",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Footsteps\\footstep_normal_left_2.wav",
+      "CachePath": "1C/{1CFFAA58-0E14-576F-0A34-51C4A7461495}.wem"
+     },
+     {
       "Id": "727117255",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "Jump\\jump_hard.wav",
       "CachePath": "81/{8137CC10-43DF-2462-6871-106E26284CA9}.wem"
+     },
+     {
+      "Id": "842838349",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Enemy\\Enemy_Hit.wav",
+      "CachePath": "87/{87D43E8B-6F8B-3BD9-57A3-56D14861082B}.wem"
+     },
+     {
+      "Id": "1049468607",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Combat\\sword_swing_1.wav",
+      "CachePath": "9D/{9D7D9E4E-A192-FC2A-98D1-9CE90DB500B3}.wem"
      }
     ],
     "Events": [
+     {
+      "Id": "1010055213",
+      "Name": "Enemy_Hit",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Hit",
+      "GUID": "{505501A9-86CB-41A4-8C85-06B8D8552A66}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.8076875",
+      "DurationMax": "0.8076875",
+      "MediaRefs": [
+       {
+        "Id": "842838349"
+       }
+      ]
+     },
+     {
+      "Id": "2545955606",
+      "Name": "Footstep_Normal_Left_2",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Footstep_Normal_Left_2",
+      "GUID": "{40215CE4-C36A-4203-9B65-23C18AF9D683}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.39904165",
+      "DurationMax": "0.39904165",
+      "MediaRefs": [
+       {
+        "Id": "714536053"
+       }
+      ]
+     },
+     {
+      "Id": "3163909963",
+      "Name": "Footstep_Normal_Right_2",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Footstep_Normal_Right_2",
+      "GUID": "{4342F9AD-E35E-45F8-9E66-6CAC247607BF}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.39904165",
+      "DurationMax": "0.39904165",
+      "MediaRefs": [
+       {
+        "Id": "361747846"
+       }
+      ]
+     },
      {
       "Id": "3892339301",
       "Name": "Jump_Normal",
@@ -60,10 +150,52 @@
         "Id": "638996786"
        }
       ]
+     },
+     {
+      "Id": "3982605422",
+      "Name": "Laser",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Laser",
+      "GUID": "{76843885-5748-4098-B706-B02C5DD42FD6}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.5913541",
+      "DurationMax": "1.5913541",
+      "MediaRefs": [
+       {
+        "Id": "510201513"
+       }
+      ]
+     },
+     {
+      "Id": "2473374816",
+      "Name": "Metal_Hit",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Metal_Hit",
+      "GUID": "{2C5AA965-BC82-4B01-8AEA-F20922861471}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.7644167",
+      "DurationMax": "0.7644167",
+      "MediaRefs": [
+       {
+        "Id": "625423893"
+       }
+      ]
+     },
+     {
+      "Id": "476098351",
+      "Name": "Sword_Swing",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Sword_Swing",
+      "GUID": "{EBB4778C-7AAF-4610-8D2C-A97D9B34E434}",
+      "DurationType": "OneShot",
+      "DurationMin": "2.7211459",
+      "DurationMax": "2.7211459",
+      "MediaRefs": [
+       {
+        "Id": "1049468607"
+       }
+      ]
      }
     ]
    }
   ],
-  "FileHash": "{5C8D2B44-8E63-E714-9627-FBB3C0B6CD61}"
+  "FileHash": "{52F043B2-4EC9-9569-A161-FA58571DC788}"
  }
 }

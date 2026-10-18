@@ -13,7 +13,21 @@
 				<SoundBank Name="OneTimeAction" ID="{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}">
 					<ObjectInclusionList>
 						<ObjectRef Name="Land_Normal" ID="{624F0B3F-D241-402C-B30E-898433EA07C9}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Laser" ID="{76843885-5748-4098-B706-B02C5DD42FD6}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Enemy_Hit" ID="{505501A9-86CB-41A4-8C85-06B8D8552A66}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Footstep_Normal_Left_2" ID="{40215CE4-C36A-4203-9B65-23C18AF9D683}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Footstep_Normal_Right_2" ID="{4342F9AD-E35E-45F8-9E66-6CAC247607BF}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Sword_Swing" ID="{EBB4778C-7AAF-4610-8D2C-A97D9B34E434}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Metal_Hit" ID="{2C5AA965-BC82-4B01-8AEA-F20922861471}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Jump_Normal" ID="{304CC152-DB75-4FE2-8385-3C1513AC44D9}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+				<SoundBank Name="Music" ID="{B9FD0FE4-8802-425B-9ECE-72D720DDD7BD}">
+					<ObjectInclusionList>
+						<ObjectRef Name="Play_Music_Run" ID="{73A76459-77BB-43AC-92C7-AEF52BF4CE56}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Music_SnowPeak" ID="{3BD68F0D-0736-4498-8D9A-129DCAC1C307}" WorkUnitID="{B11F3406-3B0F-4563-8959-36E581BFBF9D}" Origin="Manual" Filter="7"/>
 					</ObjectInclusionList>
 					<ObjectExclusionList/>
 					<GameSyncExclusionList/>

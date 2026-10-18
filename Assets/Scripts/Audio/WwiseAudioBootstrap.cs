@@ -48,6 +48,16 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
         {
             motor.gameObject.AddComponent<WwiseActionDriver>();
         }
+        if (motor.gameObject.GetComponent<PlayerGameplayAudioSource>() == null)
+        {
+            motor.gameObject.AddComponent<PlayerGameplayAudioSource>();
+        }
+
+        foreach (EnemyBase enemy in FindObjectsOfType<EnemyBase>())
+        {
+            if (enemy.GetComponent<EnemyAudioSource>() == null)
+                enemy.gameObject.AddComponent<EnemyAudioSource>();
+        }
 
         PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
         if (input != null && input != _boundInput)

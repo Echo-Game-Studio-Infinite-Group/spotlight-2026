@@ -52,6 +52,7 @@ public sealed class LaserAttack : MonoBehaviour
     public bool HasBeamHit { get; private set; }
     public Vector3 ImpactPoint { get; private set; }
     public Vector3 ImpactNormal { get; private set; }
+    public event System.Action Fired;
 
     private void Awake()
     {
@@ -142,6 +143,7 @@ public sealed class LaserAttack : MonoBehaviour
         _remaining = Mathf.Max(.01f, _beamSeconds);
         _damageAttempted = false;
         _telegraph?.Stop();
+        Fired?.Invoke();
         TraceBeam(target);
     }
 
