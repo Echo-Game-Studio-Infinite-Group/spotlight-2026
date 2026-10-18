@@ -27067,6 +27067,7 @@ GameObject:
   - component: {fileID: 7296055474667861831}
   - component: {fileID: 910010001}
   - component: {fileID: 910010002}
+  - component: {fileID: 910010003}
   - component: {fileID: 2805868951403254720}
   - component: {fileID: 3253928666613138377}
   - component: {fileID: 7736693663179220688}
@@ -27243,7 +27244,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _target: {fileID: 7588622732077400848}
-  _wallMaterial: {fileID: 2100000, guid: c044b2738022f6144b9f03ef06972daa, type: 2}
+  _transparentToonShader: {fileID: 4800000, guid: 3a4eaf7a145e4b08bac1138b8f494292, type: 3}
   _occludedAlpha: 0.2
   _fadeSpeed: 8
   _probeRadius: 0.1
@@ -27587,6 +27588,9 @@ MonoBehaviour:
   - ActionId: wall_slide
     ConditionKey: wall_sliding
     ContactIntensity: 1
+  - ActionId: transducer_loop
+    ConditionKey: skill_held
+    ContactIntensity: 1
 --- !u!114 &7612907096352858083
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27675,6 +27679,24 @@ MonoBehaviour:
   _poseResponse: 16
   _maxSlideTilt: 45
   _slideGroundClearance: 0.02
+--- !u!114 &910010003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7725487067667272363}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f00a8628fb356458e7bfc6adf28cb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _minFootstepSpeed: 0.5
+  _footstepPlantWeight: 0.65
+  _minimumFootstepInterval: 0.08
+  _wallFootstepInterval: 0.15
+  _leftFootPhase: 0.15
+  _rightFootPhase: 0.6
 --- !u!114 &2805868951403254720
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -7,56 +8,78 @@ using UnityEngine.Rendering;
 public sealed class CameraWallFade : MonoBehaviour
 {
     [SerializeField] private Transform _target;
-    [SerializeField] private Material _wallMaterial;
+    [SerializeField] private Shader _transparentToonShader;
     [SerializeField, Range(0f, 1f)] private float _occludedAlpha = 0.2f;
-    [SerializeField] private float _fadeSpeed = 8f;
-    [SerializeField] private float _probeRadius = 0.1f;
+    [SerializeField, Min(0f)] private float _fadeSpeed = 8f;
+    [SerializeField, Min(0f)] private float _probeRadius = 0.1f;
     [SerializeField] private LayerMask _wallLayers = ~0;
 
-    private readonly RaycastHit[] _hits = new RaycastHit[64];
+    private Collider[] _hits = new Collider[64];
     private readonly Dictionary<Renderer, FadeState> _fading = new Dictionary<Renderer, FadeState>();
     private readonly HashSet<Renderer> _occluded = new HashSet<Renderer>();
     private readonly List<Renderer> _finished = new List<Renderer>();
+    private readonly List<Renderer> _children = new List<Renderer>();
     private Camera _camera;
-    private Material _fadeMaterial;
+    private Transform _playerRoot;
 
     private sealed class FadeState
     {
         public Material[] OriginalMaterials;
-        public MaterialPropertyBlock OriginalProperties;
-        public MaterialPropertyBlock FadeProperties;
+        public Material[] FadeMaterials;
+        public MaterialPropertyBlock[] OriginalProperties;
+        public MaterialPropertyBlock[] FadeProperties;
+        public Color[] Colors;
+        public string[] ColorProperties;
         public float Alpha = 1f;
     }
 
+    // 保留旧装配入口；遮挡判断不再依赖指定材质。
     public void Configure(Transform target, Material wallMaterial, Camera camera = null)
     {
+        RestoreAll();
         _target = target;
-        _wallMaterial = wallMaterial;
+        _playerRoot = null;
         if (camera != null) _camera = camera;
     }
 
     private void LateUpdate()
     {
-        if (_target == null || _wallMaterial == null) return;
-        if (_camera == null) _camera = Camera.main;
-        if (_camera == null) return;
+        UpdateFade(TimeManager.UnscaledDeltaTime);
+    }
 
+    private void UpdateFade(float deltaTime)
+    {
         _occluded.Clear();
-        Vector3 start = _target.position;
-        Vector3 distance = _camera.transform.position - start;
-        float length = distance.magnitude;
-        if (length > 0.001f)
+        if (_camera == null) _camera = Camera.main;
+        if (_target != null && _camera != null)
         {
-            int count = _probeRadius > 0f
-                ? Physics.SphereCastNonAlloc(start, _probeRadius, distance / length,
-                    _hits, length, _wallLayers, QueryTriggerInteraction.Ignore)
-                : Physics.RaycastNonAlloc(start, distance / length,
-                    _hits, length, _wallLayers, QueryTriggerInteraction.Ignore);
+            if (_playerRoot == null)
+            {
+                PlayerMotor motor = _target.GetComponentInParent<PlayerMotor>();
+                _playerRoot = motor != null ? motor.transform : _target;
+            }
+
+            // 重叠查询包含两端，镜头陷入厚墙时也能找到遮挡；满缓冲时扩容重查以免漏墙。
+            int count;
+            do
+            {
+                count = Physics.OverlapCapsuleNonAlloc(_target.position, _camera.transform.position,
+                    Mathf.Max(0.001f, _probeRadius), _hits, _wallLayers, QueryTriggerInteraction.Ignore);
+                if (count < _hits.Length) break;
+                Array.Resize(ref _hits, _hits.Length * 2);
+            } while (true);
+
             for (int i = 0; i < count; i++)
             {
-                Renderer renderer = _hits[i].collider.GetComponent<Renderer>();
-                if (renderer != null && (_fading.ContainsKey(renderer) || ContainsWallMaterial(renderer)))
-                    _occluded.Add(renderer);
+                Collider collider = _hits[i];
+                if (collider.transform.IsChildOf(_playerRoot)) continue;
+                Renderer renderer = collider.GetComponentInParent<Renderer>();
+                if (renderer != null) AddOccluder(renderer);
+                else
+                {
+                    collider.GetComponentsInChildren(false, _children);
+                    foreach (Renderer child in _children) AddOccluder(child);
+                }
             }
         }
 
@@ -70,80 +93,121 @@ public sealed class CameraWallFade : MonoBehaviour
             if (renderer == null) { _finished.Add(renderer); continue; }
             FadeState state = entry.Value;
             float wanted = _occluded.Contains(renderer) ? _occludedAlpha : 1f;
-            state.Alpha = Mathf.MoveTowards(state.Alpha, wanted,
-                Mathf.Max(0f, _fadeSpeed) * TimeManager.UnscaledDeltaTime);
-            Color color = _wallMaterial.GetColor("_BaseColor");
-            color.a *= state.Alpha;
-            state.FadeProperties.SetColor("_BaseColor", color);
-            renderer.SetPropertyBlock(state.FadeProperties);
+            state.Alpha = Mathf.MoveTowards(state.Alpha, wanted, Mathf.Max(0f, _fadeSpeed) * deltaTime);
+            for (int i = 0; i < state.FadeMaterials.Length; i++)
+            {
+                if (state.ColorProperties[i] == null) continue;
+                Color color = state.Colors[i];
+                color.a *= state.Alpha;
+                state.FadeProperties[i].SetColor(state.ColorProperties[i], color);
+                renderer.SetPropertyBlock(state.FadeProperties[i], i);
+            }
             if (wanted >= 1f && state.Alpha >= 1f) _finished.Add(renderer);
         }
         foreach (Renderer renderer in _finished) EndFade(renderer);
     }
 
-    private bool ContainsWallMaterial(Renderer renderer)
+    private void AddOccluder(Renderer renderer)
     {
-        foreach (Material material in renderer.sharedMaterials)
-            if (material == _wallMaterial) return true;
-        return false;
+        if (renderer.enabled && !renderer.transform.IsChildOf(_playerRoot) &&
+            (renderer is MeshRenderer || renderer is SkinnedMeshRenderer))
+            _occluded.Add(renderer);
     }
 
     private void BeginFade(Renderer renderer)
     {
-        if (_fadeMaterial == null) CreateFadeMaterial();
+        Material[] originals = renderer.sharedMaterials;
         var state = new FadeState
         {
-            OriginalMaterials = renderer.sharedMaterials,
-            OriginalProperties = new MaterialPropertyBlock(),
-            FadeProperties = new MaterialPropertyBlock()
+            OriginalMaterials = originals,
+            FadeMaterials = (Material[])originals.Clone(),
+            OriginalProperties = new MaterialPropertyBlock[originals.Length],
+            FadeProperties = new MaterialPropertyBlock[originals.Length],
+            Colors = new Color[originals.Length],
+            ColorProperties = new string[originals.Length]
         };
-        renderer.GetPropertyBlock(state.OriginalProperties);
-        renderer.GetPropertyBlock(state.FadeProperties);
-        Material[] materials = (Material[])state.OriginalMaterials.Clone();
-        for (int i = 0; i < materials.Length; i++)
-            if (materials[i] == _wallMaterial) materials[i] = _fadeMaterial;
-        renderer.sharedMaterials = materials;
+        for (int i = 0; i < originals.Length; i++)
+        {
+            Material original = originals[i];
+            if (original == null) continue;
+            string colorProperty = original.HasProperty("_BaseColor") ? "_BaseColor" :
+                original.HasProperty("_Color") ? "_Color" : null;
+            if (colorProperty == null) continue;
+            var properties = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(properties, i);
+            state.OriginalProperties[i] = properties;
+            var fadeProperties = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(fadeProperties, i);
+            // 索引属性块优先于 Renderer 属性块，透明期间必须保留同样的覆盖关系。
+            if (fadeProperties.isEmpty) renderer.GetPropertyBlock(fadeProperties);
+            state.Colors[i] = fadeProperties.HasColor(colorProperty)
+                ? fadeProperties.GetColor(colorProperty) : original.GetColor(colorProperty);
+            state.ColorProperties[i] = colorProperty;
+            state.FadeProperties[i] = fadeProperties;
+            state.FadeMaterials[i] = CreateFadeMaterial(original);
+        }
+        renderer.sharedMaterials = state.FadeMaterials;
         _fading.Add(renderer, state);
     }
 
-    private void CreateFadeMaterial()
+    private Material CreateFadeMaterial(Material original)
     {
-        _fadeMaterial = new Material(_wallMaterial) { name = "Wall Camera Fade" };
-        _fadeMaterial.SetOverrideTag("RenderType", "Transparent");
-        _fadeMaterial.SetFloat("_Surface", 1f);
-        _fadeMaterial.SetFloat("_BlendModePreserveSpecular", 0f);
-        _fadeMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-        _fadeMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-        _fadeMaterial.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
-        _fadeMaterial.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
-        _fadeMaterial.SetFloat("_ZWrite", 0f);
-        _fadeMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        _fadeMaterial.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        _fadeMaterial.SetShaderPassEnabled("DepthOnly", false);
-        _fadeMaterial.SetShaderPassEnabled("ShadowCaster", false);
-        _fadeMaterial.renderQueue = (int)RenderQueue.Transparent;
+        var material = new Material(original) { name = original.name + " (Camera Fade)" };
+        // 不透明 NPR 的 Pass 固定写深度，必须使用项目内相同属性布局的透明版本。
+        if (original.shader.name == "OurFunction/NPR/Deferred Toon")
+        {
+            if (_transparentToonShader == null)
+                _transparentToonShader = Shader.Find("OurFunction/NPR/Transparent Toon");
+            if (_transparentToonShader != null) material.shader = _transparentToonShader;
+        }
+        material.SetOverrideTag("RenderType", "Transparent");
+        SetFloat(material, "_Surface", 1f);
+        SetFloat(material, "_Mode", 3f);
+        SetFloat(material, "_Blend", 0f);
+        SetFloat(material, "_BlendModePreserveSpecular", 0f);
+        SetFloat(material, "_SrcBlend", (float)BlendMode.SrcAlpha);
+        SetFloat(material, "_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        SetFloat(material, "_SrcBlendAlpha", (float)BlendMode.One);
+        SetFloat(material, "_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+        SetFloat(material, "_ZWrite", 0f);
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.DisableKeyword("_ALPHAMODULATE_ON");
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.SetShaderPassEnabled("DepthOnly", false);
+        material.SetShaderPassEnabled("DepthNormals", false);
+        material.SetShaderPassEnabled("ShadowCaster", false);
+        material.renderQueue = (int)RenderQueue.Transparent;
+        return material;
+    }
+
+    private static void SetFloat(Material material, string property, float value)
+    {
+        if (material.HasProperty(property)) material.SetFloat(property, value);
     }
 
     private void EndFade(Renderer renderer)
     {
-        if (!_fading.TryGetValue(renderer, out FadeState state)) return;
+        FadeState state = _fading[renderer];
         if (renderer != null)
         {
             renderer.sharedMaterials = state.OriginalMaterials;
-            renderer.SetPropertyBlock(state.OriginalProperties);
+            for (int i = 0; i < state.OriginalProperties.Length; i++)
+                if (state.OriginalProperties[i] != null)
+                    renderer.SetPropertyBlock(state.OriginalProperties[i].isEmpty ? null : state.OriginalProperties[i], i);
         }
+        for (int i = 0; i < state.FadeMaterials.Length; i++)
+            if (state.FadeMaterials[i] != state.OriginalMaterials[i]) Destroy(state.FadeMaterials[i]);
         _fading.Remove(renderer);
     }
 
-    private void OnDisable()
+    private void RestoreAll()
     {
-        var renderers = new List<Renderer>(_fading.Keys);
-        foreach (Renderer renderer in renderers) EndFade(renderer);
+        _finished.Clear();
+        _finished.AddRange(_fading.Keys);
+        foreach (Renderer renderer in _finished) EndFade(renderer);
         _occluded.Clear();
     }
 
-    private void OnDestroy()
-    {
-        if (_fadeMaterial != null) Destroy(_fadeMaterial);
-    }
+    private void OnDisable() => RestoreAll();
 }

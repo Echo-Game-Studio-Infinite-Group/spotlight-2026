@@ -26,7 +26,8 @@ WwiseEventBridge.Play("hit_metal", gameObject);
 - 管理动态动作 channel、voice 和 emitter。
 - 渲染 ADSR、循环、颗粒、采样区间和 PCM。
 - 把 PCM 交给 Wwise。
-- 把控制参数转成 Wwise RTPC、Switch 或 Bus 参数。
+- 接收并保存动态控制参数，供运行时调试和后续 Wwise 路由使用。
+- 预留将控制参数转发为 Wwise RTPC、Switch 或 Bus 参数的接口；当前版本尚未启用这层转发。
 
 ## 2. 核心接口
 
@@ -280,6 +281,19 @@ wall_slide   <- wall_sliding
 
 Unity 只上报控制值，不在 PCM 渲染器里实现动作音色曲线。
 
+当前实现状态：
+
+| 字段 | 当前实现 | 目标 |
+| --- | --- | --- |
+| `NormalizedSpeed` | 由 `WwiseActionDriver` 接收并显示在调试快照中 | 转发到 Wwise RTPC，映射音高、低通或音量 |
+| `ContactIntensity` | 由 `WwiseActionDriver` 接收并显示在调试快照中 | 转发到 Wwise RTPC，映射音量或效果器强度 |
+| `Direction` | 保留在请求协议中，当前未转发 | 转发到 Wwise RTPC，映射声像 |
+| `SurfaceId` | 保留在请求协议中，当前未转发 | 转发到 Wwise Switch 或材质路由参数 |
+| `Seed` | 用于 Unity 侧循环、颗粒和随机差分渲染 | 不要求传给 Wwise |
+
+下面的映射是目标接口示意，只有在 Wwise 工程中创建对应 Game Parameter、
+RTPC 或 Switch 并完成转发后才生效：
+
 推荐映射：
 
 ```text
@@ -289,4 +303,5 @@ Direction -> Direction RTPC -> Pan
 SurfaceId -> Surface Switch
 ```
 
-音高、低通、EQ、压缩、失真和特殊效果统一在 Wwise Bus、Actor-Mixer 或 Effect 中处理。
+音高、低通、EQ、压缩、失真和特殊效果统一在 Wwise Bus、Actor-Mixer 或 Effect
+中处理。Unity 动态音频系统当前仍负责 ADSR、循环、颗粒、采样区间和 PCM 渲染。
