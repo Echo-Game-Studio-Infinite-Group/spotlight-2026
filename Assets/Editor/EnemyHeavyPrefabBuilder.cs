@@ -137,8 +137,8 @@ public static class EnemyHeavyPrefabBuilder
     {
         var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>("Assets/Animations/EnemyHeavy.controller");
         var machine = controller.layers[0].stateMachine;
-        string[] states = { "Idle", "Move", "Attack", "Hurt", "RangeStart", "RangeStop" };
-        string[] clips = { "Idle", "Walk", "Fire", "Hurt", "RangeStart", "RangeStop" };
+        string[] states = { "Idle", "Move", "Attack", "Hurt", "RangeStart", "RangeStop", "AttackBack", "Dead" };
+        string[] clips = { "Idle", "Walk", "Attack", "Hurt", "RangeStart", "RangeStop", "AttackBack", "DieBack" };
         for (int i = 0; i < states.Length; i++)
         {
             var state = machine.states.Select(s => s.state).FirstOrDefault(s => s.name == states[i])
@@ -146,13 +146,16 @@ public static class EnemyHeavyPrefabBuilder
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/EnemyHeavy/" + clips[i] + ".anim");
             if (clip == null) throw new InvalidOperationException("缺少动作：" + clips[i]);
             state.motion = clip;
-            state.tag = states[i] == "Attack" ? "Attack" : "";
+            state.tag = states[i] == "Attack" || states[i] == "AttackBack" ? "Attack" : "";
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
             settings.loopTime = i < 2;
             AnimationUtility.SetAnimationClipSettings(clip, settings);
             if (states[i] == "Attack") AnimationUtility.SetAnimationEvents(clip, new[] {
                 new AnimationEvent { time = 0.8f, functionName = "EnableHitbox" },
-                new AnimationEvent { time = 1.2f, functionName = "DisableHitbox" },
+                new AnimationEvent { time = 1.2f, functionName = "DisableHitbox" }
+            });
+            if (states[i] == "AttackBack") AnimationUtility.SetAnimationEvents(clip, new[] {
+                new AnimationEvent { time = 0f, functionName = "DisableHitbox" },
                 new AnimationEvent { time = clip.length - 0.02f, functionName = "FinishAttack" }
             });
             EditorUtility.SetDirty(clip);
@@ -161,6 +164,18 @@ public static class EnemyHeavyPrefabBuilder
         var idle = machine.states.First(s => s.state.name == "Idle").state;
         var move = machine.states.First(s => s.state.name == "Move").state;
         var attack = machine.states.First(s => s.state.name == "Attack").state;
+        var recovery = machine.states.First(s => s.state.name == "AttackBack").state;
+        // 挥击完整播完再收手，攻击锁覆盖两段动画。
+        foreach (var transition in attack.transitions) attack.RemoveTransition(transition);
+        foreach (var transition in recovery.transitions) recovery.RemoveTransition(transition);
+        var recoverTransition = attack.AddTransition(recovery);
+        recoverTransition.hasExitTime = true;
+        recoverTransition.exitTime = 1f;
+        recoverTransition.duration = 0f;
+        var idleTransition = recovery.AddTransition(idle);
+        idleTransition.hasExitTime = true;
+        idleTransition.exitTime = 1f;
+        idleTransition.duration = 0.1f;
         if (!move.transitions.Any(t => t.destinationState == attack))
         {
             var transition = move.AddTransition(attack);
@@ -184,12 +199,22 @@ public static class EnemyHeavyPrefabBuilder
         {
             var agent = root.GetComponent<NavMeshAgent>();
             agent.enabled = true;
+            // 当前模型以脚底为原点，导航与碰撞体必须使用同一基准。
+            agent.baseOffset = 0f;
+            var body = root.GetComponent<CharacterController>();
+            body.center = new Vector3(body.center.x, body.height * 0.5f, body.center.z);
             root.GetComponent<EnemyHeavy>().SetChasePlayer(true);
-            var hitbox = root.GetComponentInChildren<Hitbox>(true).transform;
-            hitbox.localPosition = new Vector3(0f, 0.25f, 1.4f);
-            hitbox.localScale = Vector3.one;
-            hitbox.GetComponent<BoxCollider>().size = new Vector3(2.1f, 0.5f, 2f);
-            SetFloat(root.GetComponent<GibComponent>(), "_deathChance", 0f);
+            // 重型敌人的普通挥击是劣势 parry 招式（提示用红图）：
+            // 玩家接住后只被弹开、不触发时缓，否则高速状态下会被顶进它怀里。
+            var combatSettings = new SerializedObject(root.GetComponent<CombatComponent>());
+            combatSettings.FindProperty("_parryKind").enumValueIndex = (int)AttackParryKind.Disadvantage;
+            combatSettings.ApplyModifiedPropertiesWithoutUndo();
+            var enemySettings = new SerializedObject(root.GetComponent<EnemyHeavy>());
+            enemySettings.FindProperty("_hurtDamageThreshold").floatValue = 50f;
+            enemySettings.ApplyModifiedPropertiesWithoutUndo();
+            var animationSettings = new SerializedObject(root.GetComponentInChildren<EnemyAnimation>(true));
+            animationSettings.FindProperty("_playbackSpeed").floatValue = 2f;
+            animationSettings.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }

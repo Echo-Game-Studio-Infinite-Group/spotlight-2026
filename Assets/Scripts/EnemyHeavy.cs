@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.AI;
 
 // 重型独立决策：追击、挥击、炮击蓄力与收招互斥。
@@ -25,7 +25,6 @@ public sealed class EnemyHeavy : EnemyBase
     private bool _enteredRangeStop;
     private LaserAttack _laser;
     private EnemyAnimation _modelAnimation;
-    private NavMeshAgent _agent;
     private Quaternion _homeRotation;
     private Quaternion _pivotRotation;
     private float _yaw, _pitch;
@@ -39,7 +38,7 @@ public sealed class EnemyHeavy : EnemyBase
         _laser = GetComponent<LaserAttack>();
         _modelAnimation = GetComponentInChildren<EnemyAnimation>();
         _animator = GetComponentInChildren<Animator>();
-        _agent = GetComponent<NavMeshAgent>();
+        // 寻路代理由基类 EnemyBase.Awake 取好，这里走 Agent 访问器，不再自己声明一份。
         SetChasePlayer(true);
     }
 
@@ -49,7 +48,7 @@ public sealed class EnemyHeavy : EnemyBase
         _rangeActive = _rangeStopping = _enteredRangeStop = false;
         _chaseRemaining = _chaseBetweenShots;
         // 导航驱动位移，实体碰撞体保留撞击判定。
-        if (_agent != null) _agent.enabled = true;
+        if (Agent != null) Agent.enabled = true;
         if (!_poseInitialized)
         {
             _pivotRotation = _aimPivot != null ? _aimPivot.localRotation : Quaternion.identity;
@@ -64,8 +63,8 @@ public sealed class EnemyHeavy : EnemyBase
     {
         base.Start();
         // 场景中的旧实例可能悬在烘焙网格上方，先落到附近可走面再寻路。
-        if (!_agent.isOnNavMesh && NavMesh.SamplePosition(transform.position, out NavMeshHit hit,
-            _navMeshSnapDistance, _agent.areaMask)) _agent.Warp(hit.position);
+        if (Agent != null && !Agent.isOnNavMesh && NavMesh.SamplePosition(transform.position, out NavMeshHit hit,
+            _navMeshSnapDistance, Agent.areaMask)) Agent.Warp(hit.position);
     }
 
     protected override void FixedUpdate()
@@ -131,12 +130,12 @@ public sealed class EnemyHeavy : EnemyBase
             if (Vector3.Angle(transform.forward, offset) < 20f) TryAttack(player.Motor);
             return;
         }
-        if (!_agent.isActiveAndEnabled || !_agent.isOnNavMesh) return;
-        _agent.speed = WalkSpeed * TimeManager.WorldRate;
-        _agent.stoppingDistance = Mathf.Max(0f, AttackRange - _agent.radius);
-        _agent.isStopped = false;
-        _agent.SetDestination(player.transform.position);
-        Speed = _agent.velocity.magnitude / Mathf.Max(TimeManager.WorldRate, 0.0001f);
+        if (Agent == null || !Agent.isActiveAndEnabled || !Agent.isOnNavMesh) return;
+        Agent.speed = WalkSpeed * TimeManager.WorldRate;
+        Agent.stoppingDistance = Mathf.Max(0f, AttackRange - Agent.radius);
+        Agent.isStopped = false;
+        Agent.SetDestination(player.transform.position);
+        Speed = Agent.velocity.magnitude / Mathf.Max(TimeManager.WorldRate, 0.0001f);
     }
 
     private void AimAt(Transform target, float dt)

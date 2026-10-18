@@ -8,7 +8,7 @@ public sealed class CRTMenuPresentation : MonoBehaviour
     [SerializeField] private RawImage _background;
     [SerializeField] private RawImage[] _titleImages;
     [SerializeField] private float _flickerDuration = .55f;
-    [SerializeField] private float _travelDuration = 2.4f;
+    [SerializeField] private float _travelDuration = 0.5f;
     [SerializeField] private float _introFrameRate = 8;
     [SerializeField, Range(0, 1)] private float _settledOpacity = .55f;
     [SerializeField, Range(0, 1)] private float _idleGlitch = .12f;

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // 预警与实弹共用碰撞查询，表现只读结果，不能另算一条穿过遮挡的瞄准线。
 [DisallowMultipleComponent]
@@ -178,9 +178,11 @@ public sealed class LaserAttack : MonoBehaviour
         }
         if (!applyDamage || _damageAttempted || closest == null || target == null || !target.IsAlive
             || closest.GetComponentInParent<HealthComponent>() != target) return;
-        // 一轮只结算一次，命中无敌帧也消耗本轮资格；不经过 Hitbox 的 Parry 判定入口。
+        // 一轮只结算一次，命中无敌帧也消耗本轮资格。
+        // 粒子炮与光束都是飞行道具（策划案 §8）：被 parry 时只弹开，不走近战那套时缓。
         _damageAttempted = true;
-        _combat.TryHit(closest, target, new AttackDamageRequest(_combat.Damage, point, _direction, 0L, 0));
+        _combat.TryHit(closest, target, new AttackDamageRequest(_combat.Damage, point, _direction, 0L, 0,
+            AttackSourceType.Projectile, _combat.ParryKind));
     }
 
     private void OnDamaged(HealthComponent source, float applied, Vector3 point, Vector3 direction)

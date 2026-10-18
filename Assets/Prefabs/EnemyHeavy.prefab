@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4436bc5251a0dcb488c9d608448002be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _hurtDamageThreshold: 50
   _walkSpeed: 1.5
   _runSpeed: 1.5
   _runDistance: 3
@@ -198,7 +199,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.03
   m_MinMoveDistance: 0
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 2.5, z: 0}
 --- !u!195 &4611015556020556644
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -218,7 +219,7 @@ NavMeshAgent:
   m_AutoBraking: 1
   m_AutoRepath: 1
   m_Height: 2.5
-  m_BaseOffset: 1.25
+  m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
 --- !u!114 &6933992379520688310
@@ -304,6 +305,11 @@ MonoBehaviour:
   _damage: 40
   _cooldown: 2
   _windowSeconds: 0
+  _parryWindowSeconds: 0.2
+  _parryInvulnerableSeconds: 0.8
+  _parrySlowSeconds: 0.35
+  _parrySlowRate: 0.1
+  _parryKind: 1
 --- !u!114 &8648443380718486350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1191,6 +1197,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _speedDampTime: 0.1
+  _playbackSpeed: 2
   _hurtHitStopSeconds: 0
   _hurtHitStopRate: 1
   _deathHitStopSeconds: 0

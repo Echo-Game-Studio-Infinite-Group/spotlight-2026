@@ -12,6 +12,7 @@ using UnityEngine.UI;
 [InitializeOnLoad]
 public static class NasaPunkMenuBuilder
 {
+    private const string PauseRequest = "Temp/BuildCRTPause.request";
     private const string CRTRequest = "Temp/BuildCRTMenu.request";
     private const string CRTArt = "Assets/Art/UI/CRT/";
     private const string Request = "Temp/BuildNasaMenus.request";
@@ -26,14 +27,15 @@ public static class NasaPunkMenuBuilder
 
     private static void Poll()
     {
-        if ((!File.Exists(Request) && !File.Exists(CRTRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        if ((!File.Exists(Request) && !File.Exists(CRTRequest) && !File.Exists(PauseRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
         // 请求保留到编辑模式稳定后再执行，避免播放状态下保存场景。
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
             EditorApplication.isPlaying = false;
             return;
         }
-        if (File.Exists(CRTRequest)) { File.Delete(CRTRequest); BuildCRT(); }
+        if (File.Exists(PauseRequest)) { File.Delete(PauseRequest); BuildCRTPause(); }
+        else if (File.Exists(CRTRequest)) { File.Delete(CRTRequest); BuildCRT(); }
         else { File.Delete(Request); Build(); }
     }
 
@@ -209,9 +211,35 @@ public static class NasaPunkMenuBuilder
         }
     }
 
+    [MenuItem("超高速行者/UI/装配 CRT 暂停菜单")]
+    public static void BuildCRTPause()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+        try
+        {
+            BuildPause();
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CRTPause] SUCCESS / Temp/MenuPreview/PauseMenu.png");
+        }
+        catch (Exception e) { Debug.LogException(e); }
+    }
+
     private static void BuildPause()
     {
         const string path = "Assets/Prefabs/UI/PauseMenu.prefab";
+        foreach (string name in new[] { "PauseTitle", "Retry", "PauseExit" })
+        {
+            string texturePath = CRTArt + name + ".png";
+            AssetDatabase.ImportAsset(texturePath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(texturePath);
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
+        Material titleMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "TitleCRT.mat");
+        Material textMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "ButtonCRT.mat");
+        Material shutterMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "ShutterCRT.mat");
         GameObject root = PrefabUtility.LoadPrefabContents(path);
         try
         {
@@ -219,27 +247,39 @@ public static class NasaPunkMenuBuilder
                 UnityEngine.Object.DestroyImmediate(root.transform.GetChild(i).gameObject);
             ConfigureCanvas(root, 50);
             Transform panel = Stretch(root.transform, "PauseMenuPanel");
-            var dim = panel.gameObject.AddComponent<Image>();
-            dim.color = new Color(0.015f, 0.025f, 0.04f, 0.82f);
-            Transform page = DesignPage(panel);
-            Transform board = Box(page, "Pause hardware", 280, 110, 1360, 860, Paint).transform;
-            Stripes(board, 40, 38);
-            Label(board, "OPERATIONS / HOLD", 40, 75, 780, 28, 20, Hex("0B3D91"));
-            Label(board, "MISSION\nPAUSED", 40, 129, 750, 170, 77, Ink, true);
-            Label(board, "AWAITING OPERATOR COMMAND", 44, 324, 760, 30, 20, Ink);
-            Rule(board, 40, 382, 1280, Ink);
-            Button resume = MenuButton(board, "Resume", 30, 416, 650, 216);
-            Button retry = MenuButton(board, "Retry", 680, 416, 650, 216);
-            Button back = MenuButton(board, "Return", 30, 635, 650, 216);
-            Navigate(resume, retry, back);
-            Transform instrument = Box(board, "Hold instrument", 780, 110, 530, 240, Dark).transform;
-            Label(instrument, "CONTROL STATE", 24, 18, 480, 28, 17, Cyan);
-            Label(instrument, "HOLD", 24, 60, 480, 85, 68, Cream, true);
-            Label(instrument, "GAME TIME / SUSPENDED", 24, 175, 480, 30, 19, Cream);
-            Label(board, "[ ESC ]  RESUME\n\nSW-026 / CHECKLIST 02\nOPERATOR CONTROL PANEL", 775, 666, 550, 135, 18, Ink);
+            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .1f);
+            RectTransform content = Center(panel, "Pause content", new Vector2(540, 550), Vector2.zero);
+            RawImage title = CRTImage(content, "PauseTitle", new Vector2(540, 110), Vector2.zero, titleMaterial);
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0, 1);
+            title.rectTransform.pivot = new Vector2(0, 1);
+            CanvasGroup titleOpacity = title.gameObject.AddComponent<CanvasGroup>();
+            RectTransform divider = (RectTransform)Box(content, "Divider", 20, 126, 500, 2, new Color(1, 1, 1, .65f)).transform;
+            Transform buttons = Rect(content, "Buttons", 20, 150, 500, 400).transform;
+            CanvasGroup buttonOpacity = buttons.gameObject.AddComponent<CanvasGroup>();
+            Button resume = CRTButton(buttons, "Continue", 150, textMaterial, shutterMaterial, 0);
+            Button retry = CRTButton(buttons, "Retry", 50, textMaterial, shutterMaterial, 0);
+            Button settings = CRTButton(buttons, "Settings", -50, textMaterial, shutterMaterial, 0);
+            Button back = CRTButton(buttons, "PauseExit", -150, textMaterial, shutterMaterial, 0);
+            Transform settingsPanel = Stretch(panel, "Settings panel");
+            Button fullscreen = CRTButton(settingsPanel, "Fullscreen", 60, textMaterial, shutterMaterial, 0);
+            Button close = CRTButton(settingsPanel, "Close", -60, textMaterial, shutterMaterial, 0);
+            Navigate(fullscreen, close);
+            settingsPanel.gameObject.SetActive(false);
+            foreach (Button button in new[] { resume, retry, settings, back, fullscreen, close })
+            {
+                var motion = new SerializedObject(button.GetComponent<CRTMenuButton>());
+                motion.FindProperty("_tiltDegrees").floatValue = 0;
+                motion.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Navigate(resume, retry, settings, back);
+            var presentation = panel.gameObject.AddComponent<CRTPausePresentation>();
+            Wire(presentation, "_title", title, "_titleOpacity", titleOpacity, "_divider", divider, "_buttons", buttonOpacity);
             Wire(root.GetComponent<PauseUIManager>(), "_pauseMenuPanel", panel.gameObject,
-                "_resumeButton", resume, "_retryButton", retry, "_returnButton", back);
+                "_resumeButton", resume, "_retryButton", retry, "_returnButton", back,
+                "_settingsButton", settings, "_settingsPanel", settingsPanel.gameObject,
+                "_pauseContent", content.gameObject, "_closeSettingsButton", close, "_fullscreenButton", fullscreen);
             PrefabUtility.SaveAsPrefabAsset(root, path);
+            MenuVisualSettingsExport.Export(root);
             Snapshot(root, "PauseMenu");
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }
@@ -425,6 +465,8 @@ public static class NasaPunkMenuBuilder
                 if (name.EndsWith("Hover")) buttons[0].OnPointerEnter(null);
                 foreach (var button in buttons) button.Preview(clock, 1);
             }
+            var pause = copy.GetComponentInChildren<CRTPausePresentation>(true);
+            if (pause != null) pause.Preview(3);
             Canvas.ForceUpdateCanvases();
             camera.Render(); RenderTexture.active = rt;
             var texture = new Texture2D(1920, 1080, TextureFormat.RGB24, false);

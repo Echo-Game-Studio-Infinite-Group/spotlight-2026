@@ -11,6 +11,7 @@ OUTPUT = ROOT / 'Assets/Animations/EnemyHeavy'
 FPS = 30
 SWING = 'HeavyHorizontalSwing'
 RECOVER = 'HeavySwingRecover'
+DEATH = 'HeavyDeathBackward'
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=str(ROOT / 'Assets/Art/Models/EnemyHeavy/combat-mech_idle.fbx'))
@@ -82,41 +83,81 @@ def solve_arm(side, wrist_offset, elbow_hint):
 # 右臂的坐标以肩为原点：-X 向身体右侧、+Y 向后、Z 向上。
 POSES = [
     (0.00, 0, 0, 0, (-.05, -3.08, -5.81), (-1, -.25, 0)),
-    (.40, -5, -1, 1, (-1.1, -2.6, -4.5), (-2, .2, 0)),
-    (1.15, -19, -3, 2, (-2.6, .9, -2.0), (-2, -.2, .4)),
-    (1.90, -28, -4, 3, (-2.5, 3.8, -1.5), (-2, -.3, .6)),
-    (2.12, -30, -4, 3, (-2.6, 4.0, -1.5), (-2, -.3, .6)),
-    (2.34, -4, 2, -1, (-1.8, -4.4, -1.9), (-2, .2, .4)),
-    (2.54, 26, 4, -3, (3.2, -4.2, -2.1), (-1.5, -1, .6)),
-    (2.75, 30, 3, -2, (3.8, -3.5, -2.3), (-1.5, -1, .5)),
-    (3.00, 27, 2, -1, (3.5, -3.7, -2.2), (-1.5, -1, .5)),
-    (3.35, 24, 1, -1, (3.2, -3.4, -2.7), (-1.5, -.5, .3)),
-    (3.85, 12, 0, 0, (1.1, -2.9, -4.0), (-1.2, -.2, .1)),
-    (4.45, 3, 0, 0, (-.05, -2.8, -5.35), (-1, -.25, 0)),
-    (5.00, 0, 0, 0, (-.05, -3.08, -5.81), (-1, -.25, 0)),
+    (.35, -2, 0, 0, (-3.2, -2.0, -2.4), (-2, -.5, -.5)),
+    (.80, -6, 0, 0, (-5.5, -1.2, 0), (-2, -.3, -.3)),
+    (1.00, -7, 0, 0, (-5.5, -1.2, 0), (-2, -.3, -.3)),
+    (1.10, 1, 1, 0, (-2.5, -5.3, 0), (-2, -1, -.3)),
+    (1.23, 16, 2, -1, (2.3, -5.2, -.1), (-1, -2, -.3)),
+    (1.38, 20, 1, -1, (3.1, -4.8, -.3), (-1, -2, -.3)),
+    (1.80, 17, 0, 0, (2.9, -4.8, -.5), (-1, -2, -.3)),
+    (2.30, 12, 0, 0, (1.5, -3.8, -2.6), (-1.5, -.7, 0)),
+    (3.00, 4, 0, 0, (-.2, -3.0, -4.6), (-1, -.25, 0)),
+    (3.80, 0, 0, 0, (-.05, -3.08, -5.81), (-1, -.25, 0)),
 ]
+
+
+def crouch(depth):
+    # 降低骨盆后解算三段机械腿，脚掌保持原落点，避免下蹲变成整体下沉。
+    pelvis = rig.pose.bones['pelvis']
+    matrix = pelvis.matrix.copy()
+    matrix.translation.z -= depth
+    pelvis.matrix = matrix
+    bpy.context.view_layer.update()
+    for side, foot_name in (('L', 'foot_L'), ('R', 'foot_r')):
+        names = ['femoral_' + side, 'knee_' + side, 'leg_' + side]
+        points = [rig.pose.bones[name].head.copy() for name in names]
+        points.append(rig.pose.bones[foot_name].head.copy())
+        lengths = [(points[i + 1] - points[i]).length for i in range(3)]
+        anchor = points[0].copy()
+        target = original[foot_name].translation.copy()
+        for _ in range(24):
+            points[3] = target.copy()
+            for i in range(2, -1, -1):
+                points[i] = points[i + 1] + (points[i] - points[i + 1]).normalized() * lengths[i]
+            points[0] = anchor.copy()
+            for i in range(3):
+                points[i + 1] = points[i] + (points[i + 1] - points[i]).normalized() * lengths[i]
+        for i, name in enumerate(names):
+            point_bone(name, points[i + 1] - points[i])
+        rig.pose.bones[foot_name].matrix = original[foot_name].copy()
+        bpy.context.view_layer.update()
 
 
 def pose(values):
     time, yaw, lean, roll, wrist, hint = values
     reset_pose()
-    if time == 0 or time == 5:
+    if time == 0 or time == 3.8:
         return
+    depth, bend = {
+        .35: (.25, 6), .80: (1.15, 23), 1.00: (1.45, 30),
+        1.10: (1.55, 32), 1.23: (1.55, 32), 1.38: (1.50, 30),
+        1.80: (1.35, 26), 2.30: (.75, 15), 3.00: (.20, 4),
+    }[time]
+    crouch(depth)
     rotate_world('body', yaw, (0, 0, 1))
-    rotate_world('body', lean, (1, 0, 0))
+    rotate_world('body', lean + bend, (1, 0, 0))
     rotate_world('body', roll, (0, 1, 0))
-    # 肩膀跟随躯干，脚掌与根节点保留待机姿态，避免原地攻击产生滑步。
+    # 下压与转腰共同发力，右手仍沿水平轨迹快速横扫。
     rotate_world('head', -yaw * .22, (0, 0, 1))
+    if .8 <= time <= 1.8:
+        # 模型在预制体缩放为 0.5；拳头抬到敌人胸口附近，避免挥到地面。
+        x, y, _ = wrist
+        horizontal = Vector((x, y, 0))
+        horizontal.normalize()
+        horizontal *= 4.65
+        shoulder_height = rig.pose.bones['arm_R'].head.z
+        wrist = (horizontal.x, horizontal.y, 4.5 - shoulder_height)
+        hint = (-1, -.5, -.6)
     solve_arm('R', wrist, hint)
     # 左臂轻微提起制衡；机械手指随挥击握紧。
-    strength = min(time / 1.2, 1, max(0, (5 - time) / 1.1))
+    strength = min(time / .8, 1, max(0, (3.8 - time) / 1.1))
     rotate_world('arm_L', 12 * strength, (1, 0, 0))
     rotate_world('arm_L.001', 15 * strength, (1, 0, 0))
     for name in ('finger_R', 'finger_R.001'):
         rotate_world(name, 18 * strength, (1, 0, 0))
 
 
-master = bpy.data.actions.new('HeavyMelee_5s_EDIT')
+master = bpy.data.actions.new('HeavyMelee_3_8s_EDIT')
 master.use_fake_user = True
 rig.animation_data_create()
 rig.animation_data.action = master
@@ -160,12 +201,67 @@ def baked_action(name, start, end):
     return action
 
 
-swing = baked_action(SWING, 1, 91)
-recover = baked_action(RECOVER, 91, 151)
+swing = baked_action(SWING, 1, 55)
+recover = baked_action(RECOVER, 55, 115)
+
+death_master = bpy.data.actions.new('HeavyDeathBackward_EDIT')
+death_master.use_fake_user = True
+rig.animation_data.action = death_master
+# 先双膝落地停顿，再从跪姿向后仰倒；双臂以错相的小幅惯性前后摆动。
+for time, depth, kneel, angle, swing_r, swing_l in [
+    (0, 0, 0, 0, 0, 0), (.30, .35, .10, 0, 7, 4),
+    (.65, 1.5, .5, 0, -10, -7), (1.0, 2.6, 1, 0, 12, 9),
+    (1.20, 2.6, 1, 0, -8, -11), (1.45, 2.6, 1, -12, 10, 7),
+    (1.75, 2.6, 1, -40, -12, -9), (2.10, 2.6, 1, -72, 9, 12),
+    (2.30, 2.6, 1, -85, -7, -5), (2.45, 2.6, 1, -82, 5, 8),
+    (2.65, 2.6, 1, -85, -3, -2), (3, 2.6, 1, -85, 0, 0)]:
+    reset_pose()
+    crouch(depth)
+    for side, foot_name in (('L', 'foot_L'), ('R', 'foot_r')):
+        for name, direction in [('femoral_' + side, (0, -.55, -.83)),
+                                ('knee_' + side, (0, .98, .2)),
+                                ('leg_' + side, (0, .98, -.2))]:
+            bone = rig.pose.bones[name]
+            current = (bone.tail - bone.head).normalized()
+            point_bone(name, current.lerp(Vector(direction).normalized(), kneel))
+        rotate_world(foot_name, 75 * kneel, (1, 0, 0))
+    rotate_world('body', 10 * kneel, (1, 0, 0))
+    # 手臂保持自然下垂，用错相摆动表现失衡，不主动张开双手。
+    rotate_world('arm_R', swing_r, (1, 0, 0))
+    rotate_world('arm_L', swing_l, (1, 0, 0))
+    rotate_world('arm_R.001', -swing_r * .65, (1, 0, 0))
+    rotate_world('arm_L.001', -swing_l * .65, (1, 0, 0))
+    root_bone = rig.pose.bones['root']
+    pivot = Vector((0, -1.3, .8))
+    rotation = Quaternion(Vector((1, 0, 0)), math.radians(angle)).to_matrix().to_4x4()
+    matrix = rotation @ root_bone.matrix
+    matrix.translation = pivot + rotation.to_3x3() @ (root_bone.matrix.translation - pivot)
+    root_bone.matrix = matrix
+    bpy.context.view_layer.update()
+    # 用蒙皮后的最低点贴地，避免胸甲和手掌穿过地面。
+    evaluated = mesh.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    geometry = evaluated.to_mesh()
+    floor = min((evaluated.matrix_world @ v.co).z for v in geometry.vertices)
+    evaluated.to_mesh_clear()
+    matrix = rig.pose.bones['root'].matrix.copy()
+    matrix.translation.z -= floor
+    rig.pose.bones['root'].matrix = matrix
+    bpy.context.view_layer.update()
+    for bone in rig.pose.bones:
+        for prop in ('location', 'rotation_quaternion', 'scale'):
+            bone.keyframe_insert(prop, frame=1 + round(time * FPS), group=bone.name)
+for curve in death_master.fcurves:
+    for key in curve.keyframe_points:
+        key.interpolation = 'BEZIER'
+        key.handle_left_type = key.handle_right_type = 'AUTO_CLAMPED'
+melee_master = master
+master = death_master
+death = baked_action(DEATH, 1, 91)
+master = melee_master
 OUTPUT.mkdir(exist_ok=True)
-for action, duration in ((swing, 3), (recover, 2)):
+for action, duration in ((swing, 1.8), (recover, 2), (death, 3)):
     rig.animation_data.action = action
-    scene.frame_start, scene.frame_end = 1, 1 + duration * FPS
+    scene.frame_start, scene.frame_end = 1, 1 + round(duration * FPS)
     scene.frame_set(1)
     bpy.ops.object.select_all(action='DESELECT')
     rig.select_set(True)
@@ -181,11 +277,11 @@ for action, duration in ((swing, 3), (recover, 2)):
         bake_anim_simplify_factor=0,
     )
 
-# .blend 保留模型、稀疏可编辑关键帧和两个已烘焙动作；不放 Assets，避免 Unity 自动调用 Blender。
+# .blend 保留模型及可编辑、已烘焙动作；不放 Assets，避免 Unity 自动调用 Blender。
 rig.animation_data.action = master
-scene.frame_start, scene.frame_end = 1, 151
+scene.frame_start, scene.frame_end = 1, 115
 scene.timeline_markers.clear()
-for label, frame in [('READY', 1), ('PULL_BACK', 35), ('CHARGED', 58), ('SWEEP', 71), ('FOLLOW_THROUGH', 83), ('RECOVER_START', 91), ('IDLE', 151)]:
+for label, frame in [('READY', 1), ('RAISE', 25), ('SWEEP', 34), ('FOLLOW_THROUGH', 42), ('RECOVER_START', 55), ('IDLE', 115)]:
     scene.timeline_markers.new(label, frame=frame)
 
 # 预览只替换 Blender 的材质，不影响 Unity 原模型或材质。
@@ -242,11 +338,9 @@ for screen in bpy.data.screens:
             area.spaces.active.region_3d.view_rotation = camera.rotation_euler.to_quaternion()
 bpy.ops.wm.save_as_mainfile(filepath=str(HERE / 'EnemyHeavy_Melee.blend'))
 
-report = {'fps': FPS, 'actions': {SWING: 3, RECOVER: 2}, 'bone_count': len(rig.pose.bones), 'poses': []}
-for frame in [1, 35, 58, 65, 71, 77, 83, 91, 106, 121, 136, 151]:
+report = {'fps': FPS, 'actions': {SWING: 1.8, RECOVER: 2, DEATH: 3}, 'bone_count': len(rig.pose.bones), 'poses': []}
+for frame in [1, 25, 31, 34, 38, 42, 55, 70, 91, 115]:
     scene.frame_set(frame)
     report['poses'].append({'frame': frame, 'wrist_R': list(rig.pose.bones['hand_R'].head), 'foot_R': list(rig.pose.bones['foot_r'].head), 'foot_L': list(rig.pose.bones['foot_L'].head)})
-    scene.render.filepath = str(HERE / ('pose_%03d.png' % frame))
-    bpy.ops.render.render(write_still=True)
 (HERE / 'animation-report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
 print('HEAVY_MELEE_AUTHORING_COMPLETE')

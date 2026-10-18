@@ -9,6 +9,11 @@ public class PauseUIManager : MonoBehaviour
     [SerializeField] private Button _resumeButton;
     [SerializeField] private Button _retryButton;
     [SerializeField] private Button _returnButton;
+    [SerializeField] private Button _settingsButton;
+    [SerializeField] private GameObject _settingsPanel;
+    [SerializeField] private GameObject _pauseContent;
+    [SerializeField] private Button _closeSettingsButton;
+    [SerializeField] private Button _fullscreenButton;
     private PlayerInputReader _input;
     private bool _isPause;
 
@@ -18,6 +23,9 @@ public class PauseUIManager : MonoBehaviour
         _resumeButton.onClick.AddListener(ResumeGame);
         _retryButton.onClick.AddListener(RetryGame);
         _returnButton.onClick.AddListener(ReturnToTitle);
+        _settingsButton.onClick.AddListener(() => ShowSettings(true));
+        _closeSettingsButton.onClick.AddListener(() => ShowSettings(false));
+        _fullscreenButton.onClick.AddListener(() => Screen.fullScreen = !Screen.fullScreen);
         _pauseMenuPanel.SetActive(false);
     }
 
@@ -31,6 +39,7 @@ public class PauseUIManager : MonoBehaviour
 
     private void TogglePause()
     {
+        if (_isPause && _settingsPanel.activeSelf) { ShowSettings(false); return; }
         if (_isPause) ResumeGame();
         else PauseGame();
     }
@@ -42,6 +51,7 @@ public class PauseUIManager : MonoBehaviour
         _input.SetGameplayEnabled(false);
         AudioListener.pause = true;
         _pauseMenuPanel.SetActive(true);
+        ShowSettings(false);
         EventSystem.current.SetSelectedGameObject(_resumeButton.gameObject);
     }
 
@@ -56,6 +66,13 @@ public class PauseUIManager : MonoBehaviour
     }
 
     public void RetryGame() => LoadScene(SceneManager.GetActiveScene().path);
+    private void ShowSettings(bool visible)
+    {
+        _settingsPanel.SetActive(visible);
+        _pauseContent.SetActive(!visible);
+        EventSystem.current.SetSelectedGameObject(visible ? _fullscreenButton.gameObject : _resumeButton.gameObject);
+    }
+
     public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenu.unity");
 
     private void LoadScene(string path)

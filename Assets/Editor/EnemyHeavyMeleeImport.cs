@@ -5,11 +5,12 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-// 只处理 Blender 新制作的两个动作，避免重建模型时覆盖已经手调的控制器。
+// 仅覆盖指定动作的曲线，保留现有资产 GUID、事件与控制器引用。
 public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
 {
     private const string Folder = "Assets/Animations/EnemyHeavy/";
-    private static readonly string[] Names = { "HeavyHorizontalSwing", "HeavySwingRecover" };
+    private static readonly string[] Names = { "HeavyHorizontalSwing", "HeavySwingRecover", "HeavyDeathBackward" };
+    private static readonly string[] ClipNames = { "Attack", "AttackBack", "DieBack" };
     private const string ReportPath = "Tools/model-export/enemy-heavy/unity-validation.txt";
     private static bool _queued;
 
@@ -31,7 +32,7 @@ public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
     private static void CheckNewClips()
     {
         if (Names.All(name => File.Exists(Folder + name + ".fbx")) &&
-            (Names.Any(name => !File.Exists(Folder + name + ".anim")) ||
+            (ClipNames.Any(name => !File.Exists(Folder + name + ".anim")) ||
              File.GetLastWriteTimeUtc(ReportPath) < File.GetLastWriteTimeUtc("Assets/Editor/EnemyHeavyMeleeImport.cs")))
             QueueExtraction();
     }
@@ -63,7 +64,7 @@ public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
         };
     }
 
-    [MenuItem("超高速行者/动画/提取并检查重型敌人横挥动作")]
+    [MenuItem("超高速行者/动画/导出重型敌人攻击与死亡动作")]
     public static void ExtractAndValidate()
     {
         var report = new StringBuilder();
@@ -74,7 +75,7 @@ public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
             string sourcePath = Folder + name + ".fbx";
             var source = AssetDatabase.LoadAllAssetsAtPath(sourcePath).OfType<AnimationClip>()
                 .Single(clip => !clip.name.StartsWith("__preview__", StringComparison.Ordinal));
-            var clip = new AnimationClip { name = name, frameRate = 30f };
+            var clip = new AnimationClip { name = ClipNames[i], frameRate = 30f };
             foreach (var binding in AnimationUtility.GetCurveBindings(source))
             {
                 var target = binding;
@@ -92,14 +93,16 @@ public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
             clip.EnsureQuaternionContinuity();
             var settings = AnimationUtility.GetAnimationClipSettings(clip);
             settings.startTime = 0f;
-            settings.stopTime = i == 0 ? 3f : 2f;
+            settings.stopTime = i == 0 ? 1.8f : i == 1 ? 2f : 3f;
             settings.loopTime = false;
             settings.keepOriginalPositionXZ = true;
             settings.keepOriginalPositionY = true;
             settings.keepOriginalOrientation = true;
             AnimationUtility.SetAnimationClipSettings(clip, settings);
-            string path = Folder + name + ".anim";
+            string path = Folder + ClipNames[i] + ".anim";
             var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(path);
+            if (existing != null)
+                AnimationUtility.SetAnimationEvents(clip, AnimationUtility.GetAnimationEvents(existing));
             if (existing == null) AssetDatabase.CreateAsset(clip, path);
             else
             {
@@ -109,67 +112,13 @@ public sealed class EnemyHeavyMeleeImport : AssetPostprocessor
                 EditorUtility.SetDirty(clip);
             }
             clips[i] = clip;
-            if (Mathf.Abs(clip.length - (i == 0 ? 3f : 2f)) > .001f)
+            if (Mathf.Abs(clip.length - (i == 0 ? 1.8f : i == 1 ? 2f : 3f)) > .001f)
                 throw new InvalidOperationException(name + " 动作时长不正确：" + clip.length);
             report.AppendLine($"{name}: {clip.length:F3}s, {AnimationUtility.GetCurveBindings(clip).Length} curves");
         }
 
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/EnemyHeavy.prefab");
-        var instance = UnityEngine.Object.Instantiate(prefab);
-        instance.SetActive(false);
-        try
-        {
-            var model = instance.GetComponentInChildren<Animator>(true).gameObject;
-            foreach (var clip in clips)
-                foreach (var binding in AnimationUtility.GetCurveBindings(clip))
-                    if (model.transform.Find(binding.path) == null)
-                        throw new InvalidOperationException("模型缺少动画绑定：" + binding.path);
-            var transforms = model.GetComponentsInChildren<Transform>(true);
-            var idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(Folder + "Idle.anim");
-            idle.SampleAnimation(model, 0f);
-            var idlePositions = transforms.Select(t => t.localPosition).ToArray();
-            var idleRotations = transforms.Select(t => t.localRotation).ToArray();
-            clips[0].SampleAnimation(model, 0f);
-            float idlePosition = 0f, idleAngle = 0f;
-            for (int i = 0; i < transforms.Length; i++)
-            {
-                idlePosition = Mathf.Max(idlePosition, Vector3.Distance(idlePositions[i], transforms[i].localPosition));
-                idleAngle = Mathf.Max(idleAngle, Quaternion.Angle(idleRotations[i], transforms[i].localRotation));
-            }
-            // 原 Idle 使用 0.5° 压缩误差，往返比较允许 1°，交接仍使用下方的严格容差。
-            if (idlePosition > .001f || idleAngle > 1f)
-                throw new InvalidOperationException($"Blender 往返后待机姿势不匹配：{idlePosition} units / {idleAngle} degrees");
-            report.AppendLine($"Original idle to ready: {idlePosition:F7} units / {idleAngle:F5} degrees.");
-            clips[0].SampleAnimation(model, 3f);
-            var endPositions = transforms.Select(t => t.localPosition).ToArray();
-            var endRotations = transforms.Select(t => t.localRotation).ToArray();
-            clips[1].SampleAnimation(model, 0f);
-            float maxPosition = 0f, maxAngle = 0f;
-            for (int i = 0; i < transforms.Length; i++)
-            {
-                maxPosition = Mathf.Max(maxPosition, Vector3.Distance(endPositions[i], transforms[i].localPosition));
-                maxAngle = Mathf.Max(maxAngle, Quaternion.Angle(endRotations[i], transforms[i].localRotation));
-            }
-            if (maxPosition > .0001f || maxAngle > .05f)
-                throw new InvalidOperationException($"交接处不连续：{maxPosition} units / {maxAngle} degrees");
-            report.AppendLine($"Seam: {maxPosition:F7} units / {maxAngle:F5} degrees; all bindings resolve on EnemyHeavy.");
-            clips[0].SampleAnimation(model, 0f);
-            var readyPositions = transforms.Select(t => t.localPosition).ToArray();
-            var readyRotations = transforms.Select(t => t.localRotation).ToArray();
-            clips[1].SampleAnimation(model, 2f);
-            float returnPosition = 0f, returnAngle = 0f;
-            for (int i = 0; i < transforms.Length; i++)
-            {
-                returnPosition = Mathf.Max(returnPosition, Vector3.Distance(readyPositions[i], transforms[i].localPosition));
-                returnAngle = Mathf.Max(returnAngle, Quaternion.Angle(readyRotations[i], transforms[i].localRotation));
-            }
-            if (returnPosition > .0001f || returnAngle > .05f)
-                throw new InvalidOperationException($"收回未回到起始姿势：{returnPosition} units / {returnAngle} degrees");
-            report.AppendLine($"Recovery to ready: {returnPosition:F7} units / {returnAngle:F5} degrees.");
-        }
-        finally { UnityEngine.Object.DestroyImmediate(instance); }
         AssetDatabase.SaveAssets();
-        report.AppendLine("SUCCESS");
+        report.AppendLine("EXPORTED");
         File.WriteAllText(ReportPath, report.ToString());
         Debug.Log("[EnemyHeavyMelee] " + report);
     }

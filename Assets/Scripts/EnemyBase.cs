@@ -1,4 +1,4 @@
-﻿using Cinemachine;
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -30,6 +30,8 @@ public class EnemyBase : MonoBehaviour
     private const float DefaultCooldown = 1.1f;
 
     [Header("移动与受伤")]
+    [SerializeField, Min(0f), Tooltip("单次实际伤害严格超过此值才播放受伤动作")]
+    private float _hurtDamageThreshold;
     [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
     [SerializeField, Min(0f)] private float _walkSpeed = 2f;
     [SerializeField, Min(0f)] private float _runSpeed = 5f;
@@ -76,6 +78,13 @@ public class EnemyBase : MonoBehaviour
     public float MoveSpeed => _walkSpeed;
     public float AttackRange => _attackRange;
     public bool IsChasing => _chasePlayer;
+
+    /// <summary>
+    /// 寻路代理。派生类（重型敌人）直接用它，不要再声明同名的私有字段：
+    /// 基类的 _agent 是 [SerializeField]，层级里出现两个同名字段会让 Unity 直接报
+    /// 「The same field name is serialized multiple times」，并且序列化值归属不明。
+    /// </summary>
+    protected NavMeshAgent Agent => _agent;
 
     public void ConfigureStats(float maxHealth, float attackPower, float moveSpeed)
     {
@@ -181,7 +190,7 @@ public class EnemyBase : MonoBehaviour
 
         if (source.IsAlive)
         {
-            if (_animation != null) { StopMoving(); _animation.PlayHurt(); }
+            if (_animation != null && applied > _hurtDamageThreshold) { StopMoving(); _animation.PlayHurt(); }
             return;
         }
 
@@ -192,10 +201,10 @@ public class EnemyBase : MonoBehaviour
         if (_animation != null) _animation.PlayDeath();
     }
 
-    // 命中玩家：震动方向取「敌人 → 玩家」的世界方向，力度走 CameraShaker 的统一换算。
+    // 命中玩家：震动方向取「敌人 → 玩家」的世界方向，力度走 VCameraEffects 的统一换算。
     private void OnLandedHit(HealthComponent target, Vector3 point, Vector3 direction, float applied)
     {
-        CameraShaker.Emit(_impulseSource, direction, AttackDamage);
+        VCameraEffects.Emit(_impulseSource, direction, AttackDamage);
     }
 
     public void FinishAttack()
