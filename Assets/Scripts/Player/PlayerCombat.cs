@@ -52,6 +52,12 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
     public event System.Action<IAttackDamageReceiver, AttackDamageRequest, AttackDamageResult> SequenceHitLanded;
     public bool IsSequenceDriven { get; private set; }
 
+    /// <summary>
+    /// 动作集里的「攻击招式」正在播放（有战斗载荷的序列动作）。
+    /// 动画侧用它决定腿部层要不要让位给移动：普攻片段只该管上半身。
+    /// </summary>
+    public bool IsAttackSequenceActive => _sequenceInstance != 0 && _sequenceCombat != null;
+
     /// <summary>判定盒从这里取伤害值，因此攻击力只有一处真值（序列招式会临时覆盖组件上的值）。</summary>
     public float AttackDamage { get { return Combat != null ? Combat.Damage : 0f; } }
     public float AttackDuration { get { return Combat != null ? Combat.WindowSeconds : 0f; } }
@@ -168,13 +174,10 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
         return Combat != null && Combat.TryBeginAttack(now);
     }
 
-    /// <summary>按下 parry：开判定窗口，并取消进行中的普攻（连续 parry 的前提）。</summary>
+    /// <summary>按下 parry：开判定窗口。与攻击同键（左键），所以这里不动正在挥的那一刀。</summary>
     public bool BeginParry(float now)
     {
         if (Combat == null || !Combat.ReceiveAction(InputBuffer.Action.Parry, now)) return false;
-        // 序列驱动的普攻活在动作系统里，CombatComponent 的收招够不到它，要连动作一起中断。
-        // 只中断带战斗的序列：跳跃 / 滑铲不该因为按了一下 parry 被打断。
-        if (_sequenceInstance != 0 && _sequenceCombat != null && _runner != null) _runner.Interrupt();
         return true;
     }
 

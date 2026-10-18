@@ -134,7 +134,8 @@ public sealed class CombatComponent : MonoBehaviour
     /// <summary>
     /// 开 parry 窗口。三种情况拒绝：冷却未走完、窗口还开着、已死亡。
     /// 一次按键只给一次判定（窗口开着时不重开）＋ 一秒冷却，两者一起把「按住不放 / 连点」堵死。
-    /// 同时取消进行中的普攻，连续 parry 才接得起来。
+    /// 注意：**不取消进行中的攻击**。parry 与攻击现在是同一个键（左键，拼刀流），
+    /// 开窗就收招等于每次按下都把自己那一刀砍掉。
     /// </summary>
     public bool TryBeginParry(float now)
     {
@@ -143,7 +144,6 @@ public sealed class CombatComponent : MonoBehaviour
         if (_self != null && !_self.IsAlive) return false;
         _parryWindowEnd = now + _parryWindowSeconds;
         _parryReadyAt = now + _parryCooldownSeconds;
-        FinishAttack();
         return true;
     }
 

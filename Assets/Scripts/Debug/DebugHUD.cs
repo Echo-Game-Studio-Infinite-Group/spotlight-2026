@@ -44,7 +44,7 @@ public sealed class DebugHUD : MonoBehaviour
             : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
         GUILayout.Label("WAD 移动 · S 地面刹车 · Shift 奔跑 · Ctrl 滑铲", _style);
-        GUILayout.Label("Space 跳跃/蹬墙 · 左键 攻击 · E parry", _style);
+        GUILayout.Label("Space 跳跃/蹬墙 · 左键 攻击+parry · E 备用 parry", _style);
         GUILayout.Label("Esc 鼠标锁定 · F3 面板", _style);
         GUILayout.EndArea();
     }
@@ -82,7 +82,7 @@ public sealed class DebugHUD : MonoBehaviour
                 ? $"命中减速中 {TimeManager.SlowRate:0.##}x · 速率 {TimeManager.PlayerRate:0.##}"
                 : $"常速 {TimeManager.PlayerRate:0.##}", _style);
 
-        // parry 单独的读数：窗口是否开着是「按 E 到底有没有生效」最直接的观察点
+        // parry 单独的读数：窗口是否开着是「左键到底有没有开出判定」最直接的观察点
         if (_combat == null)
         {
             GUILayout.Label("parry 未接入 CombatComponent", _style);
