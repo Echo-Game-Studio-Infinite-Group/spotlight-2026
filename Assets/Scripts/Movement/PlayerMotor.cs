@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using GameJam.Actions;
 using UnityEngine;
 
@@ -72,6 +72,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
     public Vector3 WallNormal => IsWallSliding ? _wallNormal : Vector3.zero;
+    /// <summary>贴墙接触点（世界坐标）。不在划墙状态时为零向量——特效层别拿它当锚点。</summary>
+    public Vector3 WallPoint => IsWallSliding && _contacts != null ? _contacts.WallPoint : Vector3.zero;
     public bool InFrictionWindow => IsGrounded && FrictionWindowRemaining > 0f;
     public float FrictionWindowRemaining => IsGrounded ? Mathf.Max(0f, _params.FrictionExemptWindow - (_clock - _landTime)) : 0f;
     public float WallWindowRemaining => IsWallSliding ? Mathf.Max(0f, _params.WallGraceTime - (_clock - _wallTime)) : 0f;

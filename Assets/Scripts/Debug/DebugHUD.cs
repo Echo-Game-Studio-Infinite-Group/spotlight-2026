@@ -87,9 +87,12 @@ public sealed class DebugHUD : MonoBehaviour
         }
         else
         {
-            GUILayout.Label(_combat.IsParrying(TimeManager.UnscaledTime)
+            float now = TimeManager.UnscaledTime;
+            GUILayout.Label(_combat.IsParrying(now)
                 ? $"parry 窗口开启中 · 无敌 {_combat.ParryInvulnerableSeconds:0.##}s"
-                : $"parry 就绪 · 窗口 {_combat.ParryWindowSeconds:0.##}s / 无敌 {_combat.ParryInvulnerableSeconds:0.##}s", _style);
+                : _combat.IsParryReady(now)
+                    ? $"parry 就绪 · 窗口 {_combat.ParryWindowSeconds:0.##}s / 无敌 {_combat.ParryInvulnerableSeconds:0.##}s"
+                    : $"parry 冷却 {_combat.ParryCooldownRemaining(now):0.0}s", _style);
         }
     }
 }

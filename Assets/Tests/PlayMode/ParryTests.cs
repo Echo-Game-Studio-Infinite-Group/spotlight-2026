@@ -88,6 +88,19 @@ public sealed class ParryTests
     }
 
     [Test]
+    public void Parry_HasOneSecondCooldown()
+    {
+        float now = TimeManager.UnscaledTime;
+        Assert.IsTrue(OpenParry(now), "第一次 parry 应当成功");
+        Assert.IsFalse(_playerCombat.IsParryReady(now + 0.2f), "冷却期内不该就绪");
+        Assert.IsFalse(OpenParry(now + 0.2f), "冷却期内再按不能开窗");
+        Assert.IsFalse(OpenParry(now + 0.9f), "冷却结束前一帧也不能开窗");
+        Assert.IsTrue(_playerCombat.IsParryReady(now + 1.01f), "1 秒后应当就绪");
+        Assert.IsTrue(OpenParry(now + 1.01f), "冷却走完后应当能再次 parry");
+        Assert.GreaterOrEqual(_playerCombat.ParryCooldownSeconds, 1f - 0.001f);
+    }
+
+    [Test]
     public void HitOutsideWindow_StillDamages()
     {
         float before = _playerHealth.Health;

@@ -29,6 +29,8 @@ public sealed class CombatComponent : MonoBehaviour
     [SerializeField, Min(0f)] private float _parryInvulnerableSeconds = 0.8f;
     [Tooltip("近战 parry 成功时的全局时缓时长。0.2s 以下会被读成「卡了一下」而不是慢放")]
     [SerializeField, Min(0f)] private float _parrySlowSeconds = 0.6f;
+    [Tooltip("parry 冷却：一次开窗之后要等这么久才能再按")]
+    [SerializeField, Min(0f)] private float _parryCooldownSeconds = 1f;
     [Tooltip("近战 parry 时缓压到的倍率（策划案：原先的 5%–10%）")]
     [SerializeField, Range(0.01f, 1f)] private float _parrySlowRate = 0.1f;
 
@@ -47,6 +49,8 @@ public sealed class CombatComponent : MonoBehaviour
     private bool _windowOpen;
     // parry 窗口终点。与攻击窗口分开记：两者可以同时存在（普攻后摇里按 parry）。
     private float _parryWindowEnd = float.NegativeInfinity;
+    // parry 冷却终点。开窗时就记，防止「连点 E 刷判定」把 parry 变成按住即无敌。
+    private float _parryReadyAt = float.NegativeInfinity;
     private long _sequenceInstance;
     // 序列招式的临时伤害。< 0 表示没有覆盖，此时用落盘的 _damage。
     private float _sequenceDamage = -1f;
@@ -74,6 +78,7 @@ public sealed class CombatComponent : MonoBehaviour
     public float ParryInvulnerableSeconds { get => _parryInvulnerableSeconds; set => _parryInvulnerableSeconds = Mathf.Max(0f, value); }
     public float ParrySlowSeconds { get => _parrySlowSeconds; set => _parrySlowSeconds = Mathf.Max(0f, value); }
     public float ParrySlowRate { get => _parrySlowRate; set => _parrySlowRate = Mathf.Clamp(value, 0.01f, 1f); }
+    public float ParryCooldownSeconds { get => _parryCooldownSeconds; set => _parryCooldownSeconds = Mathf.Max(0f, value); }
     /// <summary>本组件的攻击要求玩家用哪种 parry 接。判定盒与远程结算构造请求时读它。</summary>
     public AttackParryKind ParryKind { get => _parryKind; set => _parryKind = value; }
 
@@ -120,16 +125,24 @@ public sealed class CombatComponent : MonoBehaviour
     /// <summary>parry 判定窗口开着没。now 由持有者按自己的时钟传。</summary>
     public bool IsParrying(float now) => now < _parryWindowEnd;
 
+    /// <summary>parry 冷却走完没。HUD 与测试读它。</summary>
+    public bool IsParryReady(float now) => now >= _parryReadyAt;
+
+    /// <summary>还剩多少冷却（秒）。给 HUD / 音效做出手提示用。</summary>
+    public float ParryCooldownRemaining(float now) => Mathf.Max(0f, _parryReadyAt - now);
+
     /// <summary>
-    /// 开 parry 窗口。窗口已经开着时不再开新窗：一次按键只给一次判定，
-    /// 否则按住不放就能刷出无限判定。同时取消进行中的普攻，连续 parry 才接得起来。
+    /// 开 parry 窗口。三种情况拒绝：冷却未走完、窗口还开着、已死亡。
+    /// 一次按键只给一次判定（窗口开着时不重开）＋ 一秒冷却，两者一起把「按住不放 / 连点」堵死。
+    /// 同时取消进行中的普攻，连续 parry 才接得起来。
     /// </summary>
     public bool TryBeginParry(float now)
     {
-        if (_parryWindowSeconds <= 0f || IsParrying(now)) return false;
+        if (_parryWindowSeconds <= 0f || IsParrying(now) || !IsParryReady(now)) return false;
         EnsureReferences();
         if (_self != null && !_self.IsAlive) return false;
         _parryWindowEnd = now + _parryWindowSeconds;
+        _parryReadyAt = now + _parryCooldownSeconds;
         FinishAttack();
         return true;
     }
@@ -169,6 +182,7 @@ public sealed class CombatComponent : MonoBehaviour
         _windowEnd = float.NegativeInfinity;
         _windowOpen = false;
         _parryWindowEnd = float.NegativeInfinity;
+        _parryReadyAt = float.NegativeInfinity;
         _sequenceInstance = 0;
         _sequenceDamage = -1f;
         _groupDamage.Clear();
