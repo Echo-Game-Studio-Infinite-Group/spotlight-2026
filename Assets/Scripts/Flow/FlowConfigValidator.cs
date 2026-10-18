@@ -74,6 +74,7 @@ namespace GameJam.Flow
                 FlowRoomTemplate template = variant.Room.Template;
                 if (template == null) continue;
                 errors.AddRange(FlowEnemySpawnValidation.Variant(variant));
+                errors.AddRange(FlowTextValidation.Variant(variant));
                 foreach (string groupId in variant.ContentGroups)
                 {
                     bool found = false;
@@ -90,6 +91,7 @@ namespace GameJam.Flow
                 if (room.Template == null) { errors.Add(room.name + "：缺少模板"); continue; }
                 FlowRoomTemplate template = room.Template;
                 errors.AddRange(FlowEnemySpawnValidation.Template(template));
+                errors.AddRange(FlowTextValidation.Template(template));
                 if (template.Entry == null || template.Exit == null || template.EntryDoor == null || template.ExitDoor == null) errors.Add(room.name + "：门接口或门板缺失");
                 if (template.EntrySize.x <= 0 || template.EntrySize.y <= 0 || template.ExitSize.x <= 0 || template.ExitSize.y <= 0) errors.Add(room.name + "：门洞尺寸必须为正数");
                 if (template.transform.localScale != UnityEngine.Vector3.one) errors.Add(room.name + "：房间模板根节点不能缩放");

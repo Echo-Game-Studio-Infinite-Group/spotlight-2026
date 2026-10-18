@@ -30,6 +30,7 @@ namespace GameJam.Flow
         public FlowCheckpoint[] Checkpoints { get; private set; }
         public RoomVariantController Variants { get; private set; }
         public FlowRoomEnemies Enemies { get; private set; }
+        public FlowRoomTexts Texts { get; private set; }
         private NavMeshDataInstance _navigationInstance;
 
         public NavMeshDataInstance RegisterNavigation()
@@ -38,13 +39,14 @@ namespace GameJam.Flow
             if (Navigation != null) _navigationInstance = NavMesh.AddNavMeshData(Navigation, transform.position, transform.rotation);
             return _navigationInstance;
         }
-        private void OnDisable() { Enemies?.SetCurrent(false); if (_navigationInstance.valid) _navigationInstance.Remove(); }
+        private void OnDisable() { Enemies?.SetCurrent(false); Texts?.SetCurrent(false); if (_navigationInstance.valid) _navigationInstance.Remove(); }
 
         public void Bind(RunFlowController flow, FlowRoomInstance instance)
         {
             Checkpoints = GetComponentsInChildren<FlowCheckpoint>(true);
             Variants = new RoomVariantController(this);
             Enemies = new FlowRoomEnemies(this, instance.Variant);
+            Texts = new FlowRoomTexts(this, instance.Variant);
             foreach (StabilityDevice device in GetComponentsInChildren<StabilityDevice>(true)) device.Bind(flow, instance);
             Variants.Apply(instance.Variant, false);
             Vector3 entryScale = EntryDoor.transform.localScale, exitScale = ExitDoor.transform.localScale;
@@ -53,7 +55,7 @@ namespace GameJam.Flow
             SetEntryOpen(true); SetExitOpen(false);
         }
         public void SetEntryOpen(bool open) => EntryDoor.SetActive(!open);
-        public void SetCurrent(bool current) { Variants.SetCurrent(current); Enemies.SetCurrent(current); }
+        public void SetCurrent(bool current) { Variants.SetCurrent(current); Enemies.SetCurrent(current); Texts.SetCurrent(current); }
         public void SetExitOpen(bool open) => ExitDoor.SetActive(!open);
         public FlowCheckpoint FindCheckpoint(string id)
         {

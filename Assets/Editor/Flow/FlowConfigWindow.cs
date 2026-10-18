@@ -119,7 +119,7 @@ namespace GameJam.FlowEditor
             if (GUILayout.Button("检查当前配置"))
             {
                 _messages = FlowConfigValidator.Validate(_config);
-                if (_messages.Count == 0) _messages.Add("通过：配置引用、编号、差分、地图池、循环、门接口、出生点与敌人预制体检查。");
+                if (_messages.Count == 0) _messages.Add("通过：配置引用、编号、差分、地图池、循环、门接口、出生点、敌人及文字点检查。");
             }
             foreach (string message in _messages) EditorGUILayout.HelpBox(message, message.StartsWith("通过") ? MessageType.Info : MessageType.Error);
         }

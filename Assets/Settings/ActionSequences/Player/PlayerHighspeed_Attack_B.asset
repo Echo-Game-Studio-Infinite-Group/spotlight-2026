@@ -28,6 +28,7 @@ MonoBehaviour:
       AllowJump: 0
       AllowSlide: 0
       AllowSprint: 1
+      AllowBrake: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
@@ -54,6 +55,7 @@ MonoBehaviour:
       AllowJump: 0
       AllowSlide: 0
       AllowSprint: 1
+      AllowBrake: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
@@ -75,6 +77,7 @@ MonoBehaviour:
       AllowJump: 0
       AllowSlide: 0
       AllowSprint: 1
+      AllowBrake: 1
       GravityMultiplier: 1
       MovementCommand: 
       CommandValue: 0
@@ -221,6 +224,22 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    ParryVolumes:
+    - DisplayName: Parry
+      AnchorPath: 
+      Center: {x: 0, y: 0.9, z: 1.5}
+      Rotation: {x: 0, y: 0, z: 0}
+      Size: {x: 3.6, y: 1.8, z: 2.4}
+      Start:
+        SegmentId: active
+        RelativeTo: 0
+        OffsetFrames: 0
+      End:
+        SegmentId: recovery
+        RelativeTo: 1
+        OffsetFrames: 0
+      HitGroup: 0
+      SweepSpacing: 0.1
     HitVolumes:
     - DisplayName: "\u9AD8\u901F\u5200\u5149"
       AnchorPath: 
@@ -236,20 +255,4 @@ MonoBehaviour:
         RelativeTo: 1
         OffsetFrames: 0
       HitGroup: 1
-      SweepSpacing: 0.1
-    ParryVolumes:
-    - DisplayName: "Parry"
-      AnchorPath:
-      Center: {x: 0, y: 0.9, z: 1.5}
-      Rotation: {x: 0, y: 0, z: 0}
-      Size: {x: 3.6, y: 1.8, z: 2.4}
-      Start:
-        SegmentId: active
-        RelativeTo: 0
-        OffsetFrames: 0
-      End:
-        SegmentId: active
-        RelativeTo: 1
-        OffsetFrames: 0
-      HitGroup: 0
       SweepSpacing: 0.1

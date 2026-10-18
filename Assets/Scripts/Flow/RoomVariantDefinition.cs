@@ -27,6 +27,7 @@ namespace GameJam.Flow
         [InspectorName("稳定装置增量"), Min(0)] public int StabilizerGain;
         [Tooltip("按地图模板中的出生点编号指定敌人。新增点位默认关闭，每次访问在启用点位生成一只敌人。")]
         [InspectorName("出生点敌人配置")] public FlowEnemySpawnBinding[] EnemySpawns = new FlowEnemySpawnBinding[0];
+        [InspectorName("文字点配置"), Tooltip("按地图模板中的文字点编号填写内容。新增点默认关闭，预加载时不会播放。")] public FlowTextBinding[] Texts = new FlowTextBinding[0];
         public bool Supports(int chaos) => chaos >= MinimumChaos && chaos <= MaximumChaos;
     }
 }

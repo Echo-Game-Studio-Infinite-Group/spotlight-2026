@@ -12,6 +12,7 @@ namespace GameJam.FlowEditor
         private FlowRoomTemplate _template;
         private FlowEnemySpawnPoint[] _points = new FlowEnemySpawnPoint[0];
         private bool _refresh = true;
+        private readonly FlowTextConfigurationGUI _texts = new FlowTextConfigurationGUI();
 
         private void OnEnable()
         {
@@ -25,8 +26,8 @@ namespace GameJam.FlowEditor
             EditorApplication.hierarchyChanged -= Invalidate;
             Undo.undoRedoPerformed -= Invalidate;
         }
-        private void Invalidate() { _refresh = true; Repaint(); }
-        protected override bool ShouldDrawProperty(SerializedProperty property) => property.name != nameof(RoomVariantDefinition.EnemySpawns);
+        private void Invalidate() { _refresh = true; _texts.Invalidate(); Repaint(); }
+        protected override bool ShouldDrawProperty(SerializedProperty property) => property.name != nameof(RoomVariantDefinition.EnemySpawns) && property.name != nameof(RoomVariantDefinition.Texts);
 
         public override void OnInspectorGUI()
         {
@@ -70,6 +71,7 @@ namespace GameJam.FlowEditor
             foreach (string error in FlowEnemySpawnValidation.Template(template).Concat(FlowEnemySpawnValidation.Variant(variant, template)))
                 EditorGUILayout.HelpBox(error, MessageType.Error);
             if (_points.Length == 0) EditorGUILayout.HelpBox("模板尚无出生点。点击“新增出生点”，或将出生点预制体拖入地图模板。", MessageType.Info);
+            _texts.Draw(variant, serializedObject);
         }
 
         private void DrawRows(RoomVariantDefinition variant)
