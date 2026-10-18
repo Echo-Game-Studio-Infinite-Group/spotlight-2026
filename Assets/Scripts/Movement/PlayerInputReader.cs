@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GameJam.Actions;
 using UnityEngine;
@@ -11,7 +11,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     [SerializeField] private InputActionAsset _actions;
     private InputActionAsset _runtime;
     private InputActionMap _gameplay;
-    private InputAction _move, _look, _sprint, _slide, _skill, _attack;
+    private InputAction _move, _brake, _look, _sprint, _slide, _skill, _attack, _parry;
     private readonly List<ActionInputEdge> _actionEdges = new List<ActionInputEdge>();
     private ActionInputButtons _heldButtons;
     private long _skillPressVersion;
@@ -24,6 +24,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private Vector2 _moveValue;
     private bool _sprintHeld, _slideHeld;
     private bool _gameplayEnabled = true;
+    private readonly HashSet<object> _gameplayBlockers = new HashSet<object>();
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action PauseRequested;
@@ -33,7 +34,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
     public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
-    public bool GameplayEnabled => _gameplayEnabled && _focused;
+    public bool GameplayEnabled => _gameplayEnabled && _focused && _gameplayBlockers.Count == 0;
+    public bool BrakeHeld => isActiveAndEnabled && GameplayEnabled && _brake != null && _brake.IsPressed();
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
     public long SkillPressVersion => _skillPressVersion;
@@ -63,14 +65,18 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _runtime = Instantiate(_actions);
         _gameplay = _runtime.FindActionMap("Gameplay", true);
         _move = _gameplay.FindAction("Move", true);
+        _brake = _gameplay.FindAction("Brake", true);
         _look = _gameplay.FindAction("Look", true);
         _sprint = _gameplay.FindAction("Sprint", true);
         _slide = _gameplay.FindAction("Slide", true);
         _skill = _gameplay.FindAction("Skill", true);
         _attack = _gameplay.FindAction("Attack", true);
+        _parry = _gameplay.FindAction("Parry", true);
         _gameplay.FindAction("Mark", true).performed += context => { if (GameplayEnabled) MarkPressed?.Invoke(); };
         _move.performed += OnMove;
         _move.canceled += OnMove;
+        _brake.performed += OnBrake;
+        _brake.canceled += OnBrake;
         _sprint.performed += OnSprint;
         _sprint.canceled += OnSprint;
         _gameplay.FindAction("Jump", true).performed += OnJump;
@@ -81,6 +87,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _attack.canceled += context => RecordEdge(ActionInputButtons.Attack, false);
         _skill.performed += OnSkill;
         _skill.canceled += context => RecordEdge(ActionInputButtons.Skill, false);
+        _parry.performed += OnParry;
+        _parry.canceled += context => RecordEdge(ActionInputButtons.Parry, false);
         _runtime.FindAction("Debug/ToggleHUD", true).performed += OnToggleHUD;
         _runtime.FindAction("Debug/ToggleCursor", true).performed += OnToggleCursor;
     }
@@ -107,6 +115,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _sprintHeld = context.ReadValueAsButton();
         RecordEdge(ActionInputButtons.Sprint, _sprintHeld);
     }
+    private void OnBrake(InputAction.CallbackContext context)
+        => RecordEdge(ActionInputButtons.Brake, context.ReadValueAsButton());
     private void OnJump(InputAction.CallbackContext context)
     {
         _jumpPressed = true;
@@ -133,6 +143,14 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         RecordEdge(ActionInputButtons.Skill, true);
         if (_sequenceOwner == null) Battle.Push(InputBuffer.Action.Skill, TimeManager.UnscaledTime);
     }
+    private void OnParry(InputAction.CallbackContext context)
+    {
+        RecordEdge(ActionInputButtons.Parry, true);
+        // parry 不是动作集里的一招（它没有动作序列，判定窗口由 PlayerCombat 自己开），
+        // 所以序列接管输入时也必须照常入队：否则普攻后摇里按 parry 会被静默丢掉。
+        // 序列期间没有人消费这个缓冲（ConsumeCombo / ConsumeAttack 都只在非序列路径调用）。
+        Battle.Push(InputBuffer.Action.Parry, TimeManager.UnscaledTime);
+    }
     private void RecordEdge(ActionInputButtons button, bool pressed)
     {
         bool wasHeld = (_heldButtons & button) != 0;
@@ -153,6 +171,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
                 bool skillHeld = SkillHeldOnDevice;
                 if (skillHeld) atEvent |= ActionInputButtons.Skill; else atEvent &= ~ActionInputButtons.Skill;
             }
+            if (BrakeHeld) atEvent |= ActionInputButtons.Brake; else atEvent &= ~ActionInputButtons.Brake;
             _actionEdges.Add(new ActionInputEdge(button, pressed ? ActionInputStep.Edge.Pressed : ActionInputStep.Edge.Released, atEvent, _moveValue));
         }
     }
@@ -196,6 +215,14 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     }
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
+    // 暂停菜单与读档仍可设置意愿；演出锁独立持有，避免外部提前恢复操作。
+    public void SetGameplayBlocked(object owner, bool blocked)
+    {
+        if (owner == null) return;
+        bool changed = blocked ? _gameplayBlockers.Add(owner) : _gameplayBlockers.Remove(owner);
+        if (changed) ApplyGameplay();
+    }
+
     private void ApplyGameplay()
     {
         Clear();
@@ -217,7 +244,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         if (_runtime == null || !GameplayEnabled) return default;
         PlayerInputFrame frame = new PlayerInputFrame
         {
-            Move = _moveValue, SprintHeld = _sprintHeld, SlideHeld = _slideHeld,
+            Move = _moveValue, BrakeHeld = BrakeHeld, SprintHeld = _sprintHeld, SlideHeld = _slideHeld,
             SlidePressed = _slidePressed, JumpPressed = _jumpPressed, JumpTime = _jumpTime
         };
         _jumpPressed = _slidePressed = false;
@@ -233,6 +260,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     // 普通攻击的消费口：与 ConsumeBattleIntent 共用同一个缓冲，
     // 但不会把「技能键 + 攻击」的组合意图提前解析掉，两条路径互不吞事件。
     public bool ConsumeAttack(float time) => Battle.ConsumeAttack(time);
+    // parry 的消费口：与攻击共用同一个缓冲，但窗口和判定都在战斗侧，输入侧只管转发。
+    public bool ConsumeParry(float time) => Battle.ConsumeParry(time);
     public void Clear()
     {
         _jumpPressed = _slidePressed = _sprintHeld = _slideHeld = false;

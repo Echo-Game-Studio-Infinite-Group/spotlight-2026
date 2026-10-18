@@ -313,7 +313,7 @@ namespace Spotlight.VFX
 
     // ==================================================================
     // 战斗火花（命中 / 近战 parry / 弹道 parry / 脚底滑铲摩擦）
-    // 与火焰同一份配方（RuinsFireConfig.asset 的 combatSparks 段）：运行时由 SlideSparks
+    // 与火焰同一份配方（RuinsFireConfig.asset 的 combatSparks 段）：运行时由 FrictionSparks
     // 接线注入 CombatSparks；不接（配置为空）时用字段默认值 = 2026-10-15 v2 字面量，
     // 行为与并入前一致。类型放命名空间层（不嵌进 RuinsFireConfig），火花侧裸名引用。
     // ==================================================================

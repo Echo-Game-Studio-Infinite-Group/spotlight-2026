@@ -175,8 +175,8 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
     private void OnLanded(HealthComponent target, Vector3 point, Vector3 direction, float applied)
     {
         // 震屏就保留x y，不要z轴视觉效果好些
-        //CameraShaker.Emit(_impulseSource, new Vector3(direction.x, direction.y, 0f), applied);
-        CameraShaker.Emit(_impulseSource, direction, applied);
+        //VCameraEffects.Emit(_impulseSource, new Vector3(direction.x, direction.y, 0f), applied);
+        VCameraEffects.Emit(_impulseSource, direction, applied);
         if (_isFlying) Recycle();
     }
 

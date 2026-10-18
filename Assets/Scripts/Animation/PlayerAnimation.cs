@@ -14,6 +14,14 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const int MotionStateWallDashRight = 6;   // 6：右侧贴墙冲刺
     public const int MotionStateHurtSmall = 7;       // 7：小受击
     public const int MotionStateHurtBig = 8;         // 8：大受击（被敌人重击或扣血太多）
+    public const int MotionStateWalk = 9;
+
+    public const string WalkXParameter = "WalkX";
+    public const string WalkZParameter = "WalkZ";
+    public const string WalkRateParameter = "WalkRate";
+    private static readonly int WalkXId = Animator.StringToHash(WalkXParameter);
+    private static readonly int WalkZId = Animator.StringToHash(WalkZParameter);
+    private static readonly int WalkRateId = Animator.StringToHash(WalkRateParameter);
 
     public const string SlideTimeParameter = "SlideTime";
     private static readonly int SlideTimeId = Animator.StringToHash(SlideTimeParameter);
@@ -22,6 +30,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
     private static readonly int IsHurtId = Animator.StringToHash("IsHurt");
     private static readonly int HurtId = Animator.StringToHash("Hurt");
+    /// <summary>Animator 里那条只驱动腿部的 Override 层（avatarMask = LegsOnly）。受击与攻击招式共用。</summary>
     public const string HurtLegLayerName = "HurtLegs";
 
     // 受伤专用参数，不复用动作序列的 ActionPlaying / ActionTime：
@@ -49,11 +58,12 @@ public sealed class PlayerAnimation : MonoBehaviour
     private PlayerCombat _combat;
     private PlayerInputReader _input;
     private GameJam.Actions.PlayerActionRunner _actionRunner;
-    private int _hurtLegLayer = -1;
+    private int _legsOnlyLayer = -1;
     private float _hurtElapsed;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
     private bool _hasSlideTime;
+    private bool _hasWalkParameters;
     private bool _wasSliding;
     private int _slideStartJumpCount;
     private float _slideProgress;
@@ -85,6 +95,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         switch (motionState)
         {
             case MotionStateMove: return "Move";
+            case MotionStateWalk: return "Walk";
             case MotionStateJump: return "Jump";
             case MotionStateSlide: return "Trackle";
             case MotionStateWallDashLeft: return "WallDashLeft";
@@ -98,7 +109,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     public void Configure(Animator animator)
     {
         _animator = animator;
-        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
+        _legsOnlyLayer = _animator.GetLayerIndex(HurtLegLayerName);
         DisableRootMotion();
         CacheSlideParameter();
     }
@@ -118,15 +129,23 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         DisableRootMotion();
         CacheSlideParameter();
-        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
+        _legsOnlyLayer = _animator.GetLayerIndex(HurtLegLayerName);
     }
 
     private void CacheSlideParameter()
     {
         _hasSlideTime = false;
+        bool walkX = false, walkZ = false, walkRate = false;
         foreach (AnimatorControllerParameter parameter in _animator.parameters)
+        {
             if (parameter.nameHash == SlideTimeId && parameter.type == AnimatorControllerParameterType.Float)
-            { _hasSlideTime = true; break; }
+                _hasSlideTime = true;
+            if (parameter.type != AnimatorControllerParameterType.Float) continue;
+            walkX |= parameter.nameHash == WalkXId;
+            walkZ |= parameter.nameHash == WalkZId;
+            walkRate |= parameter.nameHash == WalkRateId;
+        }
+        _hasWalkParameters = walkX && walkZ && walkRate;
     }
 
     private void UpdateSlide(float deltaTime)
@@ -189,10 +208,10 @@ public sealed class PlayerAnimation : MonoBehaviour
             bool finished = hurtState.IsName(CurrentHurtState) && hurtState.normalizedTime >= 1f
                 && !_animator.IsInTransition(0);
             if (finished || _hurtElapsed >= _hurtMaxSeconds) CancelHurt();
-            else { PushHurtState(); UpdateHurtLegs(); return; }
+            else { PushHurtState(); UpdateLegsOnlyLayer(); return; }
         }
         else _motor.InputSuppressed = false;
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
 
         // CharacterController 在贴地移动时可能短暂丢失 Grounded，延迟进入下落动画；主动起跳立即播放。
         _airborneTime = _motor.IsGrounded ? 0f : _airborneTime + deltaTime;
@@ -205,8 +224,17 @@ public sealed class PlayerAnimation : MonoBehaviour
             else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
         }
         else _wallMotionState = MotionStateWallDashLeft;
+        if (_hasWalkParameters && _motor.IsWalking)
+        {
+            Vector3 direction = _motor.transform.InverseTransformDirection(MovementMath.Horizontal(_motor.Velocity)).normalized;
+            _animator.SetFloat(WalkXId, direction.x);
+            _animator.SetFloat(WalkZId, direction.z);
+            _animator.SetFloat(WalkRateId, Mathf.Min(_motor.Params.WalkMaxAnimationRate,
+                _motor.HorizontalSpeed / _motor.Params.WalkSpeed));
+        }
         int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding || IsSlideRecovering ? MotionStateSlide : airborne ? MotionStateJump :
-            _motor.HasForwardInput ? MotionStateMove : MotionStateIdle;
+            _motor.IsWalking && _motor.HorizontalSpeed > _idleSpeed ? MotionStateWalk :
+            (_motor.IsBraking ? _motor.HorizontalSpeed > _idleSpeed : _motor.HasMovementInput) ? MotionStateMove : MotionStateIdle;
 
         // 攻击优先级最高：攻击窗口由 PlayerCombat 独占计时，这里只读它的结论，
         // 不在动画侧另存一份计时器，否则两边的「攻击什么时候结束」会各说各话。
@@ -238,7 +266,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         _animator.SetBool(IsAttackingId, false);
         // 连续同类型命中也必须从头重播。
         _animator.Play("Base Layer." + CurrentHurtState, 0, 0f);
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
     }
 
     /// <summary>
@@ -250,7 +278,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         _hurtKind = HurtKindNone;
         _hurtLockRemaining = 0f;
         if (_motor != null) _motor.InputSuppressed = false;
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
         // 先摘 IsHurt：控制器里受伤状态的唯一出口就是 IsHurt == false，
         // 摘掉之后状态机下一帧自己回移动状态，这里不需要再指定目标状态。
         PushHurtState();
@@ -271,14 +299,19 @@ public sealed class PlayerAnimation : MonoBehaviour
         _animator.SetInteger(MotionStateId, CurrentMotionState);
     }
 
-    private void UpdateHurtLegs()
+    // 只驱动腿部的 Override 层（Animator 里叫 HurtLegs，avatarMask = LegsOnly，默认权重 0）：
+    //   · 受击：上身播受击、腿继续走（受击锁定期不让步，否则等于用移动取消受击）
+    //   · 攻击招式：普攻片段只该管上半身，腿必须跟移动走——否则「站着出刀 → 开始移动」时腿会僵在攻击姿态
+    // 两种情况的门槛一致：接地、没滑铲、真的在动。
+    private void UpdateLegsOnlyLayer()
     {
-        if (_hurtLegLayer < 0) return;
+        if (_legsOnlyLayer < 0) return;
         bool moving = _input != null && _input.MoveInput.sqrMagnitude > 0f;
-        // 正常走跑必须完全使用基础层；空中/滑铲也不能叠加地面踏步。
-        bool active = IsHurting && !IsHurtLocked && moving && _motor != null
-            && _motor.IsGrounded && !_motor.IsSliding && _motor.HorizontalSpeed > _idleSpeed;
-        _animator.SetLayerWeight(_hurtLegLayer, active ? 1f : 0f);
+        bool groundedMoving = moving && _motor != null && _motor.IsGrounded && !_motor.IsSliding
+            && _motor.HorizontalSpeed > _idleSpeed;
+        bool hurtLegs = IsHurting && !IsHurtLocked && groundedMoving;
+        bool attackLegs = !IsHurting && _combat != null && _combat.IsAttackSequenceActive && groundedMoving;
+        _animator.SetLayerWeight(_legsOnlyLayer, hurtLegs || attackLegs ? 1f : 0f);
     }
 
     private void OnDisable()
@@ -294,7 +327,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_animator != null)
         {
             PushHurtState();
-            UpdateHurtLegs();
+            UpdateLegsOnlyLayer();
         }
     }
 }

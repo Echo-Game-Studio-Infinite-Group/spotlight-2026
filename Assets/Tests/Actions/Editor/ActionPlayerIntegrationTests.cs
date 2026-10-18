@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using GameJam.Actions;
 using GameJam.Actions.Editor;
@@ -22,6 +23,164 @@ public sealed class ActionPlayerIntegrationTests
     private long _tick;
     private string _folder;
     private bool _mobilityCatalogIsolated;
+
+    [TestCase(-1f, 0f, false, "Front_L")]
+    [TestCase(1f, 0f, false, "Front_R")]
+    [TestCase(-1f, 1f, false, "Front_L45")]
+    [TestCase(1f, 1f, false, "Front_R45")]
+    [TestCase(0f, -1f, false, "Back")]
+    [TestCase(-1f, -1f, false, "Back_L45")]
+    [TestCase(1f, -1f, false, "Back_R45")]
+    [TestCase(-1f, 0f, true, "Front_L")]
+    [TestCase(1f, 0f, true, "Front_R")]
+    [TestCase(-1f, 1f, true, "Front_L45")]
+    [TestCase(1f, 1f, true, "Front_R45")]
+    public void WalkDirectionsUseJogAtLowSpeedAndRunningWithHighMomentum(float x, float y, bool highSpeed, string suffix)
+    {
+        Ground();
+        _motor.Params.GroundFriction = 0f; _motor.Params.Pump = PumpMode.VerbatimQuake;
+        var reference = new GameObject("DirectionAnimationReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        _motor.SetHorizontalSpeed(highSpeed ? 12f : 0f);
+        Vector2 direction = new Vector2(x, y);
+        for (int i = 0; i < 60; i++) Tick(direction: direction);
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        Assert.AreEqual(highSpeed ? PlayerAnimation.MotionStateMove : PlayerAnimation.MotionStateWalk, animation.CurrentMotionState);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(highSpeed ? 12f : _motor.Params.WalkSpeed).Within(.002f));
+        string path = highSpeed ? PlayerLocomotionAnimatorSetup.RunClipPath : PlayerWalkAnimatorSetup.Folder + "CLazy@Mvm_Jog_" + suffix + ".FBX";
+        Assert.IsTrue(animation.Animator.GetCurrentAnimatorClipInfo(0).Any(value => AssetDatabase.GetAssetPath(value.clip) == path && value.weight > .99f), path);
+        Assert.IsFalse(animation.Animator.applyRootMotion);
+    }
+
+    [Test]
+    public void WalkSetupAndExistingInstallersKeepOneTreeAndPreserveAuthoredStates()
+    {
+        string name = "WalkAuthoringTest_" + Guid.NewGuid().ToString("N");
+        _folder = "Assets/" + name; AssetDatabase.CreateFolder("Assets", name);
+        AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(_folder + "/walk.controller");
+        AnimatorStateMachine machine = controller.layers[0].stateMachine;
+        AnimatorState authored = machine.AddState("AuthoredState"); authored.speed = 1.7f;
+        PlayerWalkAnimatorSetup.Ensure(controller);
+        AnimatorState walk = machine.states.Single(value => value.state.name == "Walk").state;
+        BlendTree tree = (BlendTree)walk.motion;
+        tree.children = tree.children.Take(4).ToArray();
+        Assert.IsFalse(PlayerWalkAnimatorSetup.HasWalk(controller));
+        PlayerWalkAnimatorSetup.Ensure(controller);
+        PlayerLocomotionAnimatorSetup.EnsureRun(controller);
+        ActionPlayerSetup.EnsureAnimator(controller, _catalog);
+        AssetDatabase.SaveAssets();
+        Assert.IsTrue(PlayerWalkAnimatorSetup.HasWalk(controller));
+        Assert.IsTrue(PlayerLocomotionAnimatorSetup.HasRun(controller));
+        Assert.AreSame(tree, walk.motion);
+        Assert.AreEqual(1, AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(controller)).OfType<BlendTree>().Count());
+        Assert.AreEqual(1.7f, authored.speed);
+        Assert.AreEqual(7, tree.children.Length);
+    }
+
+    [TestCase(-1f, "Back_L45")]
+    [TestCase(0f, "Back")]
+    [TestCase(1f, "Back_R45")]
+    public void RawLowSpeedSUsesTheCorrespondingBackwardJog(float x, string suffix)
+    {
+        Ground(); _motor.Params.GroundFriction = 0f;
+        var reference = new GameObject("BackwardAnimationReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        for (int i = 0; i < 60; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake, new Vector2(x, 0f)),
+                new PlayerInputFrame { BrakeHeld = true, Move = new Vector2(x, 0f) }, 1f / 60f);
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        Assert.AreEqual(PlayerAnimation.MotionStateWalk, animation.CurrentMotionState);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(_motor.Params.WalkSpeed).Within(.002f));
+        string path = PlayerWalkAnimatorSetup.Folder + "CLazy@Mvm_Jog_" + suffix + ".FBX";
+        Assert.IsTrue(animation.Animator.GetCurrentAnimatorClipInfo(0).Any(value => AssetDatabase.GetAssetPath(value.clip) == path && value.weight > .99f), path);
+    }
+
+    [Test]
+    public void LowSpeedSJumpUsesTheBackwardMovingJumpInsteadOfTheStationaryJump()
+    {
+        Ground(); MobilityEnergy(); _motor.Params.GroundFriction = 0f;
+        var reference = new GameObject("BackwardJumpReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        for (int i = 0; i < 30; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+                new PlayerInputFrame { BrakeHeld = true }, 1f / 60f);
+        ActionInputButtons held = ActionInputButtons.Brake | ActionInputButtons.Jump;
+        var edge = new ActionInputEdge(ActionInputButtons.Jump, ActionInputStep.Edge.Pressed, held);
+        string jumpAction = null;
+        Vector2 jumpDirection = default;
+        _runner.FrameEvent += (state, frameEvent) =>
+        {
+            if (frameEvent.EventKey != "motor.command" || frameEvent.MotorCommand != MotorCommandKind.Jump) return;
+            jumpAction = state.Action.ActionId; jumpDirection = state.Input.Direction;
+        };
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { edge }),
+            new PlayerInputFrame { BrakeHeld = true, JumpPressed = true, JumpTime = TimeManager.UnscaledTime }, 1f / 60f);
+        Assert.AreEqual("player_jump", jumpAction);
+        Assert.AreEqual(Vector2.down, jumpDirection);
+        Assert.AreEqual(1, _motor.JumpCount);
+        Assert.Less(_motor.Velocity.z, 0f);
+    }
+
+    [Test]
+    public void DeathClearsStoredRecoveryAndHeldSCannotAccumulateUntilAlive()
+    {
+        Ground(); _motor.Params.GroundFriction = 0f; _motor.SetHorizontalSpeed(12f);
+        _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+            new PlayerInputFrame { BrakeHeld = true }, 10f / 60f);
+        Assert.Greater(_motor.BrakeRecoverySpeed, 0f);
+        _motor.BufferBrakeRecoveryJump(.2f);
+        _runner.SetAlive(false);
+        Assert.AreEqual(0f, _motor.BrakeJumpRecoverySpeed);
+        _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+            new PlayerInputFrame { BrakeHeld = true }, 1f / 60f);
+        Assert.IsFalse(_motor.IsBraking);
+        Assert.AreEqual(0f, _motor.BrakeJumpRecoverySpeed);
+        _runner.SetAlive(true);
+        Tick(ActionInputButtons.Jump);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(8f).Within(.002f));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ActionOwnedJumpReturnsBrakeSpeedExactlyOnce(bool highJump)
+    {
+        Ground(); MobilityEnergy();
+        _motor.Params.GroundFriction = 0f;
+        _motor.SetHorizontalSpeed(12f);
+        _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+            new PlayerInputFrame { BrakeHeld = true }, 10f / 60f);
+        Assert.That(_motor.BrakeRecoverySpeed, Is.EqualTo(4f).Within(.002f));
+        ActionInputButtons held = ActionInputButtons.Brake | ActionInputButtons.Jump |
+            (highJump ? ActionInputButtons.Skill : ActionInputButtons.None);
+        var edge = new ActionInputEdge(ActionInputButtons.Jump, ActionInputStep.Edge.Pressed, held);
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, default, new[] { edge }),
+            new PlayerInputFrame { BrakeHeld = true, JumpPressed = true, JumpTime = TimeManager.UnscaledTime }, 1f / 60f);
+        Assert.AreEqual(1, _motor.JumpCount);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(12f).Within(.002f));
+        Assert.AreEqual(0f, _motor.BrakeRecoverySpeed);
+        for (int i = 0; i < 10; i++)
+            _runner.SimulateTick(new ActionInputSample(_tick++, ActionInputButtons.Brake),
+                new PlayerInputFrame { BrakeHeld = true }, 1f / 60f);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(12f).Within(.002f));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void GroundBrakeRejectsSprintAndEnergyDashBeforeCommit(bool energyDash)
+    {
+        Ground(); ActionTestEnergy energy = MobilityEnergy(100f);
+        _motor.Params.GroundFriction = 0f; _motor.SetHorizontalSpeed(12f);
+        ActionInputButtons held = ActionInputButtons.Brake | ActionInputButtons.Sprint | ActionInputButtons.Forward |
+            (energyDash ? ActionInputButtons.Skill : ActionInputButtons.None);
+        var edge = new ActionInputEdge(ActionInputButtons.Sprint, ActionInputStep.Edge.Pressed, held, Vector2.up);
+        _runner.SimulateTick(new ActionInputSample(_tick++, held, Vector2.up, new[] { edge }),
+            new PlayerInputFrame { Move = Vector2.up, BrakeHeld = true, SprintHeld = true }, 1f / 60f);
+        Assert.IsFalse(_runner.Player.IsRunning);
+        Assert.AreEqual(100f, energy.Balance);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(11.6f).Within(.002f));
+        Assert.Greater(_motor.BrakeRecoverySpeed, 0f);
+    }
 
     [SetUp]
     public void SetUp()
@@ -207,20 +366,24 @@ public sealed class ActionPlayerIntegrationTests
     {
         ActionDefinition a = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_a");
         ActionDefinition b = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_b");
-        Assert.NotNull(a); Assert.NotNull(b); Assert.AreEqual(76, a.TotalFrames); Assert.AreEqual(68, b.TotalFrames);
+        Assert.NotNull(a); Assert.NotNull(b);
         Assert.IsFalse(a.Timeline[0].Animation.Clip.isLooping); Assert.IsFalse(b.Timeline[0].Animation.Clip.isLooping);
         _bridge.EnterSegment(new ActionExecutionState(a, 120, 0, 6, 0, default), true);
         _bridge.Sample(new ActionExecutionState(a, 120, 0, 6, 0, default), 0f);
         Transform hand = _bridge.Animator.GetBoneTransform(HumanBodyBones.RightHand);
         Quaternion first = hand.rotation;
-        _bridge.EnterSegment(new ActionExecutionState(a, 120, 1, 22, 12, default), true);
-        _bridge.Sample(new ActionExecutionState(a, 120, 1, 22, 12, default), 0f);
+        int activeStart = a.Timeline[0].DurationFrames;
+        int activeSample = activeStart + a.Timeline[1].DurationFrames / 2;
+        _bridge.EnterSegment(new ActionExecutionState(a, 120, 1, activeSample, activeStart, default), true);
+        _bridge.Sample(new ActionExecutionState(a, 120, 1, activeSample, activeStart, default), 0f);
         Assert.Greater(Quaternion.Angle(first, hand.rotation), .1f);
         float sourceTime = _bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter);
         _bridge.EnterSegment(new ActionExecutionState(b, 121, 0, 5, 0, default), true);
         _bridge.Sample(new ActionExecutionState(b, 121, 0, 5, 0, default), 0f);
         Assert.AreNotEqual(a.Timeline[0].Animation.TimeParameter, b.Timeline[0].Animation.TimeParameter);
-        Assert.That(_bridge.Animator.GetFloat(b.Timeline[0].Animation.TimeParameter), Is.EqualTo(5f / 68f).Within(.0001f));
+        ActionAnimationBinding binding = b.Timeline[0].Animation;
+        float expectedTime = Mathf.Lerp(binding.NormalizedStart, binding.NormalizedEnd, 5f / b.Timeline[0].DurationFrames);
+        Assert.That(_bridge.Animator.GetFloat(binding.TimeParameter), Is.EqualTo(expectedTime).Within(.0001f));
         Assert.That(_bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter), Is.EqualTo(sourceTime).Within(.0001f));
     }
 
@@ -977,7 +1140,7 @@ public sealed class ActionPlayerIntegrationTests
         Assert.Greater(Vector3.Distance(before, _root.transform.position), 0f);
         Assert.AreEqual(PlayerAnimation.MotionStateIdle, animation.CurrentMotionState);
         Tick(ActionInputButtons.Right, Vector2.right);
-        Assert.AreEqual(PlayerAnimation.MotionStateIdle, animation.CurrentMotionState);
+        Assert.AreEqual(PlayerAnimation.MotionStateWalk, animation.CurrentMotionState);
     }
 
     [Test]
@@ -1010,7 +1173,7 @@ public sealed class ActionPlayerIntegrationTests
         _runner.FrameEvent += (state, frameEvent) => { if (frameEvent.MotorCommand == MotorCommandKind.SprintBoost) commands++; };
         SkillTick(ActionInputButtons.Sprint, ActionInputButtons.Sprint);
         Assert.AreEqual("player_sprint", _runner.Player.State.Action.ActionId);
-        float expected = Mathf.Min(initialSpeed + 16f, 120f);
+        float expected = Mathf.Min(initialSpeed + 2f * _motor.Params.LowSpeedThreshold, _motor.Params.MaxSpeed);
         Assert.That(_motor.HorizontalSpeed, Is.EqualTo(expected).Within(.001f));
         Assert.That(_motor.Velocity.y, Is.EqualTo(8f - 20f / 60f).Within(.001f));
         Assert.AreEqual(0f, energy.Balance); Assert.AreEqual(rate, TimeManager.GlobalRate);

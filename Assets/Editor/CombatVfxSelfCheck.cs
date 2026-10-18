@@ -5,7 +5,7 @@ using UnityEngine;
 //
 // 无帧循环也能验的层：共享材质生成、三类爆发特效全链路装配（模板→克隆→播放）、
 // 滑铲发射器装配。火花「看得到看不到」是渲染层的事，交给 Play 模式实机目检
-// （F5/F6 演示键 + 跑起来滑铲），本自检不越权替它下结论。
+// （按 E 真的 parry 一次 + 跑起来滑铲），本自检不越权替它下结论。
 public static class CombatVfxSelfCheck
 {
     public static void Run()
@@ -37,8 +37,8 @@ public static class CombatVfxSelfCheck
         GameObject player = new GameObject("CombatVfxSelfCheckPlayer");
         try
         {
-            player.AddComponent<SlideSparks>(); // RequireComponent 会自动补 PlayerMotor/CharacterController
-            player.GetComponent<SlideSparks>().EnsureEmitter();
+            player.AddComponent<FrictionSparks>(); // RequireComponent 会自动补 PlayerMotor/CharacterController
+            player.GetComponent<FrictionSparks>().EnsureEmitters();
             ParticleSystem emitter = player.GetComponentInChildren<ParticleSystem>();
             bool emitterOk = emitter != null;
             Debug.Log($"[CombatVfxSelfCheck] 滑铲发射器装配={(emitterOk ? "就位" : "失败")}"

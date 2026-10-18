@@ -25,6 +25,7 @@ namespace GameJam.Actions
         private bool _connected;
         private bool _ownsJump;
         private bool _ownsSlide;
+        private float _jumpRecoveryBufferSeconds;
         private bool _alive = true;
         private bool _pendingLandingStop;
         private int _actionStartJumpCount;
@@ -85,6 +86,11 @@ namespace GameJam.Actions
             _player = new ActionSequencePlayer(_catalog, this, this);
             _ownsJump = _catalog.Actions.Exists(action => action.Input.ReferencesButton(ActionInputButtons.Jump));
             _ownsSlide = _catalog.Actions.Exists(action => action.Input.ReferencesButton(ActionInputButtons.Slide));
+            _jumpRecoveryBufferSeconds = _motor.Params.JumpBufferWindow;
+            foreach (ActionDefinition action in _catalog.Actions)
+                if (action.Input.ReferencesButton(ActionInputButtons.Jump))
+                    _jumpRecoveryBufferSeconds = Mathf.Max(_jumpRecoveryBufferSeconds,
+                        action.Input.PreInputFrames / (float)ActionSequencePlayer.FramesPerSecond);
             _input.Cleared += ClearPendingInput;
             _motor.Teleported += OnTeleported;
             _motor.MotionPathPoint += RecordMotionPoint;
@@ -102,6 +108,13 @@ namespace GameJam.Actions
         {
             if (!_connected) throw new InvalidOperationException("执行器尚未接线");
             _movementInput = movement;
+            _movementInput.BrakeHeld = _alive && (movement.BrakeHeld || (sample.Held & ActionInputButtons.Brake) != 0);
+            sample = ResolveDirectionalSample(sample);
+            bool jumpPressed = movement.JumpPressed;
+            if (sample.Edges != null)
+                foreach (ActionInputEdge edge in sample.Edges)
+                    jumpPressed |= edge.Button == ActionInputButtons.Jump && edge.Trigger == ActionInputStep.Edge.Pressed;
+            if (_alive && jumpPressed) _motor.BufferBrakeRecoveryJump(_jumpRecoveryBufferSeconds);
             if (_ownsJump) _movementInput.JumpPressed = false;
             if (_ownsSlide) _movementInput.SlidePressed = false;
             _inputTime = TimeManager.UnscaledTime;
@@ -133,12 +146,12 @@ namespace GameJam.Actions
                 case "sliding": return _motor.IsSliding;
                 case "can_jump": return _motor.CanExecute(MotorCommandKind.Jump);
                 case "can_high_jump": return _motor.CanExecute(MotorCommandKind.HighJump) && (!_motor.IsSliding || request.Direction.y > 0f);
-                case "can_accelerate": return _motor.CanExecute(MotorCommandKind.Accelerate);
-                case "can_sprint": return _motor.CanExecute(MotorCommandKind.SprintBoost);
+                case "can_accelerate": return !BrakingBlocks(MotorCommandKind.Accelerate) && _motor.CanExecute(MotorCommandKind.Accelerate);
+                case "can_sprint": return !BrakingBlocks(MotorCommandKind.SprintBoost) && _motor.CanExecute(MotorCommandKind.SprintBoost);
                 case "can_slide": return _motor.CanExecute(MotorCommandKind.EnterSlide);
                 case "speed_low": return _motor.Params != null && _motor.HorizontalSpeed <= _motor.Params.LowSpeedThreshold;
                 case "speed_high": return _motor.Params != null && _motor.HorizontalSpeed > _motor.Params.LowSpeedThreshold;
-                case "non_stationary_jump": return request.Direction.sqrMagnitude > 0f;
+                case "non_stationary_jump": return request.Direction.sqrMagnitude > 0f || _motor.BrakeJumpRecoverySpeed > 0f;
                 case "forward_jump": return request.Direction.y > 0f;
                 case "flash_available": return _conditions.Contains("parry") || _conditions.Contains("limb_break");
                 default: return _conditions.Contains(key);
@@ -148,6 +161,29 @@ namespace GameJam.Actions
         {
             if (string.IsNullOrWhiteSpace(key)) return;
             if (value) _conditions.Add(key); else _conditions.Remove(key);
+        }
+        private bool BrakingBlocks(MotorCommandKind command) => _motor.ResolveDirectionalInput(_movementInput).BrakeHeld && _motor.CanBrake &&
+            (command == MotorCommandKind.Accelerate || command == MotorCommandKind.SprintBoost);
+        private ActionInputSample ResolveDirectionalSample(ActionInputSample sample)
+        {
+            PlayerInputFrame directional = _motor.ResolveDirectionalInput(_movementInput);
+            ActionInputEdge[] edges = null;
+            if (sample.Edges != null)
+                for (int i = 0; i < sample.Edges.Count; i++)
+                {
+                    ActionInputEdge edge = sample.Edges[i];
+                    if ((edge.HeldAtEvent & ActionInputButtons.Brake) == 0) continue;
+                    PlayerInputFrame atEvent = _motor.ResolveDirectionalInput(new PlayerInputFrame { Move = edge.DirectionAtEvent, BrakeHeld = true });
+                    if (atEvent.Move == edge.DirectionAtEvent) continue;
+                    if (edges == null)
+                    {
+                        edges = new ActionInputEdge[sample.Edges.Count];
+                        for (int j = 0; j < edges.Length; j++) edges[j] = sample.Edges[j];
+                    }
+                    edges[i] = new ActionInputEdge(edge.Button, edge.Trigger, edge.HeldAtEvent, atEvent.Move);
+                }
+            return new ActionInputSample(sample.Tick, sample.Held,
+                _movementInput.BrakeHeld && !directional.BrakeHeld ? directional.Move : sample.Move, edges ?? sample.Edges);
         }
         public void SetEnergyAccount(IEnergyAccount account) { _energyOverride = account; _energy = account; }
         public ActionInputButtons GetIgnoredForbiddenButtons(ActionInputEdge edge)
@@ -172,7 +208,8 @@ namespace GameJam.Actions
                     if (!string.IsNullOrWhiteSpace(segment.Control.MovementCommand)) { reason = "旧移动命令键尚未注册，请使用 motor.command 帧事件"; break; }
                     if (segment != request.Target.Timeline[0]) continue;
                     foreach (ActionFrameEvent frameEvent in segment.Events)
-                        if (frameEvent.Frame == 0 && frameEvent.EventKey == "motor.command" && !_motor.CanExecute(frameEvent.MotorCommand))
+                        if (frameEvent.Frame == 0 && frameEvent.EventKey == "motor.command" &&
+                            (BrakingBlocks(frameEvent.MotorCommand) || !_motor.CanExecute(frameEvent.MotorCommand)))
                             reason = "起招运动命令的物理条件不满足";
                 }
             }
@@ -282,7 +319,7 @@ namespace GameJam.Actions
         public void SetAlive(bool alive)
         {
             _alive = alive;
-            if (!alive) Interrupt();
+            if (!alive) { _motor.ClearBrakeRecovery(); Interrupt(); }
         }
         public void ResetActions()
         {

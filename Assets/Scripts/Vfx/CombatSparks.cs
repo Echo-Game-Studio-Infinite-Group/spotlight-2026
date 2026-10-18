@@ -4,7 +4,7 @@ using UnityEngine;
 
 // 战斗火花特效库 v2 —— 按「Functional / Industrial Chamfer Sci-Fi Hard Surface」基调重做。
 //   命中火花 / 近战 parry 闪光 / 弹道 parry 弹开 三类一次性爆发的统一入口
-//   （脚底摩擦火花是持续发射器，归 SlideSparks 组件）。
+//   （脚底摩擦火花是持续发射器，归 FrictionSparks 组件）。
 //
 // 全程序化：贴图运行时生成、粒子系统代码装配、实例池化——零美术资产、零外部包。
 //
@@ -18,22 +18,21 @@ using UnityEngine;
 //
 // 调用入口（业务语义不在这里，只收「在哪、什么方向」）：
 //   CombatSparks.PlayHit(point, direction, damage);              // 玩家攻击命中敌人（PlayerCombat.OnLandedHit 已接）
-//   CombatSparks.PlayParry(point);                               // 近战 parry 成功
-//   CombatSparks.PlayParryProjectile(point, incomingDirection);  // 对远程道具 parry 成功
-// parry 判定本体尚未落地（dev 侧待移植），当前由 DebugHUD 的 F5/F6 演示键驱动。
+//   CombatSparks.PlayParry(point);                               // 近战 parry 成功（PlayerCombat.TryParry 已接）
+//   CombatSparks.PlayParryProjectile(point, incomingDirection);  // 对远程道具 parry 成功（同上，按 SourceType 分流）
 //
 // 注：数值为提案基线（参照业界经验值区间：火花 2–5cm、6–15m/s、Bounce 0.3–0.6 / 闪光 0.05–0.1s），
 // 待 3C 与美术定稿后微调。
 public static class CombatSparks
 {
     // ===== 调参（RuinsFireConfig.asset 的 combatSparks 段——与火焰同一份配方） =====
-    // SlideSparks 接到配方后经 ApplyTune 注入；不接时用 CombatSparkTune 的字段默认值
+    // FrictionSparks 接到配方后经 ApplyTune 注入；不接时用 CombatSparkTune 的字段默认值
     // （= 2026-10-15 v2 字面量，行为与并入配置前一致）。模板与灯光参数是**首用快照**：
     // 改了资产要重进 Play / 重开场景才对模板生效。
 
     private static CombatSparkTune _tune;
 
-    /// <summary>注入配方（SlideSparks.Awake 调用；传 null = 回到内置默认）。</summary>
+    /// <summary>注入配方（FrictionSparks.Awake 调用；传 null = 回到内置默认）。</summary>
     public static void ApplyTune(RuinsFireConfig config) { _tune = config != null ? config.combatSparks : null; }
 
     /// <summary>当前配方（懒初始化为内置默认，读-only；模板装配期取值一次）。</summary>
@@ -47,7 +46,7 @@ public static class CombatSparks
     private static readonly Dictionary<CombatSparksInternal.Kind, GameObject> Templates = new Dictionary<CombatSparksInternal.Kind, GameObject>();
     private static readonly Dictionary<CombatSparksInternal.Kind, List<SparkInstance>> Instances = new Dictionary<CombatSparksInternal.Kind, List<SparkInstance>>();
 
-    /// <summary>火花点材质（SlideSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一份火花贴图）。
+    /// <summary>火花点材质（FrictionSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一份火花贴图）。
     /// public：编辑器装配/自检工具（Assembly-CSharp-Editor）也要取它。</summary>
     public static Material SparkMaterial { get { EnsureMaterials(); return _sparkMaterial; } }
 

@@ -4,7 +4,7 @@ using UnityEngine;
 // 只缓存动作语义，不绑定设备；调用方在成功执行动作时消费。
 public sealed class InputBuffer
 {
-    public enum Action { Attack, Skill, Jump }
+    public enum Action { Attack, Skill, Jump, Parry }
     public enum Intent { None, Rashomon, PushSlash, Turnaround, Accelerate, HighJump, TimeStop }
     private struct Entry { public Action Action; public float Time; }
     private readonly List<Entry> _entries = new List<Entry>(16);
@@ -37,6 +37,10 @@ public sealed class InputBuffer
     // ConsumeCombo 会把「按住技能键 + 攻击」提前解析成 Rashomon/PushSlash 并吃掉这次攻击，
     // 两个消费点共存时先到先得，普通攻击会静默失效。这里只认「这一次攻击有没有被按过」。
     public bool ConsumeAttack(float time) => Consume(Action.Attack, time);
+
+    // parry 同样走独立窗口：它不参与 ConsumeCombo 的组合解析，
+    // 否则「右键 + 攻击」这类组合会把 parry 也当成一次组合意图吃掉。
+    public bool ConsumeParry(float time) => Consume(Action.Parry, time);
 
     private void Prune(float now) => _entries.RemoveAll(entry => now - entry.Time > _window);
 }

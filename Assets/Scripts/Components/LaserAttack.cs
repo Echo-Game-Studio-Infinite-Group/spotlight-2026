@@ -1,14 +1,16 @@
-﻿using UnityEngine;
+using UnityEngine;
 
-// 激光只保存有限线段和一次命中资格；LineRenderer 是可替换的占位表现，不参与伤害判定。
+// 预警与实弹共用碰撞查询，表现只读结果，不能另算一条穿过遮挡的瞄准线。
 [DisallowMultipleComponent]
 [RequireComponent(typeof(HealthComponent), typeof(CombatComponent))]
 public sealed class LaserAttack : MonoBehaviour
 {
-    public enum AttackPhase { Idle, Charging, Firing, Cooldown }
+    public enum AttackPhase { Idle, Charging, Firing, Cooldown, Converging }
 
     [Header("激光时序（伤害与冷却使用同物体的 CombatComponent）")]
     [SerializeField, Min(0f)] private float _chargeSeconds = 1.2f;
+    [Tooltip("红线追踪结束后固定方向，汇聚期间给玩家躲避窗口；设为 0 立即开火。")]
+    [SerializeField, Min(0f)] private float _convergenceSeconds = .5f;
     [SerializeField, Min(.01f)] private float _beamSeconds = .5f;
     [SerializeField, Min(.1f)] private float _range = 30f;
     [Tooltip("光束的命中半径，设为 0 使用细射线。")]
@@ -20,23 +22,36 @@ public sealed class LaserAttack : MonoBehaviour
     [SerializeField] private Transform _muzzle;
     [SerializeField] private LineRenderer _beam;
 
+    [Header("视线")]
+    [Tooltip("挡视线的层：被这些层挡住就不开始蓄力（隔墙不索敌）；蓄力/汇聚中丢了视线也会中止")]
+    [SerializeField] private LayerMask _sightMask = Physics.DefaultRaycastLayers;
+
     private HealthComponent _health;
     private CombatComponent _combat;
     private AttackTelegraph _telegraph;
     private readonly RaycastHit[] _hits = new RaycastHit[32];
     private readonly Collider[] _overlaps = new Collider[32];
+    // 视线检测的非分配缓冲：每逻辑步都查，不能每次 new。
+    private readonly RaycastHit[] _sightHits = new RaycastHit[8];
     private float _remaining;
     private bool _damageAttempted;
     private Vector3 _origin, _direction;
 
     public AttackPhase Phase { get; private set; }
     public bool IsCharging => Phase == AttackPhase.Charging;
+    public bool IsConverging => Phase == AttackPhase.Converging;
     public bool IsFiring => Phase == AttackPhase.Firing;
     public Transform Muzzle => _muzzle != null ? _muzzle : transform;
     public Vector3 BeamStart => _origin;
     public Vector3 BeamEnd { get; private set; }
     public Vector3 BeamDirection => _direction;
     public float Remaining => _remaining;
+    public float ChargeProgress => IsCharging ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.001f, _chargeSeconds)) : 0f;
+    public float ConvergenceProgress => IsConverging ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.001f, _convergenceSeconds)) : 0f;
+    public float FireProgress => IsFiring ? 1f - Mathf.Clamp01(_remaining / Mathf.Max(.01f, _beamSeconds)) : 0f;
+    public bool HasBeamHit { get; private set; }
+    public Vector3 ImpactPoint { get; private set; }
+    public Vector3 ImpactNormal { get; private set; }
 
     private void Awake()
     {
@@ -83,7 +98,7 @@ public sealed class LaserAttack : MonoBehaviour
         }
         if (target == null || !target.IsAlive || !canCharge)
         {
-            if (IsCharging) BeginCooldown();
+            if (IsCharging || IsConverging) BeginCooldown();
             return;
         }
         if (Phase == AttackPhase.Idle)
@@ -92,26 +107,54 @@ public sealed class LaserAttack : MonoBehaviour
             Vector3 flat = target.transform.position - Muzzle.position;
             flat.y = 0f;
             if (flat.sqrMagnitude > _range * _range) return;
+            // 隔墙不索敌：射程内但炮口看不到玩家就不蓄力、不亮预警。
+            if (!HasLineOfSight(target.transform)) return;
             Phase = AttackPhase.Charging;
             _remaining = _chargeSeconds;
             _telegraph?.Play();
         }
-        _remaining -= dt;
-        if (_remaining > 0f) return;
+        if (IsCharging)
+        {
+            _remaining -= dt;
+            _origin = Muzzle.position;
+            _direction = Muzzle.forward.normalized;
+            // 蓄力中玩家躲到墙后：这一发作废，转冷却（预警一起收掉）
+            if (!HasLineOfSight(target.transform)) { BeginCooldown(); return; }
+            if (_remaining <= 0f)
+            {
+                // 汇聚起点即锁定点，后续不能重新读取炮口朝向，否则玩家没有稳定的躲避窗口。
+                Phase = AttackPhase.Converging;
+                _remaining = Mathf.Max(0f, _convergenceSeconds);
+            }
+        }
+        else if (IsConverging)
+        {
+            _remaining -= dt;
+            // 汇聚期同样要在视线内：贴上去躲进墙后不该被"已锁定"打死
+            if (!HasLineOfSight(target.transform)) { BeginCooldown(); return; }
+        }
+        if (_remaining > 0f)
+        {
+            TraceBeam(target, false);
+            return;
+        }
         Phase = AttackPhase.Firing;
         _remaining = Mathf.Max(.01f, _beamSeconds);
         _damageAttempted = false;
-        _origin = Muzzle.position;
-        _direction = Muzzle.forward.normalized;
         _telegraph?.Stop();
         TraceBeam(target);
     }
 
-    private void TraceBeam(HealthComponent target)
+    /// <summary>炮口到玩家之间有没有被墙挡住。蓄力、汇聚、开火前都用它，避免隔墙锁人。</summary>
+    public bool HasLineOfSight(Transform target)
+        => SightCheck.HasLineOfSight(Muzzle.position, target, transform, _sightMask, _sightHits);
+
+    private void TraceBeam(HealthComponent target, bool applyDamage = true)
     {
         float distance = _range;
         Collider closest = null;
         Vector3 point = _origin + _direction * distance;
+        Vector3 normal = -_direction;
         // Cast 不报告起点内部的碰撞体，补一次重叠查询，避免贴身玩家或贴脸墙被漏掉。
         int overlaps = Physics.OverlapSphereNonAlloc(_origin, Mathf.Max(.0001f, _hitRadius), _overlaps,
             _hitMask, QueryTriggerInteraction.Ignore);
@@ -136,11 +179,15 @@ public sealed class LaserAttack : MonoBehaviour
             distance = hit.distance;
             closest = hit.collider;
             point = hit.point;
+            normal = hit.normal;
         }
         // 拥挤场景填满查询缓冲时保守截断，不能拿可能漏掉最近遮挡的结果穿墙攻击。
         if (count == _hits.Length || overlaps == _overlaps.Length) { distance = 0f; closest = null; }
         BeamEnd = _origin + _direction * distance;
-        if (_beam != null)
+        HasBeamHit = closest != null;
+        ImpactPoint = point;
+        ImpactNormal = normal;
+        if (_beam != null && applyDamage)
         {
             _beam.useWorldSpace = true;
             _beam.positionCount = 2;
@@ -148,17 +195,19 @@ public sealed class LaserAttack : MonoBehaviour
             _beam.SetPosition(1, BeamEnd);
             _beam.enabled = true;
         }
-        if (_damageAttempted || closest == null || target == null || !target.IsAlive
+        if (!applyDamage || _damageAttempted || closest == null || target == null || !target.IsAlive
             || closest.GetComponentInParent<HealthComponent>() != target) return;
-        // 一轮只结算一次，命中无敌帧也消耗本轮资格；不经过 Hitbox 的 Parry 判定入口。
+        // 一轮只结算一次，命中无敌帧也消耗本轮资格。
+        // 粒子炮与光束都是飞行道具（策划案 §8）：被 parry 时只弹开，不走近战那套时缓。
         _damageAttempted = true;
-        _combat.TryHit(closest, target, new AttackDamageRequest(_combat.Damage, point, _direction, 0L, 0));
+        _combat.TryHit(closest, target, new AttackDamageRequest(_combat.Damage, point, _direction, 0L, 0,
+            AttackSourceType.Projectile, _combat.ParryKind));
     }
 
     private void OnDamaged(HealthComponent source, float applied, Vector3 point, Vector3 direction)
     {
         if (!source.IsAlive) ResetAttack();
-        else if (IsCharging) BeginCooldown();
+        else if (IsCharging || IsConverging) BeginCooldown();
     }
 
     private void OnRevived(HealthComponent source) => ResetAttack();
@@ -175,6 +224,7 @@ public sealed class LaserAttack : MonoBehaviour
         Phase = AttackPhase.Idle;
         _remaining = 0f;
         _damageAttempted = false;
+        HasBeamHit = false;
         _telegraph?.Stop();
         if (_beam != null) _beam.enabled = false;
     }

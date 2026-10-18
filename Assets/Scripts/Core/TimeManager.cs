@@ -45,6 +45,7 @@ public sealed class TimeManager : MonoBehaviour
     private static readonly object SlowOwner = new object();
     private static readonly object HitStopOwner = new object();
     private static readonly object TimeStopOwner = new object();
+    private static readonly object ParryOwner = new object();
 
     // 除玩家顿帧外，还可能有实体为自己登记的顿帧来源（例如敌人冻自己的受击动画）。
     // InHitStop 只认这张表，所以调用方必须真的登记过，不能用一次性对象冒充。
@@ -159,12 +160,28 @@ public sealed class TimeManager : MonoBehaviour
     // 往某层加一个倍率；seconds > 0 就到点自动恢复，不传就一直留着（等 Release）
     public static void Apply(TimeLayer layer, float rate, float seconds = 0f, object owner = null)
     {
-        SourcesOf(layer)?.Add(new Source
+        List<Source> sources = SourcesOf(layer);
+        // game 层不是来源表（走 SetPaused）；其余层拿不到实例，说明场景里没有 TimeManager，
+        // 此时所有时间效果都会静默失效（时间不变、画面也不变），这种失败最难查，第一次遇到就喊出来。
+        if (sources == null)
+        {
+            WarnMissingInstance();
+            return;
+        }
+        sources.Add(new Source
         {
             Rate = Mathf.Clamp01(rate),
             Until = seconds > 0f ? Time.unscaledTime + seconds : 0f,
             Owner = owner,
         });
+    }
+
+    private static bool _missingInstanceWarned;
+    private static void WarnMissingInstance()
+    {
+        if (_missingInstanceWarned) return;
+        _missingInstanceWarned = true;
+        Debug.LogWarning("[TimeManager] 场景里没有 TimeManager 实例：时缓 / 时停 / 顿帧都不会生效");
     }
 
     // 把某层里这个来源登记的倍率全拿掉（按来源删，不会误伤别的效果）
@@ -202,6 +219,7 @@ public sealed class TimeManager : MonoBehaviour
     {
         Release(TimeLayer.World, SlowOwner);
         Release(TimeLayer.Player, SlowOwner);
+        Release(TimeLayer.Global, ParryOwner);
         TimeManager instance = Resolve();
         if (instance == null) return;
         foreach (object owner in instance._hitStopOwners)
@@ -209,6 +227,17 @@ public sealed class TimeManager : MonoBehaviour
             Release(TimeLayer.World, owner);
             Release(TimeLayer.Player, owner);
         }
+    }
+
+    // parry 成功后的时缓：策划案里 parry 的时间变换是**全局**的（敌我一起慢），
+    // 与命中顿帧（world + player 短促一压）不是一回事，所以单独挂 global 层、单独一个来源标识：
+    // InHitStop 不会因为 parry 变真，敌人动画也不会被当成顿帧冻住。
+    // seconds <= 0 视为不放，只清掉上一次的残留。
+    public static void ParrySlow(float seconds, float rate)
+    {
+        Release(TimeLayer.Global, ParryOwner);
+        if (seconds <= 0f) return;
+        Apply(TimeLayer.Global, rate, seconds, ParryOwner);
     }
 
     // 保持真实时间的 60Hz 固定采样，只缩放逻辑推进量，避免减速后漏采输入。
