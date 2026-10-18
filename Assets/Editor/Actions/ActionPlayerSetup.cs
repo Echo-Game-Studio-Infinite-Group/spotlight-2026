@@ -30,9 +30,8 @@ namespace GameJam.Actions.Editor
                 PlayerCombat combat = player.GetComponent<PlayerCombat>();
                 PlayerMotor motor = player.GetComponent<PlayerMotor>();
                 if (combat == null || motor == null || motor.Params == null) throw new InvalidOperationException("Player 缺少战斗或移动参数");
-                AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx").OfType<AnimationClip>()
-                    .FirstOrDefault(value => !value.name.StartsWith("__preview__", StringComparison.Ordinal));
-                if (clip == null) throw new InvalidOperationException("缺少导入后的 Attack 动画片段");
+                AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/Player/Attack.anim");
+                if (clip == null) throw new InvalidOperationException("缺少 Assets/Animations/Player/Attack.anim 动画片段");
                 ActionCatalog catalog = CreateCatalog(clip, combat, motor.Params);
                 AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
                 if (controller == null) throw new InvalidOperationException("缺少 player.controller");

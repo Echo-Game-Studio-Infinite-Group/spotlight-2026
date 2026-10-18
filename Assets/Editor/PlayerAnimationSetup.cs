@@ -7,7 +7,7 @@ using UnityEngine;
 public static class PlayerAnimationSetup
 {
     private const string ControllerPath = "Assets/Animations/player.controller";
-    private const string AttackClipPath = "Assets/Animations/fbx/Attack.fbx";
+    private const string AttackClipPath = "Assets/Animations/Player/Attack.anim";
     // 片段路径写成常量：这几个 fbx 在工程整理时被改过名（Idle (1).fbx → Idle.fbx、
     // Soccer Tackle.fbx → Tackle.fbx），散落在代码里的硬编码路径会直接抛「动画片段缺失」。
     private const string IdleClipPath = "Assets/Animations/fbx/Idle.fbx";
