@@ -59,11 +59,13 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
         _health = Mathf.Min(_maxHealth, _health + amount);
     }
 
-    public void Reset()
+    public void Reset() => Reset(_maxHealth);
+
+    public void Reset(float health)
     {
         EnsureStarted();
         bool wasDead = _health <= 0f;
-        _health = _maxHealth;
+        _health = float.IsNaN(health) || float.IsInfinity(health) ? _maxHealth : Mathf.Clamp(health, .01f, _maxHealth);
         _invulnerableUntil = float.NegativeInfinity;
         if (wasDead) Revived?.Invoke(this);
     }

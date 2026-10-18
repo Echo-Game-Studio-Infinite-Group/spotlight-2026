@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 509b7f56b3e86bb4f9497d19b1eb7602, type: 3}
+  m_Name: ChaosRules
+  m_EditorClassIdentifier: 
+  _initialValue: 0
+  _normalMaximum: 100
+  _deathPenalty: 10
+  _lowLoopMaximum: 30
+  _highLoopMinimum: 80
+  _fallDamage: 20
+  _reviveHealthRatio: 1
+  _restoreLampsOnDeath: 0
