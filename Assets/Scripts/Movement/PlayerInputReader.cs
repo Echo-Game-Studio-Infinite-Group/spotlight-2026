@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GameJam.Actions;
 using UnityEngine;
@@ -24,6 +24,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private Vector2 _moveValue;
     private bool _sprintHeld, _slideHeld;
     private bool _gameplayEnabled = true;
+    private readonly HashSet<object> _gameplayBlockers = new HashSet<object>();
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action PauseRequested;
@@ -33,7 +34,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
     public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
-    public bool GameplayEnabled => _gameplayEnabled && _focused;
+    public bool GameplayEnabled => _gameplayEnabled && _focused && _gameplayBlockers.Count == 0;
     public bool BrakeHeld => isActiveAndEnabled && GameplayEnabled && _brake != null && _brake.IsPressed();
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
@@ -214,6 +215,14 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     }
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
+    // 暂停菜单与读档仍可设置意愿；演出锁独立持有，避免外部提前恢复操作。
+    public void SetGameplayBlocked(object owner, bool blocked)
+    {
+        if (owner == null) return;
+        bool changed = blocked ? _gameplayBlockers.Add(owner) : _gameplayBlockers.Remove(owner);
+        if (changed) ApplyGameplay();
+    }
+
     private void ApplyGameplay()
     {
         Clear();

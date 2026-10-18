@@ -12,6 +12,15 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
     [SerializeField] private AnimationClip _clip;
     [SerializeField, Min(0.01f)] private float _playbackSpeed = 1f;
 
+    [Header("复活闪烁")]
+    [SerializeField, Min(0)] private int _reviveBlinks = 3;
+    [SerializeField, Min(0.01f)] private float _reviveInterval = 0.12f;
+
+    private bool _controlsLocked, _reviving;
+    private float _reviveElapsed;
+    private Renderer[] _reviveRenderers;
+    private bool[] _renderingWasOff;
+
     private Animator _animator;
     private HealthComponent _health;
     private PlayerMotor _motor;
@@ -28,6 +37,7 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
 
     public bool IsPlayingDeath => _dead && _clip != null && _elapsed < _clip.length;
     public bool IsDead => _dead;
+    public bool IsReviving => _reviving;
     public float Duration => _clip != null ? _clip.length / Mathf.Max(0.01f, _playbackSpeed) : 0f;
 
     private void Awake()
@@ -65,12 +75,18 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
             return;
         }
 
+        CancelRevive();
         _ragdoll?.ExitHitStun();
         _dead = true;
         _elapsed = 0f;
-        _inputWasEnabled = _input != null && _input.GameplayEnabled;
-        for (int i = 0; i < _controls.Length; i++)
-            _controlsWereEnabled[i] = _controls[i] != null && _controls[i].enabled;
+        // 环境伤害可在闪烁中再次致死，此时沿用最初的控制状态，不能把锁定状态当原值。
+        if (!_controlsLocked)
+        {
+            _inputWasEnabled = _input != null && _input.GameplayEnabled;
+            for (int i = 0; i < _controls.Length; i++)
+                _controlsWereEnabled[i] = _controls[i] != null && _controls[i].enabled;
+            _controlsLocked = true;
+        }
         for (int i = _controls.Length - 1; i >= 0; i--)
             if (_controls[i] != null) _controls[i].enabled = false;
 
@@ -97,6 +113,17 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
 
     private void Update()
     {
+        if (_reviving)
+        {
+            // 无敌帧使用未缩放时间，逐帧续上，避免暂停/时缓让保护先于闪烁结束。
+            ProtectRevive();
+            _reviveElapsed += TimeManager.PlayerDeltaTime;
+            float interval = Mathf.Max(0.01f, _reviveInterval);
+            int phase = Mathf.FloorToInt(_reviveElapsed / interval);
+            if (phase >= _reviveBlinks * 2) FinishRevive();
+            else SetReviveVisible(phase % 2 != 0);
+            return;
+        }
         if (!IsPlayingDeath) return;
         // 与公共玩家时间一致；暂停和时缓仍然有效，不单独修改全局时间。
         float speed = Mathf.Max(0.01f, _playbackSpeed);
@@ -108,9 +135,55 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         _elapsed = Mathf.Min(_clip.length, _elapsed + dt * speed);
     }
 
-    private void OnRevived(HealthComponent source) => RestorePresentation();
+    private void OnRevived(HealthComponent source)
+    {
+        if (!_dead) return;
+        if (_reviveBlinks <= 0) { RestorePresentation(); return; }
 
-    private void RestorePresentation()
+        _input?.SetGameplayBlocked(this, true);
+        RestorePresentation(false);
+        _input?.SetGameplayEnabled(_inputWasEnabled);
+        _reviving = true;
+        _reviveElapsed = 0f;
+        // 只闪角色网格，不闪摄像机、UI 或粒子；隐藏不改原来的 enabled 状态。
+        var renderers = new System.Collections.Generic.List<Renderer>();
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+            if (renderer is SkinnedMeshRenderer || renderer is MeshRenderer) renderers.Add(renderer);
+        _reviveRenderers = renderers.ToArray();
+        _renderingWasOff = new bool[_reviveRenderers.Length];
+        for (int i = 0; i < _reviveRenderers.Length; i++)
+            _renderingWasOff[i] = _reviveRenderers[i].forceRenderingOff;
+        SetReviveVisible(false);
+        ProtectRevive();
+    }
+
+    private void ProtectRevive()
+        => _health.GrantInvulnerability(Mathf.Max(_reviveInterval, TimeManager.UnscaledDeltaTime * 2f));
+
+    private void SetReviveVisible(bool visible)
+    {
+        for (int i = 0; i < _reviveRenderers.Length; i++)
+            if (_reviveRenderers[i] != null)
+                _reviveRenderers[i].forceRenderingOff = !visible || _renderingWasOff[i];
+    }
+
+    private void FinishRevive()
+    {
+        CancelRevive();
+        RestoreControls(false);
+    }
+
+    private void CancelRevive()
+    {
+        if (!_reviving) return;
+        _reviving = false;
+        SetReviveVisible(true);
+        _reviveRenderers = null;
+        _renderingWasOff = null;
+        _input?.SetGameplayBlocked(this, false);
+    }
+
+    private void RestorePresentation(bool restoreControls = true)
     {
         if (!_dead) return;
         _dead = false;
@@ -124,15 +197,26 @@ public sealed class PlayerDeathAnimation : MonoBehaviour
         _animator.enabled = _animatorWasEnabled;
         // 死亡期间 Motor.Active 为空，读档可能直接改 Transform；在恢复前同步胶囊与速度。
         _motor.Teleport(transform.position);
+        if (restoreControls) RestoreControls(true);
+    }
+
+    private void RestoreControls(bool restoreInput)
+    {
+        if (!_controlsLocked) return;
+        _controlsLocked = false;
         for (int i = 0; i < _controls.Length; i++)
             if (_controls[i] != null) _controls[i].enabled = _controlsWereEnabled[i];
-        _input?.SetGameplayEnabled(_inputWasEnabled);
+        if (restoreInput) _input?.SetGameplayEnabled(_inputWasEnabled);
     }
 
     private void OnDisable()
     {
         _health.Died -= OnDied;
         _health.Revived -= OnRevived;
-        if (Application.isPlaying && gameObject.activeInHierarchy) RestorePresentation();
+        if (!Application.isPlaying) return;
+        bool wasReviving = _reviving;
+        CancelRevive();
+        RestorePresentation(false);
+        RestoreControls(!wasReviving);
     }
 }
