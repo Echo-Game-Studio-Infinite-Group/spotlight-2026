@@ -149,7 +149,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493ed823406b8ca4a8bcc329b6f91fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _hurtDamageThreshold: 0
   _walkSpeed: 2
   _runSpeed: 5
   _runDistance: 3
@@ -323,12 +322,6 @@ MonoBehaviour:
   _damage: 8
   _cooldown: 1.1
   _windowSeconds: 0
-  _parryWindowSeconds: 0.2
-  _parryInvulnerableSeconds: 0.8
-  _parrySlowSeconds: 0.6
-  _parryCooldownSeconds: 1
-  _parrySlowRate: 0.1
-  _parryKind: 0
 --- !u!114 &8648443380718486350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1089,7 +1082,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _speedDampTime: 0.1
-  _playbackSpeed: 1
   _hurtHitStopSeconds: 0.2
   _hurtHitStopRate: 1
   _deathHitStopSeconds: 0.3
