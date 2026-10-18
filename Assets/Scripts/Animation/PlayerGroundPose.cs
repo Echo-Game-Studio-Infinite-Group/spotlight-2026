@@ -90,19 +90,20 @@ public sealed class PlayerGroundPose : MonoBehaviour
     {
         if (layer != 0 || !_animator.isHuman) return;
         IkEvaluationCount++;
-        bool active = _motor.enabled && _motor.IsGrounded && !_locomotion.IsHurting
-            && !(_ragdoll != null && _ragdoll.IsActive) && !_animator.GetBool(ActionPlayingId);
+        bool groundedForPose = _motor.enabled && _motor.IsGrounded && !_locomotion.IsHurting
+            && !(_ragdoll != null && _ragdoll.IsActive);
         bool slide = _motor.IsSliding || _locomotion.IsSlideRecovering;
-        bool feet = active && !slide;
+        bool feet = groundedForPose && !slide;
+        bool applyFootIk = feet && !_animator.GetBool(ActionPlayingId);
         Vector3 left = _animator.GetIKPosition(AvatarIKGoal.LeftFoot);
         Vector3 right = _animator.GetIKPosition(AvatarIKGoal.RightFoot);
         Quaternion leftRotation = _animator.GetIKRotation(AvatarIKGoal.LeftFoot);
         Quaternion rightRotation = _animator.GetIKRotation(AvatarIKGoal.RightFoot);
         float leftDrop = FootTarget(left, _animator.leftFeetBottomHeight, feet, out Vector3 leftTarget, out Vector3 leftNormal, out float leftWeight);
         float rightDrop = FootTarget(right, _animator.rightFeetBottomHeight, feet, out Vector3 rightTarget, out Vector3 rightNormal, out float rightWeight);
-        float desiredDrop = feet ? Mathf.Clamp(Mathf.Min(leftDrop, rightDrop), -_maxPelvisDrop, 0f) : 0f;
+        float desiredDrop = applyFootIk ? Mathf.Clamp(Mathf.Min(leftDrop, rightDrop), -_maxPelvisDrop, 0f) : 0f;
         _pelvisDrop = Mathf.Lerp(_pelvisDrop, desiredDrop, 1f - Mathf.Exp(-_poseResponse * _sampleDt));
-        if (active)
+        if (applyFootIk)
         {
             Vector3 body = _animator.bodyPosition;
             if (slide)
@@ -117,8 +118,11 @@ public sealed class PlayerGroundPose : MonoBehaviour
         }
         LeftFootWeight = leftWeight; RightFootWeight = rightWeight;
         LeftFootTarget = leftTarget; RightFootTarget = rightTarget;
-        ApplyFoot(AvatarIKGoal.LeftFoot, leftTarget, leftRotation, leftNormal, leftWeight);
-        ApplyFoot(AvatarIKGoal.RightFoot, rightTarget, rightRotation, rightNormal, rightWeight);
+        if (applyFootIk)
+        {
+            ApplyFoot(AvatarIKGoal.LeftFoot, leftTarget, leftRotation, leftNormal, leftWeight);
+            ApplyFoot(AvatarIKGoal.RightFoot, rightTarget, rightRotation, rightNormal, rightWeight);
+        }
     }
     private float FootTarget(Vector3 animated, float soleHeight, bool active, out Vector3 target, out Vector3 normal, out float weight)
     {
