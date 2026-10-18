@@ -64,11 +64,11 @@ public sealed class SlowMotionFeedbackTests
     }
 
     [Test]
-    public void ParrySlow_DrivesScreenFeedback()
+    public void ParryStop_DrivesScreenFeedback()
     {
         float vignetteBefore = _feedback.CurrentVignette;
-        // 与 PlayerCombat.TryParry 同一条调用：近战 parry 成功 → 全局时缓。
-        TimeManager.ParrySlow(0.35f, 0.1f);
+        // 反馈幅度跟随同一层倍率，支持策划配置的非零停顿倍率。
+        TimeManager.ParryStop(0.35f, 0.1f);
         Assert.Less(TimeManager.GlobalRate, 1f, "前置条件：全局时间确实被压慢了");
 
         Advance(0.2f);
@@ -90,10 +90,10 @@ public sealed class SlowMotionFeedbackTests
     [Test]
     public void SlowFeedback_ReturnsToBaseAfterEffectEnds()
     {
-        TimeManager.ParrySlow(0.1f, 0.1f);
+        TimeManager.ParryStop(0.1f, 0.1f);
         Advance(0.12f);
         Assert.Greater(_feedback.SlowWeight, 0.3f);
-        // ParrySlow 的时长到点后 TimeManager.Update 会摘掉来源；测试里没有帧循环，手动清一次。
+        // 测试无帧循环，显式释放已验证的时间来源。
         TimeManager.ClearSlowMotion();
         Advance(1.5f);
         Assert.AreEqual(0f, _feedback.SlowWeight, 0.02f, "慢速结束后权重必须回落到 0");

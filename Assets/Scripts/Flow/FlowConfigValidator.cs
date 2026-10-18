@@ -29,8 +29,8 @@ namespace GameJam.Flow
                 if (loop == null) { errors.Add("循环列表含空引用"); continue; }
                 if (loop.MinimumChaos > loop.MaximumChaos) errors.Add(loop.name + "：循环区间无效");
                 if (loop.NeutralPool == null || loop.ChaosPool == null) errors.Add(loop.name + "：循环的两个来源池必须配置");
-                if (loop.NeutralPool != null) { pools.Add(loop.NeutralPool); if (loop.NeutralPool.ChangesChaos) errors.Add(loop.name + "：普通房来源必须为池1"); }
-                if (loop.ChaosPool != null) { pools.Add(loop.ChaosPool); if (!loop.ChaosPool.ChangesChaos) errors.Add(loop.name + "：变化房来源必须为池2"); }
+                if (loop.NeutralPool != null) { pools.Add(loop.NeutralPool); if (loop.NeutralPool.ChangesChaos) errors.Add(loop.name + "：普通房来源不能使用增加混乱度的地图池"); }
+                if (loop.ChaosPool != null) { pools.Add(loop.ChaosPool); if (!loop.ChaosPool.ChangesChaos) errors.Add(loop.name + "：变化房来源必须使用增加混乱度的地图池"); }
                 if (loop.NeutralCounts == null || loop.NeutralCounts.Length == 0) errors.Add(loop.name + "：没有普通房数量候选");
                 else foreach (int count in loop.NeutralCounts) if (count != 3 && count != 6) errors.Add(loop.name + "：普通房数量应为3或6");
                 foreach (LoopRuleDefinition other in config.Loops)
@@ -73,13 +73,14 @@ namespace GameJam.Flow
                 if (Array.IndexOf(variant.Room.Variants, variant) < 0) errors.Add(variant.name + "：未登记在所属箱庭的差分列表");
                 FlowRoomTemplate template = variant.Room.Template;
                 if (template == null) continue;
+                errors.AddRange(FlowEnemySpawnValidation.Variant(variant));
                 foreach (string groupId in variant.ContentGroups)
                 {
                     bool found = false;
                     foreach (FlowContentGroup group in template.GetComponentsInChildren<FlowContentGroup>(true)) if (group.Id == groupId) found = true;
                     if (!found) errors.Add(variant.Id + "：模板缺少内容组 " + groupId);
                 }
-                if (variant.StabilizerGain > 0 && template.GetComponentsInChildren<StabilityDevice>(true).Length == 0) errors.Add(variant.Id + "：池2差分没有稳定装置");
+                if (variant.StabilizerGain > 0 && template.GetComponentsInChildren<StabilityDevice>(true).Length == 0) errors.Add(variant.Id + "：增加混乱度的差分没有稳定装置");
             }
             ids.Clear();
             foreach (RoomDefinition room in rooms)
@@ -88,6 +89,7 @@ namespace GameJam.Flow
                 if (room.Variants.Length < 1 || room.Variants.Length > 6) errors.Add(room.name + "：差分数量必须为1～6");
                 if (room.Template == null) { errors.Add(room.name + "：缺少模板"); continue; }
                 FlowRoomTemplate template = room.Template;
+                errors.AddRange(FlowEnemySpawnValidation.Template(template));
                 if (template.Entry == null || template.Exit == null || template.EntryDoor == null || template.ExitDoor == null) errors.Add(room.name + "：门接口或门板缺失");
                 if (template.EntrySize.x <= 0 || template.EntrySize.y <= 0 || template.ExitSize.x <= 0 || template.ExitSize.y <= 0) errors.Add(room.name + "：门洞尺寸必须为正数");
                 if (template.transform.localScale != UnityEngine.Vector3.one) errors.Add(room.name + "：房间模板根节点不能缩放");

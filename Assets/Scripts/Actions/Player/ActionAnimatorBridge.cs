@@ -18,6 +18,7 @@ namespace GameJam.Actions
         private float _previousSpeed;
         private bool _previousFireEvents;
         private AnimatorCullingMode _previousCulling;
+        private bool _parryPose;
         private long _instance;
         private int _stateHash;
         private int _layer;
@@ -91,6 +92,7 @@ namespace GameJam.Actions
             ActionAnimationBinding binding = state.Segment?.Animation;
             if (binding == null || string.IsNullOrWhiteSpace(binding.AnimatorState))
             { EndAction(_instance, false); return; }
+            _parryPose = false;
             _airborneBinding = null;
             if (state.Action.AirborneAnimation?.HoldJumpUpPose == true && _airborneSettings != state.Action.AirborneAnimation)
             {
@@ -123,6 +125,11 @@ namespace GameJam.Actions
         public void Sample(ActionExecutionState state, float deltaTime)
         {
             if (!IsOwned) return;
+            if (_parryPose)
+            {
+                if (TimeManager.InHitStop) return;
+                _parryPose = false; ReturnToLocomotion();
+            }
             _locomotion.UpdateLocomotion(deltaTime);
             if (_airborneSettings != null && _motor != null)
             {
@@ -143,11 +150,12 @@ namespace GameJam.Actions
         {
             if (!IsOwned || _instance != instanceId) return;
             _instance = 0;
-            if (!SampleAirborneVisual(0f)) ReturnToLocomotion();
+            if (!_parryPose && !SampleAirborneVisual(0f)) ReturnToLocomotion();
             if (stopEffects) _vfx?.StopAttacks();
             // 失活对象不能再手动驱动 Animator，退出播放与卸载场景会走这条路径。
             if (_animator != null && _animator.gameObject.activeInHierarchy) _animator.Update(0f);
         }
+        public void HoldParryPose() => _parryPose = TimeManager.InHitStop;
         private void ReturnToLocomotion()
         {
             _animator.SetBool(PlayingId, false);
@@ -189,12 +197,13 @@ namespace GameJam.Actions
             _airborneSettings = null;
             _jumpUpBinding = _airborneBinding = null;
             _hasLeftGround = false;
-            if (IsOwned && _instance == 0) ReturnToLocomotion();
+            if (IsOwned && _instance == 0 && !_parryPose) ReturnToLocomotion();
         }
         public void PlayAttackEffect(int index) => _vfx?.PlayAttack(index);
         public void Release(object owner)
         {
             if (!ReferenceEquals(_owner, owner)) return;
+            _parryPose = false;
             ClearAirborneVisual();
             EndAction(_instance, true);
             _locomotion.SetSequenceDriven(false);

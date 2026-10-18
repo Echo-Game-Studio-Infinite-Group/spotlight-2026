@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // 敌人攻击提示（attack telegraph）：只负责「起手亮、收招灭」，不含任何策划数值。
 // 生命周期完全跟敌人的攻击窗口走：Enemy.TryAttack 调 Play()，Enemy.FinishAttack 调 Stop()。
@@ -14,13 +14,6 @@ public sealed class AttackTelegraph : MonoBehaviour
 {
     [Tooltip("占位表现：Play 时激活这个子物体。留空则按下面的名字在子节点里找。")]
     [SerializeField] private Transform _visual;
-
-    [Tooltip("找子物体用的名字。找不到就只走逻辑、不显示（不会报错）。")]
-    // ---- 按 parry 类型切图（劣势 parry = 红）----
-    public enum Kind { Normal, Disadvantage }
-
-    [Tooltip("这个敌人（以后是这一招）用哪种提示。Disadvantage = 劣势 parry，显示红图。")]
-    [SerializeField] private Kind _kind = Kind.Normal;
 
     [Tooltip("普通 parry 的图。留空 = 不动 SpriteRenderer 上原来的图。")]
     [SerializeField] private Sprite _normalSprite;
@@ -76,7 +69,8 @@ public sealed class AttackTelegraph : MonoBehaviour
     private void ApplySprite()
     {
         if (_renderer == null) _renderer = GetComponentInChildren<SpriteRenderer>(true);
-        Sprite target = _kind == Kind.Disadvantage ? _disadvantageSprite : _normalSprite;
+        CombatComponent combat = GetComponent<CombatComponent>();
+        Sprite target = combat != null && combat.ParryKind == AttackParryKind.Disadvantage ? _disadvantageSprite : _normalSprite;
         if (_renderer != null && target != null) _renderer.sprite = target;
     }
 

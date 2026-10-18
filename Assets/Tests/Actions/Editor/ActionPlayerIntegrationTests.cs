@@ -635,6 +635,7 @@ public sealed class ActionPlayerIntegrationTests
         AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
         ActionAnimationBinding sourceBinding = _attack.Timeline[0].Animation;
         sourceBinding.NormalizedStart = 0f; sourceBinding.NormalizedEnd = 1f; sourceBinding.BlendFrames = 0;
+        _attack.Combat.ParryVolumes.Clear();
         _attack.Timeline = new List<ActionSegment> { new ActionSegment { DurationFrames = 60, Animation = sourceBinding } };
         _attack.CancelWindows.Clear();
         ActionDefinition target = Object.Instantiate(_attack); _created.Add(target); target.ActionId = "second_attack";
@@ -1255,4 +1256,43 @@ public sealed class ActionPlayerIntegrationTests
         Assert.AreEqual(states, controller.layers[0].stateMachine.stateMachines[0].stateMachine.states.Length);
         Assert.IsTrue(PlayerLocomotionAnimatorSetup.HasWallDash(controller));
     }
+    [Test]
+    public void ParryCancelsRealRunnerBeforeDamageAndBuffersFreshStopInput()
+    {
+        var clock = new GameObject("ParryRunnerClock"); _created.Add(clock); Invoke(clock.AddComponent<TimeManager>(), "Awake");
+        Ground(); ShortAttack();
+        Enemy enemy = Target(); enemy.GetComponent<BoxCollider>().size = Vector3.one * .2f;
+        enemy.transform.position = _root.transform.position + Vector3.forward * 1.5f;
+        CombatComponent source = enemy.GetComponent<CombatComponent>();
+        Assert.IsTrue(source.TryBeginAttack(TimeManager.WorldTime));
+        int hits = 0, parries = 0;
+        _combat.SequenceHitLanded += (target, request, result) => hits++;
+        _combat.ParrySucceeded += contacts => parries++;
+        Tick(ActionInputButtons.Attack);
+        Assert.AreEqual(1, parries); Assert.AreEqual(0, hits);
+        Assert.IsFalse(_runner.Player.IsRunning); Assert.IsFalse(source.IsAttacking(TimeManager.WorldTime));
+        Assert.IsFalse(_combat.Hitbox.SequenceWindowOpen);
+        float pose = _bridge.Animator.GetFloat("ActionTime");
+        Tick(ActionInputButtons.Attack, frames: 0f);
+        Assert.AreEqual(pose, _bridge.Animator.GetFloat("ActionTime"));
+        Assert.IsFalse(_runner.Player.IsRunning); Assert.AreEqual(1, _runner.Player.PendingCount);
+        TimeManager.ClearSlowMotion(); Tick();
+        Assert.IsTrue(_runner.Player.IsRunning, "时停期间的新输入恢复后应正常提交");
+        Assert.AreEqual(1, parries);
+    }
+
+    [Test]
+    public void DisadvantageParryClearsMomentumAndAddsConfiguredBackwardImpulse()
+    {
+        var clock = new GameObject("ParryKnockbackClock"); _created.Add(clock); Invoke(clock.AddComponent<TimeManager>(), "Awake");
+        Ground(); ShortAttack(); _motor.Params.GroundFriction = 0f; _motor.SetHorizontalSpeed(5f);
+        Enemy enemy = Target(); enemy.GetComponent<BoxCollider>().size = Vector3.one * .2f;
+        enemy.transform.position = _root.transform.position + Vector3.forward * 1.5f;
+        CombatComponent source = enemy.GetComponent<CombatComponent>(); source.ParryKind = AttackParryKind.Disadvantage;
+        Assert.IsTrue(source.TryBeginAttack(TimeManager.WorldTime)); Tick(ActionInputButtons.Attack);
+        Assert.IsFalse(_runner.Player.IsRunning);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(3f).Within(.001f));
+        Assert.Less(Vector3.Dot(_motor.Velocity, _root.transform.forward), 0f);
+    }
+
 }

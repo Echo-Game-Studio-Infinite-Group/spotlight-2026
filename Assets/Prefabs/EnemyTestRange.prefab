@@ -947,6 +947,7 @@ GameObject:
   - component: {fileID: 7139187032569165066}
   - component: {fileID: 8851288337191612421}
   - component: {fileID: 910010001}
+  - component: {fileID: 6601061697889192215}
   m_Layer: 6
   m_Name: EnemyTestRange
   m_TagString: NoWallInteraction
@@ -1124,7 +1125,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _visual: {fileID: 0}
-  _kind: 0
   _normalSprite: {fileID: 21300000, guid: 80eed4cd6e5e1d842b68a47e5be4819e, type: 3}
   _disadvantageSprite: {fileID: 21300000, guid: 6aed4b813cd302a49900265a54d41531, type: 3}
   _renderer: {fileID: 0}
@@ -1141,6 +1141,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f9b8346534d6b9e072508c52a860f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &6601061697889192215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2438456557468304048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 356184dae90e72d4891d0e3d350f3dd9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _dropChance: 0.4
+  _healthShare: 0.5
+  _healthPickup: {fileID: 3351717601451807541, guid: 9ddaae401e43e554a9454a24b2d8d278, type: 3}
+  _energyPickup: {fileID: 4156707659257163327, guid: c7e949a7713965442af385b3a791078b, type: 3}
+  _dropOffset: {x: 0, y: 0.25, z: 0}
 --- !u!1 &2492104674447283237
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GameJam.Actions;
 using UnityEngine;
@@ -24,6 +24,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private Vector2 _moveValue;
     private bool _sprintHeld, _slideHeld;
     private bool _gameplayEnabled = true;
+    private readonly HashSet<object> _gameplayBlockers = new HashSet<object>();
     private bool _focused = true;
     public event Action ToggleHUD;
     public event Action PauseRequested;
@@ -33,7 +34,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     public InputBuffer Battle { get; private set; } = new InputBuffer();
 
     public Vector2 MoveInput => GameplayEnabled ? _moveValue : Vector2.zero;
-    public bool GameplayEnabled => _gameplayEnabled && _focused;
+    public bool GameplayEnabled => _gameplayEnabled && _focused && _gameplayBlockers.Count == 0;
     public bool BrakeHeld => isActiveAndEnabled && GameplayEnabled && _brake != null && _brake.IsPressed();
     // 独立持续效果只旁读状态，不能消费序列的边沿或移动快照。
     public bool SkillHeld => isActiveAndEnabled && GameplayEnabled && (_heldButtons & ActionInputButtons.Skill) != 0;
@@ -145,10 +146,6 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private void OnParry(InputAction.CallbackContext context)
     {
         RecordEdge(ActionInputButtons.Parry, true);
-        // parry 不是动作集里的一招（它没有动作序列，判定窗口由 PlayerCombat 自己开），
-        // 所以序列接管输入时也必须照常入队：否则普攻后摇里按 parry 会被静默丢掉。
-        // 序列期间没有人消费这个缓冲（ConsumeCombo / ConsumeAttack 都只在非序列路径调用）。
-        Battle.Push(InputBuffer.Action.Parry, TimeManager.UnscaledTime);
     }
     private void RecordEdge(ActionInputButtons button, bool pressed)
     {
@@ -214,6 +211,14 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     }
 
     public void SetGameplayEnabled(bool enabled) { _gameplayEnabled = enabled; ApplyGameplay(); }
+    // 暂停菜单与读档仍可设置意愿；演出锁独立持有，避免外部提前恢复操作。
+    public void SetGameplayBlocked(object owner, bool blocked)
+    {
+        if (owner == null) return;
+        bool changed = blocked ? _gameplayBlockers.Add(owner) : _gameplayBlockers.Remove(owner);
+        if (changed) ApplyGameplay();
+    }
+
     private void ApplyGameplay()
     {
         Clear();

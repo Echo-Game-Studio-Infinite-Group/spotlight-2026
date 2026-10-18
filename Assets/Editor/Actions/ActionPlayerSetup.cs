@@ -113,6 +113,9 @@ namespace GameJam.Actions.Editor
                 if (split < openFrame) AddSegment(attack, clip, "startup_b", "引刀", ActionPhase.Startup, split, openFrame, total);
                 AddSegment(attack, clip, "active", "挥砍命中", ActionPhase.Active, openFrame, closeFrame, total);
                 AddSegment(attack, clip, "recovery", "收招", ActionPhase.Recovery, closeFrame, total, total);
+                attack.Combat.ParryVolumes.Add(new ActionHitVolume { DisplayName = "挥刀 Parry",
+                    Start = new ActionFrameAnchor { SegmentId = "active" },
+                    End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd } });
                 attack.Timeline.Find(segment => segment.SegmentId == "active").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
                 attack.Timeline.Find(segment => segment.SegmentId == "recovery").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.close" });
                 if (vfx != null) AddEvent(attack, Mathf.Clamp(Mathf.RoundToInt(vfx.time / clip.length * total), 0, total - 1),

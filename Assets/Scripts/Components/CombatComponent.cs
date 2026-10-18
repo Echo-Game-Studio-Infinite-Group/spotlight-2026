@@ -22,17 +22,11 @@ public sealed class CombatComponent : MonoBehaviour
     // 等于 0 表示不自动关，由动画状态机调 FinishAttack（敌人）。
     [SerializeField, Min(0f)] private float _windowSeconds = 1.6f;
 
-    [Header("Parry（本组件作为受击方）")]
-    [Tooltip("按下 parry 后判定窗口的时长。窗口内被命中即判定成功")]
-    [SerializeField, Min(0f)] private float _parryWindowSeconds = 0.2f;
-    [Tooltip("parry 成功后的即时无敌时长（策划案：约 0.8 秒）")]
-    [SerializeField, Min(0f)] private float _parryInvulnerableSeconds = 0.8f;
-    [Tooltip("近战 parry 成功时的全局时缓时长。0.2s 以下会被读成「卡了一下」而不是慢放")]
-    [SerializeField, Min(0f)] private float _parrySlowSeconds = 0.6f;
-    [Tooltip("parry 冷却：一次开窗之后要等这么久才能再按")]
-    [SerializeField, Min(0f)] private float _parryCooldownSeconds = 1f;
-    [Tooltip("近战 parry 时缓压到的倍率（策划案：原先的 5%–10%）")]
-    [SerializeField, Range(0.01f, 1f)] private float _parrySlowRate = 0.1f;
+    [Header("Parry 成功反馈")]
+    [SerializeField, Min(0f)] private float _parryInvulnerableSeconds = .8f;
+    [SerializeField, Min(0f), Tooltip("真实秒数；0 表示关闭时停")]
+    private float _parryStopSeconds = .08f;
+    [SerializeField, Range(0f, 1f)] private float _parryStopRate;
 
     [Header("Parry（本组件作为攻击方）")]
     [Tooltip("本组件的攻击要求玩家用哪种 parry 接。红色提示的重型招式填 Disadvantage")]
@@ -47,10 +41,6 @@ public sealed class CombatComponent : MonoBehaviour
     private float _windowEnd = float.NegativeInfinity;
     // WindowSeconds 为 0 时的开窗标记：玩家由时长自动关窗，敌人由动画状态机调 FinishAttack。
     private bool _windowOpen;
-    // parry 窗口终点。与攻击窗口分开记：两者可以同时存在（普攻后摇里按 parry）。
-    private float _parryWindowEnd = float.NegativeInfinity;
-    // parry 冷却终点。开窗时就记，防止「连点 E 刷判定」把 parry 变成按住即无敌。
-    private float _parryReadyAt = float.NegativeInfinity;
     private long _sequenceInstance;
     // 序列招式的临时伤害。< 0 表示没有覆盖，此时用落盘的 _damage。
     private float _sequenceDamage = -1f;
@@ -73,12 +63,9 @@ public sealed class CombatComponent : MonoBehaviour
     }
     public float Cooldown { get => _cooldown; set => _cooldown = Mathf.Max(0f, value); }
     public float WindowSeconds { get => _windowSeconds; set => _windowSeconds = Mathf.Max(0f, value); }
-    /// <summary>parry 判定窗口时长。表现层（HUD / 特效）读它做读数，不再各自抄一份数。</summary>
-    public float ParryWindowSeconds { get => _parryWindowSeconds; set => _parryWindowSeconds = Mathf.Max(0f, value); }
     public float ParryInvulnerableSeconds { get => _parryInvulnerableSeconds; set => _parryInvulnerableSeconds = Mathf.Max(0f, value); }
-    public float ParrySlowSeconds { get => _parrySlowSeconds; set => _parrySlowSeconds = Mathf.Max(0f, value); }
-    public float ParrySlowRate { get => _parrySlowRate; set => _parrySlowRate = Mathf.Clamp(value, 0.01f, 1f); }
-    public float ParryCooldownSeconds { get => _parryCooldownSeconds; set => _parryCooldownSeconds = Mathf.Max(0f, value); }
+    public float ParryStopSeconds { get => _parryStopSeconds; set => _parryStopSeconds = Mathf.Max(0f, value); }
+    public float ParryStopRate { get => _parryStopRate; set => _parryStopRate = Mathf.Clamp01(value); }
     /// <summary>本组件的攻击要求玩家用哪种 parry 接。判定盒与远程结算构造请求时读它。</summary>
     public AttackParryKind ParryKind { get => _parryKind; set => _parryKind = value; }
 
@@ -106,6 +93,7 @@ public sealed class CombatComponent : MonoBehaviour
         _readyAt = now + Cooldown;
         _windowEnd = now + WindowSeconds;
         _windowOpen = true;
+        BeginAttackIdentity();
         return true;
     }
 
@@ -114,64 +102,87 @@ public sealed class CombatComponent : MonoBehaviour
     {
         _windowEnd = float.NegativeInfinity;
         _windowOpen = false;
+        _independentParryTarget = false;
+        ParryResolver.Unregister(this);
         DisableHitbox();
     }
 
-    // ===== Parry =====
-    // parry 与攻击共用这一层状态机：两者都是「本实体此刻的战斗状态」，
-    // 拆到两个组件里必然出现「窗口与冷却各说各话」的窗口。
-    // 成功之后的时缓、无敌、特效属于实体表现，由持有者（PlayerCombat）根据返回结果去做。
+    [SerializeField, Tooltip("攻击属性由来源持有，通用 Hitbox 不再猜测近战/子弹")]
+    private AttackSourceType _sourceType;
+    [SerializeField, Tooltip("前摇至收招期间可被拼刀；子弹使用放大的独立框。帧锚点仅供玩家动作表使用。")]
+    private GameJam.Actions.ActionHitVolume _parryTarget = new GameJam.Actions.ActionHitVolume
+    { DisplayName = "被 Parry 框", Center = new Vector3(0f, .9f, .5f), Size = new Vector3(1.5f, 1.8f, 1.5f) };
+    [SerializeField] private bool _canBeParried = true;
+    private static long _nextAttackId;
+    [SerializeField, Min(0f)] private float _parryStaggerSeconds = .3f;
+    private bool _parryConsumed;
+    private IParryMotionSource _parryMotionSource;
+    private bool _independentParryTarget;
+    private bool _targetOverride;
+    private AttackVolumePose _overridePose;
+    public long AttackId { get; private set; }
+    public AttackSourceType SourceType { get => _sourceType; set => _sourceType = value; }
+    public GameJam.Actions.ActionHitVolume ParryTarget => _parryTarget;
+    public AttackVolumePose PreviousParryTarget { get; private set; }
+    public event Action<ParryContact> Parried;
 
-    /// <summary>parry 判定窗口开着没。now 由持有者按自己的时钟传。</summary>
-    public bool IsParrying(float now) => now < _parryWindowEnd;
-
-    /// <summary>parry 冷却走完没。HUD 与测试读它。</summary>
-    public bool IsParryReady(float now) => now >= _parryReadyAt;
-
-    /// <summary>还剩多少冷却（秒）。给 HUD / 音效做出手提示用。</summary>
-    public float ParryCooldownRemaining(float now) => Mathf.Max(0f, _parryReadyAt - now);
-
-    /// <summary>
-    /// 开 parry 窗口。三种情况拒绝：冷却未走完、窗口还开着、已死亡。
-    /// 一次按键只给一次判定（窗口开着时不重开）＋ 一秒冷却，两者一起把「按住不放 / 连点」堵死。
-    /// 注意：**不取消进行中的攻击**。parry 与攻击现在是同一个键（左键，拼刀流），
-    /// 开窗就收招等于每次按下都把自己那一刀砍掉。
-    /// </summary>
-    public bool TryBeginParry(float now)
-    {
-        if (_parryWindowSeconds <= 0f || IsParrying(now) || !IsParryReady(now)) return false;
-        EnsureReferences();
-        if (_self != null && !_self.IsAlive) return false;
-        _parryWindowEnd = now + _parryWindowSeconds;
-        _parryReadyAt = now + _parryCooldownSeconds;
-        return true;
-    }
-
-    /// <summary>
-    /// 受击前的 parry 判定。命中点在窗口内即成功并消耗窗口（一次开窗只挡一下）。
-    /// sourceType / parryKind 回给持有者：近战才触发时缓，劣势 parry 另有位移处理。
-    /// </summary>
-    public bool TryParry(AttackDamageRequest request, float now, out AttackSourceType sourceType, out AttackParryKind parryKind)
-    {
-        sourceType = request.SourceType;
-        parryKind = request.ParryKind;
-        if (!IsParrying(now)) return false;
-        _parryWindowEnd = float.NegativeInfinity;
-        return true;
-    }
-
-    /// <summary>输入语义入口：实体把缓冲里的动作翻成战斗状态，成功则表示状态真的开了。</summary>
     public bool ReceiveAction(InputBuffer.Action action, float now)
+        => action == InputBuffer.Action.Attack && TryBeginAttack(now);
+
+    private void BeginAttackIdentity()
     {
-        switch (action)
-        {
-            case InputBuffer.Action.Attack:
-                return TryBeginAttack(now);
-            case InputBuffer.Action.Parry:
-                return TryBeginParry(now);
-            default:
-                return false;
-        }
+        AttackId = ++_nextAttackId; _parryConsumed = false; _targetOverride = false; _independentParryTarget = false;
+        if (TryGetParryTarget(out AttackVolumePose pose)) PreviousParryTarget = pose;
+        ParryResolver.Register(this);
+    }
+    // 蓄力由远程组件推进，不能占用近战 IsAttacking，否则 AI 会停在前摇而不再推进发射。
+    public void ArmParryTarget()
+    {
+        BeginAttackIdentity(); _independentParryTarget = true;
+        if (TryGetParryTarget(out AttackVolumePose pose)) PreviousParryTarget = pose;
+    }
+    public bool TryGetParryTarget(out AttackVolumePose pose)
+    {
+        pose = default;
+        if (!_canBeParried || _parryConsumed || AttackId == 0 || !isActiveAndEnabled
+            || (_self != null && !_self.IsAlive) || (!_independentParryTarget && !IsAttacking(Camp == CampType.Player ? TimeManager.UnscaledTime : TimeManager.WorldTime))) return false;
+        if (_targetOverride) { pose = _overridePose; return true; }
+        if (!_parryTarget.TryGetPose(transform, out Vector3 center, out Vector3 extents, out Quaternion rotation)) return false;
+        pose = new AttackVolumePose(center, extents, rotation, transform.position); return true;
+    }
+    public void SetParryMotionSource(IParryMotionSource source) => _parryMotionSource = source;
+    public bool TryGetParryMotion(out AttackVolumePose from, out AttackVolumePose to)
+    {
+        from = default;
+        if (!TryGetParryTarget(out to)) return false;
+        if (_parryMotionSource != null) return _parryMotionSource.TryGetParryMotion(out from, out to);
+        from = PreviousParryTarget; return true;
+    }
+    public void SetParryTargetPose(AttackVolumePose pose)
+    {
+        if (!_targetOverride) PreviousParryTarget = pose;
+        _targetOverride = true; _overridePose = pose;
+    }
+    public bool ConsumeParry(ParryContact contact)
+    {
+        if (contact.AttackId != AttackId || !TryGetParryTarget(out _)) return false;
+        _parryConsumed = true;
+        if (_sequenceInstance != 0) EndSequence(_sequenceInstance);
+        _readyAt = Mathf.Max(_readyAt, TimeManager.WorldTime + _parryStaggerSeconds);
+        FinishAttack();
+        Parried?.Invoke(contact);
+        return true;
+    }
+    private void LateUpdate()
+    {
+        if (TryGetParryTarget(out AttackVolumePose pose)) PreviousParryTarget = pose;
+    }
+    private void OnDrawGizmosSelected()
+    {
+        if (!_parryTarget.TryGetPose(transform, out Vector3 center, out Vector3 extents, out Quaternion rotation)) return;
+        Matrix4x4 prior = Gizmos.matrix;
+        Gizmos.color = Color.cyan; Gizmos.matrix = Matrix4x4.TRS(center, rotation, Vector3.one);
+        Gizmos.DrawWireCube(Vector3.zero, extents * 2f); Gizmos.matrix = prior;
     }
 
     // 复位攻击状态：清掉冷却与窗口。
@@ -181,8 +192,9 @@ public sealed class CombatComponent : MonoBehaviour
         _readyAt = float.NegativeInfinity;
         _windowEnd = float.NegativeInfinity;
         _windowOpen = false;
-        _parryWindowEnd = float.NegativeInfinity;
-        _parryReadyAt = float.NegativeInfinity;
+        _parryMotionSource = null;
+        AttackId = 0; _parryConsumed = false; _targetOverride = false; _independentParryTarget = false;
+        ParryResolver.Unregister(this);
         _sequenceInstance = 0;
         _sequenceDamage = -1f;
         _groupDamage.Clear();
@@ -192,7 +204,7 @@ public sealed class CombatComponent : MonoBehaviour
     }
 
     // 动画事件入口：与旧接口同名，.fbx 上的动画事件不用改。
-    public void EnableHitbox() { EnsureReferences(); if (_hitbox != null) _hitbox.EnableHitbox(); }
+    public void EnableHitbox() { EnsureReferences(); if (_parryConsumed) return; if (_hitbox != null) _hitbox.EnableHitbox(); }
     public void DisableHitbox() { EnsureReferences(); if (_hitbox != null) _hitbox.DisableHitbox(); }
 
     // ===== 多段判定（动作序列专用）=====
@@ -205,6 +217,7 @@ public sealed class CombatComponent : MonoBehaviour
         ResetAttackState();
         _sequenceInstance = instanceId;
         _sequenceDamage = Mathf.Max(0f, damage);
+        BeginAttackIdentity();
         if (_hitbox != null) _hitbox.BeginSequence(instanceId, hitMask);
     }
 
@@ -219,6 +232,7 @@ public sealed class CombatComponent : MonoBehaviour
         _sequenceDamage = -1f;
         _groupDamage.Clear();
         _hitTargets.Clear();
+        ParryResolver.Unregister(this);
         if (_hitbox != null) _hitbox.EndSequence();
     }
 
@@ -247,7 +261,7 @@ public sealed class CombatComponent : MonoBehaviour
     // 所有判定入口在此结算；Hitbox 的事件只通知结果，不能再由订阅者扣血。
     public AttackDamageResult TryHit(Collider other, IAttackDamageReceiver target, AttackDamageRequest request)
     {
-        if (!isActiveAndEnabled || other == null || target == null) return default;
+        if (!isActiveAndEnabled || _parryConsumed || other == null || target == null) return default;
         if (request.ActionInstanceId != _sequenceInstance) return default;
         EnsureReferences();
         HealthComponent health = target as HealthComponent;
@@ -265,11 +279,7 @@ public sealed class CombatComponent : MonoBehaviour
         AttackDamageResult result;
         try
         {
-            // parry 挂在实体上（PlayerCombat），而这里的 target 通常只是 HealthComponent，
-            // 所以必须顺着层级往上找；HealthComponent 是 sealed，不能用模式匹配判断派生接口。
-            IParryReceiver parry = target as IParryReceiver
-                ?? (target is Component receiver ? receiver.GetComponentInParent<IParryReceiver>() : null);
-            if (parry != null && parry.TryParry(request)) return default;
+            if (ParryResolver.ResolveIncoming(this)) return default;
             result = target.ReceiveAttack(request);
         }
         finally { _resolving.Remove(target); }

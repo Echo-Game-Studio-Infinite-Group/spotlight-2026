@@ -18,7 +18,7 @@ using UnityEngine;
 //
 // 调用入口（业务语义不在这里，只收「在哪、什么方向」）：
 //   CombatSparks.PlayHit(point, direction, damage);              // 玩家攻击命中敌人（PlayerCombat.OnLandedHit 已接）
-//   CombatSparks.PlayParry(point);                               // 近战 parry 成功（PlayerCombat.TryParry 已接）
+//   CombatSparks.PlayParry(point);                               // 近战 parry 成功（PlayerCombat.ReceiveParry 已接）
 //   CombatSparks.PlayParryProjectile(point, incomingDirection);  // 对远程道具 parry 成功（同上，按 SourceType 分流）
 //
 // 注：数值为提案基线（参照业界经验值区间：火花 2–5cm、6–15m/s、Bounce 0.3–0.6 / 闪光 0.05–0.1s），
