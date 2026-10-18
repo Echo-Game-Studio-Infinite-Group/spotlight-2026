@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // 能量账户的对外契约
 // 放在提供方模块（本文件）里：dev 上原来的落点 Core/CombatSeams.cs 已被删除，
@@ -88,6 +88,15 @@ public class VectorEnergy : MonoBehaviour, IEnergyAccount
         _energy -= amount;
         Changed?.Invoke(_energy);
         return true;
+    }
+
+    /// <summary>补充能量，沿用账户上限与 Changed 通知，返回实际恢复量。</summary>
+    public float AddEnergy(float amount)
+    {
+        if (amount <= 0f) return 0f;
+        float previous = _energy;
+        AddInternal(amount);
+        return _energy - previous;
     }
 
     /// <summary>掉落、重生、整局重开的统一复位入口</summary>

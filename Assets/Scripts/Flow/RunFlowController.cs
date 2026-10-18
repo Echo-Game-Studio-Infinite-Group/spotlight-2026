@@ -203,7 +203,11 @@ namespace GameJam.Flow
             if (IsBusy || IsComplete || room != CurrentRoom || room.Variant.StabilizerGain <= 0 || !room.BrokenDevices.Add(id)) return false;
             Chaos.Add(room.Variant.StabilizerGain, "击碎稳定装置"); return true;
         }
-        private void OnDied(HealthComponent health) => Recover(true);
+        private void OnDied(HealthComponent health)
+        {
+            if (DeathRespawnUI.Instance != null) DeathRespawnUI.Instance.OpenPanel();
+            else Recover(true);
+        }
         private void OnTeleported(Vector3 delta) => _previous = _motor.transform.position;
         public bool HandleFall()
         {

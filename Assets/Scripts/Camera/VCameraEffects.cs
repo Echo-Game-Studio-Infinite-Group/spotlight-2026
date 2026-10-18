@@ -126,7 +126,10 @@ public sealed class VCameraEffects : MonoBehaviour
         _motor = PlayerMotor.Active;
     }
 
-    private void Update() => SimulateCameraEffects(TimeManager.UnscaledDeltaTime);
+    private void Update()
+    {
+        if (!TimeManager.IsPaused) SimulateCameraEffects(TimeManager.UnscaledDeltaTime);
+    }
 
     /// <summary>推进一帧镜头效果。dt 由调用方给（运行时用 Unscaled，测试可注入固定步长）。</summary>
     public void SimulateCameraEffects(float dt)

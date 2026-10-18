@@ -32,12 +32,18 @@ public sealed class RangeComponent : MonoBehaviour
     // 开枪前先亮提示的时长。策划要的是「开枪前给一段判定区间」；0 = 退回老规矩：秒发。
     [SerializeField, Min(0f)] private float _telegraphSeconds = 0.4f;
 
+    [Header("视线")]
+    [Tooltip("挡视线的层：射程内但视线被这些层挡住就不开火（隔墙不索敌）")]
+    [SerializeField] private LayerMask _sightMask = Physics.DefaultRaycastLayers;
+
     [Tooltip("提示组件。留空则自动找同物体上的 AttackTelegraph。")]
     [SerializeField] private AttackTelegraph _telegraph;
 
     // 预警窗口的终点。用调用方传进来的时钟算，组件自己不取时钟。
     private float _chargeUntil;
     private bool _charging;
+    // 视线检测的非分配缓冲：每逻辑步都会查一次，不能每次 new。
+    private readonly RaycastHit[] _sightHits = new RaycastHit[8];
 
     public CampType Camp { get => _camp; set => _camp = value; }
     public float Damage { get => _damage; set => _damage = Mathf.Max(0f, value); }
@@ -92,8 +98,8 @@ public sealed class RangeComponent : MonoBehaviour
 
             _charging = false;
             _combat.FinishAttack();
-            // 预警期间目标死了 / 丢了 → 这一次作废，别打空气
-            if (target == null || targetHealth == null || !targetHealth.IsAlive)
+            // 预警期间目标死了 / 丢了 / 躲到墙后 → 这一次作废，别隔墙打空气
+            if (target == null || targetHealth == null || !targetHealth.IsAlive || !HasLineOfSight(target))
             {
                 StopTelegraph();
                 return false;
@@ -106,9 +112,13 @@ public sealed class RangeComponent : MonoBehaviour
         if (now < _readyAt) return false;
 
         // 射程按「水平距离」算（与敌人的近战判定同口径）
-        Vector3 flat = AimPoint(target) - Muzzle.position;
+        Vector3 flat = SightCheck.AimPoint(target) - Muzzle.position;
         flat.y = 0f;
         if (flat.magnitude > _range) return false;
+
+        // 隔墙不索敌：射程内但视线被挡就不开火，也不亮预警、不扣冷却。
+        // 放在扣冷却之前——「看不到」不该算一次开火机会。
+        if (!HasLineOfSight(target)) return false;
 
         _readyAt = now + Mathf.Max(0.01f, _cooldown);
 
@@ -131,7 +141,7 @@ public sealed class RangeComponent : MonoBehaviour
     private bool Fire(Transform target)
     {
         Vector3 origin = Muzzle.position;
-        Vector3 toTarget = AimPoint(target) - origin;
+        Vector3 toTarget = SightCheck.AimPoint(target) - origin;
         Vector3 direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : transform.forward;
 
         // 从池里取。池返回的实例一定是 active 的，且已回调过 IPooledObject.OnSpawnedFromPool。
@@ -142,6 +152,10 @@ public sealed class RangeComponent : MonoBehaviour
         return true;
     }
 
+    /// <summary>枪口到目标之间有没有被墙挡住。开火与索敌都用它，避免隔墙打空气。</summary>
+    public bool HasLineOfSight(Transform target)
+        => SightCheck.HasLineOfSight(Muzzle.position, target, transform, _sightMask, _sightHits);
+
     // 提示组件按需解析：编辑模式装配 / 自检用 AddComponent 搭的对象不跑 Awake。
     private void EnsureTelegraph()
     {
@@ -150,20 +164,5 @@ public sealed class RangeComponent : MonoBehaviour
 
     private void PlayTelegraph() { EnsureTelegraph(); _telegraph?.Play(); }
     private void StopTelegraph() { EnsureTelegraph(); _telegraph?.Stop(); }
-    // 瞄准点：优先取目标身上「非触发」碰撞体的包围盒中心。
-    // 不能直接用 target.position —— 角色的原点通常在脚底，直接瞄会朝地面打。
-    // 用碰撞体中心还能自动适配不同体型，不必为每个角色填高度。
-    private static Vector3 AimPoint(Transform target)
-    {
-        Collider[] colliders = target.GetComponentsInChildren<Collider>();
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            // 触发体是攻击判定盒之类，不代表身体，跳过。
-            if (colliders[i].isTrigger) continue;
-            return colliders[i].bounds.center;
-        }
-        // 没有可用碰撞体时退回原点，至少方向不会变成零向量。
-        return target.position;
-    }
 
 }

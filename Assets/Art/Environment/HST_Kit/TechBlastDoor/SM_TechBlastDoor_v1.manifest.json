@@ -1,0 +1,9873 @@
+{
+ "asset": "SM_TechBlastDoor",
+ "version": "v1",
+ "contract": "unity=(-x, z, -y); Blender 1 unit = 1 m; 门正面朝 Unity +Z; 地面 y=0",
+ "axis_forward": "-Z",
+ "axis_up": "Y",
+ "blender_version": "5.2.2 LTS",
+ "source_blends": [
+  "SM_TechBlastDoor_v1.blend"
+ ],
+ "travel_keys_required": [
+  "GEO-OL_in_l",
+  "GEO-OL_in_r",
+  "GEO-OL_out_l",
+  "GEO-OL_out_r",
+  "GEO-ID_horiz_out_l",
+  "GEO-ID_horiz_out_r",
+  "GEO-ID_horiz_in_l",
+  "GEO-ID_horiz_in_r",
+  "GEO-ID_vert_up_out",
+  "GEO-ID_vert_up_in",
+  "GEO-ID_vert_dn_out",
+  "GEO-ID_vert_dn_in",
+  "GEO-OD_out_l",
+  "GEO-OD_out_r",
+  "GEO-OD_in_l",
+  "GEO-OD_in_r"
+ ],
+ "objects": [
+  {
+   "name": "GEO-FR_back",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    -0.49
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.85,
+    -0.43
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_plinth_b",
+   "triangles": 164,
+   "aabb_min_unity": [
+    -5.46,
+    -0.02,
+    -0.77
+   ],
+   "aabb_max_unity": [
+    5.46,
+    0.05,
+    -0.396
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_plinth_f",
+   "triangles": 164,
+   "aabb_min_unity": [
+    -5.46,
+    -0.02,
+    0.456
+   ],
+   "aabb_max_unity": [
+    5.46,
+    0.05,
+    0.77
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_plinth_l",
+   "triangles": 164,
+   "aabb_min_unity": [
+    4.925,
+    -0.02,
+    -0.77
+   ],
+   "aabb_max_unity": [
+    5.46,
+    0.05,
+    0.77
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_plinth_r",
+   "triangles": 164,
+   "aabb_min_unity": [
+    -5.46,
+    -0.02,
+    -0.77
+   ],
+   "aabb_max_unity": [
+    -4.925,
+    0.05,
+    0.77
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_step_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.36,
+    0.048,
+    -0.59
+   ],
+   "aabb_max_unity": [
+    5.36,
+    0.14,
+    -0.47
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_step_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.36,
+    0.048,
+    0.47
+   ],
+   "aabb_max_unity": [
+    5.36,
+    0.14,
+    0.55
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_step_l",
+   "triangles": 100,
+   "aabb_min_unity": [
+    4.925,
+    0.048,
+    -0.67
+   ],
+   "aabb_max_unity": [
+    5.36,
+    0.14,
+    0.67
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_base_step_r",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.36,
+    0.048,
+    -0.67
+   ],
+   "aabb_max_unity": [
+    -4.925,
+    0.14,
+    0.67
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    0.49
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.85,
+    0.65
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    -0.65
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.85,
+    -0.49
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back_field",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.225,
+    0.075,
+    -0.664
+   ],
+   "aabb_max_unity": [
+    5.225,
+    7.775,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back_lip",
+   "triangles": 532,
+   "aabb_min_unity": [
+    -3.335,
+    0.45,
+    -0.668
+   ],
+   "aabb_max_unity": [
+    3.335,
+    6.085,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back_panels",
+   "triangles": 39940,
+   "aabb_min_unity": [
+    -4.927,
+    0.233,
+    -0.676
+   ],
+   "aabb_max_unity": [
+    4.927,
+    7.567,
+    -0.662
+   ],
+   "materials": [
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back_rim",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.85,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_back_seat",
+   "triangles": 532,
+   "aabb_min_unity": [
+    -3.28,
+    0.45,
+    -0.656
+   ],
+   "aabb_max_unity": [
+    3.28,
+    6.03,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_field",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.225,
+    0.075,
+    0.65
+   ],
+   "aabb_max_unity": [
+    5.225,
+    7.775,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_lip",
+   "triangles": 532,
+   "aabb_min_unity": [
+    -3.335,
+    0.45,
+    0.65
+   ],
+   "aabb_max_unity": [
+    3.335,
+    6.085,
+    0.668
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_panels",
+   "triangles": 25936,
+   "aabb_min_unity": [
+    -4.847,
+    0.733,
+    0.645
+   ],
+   "aabb_max_unity": [
+    4.847,
+    5.587,
+    0.672
+   ],
+   "materials": [
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_rim",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    0.65
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.85,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bezel_seat",
+   "triangles": 532,
+   "aabb_min_unity": [
+    -3.28,
+    0.45,
+    0.65
+   ],
+   "aabb_max_unity": [
+    3.28,
+    6.03,
+    0.656
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bolts_back",
+   "triangles": 21432,
+   "aabb_min_unity": [
+    -5.1611,
+    0.13963,
+    -0.6275
+   ],
+   "aabb_max_unity": [
+    5.1611,
+    7.71037,
+    -0.6155
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bolts_side_l",
+   "triangles": 6016,
+   "aabb_min_unity": [
+    5.2975,
+    0.9939,
+    -0.52537
+   ],
+   "aabb_max_unity": [
+    5.3095,
+    7.1661,
+    0.52537
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_bolts_side_r",
+   "triangles": 6016,
+   "aabb_min_unity": [
+    -5.3095,
+    0.9939,
+    -0.52537
+   ],
+   "aabb_max_unity": [
+    -5.2975,
+    7.1661,
+    0.52537
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_rib_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    7.09,
+    -0.424
+   ],
+   "aabb_max_unity": [
+    5.22,
+    7.79,
+    -0.396
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_rib_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    7.09,
+    0.456
+   ],
+   "aabb_max_unity": [
+    5.22,
+    7.79,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_rib_m1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    7.09,
+    0.236
+   ],
+   "aabb_max_unity": [
+    5.22,
+    7.79,
+    0.264
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_rib_m2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    7.09,
+    0.016
+   ],
+   "aabb_max_unity": [
+    5.22,
+    7.79,
+    0.044
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_rib_m3",
+   "triangles": 200,
+   "aabb_min_unity": [
+    -5.22,
+    7.09,
+    -0.204
+   ],
+   "aabb_max_unity": [
+    5.22,
+    7.79,
+    -0.176
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_xt1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.9,
+    7.09,
+    0.27
+   ],
+   "aabb_max_unity": [
+    4.9,
+    7.79,
+    0.45
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_xt2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.9,
+    7.09,
+    0.05
+   ],
+   "aabb_max_unity": [
+    4.9,
+    7.79,
+    0.23
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ceiling_xt4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.9,
+    7.09,
+    -0.39
+   ],
+   "aabb_max_unity": [
+    4.9,
+    7.79,
+    -0.21
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_chamfer_bands_b",
+   "triangles": 432,
+   "aabb_min_unity": [
+    -5.23518,
+    0.06482,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    5.23518,
+    7.78518,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_chamfer_bands_f",
+   "triangles": 432,
+   "aabb_min_unity": [
+    -5.23518,
+    0.06482,
+    0.65
+   ],
+   "aabb_max_unity": [
+    5.23518,
+    7.78518,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_chamfer_web_b",
+   "triangles": 320,
+   "aabb_min_unity": [
+    -5.29924,
+    0.00167,
+    -0.424
+   ],
+   "aabb_max_unity": [
+    5.29924,
+    7.84833,
+    -0.396
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_chamfer_web_f",
+   "triangles": 320,
+   "aabb_min_unity": [
+    -5.29924,
+    0.00167,
+    0.456
+   ],
+   "aabb_max_unity": [
+    5.29924,
+    7.84833,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_chamfer_web_m",
+   "triangles": 320,
+   "aabb_min_unity": [
+    -5.29924,
+    0.00167,
+    0.016
+   ],
+   "aabb_max_unity": [
+    5.29924,
+    7.84833,
+    0.044
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_lip",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.37,
+    -0.02,
+    0.017
+   ],
+   "aabb_max_unity": [
+    3.37,
+    0.02,
+    0.045
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_slot_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.34,
+    -1.56,
+    -0.204
+   ],
+   "aabb_max_unity": [
+    3.34,
+    -0.018,
+    -0.176
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_slot_floor",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.7,
+    -1.56,
+    -0.23
+   ],
+   "aabb_max_unity": [
+    3.7,
+    -1.515,
+    0.456
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_slot_front",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.34,
+    -1.56,
+    0.016
+   ],
+   "aabb_max_unity": [
+    3.34,
+    -0.018,
+    0.044
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_slot_l",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.34,
+    -1.56,
+    -0.19
+   ],
+   "aabb_max_unity": [
+    -3.22,
+    -0.018,
+    -0.01
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_foundation_slot_r",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.22,
+    -1.56,
+    -0.19
+   ],
+   "aabb_max_unity": [
+    3.34,
+    -0.018,
+    -0.01
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_37",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.10284,
+    0.04417,
+    -0.70321
+   ],
+   "aabb_max_unity": [
+    5.13283,
+    0.05583,
+    -0.67679
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_38",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.81935,
+    0.04417,
+    -0.70473
+   ],
+   "aabb_max_unity": [
+    4.84768,
+    0.05583,
+    -0.67527
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_39",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.53542,
+    0.04417,
+    -0.7049
+   ],
+   "aabb_max_unity": [
+    4.56296,
+    0.05583,
+    -0.6751
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_40",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.25053,
+    0.04417,
+    -0.70462
+   ],
+   "aabb_max_unity": [
+    4.2792,
+    0.05583,
+    -0.67538
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_41",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.96658,
+    0.04417,
+    -0.70483
+   ],
+   "aabb_max_unity": [
+    3.9945,
+    0.05583,
+    -0.67517
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_42",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.68267,
+    0.04417,
+    -0.70495
+   ],
+   "aabb_max_unity": [
+    3.70976,
+    0.05583,
+    -0.67505
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_43",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.3973,
+    0.04417,
+    -0.70437
+   ],
+   "aabb_max_unity": [
+    3.42648,
+    0.05583,
+    -0.67563
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_44",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.1134,
+    0.04417,
+    -0.70474
+   ],
+   "aabb_max_unity": [
+    3.14173,
+    0.05583,
+    -0.67526
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_45",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.82833,
+    0.04417,
+    -0.70373
+   ],
+   "aabb_max_unity": [
+    2.85815,
+    0.05583,
+    -0.67627
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_46",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.54398,
+    0.04417,
+    -0.7036
+   ],
+   "aabb_max_unity": [
+    2.57386,
+    0.05583,
+    -0.6764
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_47",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.26112,
+    0.04417,
+    -0.70496
+   ],
+   "aabb_max_unity": [
+    2.28807,
+    0.05583,
+    -0.67504
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_48",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.97695,
+    0.04417,
+    -0.70498
+   ],
+   "aabb_max_unity": [
+    2.00359,
+    0.05583,
+    -0.67502
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_49",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.69095,
+    0.04417,
+    -0.70323
+   ],
+   "aabb_max_unity": [
+    1.72094,
+    0.05583,
+    -0.67677
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_50",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.40728,
+    0.04417,
+    -0.70461
+   ],
+   "aabb_max_unity": [
+    1.43597,
+    0.05583,
+    -0.67539
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_51",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.12427,
+    0.04417,
+    -0.705
+   ],
+   "aabb_max_unity": [
+    1.15033,
+    0.05583,
+    -0.675
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_52",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.8381,
+    0.04417,
+    -0.70386
+   ],
+   "aabb_max_unity": [
+    0.86784,
+    0.05583,
+    -0.67614
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_53",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.55406,
+    0.04417,
+    -0.70438
+   ],
+   "aabb_max_unity": [
+    0.58323,
+    0.05583,
+    -0.67562
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_54",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.26948,
+    0.04417,
+    -0.70393
+   ],
+   "aabb_max_unity": [
+    0.29917,
+    0.05583,
+    -0.67607
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_55",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.01486,
+    0.04417,
+    -0.70389
+   ],
+   "aabb_max_unity": [
+    0.01486,
+    0.05583,
+    -0.67611
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_56",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.29885,
+    0.04417,
+    -0.70446
+   ],
+   "aabb_max_unity": [
+    -0.2698,
+    0.05583,
+    -0.67554
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_57",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.58362,
+    0.04417,
+    -0.7034
+   ],
+   "aabb_max_unity": [
+    -0.55367,
+    0.05583,
+    -0.6766
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_58",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.86704,
+    0.04417,
+    -0.70479
+   ],
+   "aabb_max_unity": [
+    -0.83891,
+    0.05583,
+    -0.67521
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_59",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.15127,
+    0.04417,
+    -0.70483
+   ],
+   "aabb_max_unity": [
+    -1.12333,
+    0.05583,
+    -0.67517
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_60",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.43543,
+    0.04417,
+    -0.70489
+   ],
+   "aabb_max_unity": [
+    -1.40781,
+    0.05583,
+    -0.67511
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_61",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.72093,
+    0.04417,
+    -0.70327
+   ],
+   "aabb_max_unity": [
+    -1.69096,
+    0.05583,
+    -0.67673
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_62",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.00483,
+    0.04417,
+    -0.70441
+   ],
+   "aabb_max_unity": [
+    -1.97571,
+    0.05583,
+    -0.67559
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_63",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.28891,
+    0.04417,
+    -0.70464
+   ],
+   "aabb_max_unity": [
+    -2.26028,
+    0.05583,
+    -0.67536
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_64",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.57254,
+    0.04417,
+    -0.70494
+   ],
+   "aabb_max_unity": [
+    -2.5453,
+    0.05583,
+    -0.67506
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_65",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.85723,
+    0.04417,
+    -0.70482
+   ],
+   "aabb_max_unity": [
+    -2.82926,
+    0.05583,
+    -0.67518
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_66",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.14257,
+    0.04417,
+    -0.7031
+   ],
+   "aabb_max_unity": [
+    -3.11257,
+    0.05583,
+    -0.6769
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_67",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.42687,
+    0.04417,
+    -0.70334
+   ],
+   "aabb_max_unity": [
+    -3.39691,
+    0.05583,
+    -0.67666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_68",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.71116,
+    0.04417,
+    -0.70358
+   ],
+   "aabb_max_unity": [
+    -3.68127,
+    0.05583,
+    -0.67642
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_69",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.99443,
+    0.04417,
+    -0.70486
+   ],
+   "aabb_max_unity": [
+    -3.96665,
+    0.05583,
+    -0.67514
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_70",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.27872,
+    0.04417,
+    -0.70487
+   ],
+   "aabb_max_unity": [
+    -4.25101,
+    0.05583,
+    -0.67513
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_71",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.56402,
+    0.04417,
+    -0.70396
+   ],
+   "aabb_max_unity": [
+    -4.53436,
+    0.05583,
+    -0.67604
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_72",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.84846,
+    0.04417,
+    -0.70358
+   ],
+   "aabb_max_unity": [
+    -4.81857,
+    0.05583,
+    -0.67642
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_b_73",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.13273,
+    0.04417,
+    -0.7038
+   ],
+   "aabb_max_unity": [
+    -5.10295,
+    0.05583,
+    -0.6762
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_00",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.10284,
+    0.04417,
+    0.67679
+   ],
+   "aabb_max_unity": [
+    5.13283,
+    0.05583,
+    0.70321
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_01",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.81935,
+    0.04417,
+    0.67527
+   ],
+   "aabb_max_unity": [
+    4.84768,
+    0.05583,
+    0.70473
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_02",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.53542,
+    0.04417,
+    0.6751
+   ],
+   "aabb_max_unity": [
+    4.56296,
+    0.05583,
+    0.7049
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_03",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.25053,
+    0.04417,
+    0.67538
+   ],
+   "aabb_max_unity": [
+    4.2792,
+    0.05583,
+    0.70462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_04",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.96658,
+    0.04417,
+    0.67517
+   ],
+   "aabb_max_unity": [
+    3.9945,
+    0.05583,
+    0.70483
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_05",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.68267,
+    0.04417,
+    0.67505
+   ],
+   "aabb_max_unity": [
+    3.70976,
+    0.05583,
+    0.70495
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_06",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.3973,
+    0.04417,
+    0.67563
+   ],
+   "aabb_max_unity": [
+    3.42648,
+    0.05583,
+    0.70437
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_07",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.1134,
+    0.04417,
+    0.67526
+   ],
+   "aabb_max_unity": [
+    3.14173,
+    0.05583,
+    0.70474
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_08",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.82833,
+    0.04417,
+    0.67627
+   ],
+   "aabb_max_unity": [
+    2.85815,
+    0.05583,
+    0.70373
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_09",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.54398,
+    0.04417,
+    0.6764
+   ],
+   "aabb_max_unity": [
+    2.57386,
+    0.05583,
+    0.7036
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_10",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.26112,
+    0.04417,
+    0.67504
+   ],
+   "aabb_max_unity": [
+    2.28807,
+    0.05583,
+    0.70496
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_11",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.97695,
+    0.04417,
+    0.67502
+   ],
+   "aabb_max_unity": [
+    2.00359,
+    0.05583,
+    0.70498
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_12",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.69095,
+    0.04417,
+    0.67677
+   ],
+   "aabb_max_unity": [
+    1.72094,
+    0.05583,
+    0.70323
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_13",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.40728,
+    0.04417,
+    0.67539
+   ],
+   "aabb_max_unity": [
+    1.43597,
+    0.05583,
+    0.70461
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_14",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.12427,
+    0.04417,
+    0.675
+   ],
+   "aabb_max_unity": [
+    1.15033,
+    0.05583,
+    0.705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_15",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.8381,
+    0.04417,
+    0.67614
+   ],
+   "aabb_max_unity": [
+    0.86784,
+    0.05583,
+    0.70386
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_16",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.55406,
+    0.04417,
+    0.67562
+   ],
+   "aabb_max_unity": [
+    0.58323,
+    0.05583,
+    0.70438
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_17",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.26948,
+    0.04417,
+    0.67607
+   ],
+   "aabb_max_unity": [
+    0.29917,
+    0.05583,
+    0.70393
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_18",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.01486,
+    0.04417,
+    0.67611
+   ],
+   "aabb_max_unity": [
+    0.01486,
+    0.05583,
+    0.70389
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_19",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.29885,
+    0.04417,
+    0.67554
+   ],
+   "aabb_max_unity": [
+    -0.2698,
+    0.05583,
+    0.70446
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_20",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.58362,
+    0.04417,
+    0.6766
+   ],
+   "aabb_max_unity": [
+    -0.55367,
+    0.05583,
+    0.7034
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_21",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.86704,
+    0.04417,
+    0.67521
+   ],
+   "aabb_max_unity": [
+    -0.83891,
+    0.05583,
+    0.70479
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_22",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.15127,
+    0.04417,
+    0.67517
+   ],
+   "aabb_max_unity": [
+    -1.12333,
+    0.05583,
+    0.70483
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_23",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.43543,
+    0.04417,
+    0.67511
+   ],
+   "aabb_max_unity": [
+    -1.40781,
+    0.05583,
+    0.70489
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_24",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.72093,
+    0.04417,
+    0.67673
+   ],
+   "aabb_max_unity": [
+    -1.69096,
+    0.05583,
+    0.70327
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_25",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.00483,
+    0.04417,
+    0.67559
+   ],
+   "aabb_max_unity": [
+    -1.97571,
+    0.05583,
+    0.70441
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_26",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.28891,
+    0.04417,
+    0.67536
+   ],
+   "aabb_max_unity": [
+    -2.26028,
+    0.05583,
+    0.70464
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_27",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.57254,
+    0.04417,
+    0.67506
+   ],
+   "aabb_max_unity": [
+    -2.5453,
+    0.05583,
+    0.70494
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_28",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.85723,
+    0.04417,
+    0.67518
+   ],
+   "aabb_max_unity": [
+    -2.82926,
+    0.05583,
+    0.70482
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_29",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.14257,
+    0.04417,
+    0.6769
+   ],
+   "aabb_max_unity": [
+    -3.11257,
+    0.05583,
+    0.7031
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_30",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.42687,
+    0.04417,
+    0.67666
+   ],
+   "aabb_max_unity": [
+    -3.39691,
+    0.05583,
+    0.70334
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_31",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.71116,
+    0.04417,
+    0.67642
+   ],
+   "aabb_max_unity": [
+    -3.68127,
+    0.05583,
+    0.70358
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_32",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.99443,
+    0.04417,
+    0.67514
+   ],
+   "aabb_max_unity": [
+    -3.96665,
+    0.05583,
+    0.70486
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_33",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.27872,
+    0.04417,
+    0.67513
+   ],
+   "aabb_max_unity": [
+    -4.25101,
+    0.05583,
+    0.70487
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_34",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.56402,
+    0.04417,
+    0.67604
+   ],
+   "aabb_max_unity": [
+    -4.53436,
+    0.05583,
+    0.70396
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_35",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.84846,
+    0.04417,
+    0.67642
+   ],
+   "aabb_max_unity": [
+    -4.81857,
+    0.05583,
+    0.70358
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_f_36",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.13273,
+    0.04417,
+    0.6762
+   ],
+   "aabb_max_unity": [
+    -5.10295,
+    0.05583,
+    0.7038
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_84",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40501,
+    0.04417,
+    0.55379
+   ],
+   "aabb_max_unity": [
+    5.43499,
+    0.05583,
+    0.58021
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_85",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40583,
+    0.04417,
+    0.42627
+   ],
+   "aabb_max_unity": [
+    5.43417,
+    0.05583,
+    0.45573
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_86",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40623,
+    0.04417,
+    0.3001
+   ],
+   "aabb_max_unity": [
+    5.43377,
+    0.05583,
+    0.3299
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_87",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40567,
+    0.04417,
+    0.17438
+   ],
+   "aabb_max_unity": [
+    5.43433,
+    0.05583,
+    0.20362
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_88",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40604,
+    0.04417,
+    0.04817
+   ],
+   "aabb_max_unity": [
+    5.43396,
+    0.05583,
+    0.07783
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_89",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40645,
+    0.04417,
+    -0.07795
+   ],
+   "aabb_max_unity": [
+    5.43355,
+    0.05583,
+    -0.04805
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_90",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40541,
+    0.04417,
+    -0.20337
+   ],
+   "aabb_max_unity": [
+    5.43459,
+    0.05583,
+    -0.17463
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_91",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40584,
+    0.04417,
+    -0.32974
+   ],
+   "aabb_max_unity": [
+    5.43416,
+    0.05583,
+    -0.30026
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_92",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40509,
+    0.04417,
+    -0.45473
+   ],
+   "aabb_max_unity": [
+    5.43491,
+    0.05583,
+    -0.42727
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_l_93",
+   "triangles": 92,
+   "aabb_min_unity": [
+    5.40506,
+    0.04417,
+    -0.5806
+   ],
+   "aabb_max_unity": [
+    5.43494,
+    0.05583,
+    -0.5534
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_74",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43499,
+    0.04417,
+    0.55379
+   ],
+   "aabb_max_unity": [
+    -5.40501,
+    0.05583,
+    0.58021
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_75",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43417,
+    0.04417,
+    0.42627
+   ],
+   "aabb_max_unity": [
+    -5.40583,
+    0.05583,
+    0.45573
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_76",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43377,
+    0.04417,
+    0.3001
+   ],
+   "aabb_max_unity": [
+    -5.40623,
+    0.05583,
+    0.3299
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_77",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43433,
+    0.04417,
+    0.17438
+   ],
+   "aabb_max_unity": [
+    -5.40567,
+    0.05583,
+    0.20362
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_78",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43396,
+    0.04417,
+    0.04817
+   ],
+   "aabb_max_unity": [
+    -5.40604,
+    0.05583,
+    0.07783
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_79",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43355,
+    0.04417,
+    -0.07795
+   ],
+   "aabb_max_unity": [
+    -5.40645,
+    0.05583,
+    -0.04805
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_80",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43459,
+    0.04417,
+    -0.20337
+   ],
+   "aabb_max_unity": [
+    -5.40541,
+    0.05583,
+    -0.17463
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_81",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43416,
+    0.04417,
+    -0.32974
+   ],
+   "aabb_max_unity": [
+    -5.40584,
+    0.05583,
+    -0.30026
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_82",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43491,
+    0.04417,
+    -0.45473
+   ],
+   "aabb_max_unity": [
+    -5.40509,
+    0.05583,
+    -0.42727
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_ground_anchor_r_83",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -5.43494,
+    0.04417,
+    -0.5806
+   ],
+   "aabb_max_unity": [
+    -5.40506,
+    0.05583,
+    -0.5534
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_lintel_panels",
+   "triangles": 9492,
+   "aabb_min_unity": [
+    -4.287,
+    6.253,
+    0.645
+   ],
+   "aabb_max_unity": [
+    4.287,
+    7.407,
+    0.672
+   ],
+   "materials": [
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_l_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.3,
+    -0.02,
+    0.456
+   ],
+   "aabb_max_unity": [
+    5.22,
+    -0.004,
+    0.49
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_l_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.3,
+    -0.02,
+    0.341
+   ],
+   "aabb_max_unity": [
+    5.22,
+    -0.004,
+    0.379
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_l_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.3,
+    -0.02,
+    -0.43
+   ],
+   "aabb_max_unity": [
+    5.22,
+    -0.004,
+    0.264
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_r_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    -0.02,
+    0.456
+   ],
+   "aabb_max_unity": [
+    -3.3,
+    -0.004,
+    0.49
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_r_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    -0.02,
+    0.341
+   ],
+   "aabb_max_unity": [
+    -3.3,
+    -0.004,
+    0.379
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_floor_r_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.22,
+    -0.02,
+    -0.43
+   ],
+   "aabb_max_unity": [
+    -3.3,
+    -0.004,
+    0.264
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_wall_l",
+   "triangles": 100,
+   "aabb_min_unity": [
+    5.22,
+    0.0,
+    -0.45
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.79,
+    0.51
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_pocket_wall_r",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.3,
+    0.0,
+    -0.45
+   ],
+   "aabb_max_unity": [
+    -5.22,
+    7.79,
+    0.51
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_seal_frame",
+   "triangles": 316,
+   "aabb_min_unity": [
+    -3.312,
+    -0.018,
+    0.456
+   ],
+   "aabb_max_unity": [
+    3.312,
+    6.058,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_seal_frame_back",
+   "triangles": 316,
+   "aabb_min_unity": [
+    -3.312,
+    -0.018,
+    -0.424
+   ],
+   "aabb_max_unity": [
+    3.312,
+    6.058,
+    -0.396
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_shell_l",
+   "triangles": 100,
+   "aabb_min_unity": [
+    5.26,
+    0.42,
+    -0.59
+   ],
+   "aabb_max_unity": [
+    5.3,
+    7.25,
+    0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_shell_r",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.3,
+    0.42,
+    -0.59
+   ],
+   "aabb_max_unity": [
+    -5.26,
+    7.25,
+    0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_shell_rib_l",
+   "triangles": 600,
+   "aabb_min_unity": [
+    5.3,
+    0.138,
+    -0.432
+   ],
+   "aabb_max_unity": [
+    5.33,
+    7.3,
+    0.432
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_shell_rib_r",
+   "triangles": 600,
+   "aabb_min_unity": [
+    -5.33,
+    0.138,
+    -0.432
+   ],
+   "aabb_max_unity": [
+    -5.3,
+    7.3,
+    0.432
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_shell_top",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.7,
+    7.79,
+    -0.59
+   ],
+   "aabb_max_unity": [
+    4.7,
+    7.85,
+    0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-FR_sidewall_r",
+   "triangles": 220,
+   "aabb_min_unity": [
+    -5.08,
+    0.75,
+    0.664
+   ],
+   "aabb_max_unity": [
+    -3.32,
+    5.45,
+    0.7
+   ],
+   "materials": [
+    "M_Door_Metal_Light"
+   ]
+  },
+  {
+   "name": "GEO-FR_sidewall_r_rim",
+   "triangles": 248,
+   "aabb_min_unity": [
+    -5.2,
+    0.64,
+    0.692
+   ],
+   "aabb_max_unity": [
+    -3.2,
+    5.56,
+    0.706
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_lip",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.3,
+    -0.02,
+    0.456
+   ],
+   "aabb_max_unity": [
+    3.3,
+    0.022,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_rubber_back",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -5.24,
+    -0.002,
+    -0.42
+   ],
+   "aabb_max_unity": [
+    5.24,
+    0.004,
+    -0.4
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_rubber_front",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -5.24,
+    -0.002,
+    0.46
+   ],
+   "aabb_max_unity": [
+    5.24,
+    0.004,
+    0.48
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_rubber_mid1",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -3.24,
+    -0.002,
+    0.24
+   ],
+   "aabb_max_unity": [
+    3.24,
+    0.004,
+    0.26
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_rubber_mid2",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -3.24,
+    -0.002,
+    0.02
+   ],
+   "aabb_max_unity": [
+    3.24,
+    0.004,
+    0.04
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_rubber_mid3",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -3.24,
+    -0.002,
+    -0.2
+   ],
+   "aabb_max_unity": [
+    3.24,
+    0.004,
+    -0.18
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_seat_back",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.26,
+    -0.02,
+    -0.424
+   ],
+   "aabb_max_unity": [
+    5.26,
+    0.0,
+    -0.396
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_seat_front",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.26,
+    -0.02,
+    0.456
+   ],
+   "aabb_max_unity": [
+    5.26,
+    0.0,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_seat_mid1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -1.7,
+    -0.02,
+    0.236
+   ],
+   "aabb_max_unity": [
+    1.7,
+    0.0,
+    0.264
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_seat_mid2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -1.7,
+    -0.02,
+    0.016
+   ],
+   "aabb_max_unity": [
+    1.7,
+    0.0,
+    0.044
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_sill_seat_mid3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -1.7,
+    -0.02,
+    -0.204
+   ],
+   "aabb_max_unity": [
+    1.7,
+    0.0,
+    -0.176
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_vent_back",
+   "triangles": 53164,
+   "aabb_min_unity": [
+    -1.6,
+    6.16,
+    -0.664
+   ],
+   "aabb_max_unity": [
+    1.6,
+    6.95,
+    -0.65
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Perf_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_vent_louver_bl",
+   "triangles": 216,
+   "aabb_min_unity": [
+    3.45,
+    0.48242,
+    0.607
+   ],
+   "aabb_max_unity": [
+    4.75,
+    1.36438,
+    0.651
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_vent_louver_br",
+   "triangles": 216,
+   "aabb_min_unity": [
+    -4.75,
+    0.48242,
+    0.607
+   ],
+   "aabb_max_unity": [
+    -3.45,
+    1.36438,
+    0.651
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-FR_vent_louver_top",
+   "triangles": 308,
+   "aabb_min_unity": [
+    -1.6,
+    6.17903,
+    0.607
+   ],
+   "aabb_max_unity": [
+    1.6,
+    6.90845,
+    0.651
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_000",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.608,
+    6.308,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.712,
+    6.412,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_000.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.71,
+    1.41,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.61,
+    1.51,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_000.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.572,
+    1.24,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.668,
+    1.336,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_000.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.668,
+    6.004,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.572,
+    6.1,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.39343,
+    5.83343,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.50657,
+    5.94657,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_001.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.50374,
+    2.35626,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.39626,
+    2.46374,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_001.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.572,
+    2.376,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.668,
+    2.472,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_001.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.668,
+    4.868,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.572,
+    4.964,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.188,
+    4.9705,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.292,
+    5.0745,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_002.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.29,
+    3.065,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.19,
+    3.165,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_002.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.572,
+    3.512,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.668,
+    3.608,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_002.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.668,
+    3.732,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.572,
+    3.828,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.188,
+    3.6555,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.292,
+    3.7595,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_003.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.29,
+    4.055,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.19,
+    4.155,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_003.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.572,
+    4.648,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.668,
+    4.744,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_003.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.668,
+    2.596,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.572,
+    2.692,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_004",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.39343,
+    2.78343,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.50657,
+    2.89657,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_004.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.50374,
+    4.75626,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.39626,
+    4.86374,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_004.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.572,
+    5.784,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.668,
+    5.88,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_004.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.668,
+    1.46,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.572,
+    1.556,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_005",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.608,
+    2.1005,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.712,
+    2.2045,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_005.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.71,
+    5.77,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -4.61,
+    5.87,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_005.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.67909,
+    6.45909,
+    0.674
+   ],
+   "aabb_max_unity": [
+    3.78091,
+    6.56091,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_005.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.78091,
+    0.77909,
+    0.674
+   ],
+   "aabb_max_unity": [
+    -3.67909,
+    0.88091,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_clamp_006",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.608,
+    1.1455,
+    0.674
+   ],
+   "aabb_max_unity": [
+    4.712,
+    1.2495,
+    0.69
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_conduit_1",
+   "triangles": 2612,
+   "aabb_min_unity": [
+    4.15622,
+    0.72,
+    0.669
+   ],
+   "aabb_max_unity": [
+    4.72227,
+    6.62,
+    0.731
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_conduit_2",
+   "triangles": 2612,
+   "aabb_min_unity": [
+    -4.72027,
+    0.72,
+    0.671
+   ],
+   "aabb_max_unity": [
+    -4.15822,
+    6.62,
+    0.729
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_conduit_3",
+   "triangles": 884,
+   "aabb_min_unity": [
+    3.56173,
+    0.72,
+    0.673
+   ],
+   "aabb_max_unity": [
+    3.85909,
+    6.63909,
+    0.727
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_conduit_4",
+   "triangles": 884,
+   "aabb_min_unity": [
+    -3.85909,
+    0.70091,
+    0.673
+   ],
+   "aabb_max_unity": [
+    -3.56173,
+    6.62,
+    0.727
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ctrlbox_body",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.15,
+    2.55,
+    0.698
+   ],
+   "aabb_max_unity": [
+    -3.45,
+    3.25,
+    0.788
+   ],
+   "materials": [
+    "M_Door_Metal_Mid"
+   ]
+  },
+  {
+   "name": "GEO-HW_ctrlbox_glass",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -4.105,
+    3.05,
+    0.786
+   ],
+   "aabb_max_unity": [
+    -3.495,
+    3.205,
+    0.796
+   ],
+   "materials": [
+    "M_Door_Glass_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ctrlbox_grille",
+   "triangles": 132,
+   "aabb_min_unity": [
+    -3.73,
+    2.83482,
+    0.7325
+   ],
+   "aabb_max_unity": [
+    -3.51,
+    2.91211,
+    0.76
+   ],
+   "materials": [
+    "M_Door_Perf_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ctrlbox_indicator",
+   "triangles": 380,
+   "aabb_min_unity": [
+    -3.54353,
+    2.62647,
+    0.786
+   ],
+   "aabb_max_unity": [
+    -3.49647,
+    2.67353,
+    0.806
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan"
+   ]
+  },
+  {
+   "name": "GEO-HW_ctrlbox_keys",
+   "triangles": 948,
+   "aabb_min_unity": [
+    -3.70444,
+    2.60598,
+    0.788
+   ],
+   "aabb_max_unity": [
+    -3.54556,
+    2.64402,
+    0.804
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_b1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    1.94,
+    0.014,
+    0.5
+   ],
+   "aabb_max_unity": [
+    2.06,
+    0.097,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_b2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -2.06,
+    0.014,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -1.94,
+    0.097,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_l1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.258,
+    0.858,
+    0.5
+   ],
+   "aabb_max_unity": [
+    3.342,
+    0.942,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_l2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.258,
+    2.358,
+    0.5
+   ],
+   "aabb_max_unity": [
+    3.342,
+    2.442,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_l3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.258,
+    3.858,
+    0.5
+   ],
+   "aabb_max_unity": [
+    3.342,
+    3.942,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_l4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.258,
+    5.158,
+    0.5
+   ],
+   "aabb_max_unity": [
+    3.342,
+    5.242,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_r1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.342,
+    0.858,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -3.258,
+    0.942,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_r2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.342,
+    2.358,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -3.258,
+    2.442,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_r3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.342,
+    3.858,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -3.258,
+    3.942,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_r4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.342,
+    5.158,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -3.258,
+    5.242,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_t1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    2.04,
+    5.905,
+    0.5
+   ],
+   "aabb_max_unity": [
+    2.16,
+    5.988,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_t2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -0.06,
+    5.905,
+    0.5
+   ],
+   "aabb_max_unity": [
+    0.06,
+    5.988,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_latch_t3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -2.16,
+    5.905,
+    0.5
+   ],
+   "aabb_max_unity": [
+    -2.04,
+    5.988,
+    0.612
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.85,
+    6.125,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    4.85,
+    6.195,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.79,
+    6.105,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    3.97,
+    6.215,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    1.85,
+    6.105,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    2.03,
+    6.215,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -0.09,
+    6.105,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    0.09,
+    6.215,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -2.03,
+    6.105,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    -1.85,
+    6.215,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_b_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.97,
+    6.105,
+    0.0675
+   ],
+   "aabb_max_unity": [
+    -3.79,
+    6.215,
+    0.1275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -4.85,
+    6.125,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    4.85,
+    6.195,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.79,
+    6.105,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    3.97,
+    6.215,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    1.85,
+    6.105,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    2.03,
+    6.215,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -0.09,
+    6.105,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    0.09,
+    6.215,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -2.03,
+    6.105,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    -1.85,
+    6.215,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_horiz_f_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.97,
+    6.105,
+    0.1675
+   ],
+   "aabb_max_unity": [
+    -3.79,
+    6.215,
+    0.2275
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.33,
+    0.02,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.39,
+    7.55,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    0.698,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    0.848,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    2.204,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    2.354,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    3.71,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    3.86,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    5.216,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    5.366,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_b_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    6.722,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    6.872,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.33,
+    0.02,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.39,
+    7.55,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    0.698,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    0.848,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    2.204,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    2.354,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    3.71,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    3.86,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    5.216,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    5.366,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_l_f_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.308,
+    6.722,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    3.412,
+    6.872,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.39,
+    0.02,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.33,
+    7.55,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    0.698,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    0.848,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    2.204,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    2.354,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    3.71,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    3.86,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    5.216,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    5.366,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_b_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    6.722,
+    -0.1525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    6.872,
+    -0.0925
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.39,
+    0.02,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.33,
+    7.55,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f_block_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    0.698,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    0.848,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f_block_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    2.204,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    2.354,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f_block_2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    3.71,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    3.86,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f_block_3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    5.216,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    5.366,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rail_vert_r_f_block_4",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.412,
+    6.722,
+    -0.0525
+   ],
+   "aabb_max_unity": [
+    -3.308,
+    6.872,
+    0.0075
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l",
+   "triangles": 4088,
+   "aabb_min_unity": [
+    3.43428,
+    3.94144,
+    0.54878
+   ],
+   "aabb_max_unity": [
+    5.11693,
+    4.60211,
+    0.73122
+   ],
+   "materials": [
+    "M_Door_Steel_Trim",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l_b",
+   "triangles": 4088,
+   "aabb_min_unity": [
+    3.43428,
+    3.94144,
+    -0.73122
+   ],
+   "aabb_max_unity": [
+    5.11693,
+    4.60211,
+    -0.54878
+   ],
+   "materials": [
+    "M_Door_Steel_Trim",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l_b_mount_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    4.94,
+    4.4,
+    -0.71
+   ],
+   "aabb_max_unity": [
+    5.2,
+    4.7,
+    -0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l_b_mount_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.29,
+    3.84,
+    -0.71
+   ],
+   "aabb_max_unity": [
+    3.55,
+    4.14,
+    -0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l_mount_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    4.94,
+    4.4,
+    0.61
+   ],
+   "aabb_max_unity": [
+    5.2,
+    4.7,
+    0.71
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_l_mount_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.29,
+    3.84,
+    0.61
+   ],
+   "aabb_max_unity": [
+    3.55,
+    4.14,
+    0.71
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r",
+   "triangles": 4088,
+   "aabb_min_unity": [
+    -5.11693,
+    3.94144,
+    0.54878
+   ],
+   "aabb_max_unity": [
+    -3.43428,
+    4.60211,
+    0.73122
+   ],
+   "materials": [
+    "M_Door_Steel_Trim",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r_b",
+   "triangles": 4088,
+   "aabb_min_unity": [
+    -5.11693,
+    3.94144,
+    -0.73122
+   ],
+   "aabb_max_unity": [
+    -3.43428,
+    4.60211,
+    -0.54878
+   ],
+   "materials": [
+    "M_Door_Steel_Trim",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r_b_mount_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.2,
+    4.4,
+    -0.71
+   ],
+   "aabb_max_unity": [
+    -4.94,
+    4.7,
+    -0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r_b_mount_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.55,
+    3.84,
+    -0.71
+   ],
+   "aabb_max_unity": [
+    -3.29,
+    4.14,
+    -0.61
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r_mount_0",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -5.2,
+    4.4,
+    0.61
+   ],
+   "aabb_max_unity": [
+    -4.94,
+    4.7,
+    0.71
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_ram_r_mount_1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.55,
+    3.84,
+    0.61
+   ],
+   "aabb_max_unity": [
+    -3.29,
+    4.14,
+    0.71
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_release_knob",
+   "triangles": 616,
+   "aabb_min_unity": [
+    3.9924,
+    3.08295,
+    0.67
+   ],
+   "aabb_max_unity": [
+    4.0676,
+    3.15705,
+    0.73
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-HW_release_lever",
+   "triangles": 100,
+   "aabb_min_unity": [
+    4.0,
+    3.2,
+    0.664
+   ],
+   "aabb_max_unity": [
+    4.06,
+    3.6,
+    0.7
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_1",
+   "triangles": 444,
+   "aabb_min_unity": [
+    2.788,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    2.812,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_2",
+   "triangles": 444,
+   "aabb_min_unity": [
+    1.668,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    1.692,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_3",
+   "triangles": 444,
+   "aabb_min_unity": [
+    0.548,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    0.572,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_4",
+   "triangles": 444,
+   "aabb_min_unity": [
+    -0.572,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    -0.548,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_5",
+   "triangles": 444,
+   "aabb_min_unity": [
+    -1.692,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    -1.668,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_roller_6",
+   "triangles": 444,
+   "aabb_min_unity": [
+    -2.812,
+    0.00915,
+    0.01538
+   ],
+   "aabb_max_unity": [
+    -2.788,
+    0.03885,
+    0.04462
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.42,
+    1.1,
+    0.596
+   ],
+   "aabb_max_unity": [
+    3.9,
+    1.3,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l1_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    3.6204,
+    1.161,
+    0.623
+   ],
+   "aabb_max_unity": [
+    3.6996,
+    1.239,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.42,
+    2.85,
+    0.596
+   ],
+   "aabb_max_unity": [
+    3.9,
+    3.05,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l2_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    3.6204,
+    2.911,
+    0.623
+   ],
+   "aabb_max_unity": [
+    3.6996,
+    2.989,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.42,
+    4.6,
+    0.596
+   ],
+   "aabb_max_unity": [
+    3.9,
+    4.8,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_l3_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    3.6204,
+    4.661,
+    0.623
+   ],
+   "aabb_max_unity": [
+    3.6996,
+    4.739,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r1",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.9,
+    1.1,
+    0.596
+   ],
+   "aabb_max_unity": [
+    -3.42,
+    1.3,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r1_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    -3.6996,
+    1.161,
+    0.623
+   ],
+   "aabb_max_unity": [
+    -3.6204,
+    1.239,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r2",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.9,
+    2.85,
+    0.596
+   ],
+   "aabb_max_unity": [
+    -3.42,
+    3.05,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r2_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    -3.6996,
+    2.911,
+    0.623
+   ],
+   "aabb_max_unity": [
+    -3.6204,
+    2.989,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r3",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.9,
+    4.6,
+    0.596
+   ],
+   "aabb_max_unity": [
+    -3.42,
+    4.8,
+    0.664
+   ],
+   "materials": [
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-HW_rollseat_r3_pin",
+   "triangles": 616,
+   "aabb_min_unity": [
+    -3.6996,
+    4.661,
+    0.623
+   ],
+   "aabb_max_unity": [
+    -3.6204,
+    4.739,
+    0.713
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_seal_l",
+   "triangles": 100,
+   "aabb_min_unity": [
+    3.26,
+    0.6,
+    0.456
+   ],
+   "aabb_max_unity": [
+    3.33,
+    5.4,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-HW_seal_r",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.33,
+    0.6,
+    0.456
+   ],
+   "aabb_max_unity": [
+    -3.26,
+    5.4,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Dark_Rubber"
+   ]
+  },
+  {
+   "name": "GEO-HW_track_floor_wall_b",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.1,
+    0.0,
+    0.016
+   ],
+   "aabb_max_unity": [
+    3.1,
+    0.04,
+    0.024
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-HW_track_floor_wall_f",
+   "triangles": 100,
+   "aabb_min_unity": [
+    -3.1,
+    0.0,
+    0.036
+   ],
+   "aabb_max_unity": [
+    3.1,
+    0.04,
+    0.044
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-ID_horiz_in_l",
+   "triangles": 8028,
+   "aabb_min_unity": [
+    -0.1,
+    -0.0015,
+    0.15
+   ],
+   "aabb_max_unity": [
+    1.635,
+    5.97,
+    0.23
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_horiz_in_r",
+   "triangles": 8008,
+   "aabb_min_unity": [
+    -1.635,
+    -0.0015,
+    0.15
+   ],
+   "aabb_max_unity": [
+    -0.006,
+    5.97,
+    0.23
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_horiz_out_l",
+   "triangles": 6812,
+   "aabb_min_unity": [
+    1.625,
+    -0.0015,
+    0.05
+   ],
+   "aabb_max_unity": [
+    3.19,
+    5.97,
+    0.13
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_horiz_out_r",
+   "triangles": 6812,
+   "aabb_min_unity": [
+    -3.19,
+    -0.0015,
+    0.05
+   ],
+   "aabb_max_unity": [
+    -1.625,
+    5.97,
+    0.13
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_vert_dn_in",
+   "triangles": 8220,
+   "aabb_min_unity": [
+    -3.19,
+    -0.0015,
+    -0.07
+   ],
+   "aabb_max_unity": [
+    3.19,
+    3.0825,
+    0.01
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_vert_dn_out",
+   "triangles": 7124,
+   "aabb_min_unity": [
+    -3.19,
+    -0.0015,
+    -0.17
+   ],
+   "aabb_max_unity": [
+    3.19,
+    1.4925,
+    -0.09
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_vert_up_in",
+   "triangles": 8512,
+   "aabb_min_unity": [
+    -3.19,
+    2.9845,
+    -0.07
+   ],
+   "aabb_max_unity": [
+    3.19,
+    4.4775,
+    0.01
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-ID_vert_up_out",
+   "triangles": 11460,
+   "aabb_min_unity": [
+    -3.19,
+    4.4675,
+    -0.17
+   ],
+   "aabb_max_unity": [
+    3.19,
+    5.97,
+    -0.09
+   ],
+   "materials": [
+    "M_Door_Metal_Mid",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Perf_Dark",
+    "M_Door_Metal_Dark",
+    "M_Door_Emit_Cyan",
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-LT_bars_white",
+   "triangles": 332,
+   "aabb_min_unity": [
+    -5.0,
+    0.077,
+    0.668
+   ],
+   "aabb_max_unity": [
+    5.0,
+    7.63,
+    0.781
+   ],
+   "materials": [
+    "M_Door_Emit_White",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-LT_bars_white_back",
+   "triangles": 44,
+   "aabb_min_unity": [
+    -4.6,
+    7.61,
+    0.668
+   ],
+   "aabb_max_unity": [
+    4.6,
+    7.63,
+    0.676
+   ],
+   "materials": [
+    "M_Door_Emit_White",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-LT_glyph_1",
+   "triangles": 200,
+   "aabb_min_unity": [
+    4.05,
+    5.0,
+    0.66
+   ],
+   "aabb_max_unity": [
+    4.55,
+    5.52,
+    0.68
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-LT_glyph_2",
+   "triangles": 248,
+   "aabb_min_unity": [
+    4.05,
+    4.34,
+    0.66
+   ],
+   "aabb_max_unity": [
+    4.55,
+    4.86,
+    0.68
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-LT_glyph_3",
+   "triangles": 112,
+   "aabb_min_unity": [
+    4.05,
+    3.68,
+    0.66
+   ],
+   "aabb_max_unity": [
+    4.55,
+    4.2,
+    0.68
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-LT_glyph_4",
+   "triangles": 200,
+   "aabb_min_unity": [
+    4.05,
+    3.02,
+    0.66
+   ],
+   "aabb_max_unity": [
+    4.55,
+    3.54,
+    0.68
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Metal_Dark"
+   ]
+  },
+  {
+   "name": "GEO-LT_hazard_sides",
+   "triangles": 224,
+   "aabb_min_unity": [
+    -3.2545,
+    0.2,
+    0.502
+   ],
+   "aabb_max_unity": [
+    3.2545,
+    5.8,
+    0.638
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-LT_hazard_sides_back",
+   "triangles": 224,
+   "aabb_min_unity": [
+    -3.2545,
+    0.2,
+    -0.638
+   ],
+   "aabb_max_unity": [
+    3.2545,
+    5.8,
+    -0.442
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-LT_hazard_topbot",
+   "triangles": 224,
+   "aabb_min_unity": [
+    -3.1,
+    -0.0015,
+    0.502
+   ],
+   "aabb_max_unity": [
+    3.1,
+    6.0015,
+    0.638
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-LT_hazard_topbot_back",
+   "triangles": 224,
+   "aabb_min_unity": [
+    -3.1,
+    -0.0015,
+    -0.638
+   ],
+   "aabb_max_unity": [
+    3.1,
+    6.0015,
+    -0.442
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe"
+   ]
+  },
+  {
+   "name": "GEO-LT_indicator_l",
+   "triangles": 1272,
+   "aabb_min_unity": [
+    2.55226,
+    0.95249,
+    0.66
+   ],
+   "aabb_max_unity": [
+    2.64774,
+    1.04751,
+    0.683
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-LT_indicator_r",
+   "triangles": 1272,
+   "aabb_min_unity": [
+    -2.64774,
+    0.95249,
+    0.66
+   ],
+   "aabb_max_unity": [
+    -2.55226,
+    1.04751,
+    0.683
+   ],
+   "materials": [
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-LT_jamb_hazard",
+   "triangles": 312,
+   "aabb_min_unity": [
+    -3.57,
+    0.28,
+    0.658
+   ],
+   "aabb_max_unity": [
+    3.57,
+    5.756,
+    0.68
+   ],
+   "materials": [
+    "M_Door_Hazard_Stripe",
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "GEO-LT_screen_bezel",
+   "triangles": 576,
+   "aabb_min_unity": [
+    -5.03,
+    4.36,
+    0.708
+   ],
+   "aabb_max_unity": [
+    -4.07,
+    5.04,
+    0.732
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Glass_Dark",
+    "M_Door_Emit_Cyan"
+   ]
+  },
+  {
+   "name": "GEO-LT_screen_dots",
+   "triangles": 5688,
+   "aabb_min_unity": [
+    -4.84344,
+    4.56669,
+    0.71
+   ],
+   "aabb_max_unity": [
+    -4.25656,
+    4.83331,
+    0.716
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Glass_Dark",
+    "M_Door_Emit_Cyan"
+   ]
+  },
+  {
+   "name": "GEO-LT_screen_glass",
+   "triangles": 68,
+   "aabb_min_unity": [
+    -4.96,
+    4.44,
+    0.7
+   ],
+   "aabb_max_unity": [
+    -4.14,
+    4.96,
+    0.71
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Glass_Dark",
+    "M_Door_Emit_Cyan"
+   ]
+  },
+  {
+   "name": "GEO-OD_in_l",
+   "triangles": 14956,
+   "aabb_min_unity": [
+    -0.0005,
+    -0.004,
+    -0.42
+   ],
+   "aabb_max_unity": [
+    1.8005,
+    5.97,
+    -0.317
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OD_in_r",
+   "triangles": 14292,
+   "aabb_min_unity": [
+    -1.635,
+    -0.004,
+    -0.42
+   ],
+   "aabb_max_unity": [
+    0.1,
+    5.97,
+    -0.317
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OD_out_l",
+   "triangles": 10588,
+   "aabb_min_unity": [
+    1.625,
+    -0.004,
+    -0.304
+   ],
+   "aabb_max_unity": [
+    3.19,
+    5.97,
+    -0.202
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OD_out_r",
+   "triangles": 10356,
+   "aabb_min_unity": [
+    -3.19,
+    -0.004,
+    -0.304
+   ],
+   "aabb_max_unity": [
+    -1.625,
+    5.97,
+    -0.202
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OL_in_l",
+   "triangles": 28160,
+   "aabb_min_unity": [
+    -0.725,
+    0.0,
+    0.385
+   ],
+   "aabb_max_unity": [
+    1.3,
+    5.96986,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OL_in_r",
+   "triangles": 27636,
+   "aabb_min_unity": [
+    -1.3,
+    0.0,
+    0.385
+   ],
+   "aabb_max_unity": [
+    0.642,
+    5.96958,
+    0.484
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OL_out_l",
+   "triangles": 13320,
+   "aabb_min_unity": [
+    1.29,
+    0.0,
+    -0.03
+   ],
+   "aabb_max_unity": [
+    3.19,
+    5.97,
+    0.369
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "GEO-OL_out_r",
+   "triangles": 13320,
+   "aabb_min_unity": [
+    -3.19,
+    0.0,
+    -0.03
+   ],
+   "aabb_max_unity": [
+    -1.29,
+    5.97,
+    0.369
+   ],
+   "materials": [
+    "M_Door_Metal_Dark",
+    "M_Door_Metal_Mid",
+    "M_Door_Metal_Light",
+    "M_Door_Steel_Trim",
+    "M_Door_Dark_Rubber",
+    "M_Door_Hazard_Stripe",
+    "M_Door_Emit_Cyan",
+    "M_Door_Emit_White",
+    "M_Door_Perf_Dark",
+    "M_Door_Paint_Blue"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9645,
+    0.8729,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    -4.9555,
+    0.8764,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.001",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96425,
+    1.15021,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -4.95575,
+    1.15371,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.002",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96413,
+    1.42751,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    -4.95587,
+    1.43101,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.003",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9643,
+    1.70482,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    -4.9557,
+    1.70832,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.004",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96419,
+    1.98212,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    -4.95581,
+    1.98562,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.005",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96406,
+    2.25942,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    -4.95594,
+    2.26292,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.006",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96438,
+    2.53673,
+    0.65719
+   ],
+   "aabb_max_unity": [
+    -4.95562,
+    2.54023,
+    0.66581
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.007",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96425,
+    2.81403,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -4.95575,
+    2.81753,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.008",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96447,
+    3.09134,
+    0.65738
+   ],
+   "aabb_max_unity": [
+    -4.95553,
+    3.09484,
+    0.66562
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.009",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96448,
+    3.36864,
+    0.65742
+   ],
+   "aabb_max_unity": [
+    -4.95552,
+    3.37214,
+    0.66558
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.010",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96404,
+    3.64595,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    -4.95596,
+    3.64945,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.011",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.964,
+    3.92325,
+    0.657
+   ],
+   "aabb_max_unity": [
+    -4.956,
+    3.92675,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.012",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9645,
+    4.20055,
+    0.65753
+   ],
+   "aabb_max_unity": [
+    -4.9555,
+    4.20405,
+    0.66547
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.013",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9643,
+    4.47786,
+    0.65712
+   ],
+   "aabb_max_unity": [
+    -4.9557,
+    4.48136,
+    0.66588
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.014",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96391,
+    4.75516,
+    0.657
+   ],
+   "aabb_max_unity": [
+    -4.95609,
+    4.75866,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.015",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96446,
+    5.03247,
+    0.65734
+   ],
+   "aabb_max_unity": [
+    -4.95554,
+    5.03597,
+    0.66566
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.016",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96438,
+    5.30977,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    -4.95562,
+    5.31327,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.017",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96445,
+    5.58708,
+    0.65732
+   ],
+   "aabb_max_unity": [
+    -4.95555,
+    5.59058,
+    0.66568
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.018",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96446,
+    5.86438,
+    0.65733
+   ],
+   "aabb_max_unity": [
+    -4.95554,
+    5.86788,
+    0.66567
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.019",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96436,
+    6.14168,
+    0.65716
+   ],
+   "aabb_max_unity": [
+    -4.95564,
+    6.14518,
+    0.66584
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.020",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96449,
+    6.41899,
+    0.65748
+   ],
+   "aabb_max_unity": [
+    -4.95551,
+    6.42249,
+    0.66552
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.021",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96422,
+    6.69629,
+    0.65706
+   ],
+   "aabb_max_unity": [
+    -4.95578,
+    6.69979,
+    0.66594
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.022",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96419,
+    6.9736,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    -4.95581,
+    6.9771,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.023",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.8655,
+    7.21125,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    -4.8565,
+    7.21475,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.024",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.66725,
+    7.40925,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -4.65875,
+    7.41275,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.025",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.4302,
+    7.50825,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    -4.4212,
+    7.51175,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.026",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.15334,
+    7.50825,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -4.14484,
+    7.51175,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.027",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.87662,
+    7.50825,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    -3.86835,
+    7.51175,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.028",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.60018,
+    7.50825,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    -3.59158,
+    7.51175,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.029",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.32346,
+    7.50825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    -3.31508,
+    7.51175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.030",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.04673,
+    7.50825,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    -3.0386,
+    7.51175,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.031",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.77044,
+    7.50825,
+    0.65719
+   ],
+   "aabb_max_unity": [
+    -2.76168,
+    7.51175,
+    0.66581
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.032",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.4937,
+    7.50825,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -2.48521,
+    7.51175,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.033",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.21732,
+    7.50825,
+    0.65738
+   ],
+   "aabb_max_unity": [
+    -2.20838,
+    7.51175,
+    0.66562
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.034",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.94072,
+    7.50825,
+    0.65742
+   ],
+   "aabb_max_unity": [
+    -1.93176,
+    7.51175,
+    0.66558
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.035",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.66368,
+    7.50825,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    -1.65559,
+    7.51175,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.036",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.38703,
+    7.50825,
+    0.657
+   ],
+   "aabb_max_unity": [
+    -1.37903,
+    7.51175,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.037",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.11092,
+    7.50825,
+    0.65753
+   ],
+   "aabb_max_unity": [
+    -1.10193,
+    7.51175,
+    0.66547
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.038",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.83412,
+    7.50825,
+    0.65712
+   ],
+   "aabb_max_unity": [
+    -0.82551,
+    7.51175,
+    0.66588
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.039",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.55712,
+    7.50825,
+    0.657
+   ],
+   "aabb_max_unity": [
+    -0.5493,
+    7.51175,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.040",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.28107,
+    7.50825,
+    0.65734
+   ],
+   "aabb_max_unity": [
+    -0.27214,
+    7.51175,
+    0.66566
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.041",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.00438,
+    7.50825,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    0.00438,
+    7.51175,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.042",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.27215,
+    7.50825,
+    0.65732
+   ],
+   "aabb_max_unity": [
+    0.28106,
+    7.51175,
+    0.66568
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.043",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.54875,
+    7.50825,
+    0.65733
+   ],
+   "aabb_max_unity": [
+    0.55767,
+    7.51175,
+    0.66567
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.044",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.82546,
+    7.50825,
+    0.65716
+   ],
+   "aabb_max_unity": [
+    0.83417,
+    7.51175,
+    0.66584
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.045",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.10193,
+    7.50825,
+    0.65748
+   ],
+   "aabb_max_unity": [
+    1.11092,
+    7.51175,
+    0.66552
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.046",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.37881,
+    7.50825,
+    0.65706
+   ],
+   "aabb_max_unity": [
+    1.38725,
+    7.51175,
+    0.66594
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.047",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.65544,
+    7.50825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    1.66383,
+    7.51175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.048",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.9321,
+    7.50825,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    1.94039,
+    7.51175,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.049",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.20835,
+    7.50825,
+    0.65752
+   ],
+   "aabb_max_unity": [
+    2.21735,
+    7.51175,
+    0.66548
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.050",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.48509,
+    7.50825,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    2.49382,
+    7.51175,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.051",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.76177,
+    7.50825,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    2.77036,
+    7.51175,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.052",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.03858,
+    7.50825,
+    0.65702
+   ],
+   "aabb_max_unity": [
+    3.04675,
+    7.51175,
+    0.66598
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.053",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.31508,
+    7.50825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    3.32347,
+    7.51175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.054",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.59138,
+    7.50825,
+    0.65757
+   ],
+   "aabb_max_unity": [
+    3.60038,
+    7.51175,
+    0.66543
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.055",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.86799,
+    7.50825,
+    0.6575
+   ],
+   "aabb_max_unity": [
+    3.87698,
+    7.51175,
+    0.6655
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.056",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.14461,
+    7.50825,
+    0.65743
+   ],
+   "aabb_max_unity": [
+    4.15357,
+    7.51175,
+    0.66557
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.057",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.42153,
+    7.50825,
+    0.65704
+   ],
+   "aabb_max_unity": [
+    4.42986,
+    7.51175,
+    0.66596
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.058",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.6585,
+    7.40925,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    4.6675,
+    7.41275,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.059",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.85675,
+    7.21125,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    4.86525,
+    7.21475,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.060",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9555,
+    6.9736,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    4.9645,
+    6.9771,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.061",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95575,
+    6.69629,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    4.96425,
+    6.69979,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.062",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95587,
+    6.41899,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    4.96413,
+    6.42249,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.063",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9557,
+    6.14168,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    4.9643,
+    6.14518,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.064",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95581,
+    5.86438,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    4.96419,
+    5.86788,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.065",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95594,
+    5.58708,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    4.96406,
+    5.59058,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.066",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95562,
+    5.30977,
+    0.65719
+   ],
+   "aabb_max_unity": [
+    4.96438,
+    5.31327,
+    0.66581
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.067",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95575,
+    5.03247,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    4.96425,
+    5.03597,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.068",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95553,
+    4.75516,
+    0.65738
+   ],
+   "aabb_max_unity": [
+    4.96447,
+    4.75866,
+    0.66562
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.069",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95552,
+    4.47786,
+    0.65742
+   ],
+   "aabb_max_unity": [
+    4.96448,
+    4.48136,
+    0.66558
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.070",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95596,
+    4.20055,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    4.96404,
+    4.20405,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.071",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.956,
+    3.92325,
+    0.657
+   ],
+   "aabb_max_unity": [
+    4.964,
+    3.92675,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.072",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9555,
+    3.64595,
+    0.65753
+   ],
+   "aabb_max_unity": [
+    4.9645,
+    3.64945,
+    0.66547
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.073",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9557,
+    3.36864,
+    0.65712
+   ],
+   "aabb_max_unity": [
+    4.9643,
+    3.37214,
+    0.66588
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.074",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95609,
+    3.09134,
+    0.657
+   ],
+   "aabb_max_unity": [
+    4.96391,
+    3.09484,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.075",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95554,
+    2.81403,
+    0.65734
+   ],
+   "aabb_max_unity": [
+    4.96446,
+    2.81753,
+    0.66566
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.076",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95562,
+    2.53673,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    4.96438,
+    2.54023,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.077",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95555,
+    2.25942,
+    0.65732
+   ],
+   "aabb_max_unity": [
+    4.96445,
+    2.26292,
+    0.66568
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.078",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95554,
+    1.98212,
+    0.65733
+   ],
+   "aabb_max_unity": [
+    4.96446,
+    1.98562,
+    0.66567
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.079",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95564,
+    1.70482,
+    0.65716
+   ],
+   "aabb_max_unity": [
+    4.96436,
+    1.70832,
+    0.66584
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.080",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95551,
+    1.42751,
+    0.65748
+   ],
+   "aabb_max_unity": [
+    4.96449,
+    1.43101,
+    0.66552
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.081",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95578,
+    1.15021,
+    0.65706
+   ],
+   "aabb_max_unity": [
+    4.96422,
+    1.15371,
+    0.66594
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.082",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95581,
+    0.8729,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    4.96419,
+    0.8764,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.083",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.8565,
+    0.63525,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    4.8655,
+    0.63875,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.084",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.65875,
+    0.43725,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    4.66725,
+    0.44075,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.085",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.4212,
+    0.33825,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    4.4302,
+    0.34175,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.086",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.14484,
+    0.33825,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    4.15334,
+    0.34175,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.087",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.86835,
+    0.33825,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    3.87662,
+    0.34175,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.088",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.59158,
+    0.33825,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    3.60018,
+    0.34175,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.089",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.31508,
+    0.33825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    3.32346,
+    0.34175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.090",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.0386,
+    0.33825,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    3.04673,
+    0.34175,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.091",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.76168,
+    0.33825,
+    0.65719
+   ],
+   "aabb_max_unity": [
+    2.77044,
+    0.34175,
+    0.66581
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.092",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.48521,
+    0.33825,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    2.4937,
+    0.34175,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.093",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.20838,
+    0.33825,
+    0.65738
+   ],
+   "aabb_max_unity": [
+    2.21732,
+    0.34175,
+    0.66562
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.094",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.93176,
+    0.33825,
+    0.65742
+   ],
+   "aabb_max_unity": [
+    1.94072,
+    0.34175,
+    0.66558
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.095",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.65559,
+    0.33825,
+    0.65701
+   ],
+   "aabb_max_unity": [
+    1.66368,
+    0.34175,
+    0.66599
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.096",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.37903,
+    0.33825,
+    0.657
+   ],
+   "aabb_max_unity": [
+    1.38703,
+    0.34175,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.097",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.10193,
+    0.33825,
+    0.65753
+   ],
+   "aabb_max_unity": [
+    1.11092,
+    0.34175,
+    0.66547
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.098",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.82551,
+    0.33825,
+    0.65712
+   ],
+   "aabb_max_unity": [
+    0.83412,
+    0.34175,
+    0.66588
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.099",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.5493,
+    0.33825,
+    0.657
+   ],
+   "aabb_max_unity": [
+    0.55712,
+    0.34175,
+    0.666
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.100",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.27214,
+    0.33825,
+    0.65734
+   ],
+   "aabb_max_unity": [
+    0.28107,
+    0.34175,
+    0.66566
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.101",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.00438,
+    0.33825,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    0.00438,
+    0.34175,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.102",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.28106,
+    0.33825,
+    0.65732
+   ],
+   "aabb_max_unity": [
+    -0.27215,
+    0.34175,
+    0.66568
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.103",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.55767,
+    0.33825,
+    0.65733
+   ],
+   "aabb_max_unity": [
+    -0.54875,
+    0.34175,
+    0.66567
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.104",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.83417,
+    0.33825,
+    0.65716
+   ],
+   "aabb_max_unity": [
+    -0.82546,
+    0.34175,
+    0.66584
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.105",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.11092,
+    0.33825,
+    0.65748
+   ],
+   "aabb_max_unity": [
+    -1.10193,
+    0.34175,
+    0.66552
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.106",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.38725,
+    0.33825,
+    0.65706
+   ],
+   "aabb_max_unity": [
+    -1.37881,
+    0.34175,
+    0.66594
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.107",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.66383,
+    0.33825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    -1.65544,
+    0.34175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.108",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.94039,
+    0.33825,
+    0.65703
+   ],
+   "aabb_max_unity": [
+    -1.9321,
+    0.34175,
+    0.66597
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.109",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.21735,
+    0.33825,
+    0.65752
+   ],
+   "aabb_max_unity": [
+    -2.20835,
+    0.34175,
+    0.66548
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.110",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.49382,
+    0.33825,
+    0.65718
+   ],
+   "aabb_max_unity": [
+    -2.48509,
+    0.34175,
+    0.66582
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.111",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.77036,
+    0.33825,
+    0.65711
+   ],
+   "aabb_max_unity": [
+    -2.76177,
+    0.34175,
+    0.66589
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.112",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.04675,
+    0.33825,
+    0.65702
+   ],
+   "aabb_max_unity": [
+    -3.03858,
+    0.34175,
+    0.66598
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.113",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.32347,
+    0.33825,
+    0.65705
+   ],
+   "aabb_max_unity": [
+    -3.31508,
+    0.34175,
+    0.66595
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.114",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.60038,
+    0.33825,
+    0.65757
+   ],
+   "aabb_max_unity": [
+    -3.59138,
+    0.34175,
+    0.66543
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.115",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.87698,
+    0.33825,
+    0.6575
+   ],
+   "aabb_max_unity": [
+    -3.86799,
+    0.34175,
+    0.6655
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.116",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.15357,
+    0.33825,
+    0.65743
+   ],
+   "aabb_max_unity": [
+    -4.14461,
+    0.34175,
+    0.66557
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.117",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.42986,
+    0.33825,
+    0.65704
+   ],
+   "aabb_max_unity": [
+    -4.42153,
+    0.34175,
+    0.66596
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.118",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.6675,
+    0.43725,
+    0.65754
+   ],
+   "aabb_max_unity": [
+    -4.6585,
+    0.44075,
+    0.66546
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.119",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.86525,
+    0.63525,
+    0.65708
+   ],
+   "aabb_max_unity": [
+    -4.85675,
+    0.63875,
+    0.66592
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.120",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9645,
+    0.8729,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    -4.9555,
+    0.8764,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.121",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96425,
+    1.15021,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -4.95575,
+    1.15371,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.122",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96413,
+    1.42751,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    -4.95587,
+    1.43101,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.123",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9643,
+    1.70482,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    -4.9557,
+    1.70832,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.124",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96419,
+    1.98212,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    -4.95581,
+    1.98562,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.125",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96406,
+    2.25942,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    -4.95594,
+    2.26292,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.126",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96438,
+    2.53673,
+    -0.66581
+   ],
+   "aabb_max_unity": [
+    -4.95562,
+    2.54023,
+    -0.65719
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.127",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96425,
+    2.81403,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -4.95575,
+    2.81753,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.128",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96447,
+    3.09134,
+    -0.66562
+   ],
+   "aabb_max_unity": [
+    -4.95553,
+    3.09484,
+    -0.65738
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.129",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96448,
+    3.36864,
+    -0.66558
+   ],
+   "aabb_max_unity": [
+    -4.95552,
+    3.37214,
+    -0.65742
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.130",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96404,
+    3.64595,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    -4.95596,
+    3.64945,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.131",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.964,
+    3.92325,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    -4.956,
+    3.92675,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.132",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9645,
+    4.20055,
+    -0.66547
+   ],
+   "aabb_max_unity": [
+    -4.9555,
+    4.20405,
+    -0.65753
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.133",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.9643,
+    4.47786,
+    -0.66588
+   ],
+   "aabb_max_unity": [
+    -4.9557,
+    4.48136,
+    -0.65712
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.134",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96391,
+    4.75516,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    -4.95609,
+    4.75866,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.135",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96446,
+    5.03247,
+    -0.66566
+   ],
+   "aabb_max_unity": [
+    -4.95554,
+    5.03597,
+    -0.65734
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.136",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96438,
+    5.30977,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    -4.95562,
+    5.31327,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.137",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96445,
+    5.58708,
+    -0.66568
+   ],
+   "aabb_max_unity": [
+    -4.95555,
+    5.59058,
+    -0.65732
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.138",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96446,
+    5.86438,
+    -0.66567
+   ],
+   "aabb_max_unity": [
+    -4.95554,
+    5.86788,
+    -0.65733
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.139",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96436,
+    6.14168,
+    -0.66584
+   ],
+   "aabb_max_unity": [
+    -4.95564,
+    6.14518,
+    -0.65716
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.140",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96449,
+    6.41899,
+    -0.66552
+   ],
+   "aabb_max_unity": [
+    -4.95551,
+    6.42249,
+    -0.65748
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.141",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96422,
+    6.69629,
+    -0.66594
+   ],
+   "aabb_max_unity": [
+    -4.95578,
+    6.69979,
+    -0.65706
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.142",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.96419,
+    6.9736,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    -4.95581,
+    6.9771,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.143",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.8655,
+    7.21125,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    -4.8565,
+    7.21475,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.144",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.66725,
+    7.40925,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -4.65875,
+    7.41275,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.145",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.4302,
+    7.50825,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    -4.4212,
+    7.51175,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.146",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.15334,
+    7.50825,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -4.14484,
+    7.51175,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.147",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.87662,
+    7.50825,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    -3.86835,
+    7.51175,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.148",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.60018,
+    7.50825,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    -3.59158,
+    7.51175,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.149",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.32346,
+    7.50825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    -3.31508,
+    7.51175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.150",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.04673,
+    7.50825,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    -3.0386,
+    7.51175,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.151",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.77044,
+    7.50825,
+    -0.66581
+   ],
+   "aabb_max_unity": [
+    -2.76168,
+    7.51175,
+    -0.65719
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.152",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.4937,
+    7.50825,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -2.48521,
+    7.51175,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.153",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.21732,
+    7.50825,
+    -0.66562
+   ],
+   "aabb_max_unity": [
+    -2.20838,
+    7.51175,
+    -0.65738
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.154",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.94072,
+    7.50825,
+    -0.66558
+   ],
+   "aabb_max_unity": [
+    -1.93176,
+    7.51175,
+    -0.65742
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.155",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.66368,
+    7.50825,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    -1.65559,
+    7.51175,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.156",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.38703,
+    7.50825,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    -1.37903,
+    7.51175,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.157",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.11092,
+    7.50825,
+    -0.66547
+   ],
+   "aabb_max_unity": [
+    -1.10193,
+    7.51175,
+    -0.65753
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.158",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.83412,
+    7.50825,
+    -0.66588
+   ],
+   "aabb_max_unity": [
+    -0.82551,
+    7.51175,
+    -0.65712
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.159",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.55712,
+    7.50825,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    -0.5493,
+    7.51175,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.160",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.28107,
+    7.50825,
+    -0.66566
+   ],
+   "aabb_max_unity": [
+    -0.27214,
+    7.51175,
+    -0.65734
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.161",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.00438,
+    7.50825,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    0.00438,
+    7.51175,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.162",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.27215,
+    7.50825,
+    -0.66568
+   ],
+   "aabb_max_unity": [
+    0.28106,
+    7.51175,
+    -0.65732
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.163",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.54875,
+    7.50825,
+    -0.66567
+   ],
+   "aabb_max_unity": [
+    0.55767,
+    7.51175,
+    -0.65733
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.164",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.82546,
+    7.50825,
+    -0.66584
+   ],
+   "aabb_max_unity": [
+    0.83417,
+    7.51175,
+    -0.65716
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.165",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.10193,
+    7.50825,
+    -0.66552
+   ],
+   "aabb_max_unity": [
+    1.11092,
+    7.51175,
+    -0.65748
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.166",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.37881,
+    7.50825,
+    -0.66594
+   ],
+   "aabb_max_unity": [
+    1.38725,
+    7.51175,
+    -0.65706
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.167",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.65544,
+    7.50825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    1.66383,
+    7.51175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.168",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.9321,
+    7.50825,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    1.94039,
+    7.51175,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.169",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.20835,
+    7.50825,
+    -0.66548
+   ],
+   "aabb_max_unity": [
+    2.21735,
+    7.51175,
+    -0.65752
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.170",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.48509,
+    7.50825,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    2.49382,
+    7.51175,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.171",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.76177,
+    7.50825,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    2.77036,
+    7.51175,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.172",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.03858,
+    7.50825,
+    -0.66598
+   ],
+   "aabb_max_unity": [
+    3.04675,
+    7.51175,
+    -0.65702
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.173",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.31508,
+    7.50825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    3.32347,
+    7.51175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.174",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.59138,
+    7.50825,
+    -0.66543
+   ],
+   "aabb_max_unity": [
+    3.60038,
+    7.51175,
+    -0.65757
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.175",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.86799,
+    7.50825,
+    -0.6655
+   ],
+   "aabb_max_unity": [
+    3.87698,
+    7.51175,
+    -0.6575
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.176",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.14461,
+    7.50825,
+    -0.66557
+   ],
+   "aabb_max_unity": [
+    4.15357,
+    7.51175,
+    -0.65743
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.177",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.42153,
+    7.50825,
+    -0.66596
+   ],
+   "aabb_max_unity": [
+    4.42986,
+    7.51175,
+    -0.65704
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.178",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.6585,
+    7.40925,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    4.6675,
+    7.41275,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.179",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.85675,
+    7.21125,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    4.86525,
+    7.21475,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.180",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9555,
+    6.9736,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    4.9645,
+    6.9771,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.181",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95575,
+    6.69629,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    4.96425,
+    6.69979,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.182",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95587,
+    6.41899,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    4.96413,
+    6.42249,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.183",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9557,
+    6.14168,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    4.9643,
+    6.14518,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.184",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95581,
+    5.86438,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    4.96419,
+    5.86788,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.185",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95594,
+    5.58708,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    4.96406,
+    5.59058,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.186",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95562,
+    5.30977,
+    -0.66581
+   ],
+   "aabb_max_unity": [
+    4.96438,
+    5.31327,
+    -0.65719
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.187",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95575,
+    5.03247,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    4.96425,
+    5.03597,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.188",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95553,
+    4.75516,
+    -0.66562
+   ],
+   "aabb_max_unity": [
+    4.96447,
+    4.75866,
+    -0.65738
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.189",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95552,
+    4.47786,
+    -0.66558
+   ],
+   "aabb_max_unity": [
+    4.96448,
+    4.48136,
+    -0.65742
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.190",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95596,
+    4.20055,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    4.96404,
+    4.20405,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.191",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.956,
+    3.92325,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    4.964,
+    3.92675,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.192",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9555,
+    3.64595,
+    -0.66547
+   ],
+   "aabb_max_unity": [
+    4.9645,
+    3.64945,
+    -0.65753
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.193",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.9557,
+    3.36864,
+    -0.66588
+   ],
+   "aabb_max_unity": [
+    4.9643,
+    3.37214,
+    -0.65712
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.194",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95609,
+    3.09134,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    4.96391,
+    3.09484,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.195",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95554,
+    2.81403,
+    -0.66566
+   ],
+   "aabb_max_unity": [
+    4.96446,
+    2.81753,
+    -0.65734
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.196",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95562,
+    2.53673,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    4.96438,
+    2.54023,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.197",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95555,
+    2.25942,
+    -0.66568
+   ],
+   "aabb_max_unity": [
+    4.96445,
+    2.26292,
+    -0.65732
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.198",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95554,
+    1.98212,
+    -0.66567
+   ],
+   "aabb_max_unity": [
+    4.96446,
+    1.98562,
+    -0.65733
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.199",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95564,
+    1.70482,
+    -0.66584
+   ],
+   "aabb_max_unity": [
+    4.96436,
+    1.70832,
+    -0.65716
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.200",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95551,
+    1.42751,
+    -0.66552
+   ],
+   "aabb_max_unity": [
+    4.96449,
+    1.43101,
+    -0.65748
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.201",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95578,
+    1.15021,
+    -0.66594
+   ],
+   "aabb_max_unity": [
+    4.96422,
+    1.15371,
+    -0.65706
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.202",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.95581,
+    0.8729,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    4.96419,
+    0.8764,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.203",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.8565,
+    0.63525,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    4.8655,
+    0.63875,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.204",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.65875,
+    0.43725,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    4.66725,
+    0.44075,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.205",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.4212,
+    0.33825,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    4.4302,
+    0.34175,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.206",
+   "triangles": 92,
+   "aabb_min_unity": [
+    4.14484,
+    0.33825,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    4.15334,
+    0.34175,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.207",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.86835,
+    0.33825,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    3.87662,
+    0.34175,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.208",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.59158,
+    0.33825,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    3.60018,
+    0.34175,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.209",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.31508,
+    0.33825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    3.32346,
+    0.34175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.210",
+   "triangles": 92,
+   "aabb_min_unity": [
+    3.0386,
+    0.33825,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    3.04673,
+    0.34175,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.211",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.76168,
+    0.33825,
+    -0.66581
+   ],
+   "aabb_max_unity": [
+    2.77044,
+    0.34175,
+    -0.65719
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.212",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.48521,
+    0.33825,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    2.4937,
+    0.34175,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.213",
+   "triangles": 92,
+   "aabb_min_unity": [
+    2.20838,
+    0.33825,
+    -0.66562
+   ],
+   "aabb_max_unity": [
+    2.21732,
+    0.34175,
+    -0.65738
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.214",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.93176,
+    0.33825,
+    -0.66558
+   ],
+   "aabb_max_unity": [
+    1.94072,
+    0.34175,
+    -0.65742
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.215",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.65559,
+    0.33825,
+    -0.66599
+   ],
+   "aabb_max_unity": [
+    1.66368,
+    0.34175,
+    -0.65701
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.216",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.37903,
+    0.33825,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    1.38703,
+    0.34175,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.217",
+   "triangles": 92,
+   "aabb_min_unity": [
+    1.10193,
+    0.33825,
+    -0.66547
+   ],
+   "aabb_max_unity": [
+    1.11092,
+    0.34175,
+    -0.65753
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.218",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.82551,
+    0.33825,
+    -0.66588
+   ],
+   "aabb_max_unity": [
+    0.83412,
+    0.34175,
+    -0.65712
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.219",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.5493,
+    0.33825,
+    -0.666
+   ],
+   "aabb_max_unity": [
+    0.55712,
+    0.34175,
+    -0.657
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.220",
+   "triangles": 92,
+   "aabb_min_unity": [
+    0.27214,
+    0.33825,
+    -0.66566
+   ],
+   "aabb_max_unity": [
+    0.28107,
+    0.34175,
+    -0.65734
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.221",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.00438,
+    0.33825,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    0.00438,
+    0.34175,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.222",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.28106,
+    0.33825,
+    -0.66568
+   ],
+   "aabb_max_unity": [
+    -0.27215,
+    0.34175,
+    -0.65732
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.223",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.55767,
+    0.33825,
+    -0.66567
+   ],
+   "aabb_max_unity": [
+    -0.54875,
+    0.34175,
+    -0.65733
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.224",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -0.83417,
+    0.33825,
+    -0.66584
+   ],
+   "aabb_max_unity": [
+    -0.82546,
+    0.34175,
+    -0.65716
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.225",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.11092,
+    0.33825,
+    -0.66552
+   ],
+   "aabb_max_unity": [
+    -1.10193,
+    0.34175,
+    -0.65748
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.226",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.38725,
+    0.33825,
+    -0.66594
+   ],
+   "aabb_max_unity": [
+    -1.37881,
+    0.34175,
+    -0.65706
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.227",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.66383,
+    0.33825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    -1.65544,
+    0.34175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.228",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -1.94039,
+    0.33825,
+    -0.66597
+   ],
+   "aabb_max_unity": [
+    -1.9321,
+    0.34175,
+    -0.65703
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.229",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.21735,
+    0.33825,
+    -0.66548
+   ],
+   "aabb_max_unity": [
+    -2.20835,
+    0.34175,
+    -0.65752
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.230",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.49382,
+    0.33825,
+    -0.66582
+   ],
+   "aabb_max_unity": [
+    -2.48509,
+    0.34175,
+    -0.65718
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.231",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -2.77036,
+    0.33825,
+    -0.66589
+   ],
+   "aabb_max_unity": [
+    -2.76177,
+    0.34175,
+    -0.65711
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.232",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.04675,
+    0.33825,
+    -0.66598
+   ],
+   "aabb_max_unity": [
+    -3.03858,
+    0.34175,
+    -0.65702
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.233",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.32347,
+    0.33825,
+    -0.66595
+   ],
+   "aabb_max_unity": [
+    -3.31508,
+    0.34175,
+    -0.65705
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.234",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.60038,
+    0.33825,
+    -0.66543
+   ],
+   "aabb_max_unity": [
+    -3.59138,
+    0.34175,
+    -0.65757
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.235",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -3.87698,
+    0.33825,
+    -0.6655
+   ],
+   "aabb_max_unity": [
+    -3.86799,
+    0.34175,
+    -0.6575
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.236",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.15357,
+    0.33825,
+    -0.66557
+   ],
+   "aabb_max_unity": [
+    -4.14461,
+    0.34175,
+    -0.65743
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.237",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.42986,
+    0.33825,
+    -0.66596
+   ],
+   "aabb_max_unity": [
+    -4.42153,
+    0.34175,
+    -0.65704
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.238",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.6675,
+    0.43725,
+    -0.66546
+   ],
+   "aabb_max_unity": [
+    -4.6585,
+    0.44075,
+    -0.65754
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  },
+  {
+   "name": "Greeble_Bolt.239",
+   "triangles": 92,
+   "aabb_min_unity": [
+    -4.86525,
+    0.63525,
+    -0.66592
+   ],
+   "aabb_max_unity": [
+    -4.85675,
+    0.63875,
+    -0.65708
+   ],
+   "materials": [
+    "M_Door_Steel_Trim"
+   ]
+  }
+ ],
+ "total_triangles": 458216,
+ "fbx": "SM_TechBlastDoor_v1.fbx",
+ "fbx_md5": "850295e0b54a02effac424870c6f387a",
+ "fbx_texture_refs": 56,
+ "unity_materials": [
+  {
+   "material": "M_Door_Metal_Dark",
+   "base_color": [
+    0.1255,
+    0.1412,
+    0.1686
+   ],
+   "metallic": 0.35,
+   "roughness": 0.44,
+   "bc_texture": "T_Door_metal_dark_BC_unity.png",
+   "normal_texture": "T_Door_Panel_N.png",
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Metal_Mid",
+   "base_color": [
+    0.3373,
+    0.3608,
+    0.4
+   ],
+   "metallic": 0.7,
+   "roughness": 0.42,
+   "bc_texture": "T_Door_metal_mid_BC_unity.png",
+   "normal_texture": "T_Door_Panel_N.png",
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Metal_Light",
+   "base_color": [
+    0.7608,
+    0.7804,
+    0.8078
+   ],
+   "metallic": 0.02,
+   "roughness": 0.5,
+   "bc_texture": "T_Door_metal_light_BC_unity.png",
+   "normal_texture": "T_Door_Panel_N.png",
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Steel_Trim",
+   "base_color": [
+    0.5608,
+    0.5882,
+    0.6196
+   ],
+   "metallic": 1.0,
+   "roughness": 0.22,
+   "bc_texture": "T_Door_steel_BC_unity.png",
+   "normal_texture": "T_Door_Panel_N.png",
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Dark_Rubber",
+   "base_color": [
+    0.0431,
+    0.0471,
+    0.0549
+   ],
+   "metallic": 0.03,
+   "roughness": 0.86,
+   "bc_texture": "T_Door_rubber_BC_unity.png",
+   "normal_texture": null,
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Hazard_Stripe",
+   "base_color": [
+    0.8,
+    0.8,
+    0.8
+   ],
+   "metallic": 0.2,
+   "roughness": 0.55,
+   "bc_texture": "T_Door_hazard_BC_unity.png",
+   "normal_texture": null,
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Emit_Cyan",
+   "base_color": [
+    0.1608,
+    0.7804,
+    1.0
+   ],
+   "metallic": 0.0,
+   "roughness": 0.3,
+   "bc_texture": null,
+   "normal_texture": null,
+   "emission_strength": 5.0
+  },
+  {
+   "material": "M_Door_Emit_White",
+   "base_color": [
+    1.0,
+    0.9725,
+    0.9333
+   ],
+   "metallic": 0.0,
+   "roughness": 0.3,
+   "bc_texture": null,
+   "normal_texture": null,
+   "emission_strength": 4.5
+  },
+  {
+   "material": "M_Door_Glass_Dark",
+   "base_color": [
+    0.0392,
+    0.0784,
+    0.102
+   ],
+   "metallic": 0.0,
+   "roughness": 0.06,
+   "bc_texture": null,
+   "normal_texture": null,
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Perf_Dark",
+   "base_color": [
+    0.0549,
+    0.0667,
+    0.0784
+   ],
+   "metallic": 0.6,
+   "roughness": 0.72,
+   "bc_texture": "T_Door_perf_BC_unity.png",
+   "normal_texture": null,
+   "emission_strength": 0.0
+  },
+  {
+   "material": "M_Door_Paint_Blue",
+   "base_color": [
+    0.1647,
+    0.4824,
+    1.0
+   ],
+   "metallic": 0.15,
+   "roughness": 0.42,
+   "bc_texture": "T_Door_paint_blue_BC_unity.png",
+   "normal_texture": null,
+   "emission_strength": 0.0
+  }
+ ],
+ "texture_contract": "UV = 世界投影/2m (door_kit.world_uv); 基色图 sRGB; 法线图 OpenGL 约定; MS 图另有 URP 版 R=金属 A=光滑 —— FBX 带不走 MS, 需按 IMPORT.md 手工挂到 URP/Lit 的 Metallic 槽",
+ "textures_exported": [
+  "T_Door_hazard_BC_unity.png",
+  "T_Door_metal_dark_BC_unity.png",
+  "T_Door_metal_light_BC_unity.png",
+  "T_Door_metal_mid_BC_unity.png",
+  "T_Door_paint_blue_BC_unity.png",
+  "T_Door_perf_BC_unity.png",
+  "T_Door_rubber_BC_unity.png",
+  "T_Door_steel_BC_unity.png"
+ ]
+}

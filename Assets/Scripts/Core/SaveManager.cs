@@ -114,7 +114,7 @@ public static class SaveManager
             {
                 SaveManager.PlayerObj = PlayerMotor.Active.gameObject;
             }
-            if (SaveManager.PlayerObj == null) return;
+            if (SaveManager.PlayerObj == null || TimeManager.IsPaused) return;
 
             if (Input.GetKeyDown(KeyCode.E))
             {
