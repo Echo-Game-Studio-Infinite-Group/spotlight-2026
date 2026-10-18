@@ -39,6 +39,7 @@ public class PauseUIManager : MonoBehaviour
 
     private void TogglePause()
     {
+        if (DeathRespawnUI.Instance != null && DeathRespawnUI.Instance.IsOpen) return;
         if (_isPause && _settingsPanel.activeSelf) { ShowSettings(false); return; }
         if (_isPause) ResumeGame();
         else PauseGame();
@@ -46,6 +47,7 @@ public class PauseUIManager : MonoBehaviour
 
     public void PauseGame()
     {
+        if (DeathRespawnUI.Instance != null && DeathRespawnUI.Instance.IsOpen) return;
         _isPause = true;
         TimeManager.SetPaused(true);
         _input.SetGameplayEnabled(false);
@@ -57,6 +59,7 @@ public class PauseUIManager : MonoBehaviour
 
     public void ResumeGame()
     {
+        if (DeathRespawnUI.Instance != null && DeathRespawnUI.Instance.IsOpen) return;
         _isPause = false;
         TimeManager.SetPaused(false);
         // 场景卸载时玩家可能先于 UI 被销毁，仍需解除全局暂停。

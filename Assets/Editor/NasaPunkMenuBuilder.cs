@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,6 +12,7 @@ using UnityEngine.UI;
 [InitializeOnLoad]
 public static class NasaPunkMenuBuilder
 {
+    private const string DeathRequest = "Temp/BuildCRTDeath.request";
     private const string PauseRequest = "Temp/BuildCRTPause.request";
     private const string CRTRequest = "Temp/BuildCRTMenu.request";
     private const string CRTArt = "Assets/Art/UI/CRT/";
@@ -27,14 +28,15 @@ public static class NasaPunkMenuBuilder
 
     private static void Poll()
     {
-        if ((!File.Exists(Request) && !File.Exists(CRTRequest) && !File.Exists(PauseRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+        if ((!File.Exists(Request) && !File.Exists(CRTRequest) && !File.Exists(PauseRequest) && !File.Exists(DeathRequest)) || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
         // 请求保留到编辑模式稳定后再执行，避免播放状态下保存场景。
         if (EditorApplication.isPlayingOrWillChangePlaymode)
         {
             EditorApplication.isPlaying = false;
             return;
         }
-        if (File.Exists(PauseRequest)) { File.Delete(PauseRequest); BuildCRTPause(); }
+        if (File.Exists(DeathRequest)) { File.Delete(DeathRequest); BuildCRTDeath(); }
+        else if (File.Exists(PauseRequest)) { File.Delete(PauseRequest); BuildCRTPause(); }
         else if (File.Exists(CRTRequest)) { File.Delete(CRTRequest); BuildCRT(); }
         else { File.Delete(Request); Build(); }
     }
@@ -285,6 +287,64 @@ public static class NasaPunkMenuBuilder
         finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
+    [MenuItem("超高速行者/UI/装配 CRT 死亡菜单")]
+    public static void BuildCRTDeath()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+        const string path = "Assets/Prefabs/DeathScreen.prefab";
+        foreach (string name in new[] { "DeathTitle", "BattleAgain", "TitleScreen" })
+        {
+            string texturePath = CRTArt + name + ".png";
+            AssetDatabase.ImportAsset(texturePath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(texturePath);
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            for (int i = root.transform.childCount - 1; i >= 0; i--)
+                UnityEngine.Object.DestroyImmediate(root.transform.GetChild(i).gameObject);
+            ConfigureCanvas(root, 51);
+            var controller = root.GetComponent<DeathRespawnUI>();
+            if (controller == null) controller = root.AddComponent<DeathRespawnUI>();
+            Transform panel = Stretch(root.transform, "DeathScreenPanel");
+            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .1f);
+            RectTransform content = Center(panel, "Death content", new Vector2(540, 350), Vector2.zero);
+            var titleMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "TitleCRT.mat");
+            var textMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "ButtonCRT.mat");
+            var shutterMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "ShutterCRT.mat");
+            RawImage title = CRTImage(content, "DeathTitle", new Vector2(540, 110), Vector2.zero, titleMaterial);
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = title.rectTransform.pivot = new Vector2(0, 1);
+            CanvasGroup opacity = title.gameObject.AddComponent<CanvasGroup>();
+            RectTransform divider = (RectTransform)Box(content, "Divider", 20, 126, 500, 2, new Color(1, 1, 1, .65f)).transform;
+            Transform buttons = Rect(content, "Buttons", 20, 150, 500, 200).transform;
+            CanvasGroup buttonOpacity = buttons.gameObject.AddComponent<CanvasGroup>();
+            Button retry = CRTButton(buttons, "BattleAgain", 50, textMaterial, shutterMaterial, 0);
+            Button back = CRTButton(buttons, "TitleScreen", -50, textMaterial, shutterMaterial, 0);
+            foreach (Button button in new[] { retry, back })
+            {
+                var serialized = new SerializedObject(button.GetComponent<CRTMenuButton>());
+                serialized.FindProperty("_tiltDegrees").floatValue = 0;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Navigate(retry, back);
+            var presentation = panel.gameObject.AddComponent<CRTPausePresentation>();
+            Wire(presentation, "_title", title, "_titleOpacity", opacity, "_divider", divider, "_buttons", buttonOpacity);
+            Wire(controller, "respawnButton", retry, "panelRoot", panel, "_returnButton", back);
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            var settings = Resources.Load<SceneUISettings>("SceneUISettings");
+            settings.DeathScreen = prefab;
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+            Snapshot(root, "DeathScreen");
+            Debug.Log("[CRTDeath] SUCCESS / Temp/MenuPreview/DeathScreen.png");
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     private static GameObject CanvasRoot(string name, int order)
     {
         var root = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -438,8 +498,8 @@ public static class NasaPunkMenuBuilder
             GameObject copy = UnityEngine.Object.Instantiate(source);
             SceneManager.MoveGameObjectToScene(copy, scene);
             foreach (MonoBehaviour behaviour in copy.GetComponentsInChildren<MonoBehaviour>(true))
-                if (behaviour is MainMenuUI || behaviour is PauseUIManager) UnityEngine.Object.DestroyImmediate(behaviour);
-            if (name == "PauseMenu") copy.transform.GetChild(0).gameObject.SetActive(true);
+                if (behaviour is MainMenuUI || behaviour is PauseUIManager || behaviour is DeathRespawnUI) UnityEngine.Object.DestroyImmediate(behaviour);
+            if (name == "PauseMenu" || name == "DeathScreen") copy.transform.GetChild(0).gameObject.SetActive(true);
             var cameraObject = new GameObject("Preview camera", typeof(Camera));
             SceneManager.MoveGameObjectToScene(cameraObject, scene);
             Camera camera = cameraObject.GetComponent<Camera>();

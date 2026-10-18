@@ -266,7 +266,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         SetOtherColliders(true);
         if (_motor != null) _motor.SetActionControl(null);
         SetControlsEnabled(true);
-        if (_input != null) _input.SetGameplayEnabled(true);
+        if (_input != null && !TimeManager.IsPaused) _input.SetGameplayEnabled(true);
 
         // 最后再交回动画器：把起身层权重还原，并还原播放倍率
         if (_animator != null)
