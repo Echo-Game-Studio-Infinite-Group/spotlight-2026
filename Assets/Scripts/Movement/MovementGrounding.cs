@@ -86,6 +86,17 @@ public sealed class MovementGrounding
         if (distance < .000001f || _params.MaxStepUp <= 0f) return false;
         Vector3 feet = _controller.transform.position;
         TrySupport(feet + horizontal, _params.MaxStepUp, _params.MaxStepDown, out landing);
+        // 原生胶囊在棱边的接触余量大于球扫半径；沿实际位移补前沿台面，避免先卡住再也探不到下一阶。
+        Vector3 front = feet + horizontal + horizontal / distance * (_controller.radius + _controller.skinWidth * 2f + Padding);
+        front.y = feet.y + _params.MaxStepUp + Padding;
+        if (TrySurface(front, _params.MaxStepUp + _params.MaxStepDown + Padding * 2f, null, out RaycastHit ahead)
+            && ahead.normal.y > .999f)
+        {
+            float planeY = ahead.point.y - Vector3.Dot(MovementMath.Horizontal(ahead.normal), feet + horizontal - ahead.point) / ahead.normal.y;
+            float rootHeight = planeY + _controller.radius * (1f / ahead.normal.y - 1f);
+            if (rootHeight <= feet.y + _params.MaxStepUp + .001f && (!landing.IsValid || rootHeight > landing.RootHeight))
+                landing = new GroundSupport(ahead.collider, ahead.point, ahead.normal, rootHeight);
+        }
         if (Blocked(feet, height, horizontal / distance, distance + _controller.skinWidth, out RaycastHit obstacle, true))
         {
             if (obstacle.collider == null) return false;

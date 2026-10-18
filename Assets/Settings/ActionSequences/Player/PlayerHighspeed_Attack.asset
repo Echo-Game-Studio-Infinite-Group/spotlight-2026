@@ -20,7 +20,7 @@ MonoBehaviour:
   - SegmentId: startup
     DisplayName: "\u5F15\u5200"
     Phase: 0
-    DurationFrames: 12
+    DurationFrames: 8
     Events: []
     Control:
       AllowMove: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
   - SegmentId: active
     DisplayName: "\u9AD8\u901F\u6325\u780D"
     Phase: 1
-    DurationFrames: 18
+    DurationFrames: 12
     Events:
     - MotorCommand: 0
       Frame: 0
@@ -67,7 +67,7 @@ MonoBehaviour:
   - SegmentId: recovery
     DisplayName: "\u6536\u62DB"
     Phase: 2
-    DurationFrames: 46
+    DurationFrames: 24
     Events: []
     Control:
       AllowMove: 1
@@ -170,7 +170,7 @@ MonoBehaviour:
     SegmentId: 
     RelativeTo: 0
     OffsetFrames: 0
-  CooldownFrames: 21
+  CooldownFrames: 10
   CooldownGroup: player_basic_attack
   RequestVariants: []
   Motion:
@@ -226,7 +226,7 @@ MonoBehaviour:
       AnchorPath: 
       Center: {x: 0, y: 0.9, z: 1.5}
       Rotation: {x: 0, y: 0, z: 0}
-      Size: {x: 2.2, y: 1.8, z: 2.4}
+      Size: {x: 3.6, y: 1.8, z: 2.4}
       Start:
         SegmentId: active
         RelativeTo: 0

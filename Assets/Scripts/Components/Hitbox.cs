@@ -46,7 +46,8 @@ public sealed class Hitbox : MonoBehaviour
         IAttackDamageReceiver receiver = health != null ? health : other.GetComponentInParent<IAttackDamageReceiver>();
         if (receiver == null) return;
         var request = new AttackDamageRequest(instance == 0 ? _owner.Damage : _owner.SequenceDamage(group),
-            other.ClosestPoint(center), other.bounds.center - center, instance, group);
+            other.ClosestPoint(center), other.bounds.center - center, instance, group,
+            AttackSourceType.Melee, _owner.ParryKind);
         AttackDamageResult result = _owner.TryHit(other, receiver, request);
         if (result.AppliedDamage > 0f && health != null) Hit?.Invoke(this, other, health);
     }

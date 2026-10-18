@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using GameJam.Actions;
 using UnityEngine;
 
@@ -37,6 +37,12 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private ActionMotionSettings _actionMotion;
     private long _motionInstance;
     private bool _slidePoseActive;
+    private bool _brakeHoldLocked;
+    private float _brakeStoredSpeed;
+    private float _brakeRecoveryUntil = float.NegativeInfinity;
+    private float _brakeJumpSpeed;
+    private float _brakeJumpUntil = float.NegativeInfinity;
+    private bool _inputSuppressed;
     public event Action<Vector3> MotionPathPoint;
 
     public void BeginMotion(ActionMotionSettings settings, long instanceId)
@@ -68,10 +74,21 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public bool IsSliding { get; private set; }
     public bool IsSlideHeadBlocked { get; private set; }
     public bool HasForwardInput { get; private set; }
+    public bool HasMovementInput { get; private set; }
+    public bool IsWalking { get; private set; }
+    public bool IsBraking { get; private set; }
+    public bool CanBrake => IsGrounded && !IsSliding && !_slidePoseActive && !InputSuppressed &&
+        (_actionControl == null || _actionControl.AllowBrake);
+    public float BrakeRecoverySpeed => BrakeRecoveryValid ? _brakeStoredSpeed : 0f;
+    public float BrakeJumpRecoverySpeed => Mathf.Max(BrakeRecoverySpeed, _clock <= _brakeJumpUntil ? _brakeJumpSpeed : 0f);
+    public float BrakeRecoveryRemaining => Mathf.Max(0f, _brakeRecoveryUntil - _clock);
+    private bool BrakeRecoveryValid => IsBraking || _clock <= _brakeRecoveryUntil || Mathf.Approximately(_clock, _brakeRecoveryUntil);
     public int JumpCount { get; private set; }
     public int WallJumpCount { get; private set; }
     public float WallApproachAngle { get; private set; }
     public Vector3 WallNormal => IsWallSliding ? _wallNormal : Vector3.zero;
+    /// <summary>贴墙接触点（世界坐标）。不在划墙状态时为零向量——特效层别拿它当锚点。</summary>
+    public Vector3 WallPoint => IsWallSliding && _contacts != null ? _contacts.WallPoint : Vector3.zero;
     public bool InFrictionWindow => IsGrounded && FrictionWindowRemaining > 0f;
     public float FrictionWindowRemaining => IsGrounded ? Mathf.Max(0f, _params.FrictionExemptWindow - (_clock - _landTime)) : 0f;
     public float WallWindowRemaining => IsWallSliding ? Mathf.Max(0f, _params.WallGraceTime - (_clock - _wallTime)) : 0f;
@@ -146,14 +163,45 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void OnEnable()
     {
-        if (_input is PlayerInputReader reader) reader.Cleared += ClearPendingInput;
+        if (_input is PlayerInputReader reader) reader.Cleared += OnInputCleared;
     }
-    public bool InputSuppressed { get; set; }
+    public bool InputSuppressed
+    {
+        get => _inputSuppressed;
+        set { _inputSuppressed = value; if (value) { _brakeHoldLocked = false; ClearBrakeRecovery(); } }
+    }
+
+    private void OnInputCleared() { _brakeHoldLocked = false; ClearPendingInput(); ClearBrakeRecovery(); }
+
+    // 保留 S 的原始独立按键；运动与动作预输入共用低速方向，不能把后退跳误判为原地跳。
+    public PlayerInputFrame ResolveDirectionalInput(PlayerInputFrame input)
+    {
+        if (!input.BrakeHeld || _brakeHoldLocked || InputSuppressed || !IsGrounded || IsSliding || _slidePoseActive ||
+            HorizontalSpeed > _params.LowSpeedThreshold || (_actionControl != null && !_actionControl.AllowMove)) return input;
+        input.Move = new Vector2(input.Move.x, input.Move.y > 0f ? 0f : -1f).normalized;
+        input.BrakeHeld = false;
+        return input;
+    }
+
+    // 资格随这次跳跃预输入保留，速度只能在真正起跳时消费。
+    public void BufferBrakeRecoveryJump(float bufferSeconds)
+    {
+        _brakeJumpSpeed = InputSuppressed ? 0f : BrakeRecoverySpeed;
+        _brakeJumpUntil = _clock + Mathf.Max(0f, bufferSeconds);
+    }
+
+    public void ClearBrakeRecovery()
+    {
+        IsBraking = false;
+        _brakeStoredSpeed = _brakeJumpSpeed = 0f;
+        _brakeRecoveryUntil = _brakeJumpUntil = float.NegativeInfinity;
+    }
 
     private void ClearPendingInput()
     {
         _jumpUntil = float.NegativeInfinity;
         HasForwardInput = false;
+        HasMovementInput = IsWalking = false;
     }
 
     private void FixedUpdate()
@@ -179,14 +227,28 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             input.SprintHeld = false;
             input.JumpPressed = false;
             input.SlidePressed = false;
+            input.BrakeHeld = false;
+            ClearBrakeRecovery();
             ClearPendingInput();
         }
-        if (input.JumpPressed) _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
+        // 高速开始的这次 S 持续保持刹车，不能在跨过低速阈值后突然倒走。
+        if (!input.BrakeHeld) _brakeHoldLocked = false;
+        else if (HorizontalSpeed > _params.LowSpeedThreshold) _brakeHoldLocked = true;
+        input = ResolveDirectionalInput(input);
+        if (input.JumpPressed)
+        {
+            _jumpUntil = input.JumpTime + _params.JumpBufferWindow;
+            BufferBrakeRecoveryJump(_params.JumpBufferWindow);
+        }
         HasForwardInput = input.Move.y > 0f;
+        HasMovementInput = !input.BrakeHeld && input.Move.sqrMagnitude > 0f;
         if (dt == 0f) return;
         bool wallJumpFacingLocked = _clock - _lastWallJump < _params.WallJumpFacingLockTime;
         _clock += dt;
         Vector3 wish = WishDirection(input.Move);
+        // 低速侧移与后退保持面朝镜头前方；高速仍按旧规则转向位移方向并保留动量。
+        IsWalking = HasMovementInput && (input.Move.x != 0f || input.Move.y < 0f) &&
+            IsGrounded && !IsSliding && !_slidePoseActive && HorizontalSpeed <= _params.LowSpeedThreshold;
         RearmWall();
         if (IsWallSliding)
         {
@@ -200,20 +262,26 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         }
 
         // 墙面约束仍优先；普通角色转向可以由动作段锁定，相机继续独立转动。
-        if (_actionControl == null || _actionControl.AllowTurn || IsWallSliding)
-            UpdateFacing(wish, dt, wallJumpFacingLocked);
+        if (!input.BrakeHeld && (_actionControl == null || _actionControl.AllowTurn || IsWallSliding))
+            UpdateFacing(IsWalking ? WishDirection(Vector2.up) : wish, dt, wallJumpFacingLocked);
         else _facingAngularVelocity = 0f;
-        Vector3 drive = transform.forward * wish.magnitude;
+        Vector3 drive = IsWalking ? wish : transform.forward * wish.magnitude;
         // 仅改变方向，不用向量插值，避免转弯时丢失速度；墙面与离墙保护优先。
-        if (wish != Vector3.zero && !IsWallSliding && !wallJumpFacingLocked && !_wallJumpExitProtected &&
+        if (!input.BrakeHeld && wish != Vector3.zero && !IsWallSliding && !wallJumpFacingLocked && !_wallJumpExitProtected &&
             _clock - _lastWallJump >= _params.WallJumpCooldown)
-            SetHorizontal(transform.forward * HorizontalSpeed);
+            SetHorizontal((IsWalking ? wish.normalized : transform.forward) * HorizontalSpeed);
 
         if (input.SlidePressed && CanExecute(MotorCommandKind.EnterSlide))
         {
             IsSliding = true;
             SetCapsule(_params.SlideCapsuleHeight, _controller.radius);
         }
+
+        IsBraking = input.BrakeHeld && CanBrake;
+        if (IsSliding || IsBraking) IsWalking = false;
+        if (IsBraking) _brakeRecoveryUntil = _clock + _params.BrakeRecoveryWindow;
+        else if (!BrakeRecoveryValid) _brakeStoredSpeed = 0f;
+        bool brakeThisStep = IsBraking;
 
         bool protectSlideFront = IsSliding || _slidePoseActive;
         bool jump = _commandJump || inputTime <= _jumpUntil;
@@ -245,9 +313,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             }
         }
 
-        if (_commandAccelerateSpeedRatio > 0f && !IsSliding && !IsWallSliding)
+        if (_commandAccelerateSpeedRatio > 0f && !brakeThisStep && !IsSliding && !IsWallSliding)
             SetHorizontal(transform.forward * Mathf.Max(HorizontalSpeed, _params.GroundSpeedThreshold * _commandAccelerateSpeedRatio));
-        if (_commandSprintBoostRatio > 0f && !IsSliding && !IsWallSliding)
+        if (_commandSprintBoostRatio > 0f && !brakeThisStep && !IsSliding && !IsWallSliding)
             SetHorizontal(transform.forward * (HorizontalSpeed + _params.LowSpeedThreshold * _commandSprintBoostRatio));
         SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity), _params.MaxSpeed));
         float gravity = _params.Gravity * (IsWallSliding ? _params.WallGravityScale : 1f);
@@ -308,7 +376,9 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _commandSprintBoostRatio = 0f;
         if (_contacts.StepHeightDelta != 0f) GroundStepped?.Invoke(_contacts.StepHeightDelta);
         // 消费方会关闭 Motor、切换布娃娃；所有状态结算完再上报，不能在回调后覆盖重置结果。
-        if (hasImpact) WallImpact?.Invoke(impact);
+        if (!CanBrake) IsBraking = false;
+        if (!IsGrounded || IsSliding || HorizontalSpeed > _params.LowSpeedThreshold) IsWalking = false;
+        if (hasImpact) { ClearBrakeRecovery(); WallImpact?.Invoke(impact); }
     }
 
     private float RequestedJumpSpeed => _params.JumpSpeed * Mathf.Sqrt(_commandJumpHeightRatio > 0f ? _commandJumpHeightRatio : 1f);
@@ -325,8 +395,19 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
                 if (horizontal.sqrMagnitude < _params.GroundStopSpeed * _params.GroundStopSpeed)
                     horizontal = Vector3.zero;
             }
-            horizontal = MovementMath.Accelerate(horizontal, wish, target, _params.RunAccel, dt,
-                _params.Pump == PumpMode.WindowPump && InFrictionWindow);
+            if (IsBraking)
+            {
+                float speed = horizontal.magnitude;
+                float reduced = Mathf.Max(0f, speed - _params.BrakeDeceleration * dt);
+                if (_params.BrakeDeceleration > 0f && reduced <= _params.BrakeStopSpeed) reduced = 0f;
+                _brakeStoredSpeed = Mathf.Min(_params.MaxSpeed, _brakeStoredSpeed + speed - reduced);
+                horizontal = speed > 0f ? horizontal * (reduced / speed) : Vector3.zero;
+            }
+            else if (IsWalking)
+                horizontal = wish.normalized * Mathf.MoveTowards(horizontal.magnitude,
+                    _params.WalkSpeed * wish.magnitude, _params.WalkAcceleration * dt);
+            else horizontal = MovementMath.Accelerate(horizontal, wish, target, _params.RunAccel, dt,
+                    _params.Pump == PumpMode.WindowPump && InFrictionWindow);
         }
         else horizontal = MovementMath.Accelerate(horizontal, wish, _params.GroundSpeedThreshold, _params.AirControl, dt, false);
         SetHorizontal(horizontal);
@@ -425,6 +506,10 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void ExitWall() { State = MovementState.Airborne; _wallSpeed = 0f; }
     private void Jump(float speed)
     {
+        float recovered = BrakeJumpRecoverySpeed;
+        if (recovered > 0f) SetHorizontalSpeed(HorizontalSpeed + recovered);
+        ClearBrakeRecovery();
+        IsWalking = false;
         _jumpUntil = float.NegativeInfinity;
         _velocity.y = speed;
         State = MovementState.Airborne;
@@ -537,7 +622,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
             case MotorCommandKind.LaunchVertical: LaunchVertical(value); break;
             case MotorCommandKind.ReverseHorizontal: ReverseHorizontal(); break;
             case MotorCommandKind.AddForwardImpulse: SetHorizontal(Vector3.ClampMagnitude(MovementMath.Horizontal(_velocity) + transform.forward * value, _params.MaxSpeed)); break;
-            case MotorCommandKind.ClearHorizontal: SetHorizontal(Vector3.zero); break;
+            case MotorCommandKind.ClearHorizontal: SetHorizontal(Vector3.zero); ClearBrakeRecovery(); break;
         }
         return true;
     }
@@ -551,6 +636,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public void SetHorizontalSpeed(float speed)
     {
         if (_params == null) return;
+        if (speed <= 0f) ClearBrakeRecovery();
         Vector3 direction = HorizontalSpeed > 0f ? MovementMath.Horizontal(_velocity).normalized : transform.forward;
         SetHorizontal(direction * Mathf.Clamp(speed, 0f, _params.MaxSpeed));
     }
@@ -584,6 +670,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     public void ResetState()
     {
+        _brakeHoldLocked = false;
+        ClearBrakeRecovery();
         _velocity = Vector3.zero;
         _actionMotion = null; _motionInstance = 0;
         _commandJump = false;
@@ -593,7 +681,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _facingAngularVelocity = 0f;
         JumpCount = WallJumpCount = 0;
         State = MovementState.Airborne;
-        IsSliding = HasForwardInput = _wallLocked = _wallJumpExitProtected = false;
+        IsSliding = HasForwardInput = HasMovementInput = IsWalking = _wallLocked = _wallJumpExitProtected = false;
         IsSlideHeadBlocked = false;
         _slidePoseActive = false;
         _clock = _wallTime = _wallLastContactTime = _wallSpeed = WallApproachAngle = 0f;
@@ -618,7 +706,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     private void OnDisable()
     {
         if (Active == this) Active = null;
-        if (_input is PlayerInputReader reader) reader.Cleared -= ClearPendingInput;
+        if (_input is PlayerInputReader reader) reader.Cleared -= OnInputCleared;
         if (_controller != null) _controller.stepOffset = _groundStepOffset;
         if (_params != null) ResetState();
     }

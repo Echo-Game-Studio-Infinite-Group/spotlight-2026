@@ -30,13 +30,15 @@ public class EnemyBase : MonoBehaviour
     private const float DefaultCooldown = 1.1f;
 
     [Header("移动与受伤")]
+    [SerializeField, Min(0f), Tooltip("单次实际伤害严格超过此值才播放受伤动作")]
+    private float _hurtDamageThreshold;
     [UnityEngine.Serialization.FormerlySerializedAs("_moveSpeed")]
     [SerializeField, Min(0f)] private float _walkSpeed = 2f;
     [SerializeField, Min(0f)] private float _runSpeed = 5f;
     [SerializeField, Min(0f)] private float _runDistance = 6f;
     [SerializeField, Min(0f)] private float _runHysteresis = 0.5f;
     [SerializeField, Range(0f, 1f)] private float _injuredThreshold = 0.3f;
-    public float Speed { get; private set; }
+    public float Speed { get; protected set; }
     public float WalkSpeed => _walkSpeed;
     public float RunSpeed => _runSpeed;
     // 比较比例，避免 100 * 0.3f 的舍入把恰好 30 血误判为受伤。
@@ -76,6 +78,13 @@ public class EnemyBase : MonoBehaviour
     public float MoveSpeed => _walkSpeed;
     public float AttackRange => _attackRange;
     public bool IsChasing => _chasePlayer;
+
+    /// <summary>
+    /// 寻路代理。派生类（重型敌人）直接用它，不要再声明同名的私有字段：
+    /// 基类的 _agent 是 [SerializeField]，层级里出现两个同名字段会让 Unity 直接报
+    /// 「The same field name is serialized multiple times」，并且序列化值归属不明。
+    /// </summary>
+    protected NavMeshAgent Agent => _agent;
 
     public void ConfigureStats(float maxHealth, float attackPower, float moveSpeed)
     {
@@ -181,7 +190,7 @@ public class EnemyBase : MonoBehaviour
 
         if (source.IsAlive)
         {
-            if (_animation != null) { StopMoving(); _animation.PlayHurt(); }
+            if (_animation != null && applied > _hurtDamageThreshold) { StopMoving(); _animation.PlayHurt(); }
             return;
         }
 
@@ -192,10 +201,10 @@ public class EnemyBase : MonoBehaviour
         if (_animation != null) _animation.PlayDeath();
     }
 
-    // 命中玩家：震动方向取「敌人 → 玩家」的世界方向，力度走 CameraShaker 的统一换算。
+    // 命中玩家：震动方向取「敌人 → 玩家」的世界方向，力度走 VCameraEffects 的统一换算。
     private void OnLandedHit(HealthComponent target, Vector3 point, Vector3 direction, float applied)
     {
-        CameraShaker.Emit(_impulseSource, direction, AttackDamage);
+        VCameraEffects.Emit(_impulseSource, direction, AttackDamage);
     }
 
     public void FinishAttack()
@@ -239,7 +248,7 @@ public class EnemyBase : MonoBehaviour
             + $"Agent={(_agent != null ? (_agent.isOnNavMesh ? "在网格上" : "不在网格上") : "未挂")} 世界dt={TimeManager.WorldDeltaTime:0.#####}");
     }
 
-    private void Chase()
+    protected virtual void Chase()
     {
         Player player = Player.Current;
         PlayerMotor target = player != null ? player.Motor : null;
@@ -282,7 +291,7 @@ public class EnemyBase : MonoBehaviour
     // 这样策划只填一个值，敌人自己的停步位置就跟着变，不会出现"站在射程外干等"。
     private float StopDistance => _ranged != null && _ranged.CanFire ? _ranged.Range : _attackRange;
 
-    private void StopMoving()
+    protected void StopMoving()
     {
         Speed = 0f;
         if (!AgentReady) return;
@@ -290,7 +299,7 @@ public class EnemyBase : MonoBehaviour
         _agent.velocity = Vector3.zero;
     }
 
-    private void TryAttack(PlayerMotor target)
+    protected void TryAttack(PlayerMotor target)
     {
         // 水平距离已在 Chase 里算过，这里再查一次高度差，避免站在玩家头顶隔着两层平台开打
         if (Mathf.Abs(target.transform.position.y - transform.position.y) > _attackRange) return;

@@ -16,7 +16,7 @@ public static class PlayerAnimationSetup
     private const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
     private const string AttackParameterName = "IsAttacking";
 
-    private static readonly string[] RequiredStates = { "Idle", "Move", "Jump", "Trackle", "Attack", "WallDashLeft", "WallDashRight" };
+    private static readonly string[] RequiredStates = { "Idle", "Move", "Jump", "Trackle", "Attack", "WallDashLeft", "WallDashRight", "Walk" };
 
     // 参数条件与完整状态路径才是契约，手工状态和 Actions 子状态机必须保留。
     public static void EnsureStateLayout()
@@ -43,6 +43,7 @@ public static class PlayerAnimationSetup
 
         return HasParameter(controller, "MotionState") && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasRun(controller)
             && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasSlide(controller)
+            && GameJam.Actions.Editor.PlayerWalkAnimatorSetup.HasWalk(controller)
             && HasParameter(controller, "IsAttacking")
             && GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.HasWallDash(controller);
     }

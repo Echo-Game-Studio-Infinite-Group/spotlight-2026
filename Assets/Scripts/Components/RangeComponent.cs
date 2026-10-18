@@ -172,7 +172,10 @@ public sealed class RangeComponent : MonoBehaviour
 
         // 走 IAttackDamageReceiver 这条正规入口：无敌帧、死亡事件、跳字都由 HealthComponent 处理。
         // ActionInstanceId 传 0 表示「不属于任何动作序列」——远程弹没有多段判定。
-        var request = new AttackDamageRequest(_damage, point, direction, 0L, 0);
+        var request = new AttackDamageRequest(_damage, point, direction, 0L, 0, AttackSourceType.Projectile);
+        // HealthComponent 是 sealed，不能用模式匹配判断其派生接口；从层级组件查询可兼容挂载式格挡组件。
+        IParryReceiver parry = target.GetComponentInParent<IParryReceiver>();
+        if (parry != null && parry.TryParry(request)) return;
         AttackDamageResult result = target.ReceiveAttack(request);
         
         if (result.AppliedDamage > 0f) Landed?.Invoke(target, point, direction, result.AppliedDamage);

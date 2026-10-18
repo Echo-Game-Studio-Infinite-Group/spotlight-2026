@@ -58,6 +58,7 @@ public sealed class PlayerCameraRig : MonoBehaviour
     }
     private void Update()
     {
+        if (TimeManager.IsPaused) return;
         ResolvePlayer();
         if (_target == null || _input == null || _motor == null) return;
         Vector2 look = _input.LookDelta;

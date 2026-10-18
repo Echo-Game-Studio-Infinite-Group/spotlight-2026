@@ -6,4 +6,5 @@ public sealed class SceneUISettings : ScriptableObject
 {
     public GameObject HUD;
     public GameObject PauseMenu;
+    public GameObject DeathScreen;
 }
