@@ -13,6 +13,7 @@ public sealed class EnemyAnimation : MonoBehaviour
         && (_animator.GetCurrentAnimatorStateInfo(0).IsName("Hurt")
             || (_animator.IsInTransition(0) && _animator.GetNextAnimatorStateInfo(0).IsName("Hurt")));
     [SerializeField, Min(0f)] private float _speedDampTime = 0.1f;
+    [SerializeField, Min(0.01f)] private float _playbackSpeed = 1f;
     private Vector3 _modelOffset;
     private Quaternion _modelRotation;
     public bool CanAttack => _animator != null && _animator.isActiveAndEnabled
@@ -97,7 +98,9 @@ public sealed class EnemyAnimation : MonoBehaviour
         if (state.IsTag("Attack")) _enteredAttack = true;
         // 状态被打断或末帧事件未送达时也要关闭判定，不能把敌人锁在攻击里。
         if (_enteredAttack && ((!state.IsTag("Attack") && !_animator.IsInTransition(0))
-            || (state.IsTag("Attack") && state.normalizedTime >= 1f))) FinishAttack();
+            || (state.IsTag("Attack") && state.normalizedTime >= 1f
+                && (!state.IsName("Attack") || !_animator.HasState(0, Animator.StringToHash("Base Layer.AttackBack")))
+                && !_animator.IsInTransition(0)))) FinishAttack();
     }
 
     public void PlayAttack()
@@ -158,7 +161,7 @@ public sealed class EnemyAnimation : MonoBehaviour
         return _holdFrozen ? 0f : NormalSpeed();
     }
 
-    private float NormalSpeed() => TimeManager.WorldRate * TimeManager.GameRate;
+    private float NormalSpeed() => _playbackSpeed * TimeManager.WorldRate * TimeManager.GameRate;
 
     public void ResetAfterDeath()
     {

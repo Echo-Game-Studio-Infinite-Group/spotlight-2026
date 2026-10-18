@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 // 幂等：对已经装好的场景（如 CombatTestScene）执行是空操作，可反复点。
 //
 // 组件归属只有两条线，别混：
-//   震屏链  —— CinemachineImpulseListener + CameraShaker —— 挂 vcam 物体。
+//   震屏链  —— CinemachineImpulseListener + VCameraEffects —— 挂 vcam 物体。
 //              impulse 施加在 vcam 的最终输出上，离开 vcam 就不生效。
 //   渲染链  —— CinemachineBrain + PlayerCameraRig + CameraPostProcessing —— 挂 Main Camera。
 //              Brain 是 Camera 组件的孪生组件，脱离相机无法存在。
@@ -82,7 +82,7 @@ public static class CameraRigSetup
         CinemachineVirtualCamera vcam = EnsureVirtualCamera(scene, target);
         EnsureBrain(cameraObject);
         EnsureRig(cameraObject, player, target, vcam);
-        EnsurePostProcessing(cameraObject, player, vcam, FindGlobalVolume(scene));
+        EnsurePostProcessing(cameraObject, player, FindGlobalVolume(scene));
         EnforceOwnership(cameraObject, vcam);
         DisableCompetingCameras(scene, vcam);
 
@@ -218,9 +218,8 @@ public static class CameraRigSetup
         // 狭缝中避障会让镜头反复缩放；遮挡交给 CameraWallFade，不走碰撞。
         follow.CameraCollisionFilter = 0;
 
-        CameraShaker.EnsureListener(vcam);
-        SetPrivate(GetOrAdd<CameraShaker>(host), "_virtualCamera", vcam);
-        // Follow / LookAt 指向玩家预制体实例里的子节点，必须记录覆盖才会落盘。
+        VCameraEffects.EnsureListener(vcam);
+        SetPrivate(GetOrAdd<VCameraEffects>(host), "_virtualCamera", vcam);        // Follow / LookAt 指向玩家预制体实例里的子节点，必须记录覆盖才会落盘。
         Record(vcam);
         Record(follow);
         return vcam;
@@ -257,10 +256,11 @@ public static class CameraRigSetup
         Record(rig);
     }
 
-    private static void EnsurePostProcessing(GameObject cameraObject, PlayerMotor player, CinemachineVirtualCamera vcam, Volume volume)
+    private static void EnsurePostProcessing(GameObject cameraObject, PlayerMotor player, Volume volume)
     {
         CameraPostProcessing processing = GetOrAdd<CameraPostProcessing>(cameraObject);
-        processing.Configure(player, vcam, volume);
+        // 镜头本体（FOV / 跟随臂 / 滚转）已经收进 vcam 上的 VCameraEffects，这一层只剩后处理。
+        processing.Configure(player, volume);
         Record(processing);
     }
 
@@ -280,7 +280,7 @@ public static class CameraRigSetup
     private static void EnforceOwnership(GameObject cameraObject, CinemachineVirtualCamera vcam)
     {
         GameObject vcamObject = vcam.gameObject;
-        MoveTo<CameraShaker>(cameraObject, vcamObject);
+        MoveTo<VCameraEffects>(cameraObject, vcamObject);
         MoveTo<CinemachineImpulseListener>(cameraObject, vcamObject);
         MoveTo<PlayerCameraRig>(vcamObject, cameraObject);
         MoveTo<CameraPostProcessing>(vcamObject, cameraObject);

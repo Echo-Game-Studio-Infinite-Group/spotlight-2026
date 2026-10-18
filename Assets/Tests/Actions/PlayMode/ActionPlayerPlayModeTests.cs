@@ -23,6 +23,23 @@ public sealed class ActionPlayerPlayModeTests
     private MovementParams _brakingParameters;
     private GameObject _walkReference;
 
+    [TestCase(true, false)]
+    [TestCase(false, true)]
+    [TestCase(true, true)]
+    public void BrakeAndParryHaveIndependentFlagsAndParryReachesCombatBuffer(bool brake, bool parry)
+    {
+        KeyboardState state = brake && parry ? new KeyboardState(Key.S, Key.E) :
+            brake ? new KeyboardState(Key.S) : new KeyboardState(Key.E);
+        InputSystem.QueueStateEvent(_keyboard, state); InputSystem.Update();
+        PlayerInputReader reader = _root.GetComponent<PlayerInputReader>();
+        ActionInputSample sample = reader.CaptureTick(10000, out PlayerInputFrame movement);
+        Assert.AreEqual(brake, movement.BrakeHeld);
+        Assert.AreEqual(brake, (sample.Held & ActionInputButtons.Brake) != 0);
+        Assert.AreEqual(parry, (sample.Held & ActionInputButtons.Parry) != 0);
+        Assert.AreEqual(Vector2.zero, movement.Move);
+        Assert.AreEqual(parry, reader.Battle.ConsumeParry(TimeManager.UnscaledTime));
+    }
+
     [UnityTest]
     public IEnumerator FourDirectionKeysWalkThenRunWhenGivenHighMomentum()
     {

@@ -11,7 +11,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     [SerializeField] private InputActionAsset _actions;
     private InputActionAsset _runtime;
     private InputActionMap _gameplay;
-    private InputAction _move, _brake, _look, _sprint, _slide, _skill, _attack;
+    private InputAction _move, _brake, _look, _sprint, _slide, _skill, _attack, _parry;
     private readonly List<ActionInputEdge> _actionEdges = new List<ActionInputEdge>();
     private ActionInputButtons _heldButtons;
     private long _skillPressVersion;
@@ -70,6 +70,7 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _slide = _gameplay.FindAction("Slide", true);
         _skill = _gameplay.FindAction("Skill", true);
         _attack = _gameplay.FindAction("Attack", true);
+        _parry = _gameplay.FindAction("Parry", true);
         _gameplay.FindAction("Mark", true).performed += context => { if (GameplayEnabled) MarkPressed?.Invoke(); };
         _move.performed += OnMove;
         _move.canceled += OnMove;
@@ -85,6 +86,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
         _attack.canceled += context => RecordEdge(ActionInputButtons.Attack, false);
         _skill.performed += OnSkill;
         _skill.canceled += context => RecordEdge(ActionInputButtons.Skill, false);
+        _parry.performed += OnParry;
+        _parry.canceled += context => RecordEdge(ActionInputButtons.Parry, false);
         _runtime.FindAction("Debug/ToggleHUD", true).performed += OnToggleHUD;
         _runtime.FindAction("Debug/ToggleCursor", true).performed += OnToggleCursor;
     }
@@ -138,6 +141,14 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     {
         RecordEdge(ActionInputButtons.Skill, true);
         if (_sequenceOwner == null) Battle.Push(InputBuffer.Action.Skill, TimeManager.UnscaledTime);
+    }
+    private void OnParry(InputAction.CallbackContext context)
+    {
+        RecordEdge(ActionInputButtons.Parry, true);
+        // parry 不是动作集里的一招（它没有动作序列，判定窗口由 PlayerCombat 自己开），
+        // 所以序列接管输入时也必须照常入队：否则普攻后摇里按 parry 会被静默丢掉。
+        // 序列期间没有人消费这个缓冲（ConsumeCombo / ConsumeAttack 都只在非序列路径调用）。
+        Battle.Push(InputBuffer.Action.Parry, TimeManager.UnscaledTime);
     }
     private void RecordEdge(ActionInputButtons button, bool pressed)
     {
@@ -240,6 +251,8 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     // 普通攻击的消费口：与 ConsumeBattleIntent 共用同一个缓冲，
     // 但不会把「技能键 + 攻击」的组合意图提前解析掉，两条路径互不吞事件。
     public bool ConsumeAttack(float time) => Battle.ConsumeAttack(time);
+    // parry 的消费口：与攻击共用同一个缓冲，但窗口和判定都在战斗侧，输入侧只管转发。
+    public bool ConsumeParry(float time) => Battle.ConsumeParry(time);
     public void Clear()
     {
         _jumpPressed = _slidePressed = _sprintHeld = _slideHeld = false;

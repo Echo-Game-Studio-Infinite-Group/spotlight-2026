@@ -1,19 +1,31 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class PauseUIManager : MonoBehaviour
 {
     [SerializeField] private GameObject _pauseMenuPanel;
+    [SerializeField] private Button _resumeButton;
+    [SerializeField] private Button _retryButton;
+    [SerializeField] private Button _returnButton;
+    [SerializeField] private Button _settingsButton;
+    [SerializeField] private GameObject _settingsPanel;
+    [SerializeField] private GameObject _pauseContent;
+    [SerializeField] private Button _closeSettingsButton;
+    [SerializeField] private Button _fullscreenButton;
     private PlayerInputReader _input;
     private bool _isPause;
 
     private void Awake()
     {
         _input = FindObjectOfType<PlayerInputReader>();
-        Button[] buttons = _pauseMenuPanel.GetComponentsInChildren<Button>(true);
-        buttons[0].onClick.AddListener(RetryGame);
-        buttons[1].onClick.AddListener(ReturnToTitle);
+        _resumeButton.onClick.AddListener(ResumeGame);
+        _retryButton.onClick.AddListener(RetryGame);
+        _returnButton.onClick.AddListener(ReturnToTitle);
+        _settingsButton.onClick.AddListener(() => ShowSettings(true));
+        _closeSettingsButton.onClick.AddListener(() => ShowSettings(false));
+        _fullscreenButton.onClick.AddListener(() => Screen.fullScreen = !Screen.fullScreen);
         _pauseMenuPanel.SetActive(false);
     }
 
@@ -27,6 +39,7 @@ public class PauseUIManager : MonoBehaviour
 
     private void TogglePause()
     {
+        if (_isPause && _settingsPanel.activeSelf) { ShowSettings(false); return; }
         if (_isPause) ResumeGame();
         else PauseGame();
     }
@@ -38,6 +51,8 @@ public class PauseUIManager : MonoBehaviour
         _input.SetGameplayEnabled(false);
         AudioListener.pause = true;
         _pauseMenuPanel.SetActive(true);
+        ShowSettings(false);
+        EventSystem.current.SetSelectedGameObject(_resumeButton.gameObject);
     }
 
     public void ResumeGame()
@@ -51,7 +66,14 @@ public class PauseUIManager : MonoBehaviour
     }
 
     public void RetryGame() => LoadScene(SceneManager.GetActiveScene().path);
-    public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenuScene.unity");
+    private void ShowSettings(bool visible)
+    {
+        _settingsPanel.SetActive(visible);
+        _pauseContent.SetActive(!visible);
+        EventSystem.current.SetSelectedGameObject(visible ? _fullscreenButton.gameObject : _resumeButton.gameObject);
+    }
+
+    public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenu.unity");
 
     private void LoadScene(string path)
     {

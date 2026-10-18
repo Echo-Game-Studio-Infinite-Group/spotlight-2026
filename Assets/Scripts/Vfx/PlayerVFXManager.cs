@@ -54,7 +54,7 @@ public sealed class PlayerVFXManager : MonoBehaviour
     {
         PlayerCombat combat = _player;
         if (combat == null) return;
-        CameraShaker.Emit(_impulseSource, new Vector3(0.5f, 0.0f, 0.0f), combat.AttackDamage);
+        VCameraEffects.Emit(_impulseSource, new Vector3(0.5f, 0.0f, 0.0f), combat.AttackDamage);
     }
     public void StopAttacks()
     {
