@@ -176,6 +176,10 @@ namespace GameJam.FlowTests
             long id = room.Id; string family = room.Variant.Room.Id;
             Assert.That(room.Variant.MinimumChaos, Is.EqualTo(31));
             _health.SetInvulnerableTime(0); _health.TakeDamage(_health.MaxHealth);
+            // 死亡动画与菜单拥有重试时机，不能在玩家选择前自动重建房间。
+            Assert.That(_flow.IsBusy, Is.False);
+            yield return Until(() => DeathRespawnUI.Instance.IsOpen);
+            DeathRespawnUI.Instance.respawnButton.onClick.Invoke();
             Assert.That(_flow.IsBusy, Is.True);
             yield return Ready();
             Assert.That(_flow.Chaos.Value, Is.EqualTo(25));

@@ -15,19 +15,19 @@ public static class SightCheck
         if (distance <= 0.0001f) return true;
 
         int count = Physics.RaycastNonAlloc(from, ray / distance, buffer, distance, mask, QueryTriggerInteraction.Ignore);
+        // 非分配查询没有距离顺序，填满时也不能确信最近遮挡已入列。
+        if (count == buffer.Length) return false;
+        float nearestTarget = float.PositiveInfinity, nearestObstacle = float.PositiveInfinity;
         for (int i = 0; i < count; i++)
         {
             Collider hit = buffer[i].collider;
             if (hit == null) continue;
             // 自己身上的碰撞体（枪口常埋在模型里）不算遮挡，继续往下看
             if (self != null && hit.transform.IsChildOf(self)) continue;
-            // 先打到目标 → 视线畅通
-            if (hit.transform.IsChildOf(target)) return true;
-            // 先打到别的东西 → 被挡
-            return false;
+            if (hit.transform.IsChildOf(target)) nearestTarget = Mathf.Min(nearestTarget, buffer[i].distance);
+            else nearestObstacle = Mathf.Min(nearestObstacle, buffer[i].distance);
         }
-        // 什么都没打到（例如目标没有碰撞体）→ 不拦，保持原来的行为
-        return true;
+        return float.IsPositiveInfinity(nearestObstacle) || nearestTarget < nearestObstacle;
     }
 
     /// <summary>
