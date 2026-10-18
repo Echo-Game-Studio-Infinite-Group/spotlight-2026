@@ -3,7 +3,8 @@ using UnityEngine;
 public enum AttackSourceType
 {
     Melee,
-    Projectile
+    Projectile,
+    Beam
 }
 
 // 这一击要求玩家用哪种 parry 接：普通 parry（蓝/黄提示）还是劣势 parry（红提示）。

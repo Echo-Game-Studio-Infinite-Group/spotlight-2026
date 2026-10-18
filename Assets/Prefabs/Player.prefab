@@ -26285,8 +26285,6 @@ MonoBehaviour:
   _impactSeconds: 0.09
   _impactTimeScale: 0.35
   _disadvantageKnockback: 3
-  _slowOnProjectileParry: 0
-  _slowOnDisadvantageParry: 0
   _logParry: 1
   _logHits: 0
 --- !u!114 &4061813187216391473
@@ -26458,11 +26456,9 @@ MonoBehaviour:
   _damage: 25
   _cooldown: 0.35
   _windowSeconds: 1.6
-  _parryWindowSeconds: 0.2
   _parryInvulnerableSeconds: 0.8
-  _parrySlowSeconds: 0.6
-  _parryCooldownSeconds: 1
-  _parrySlowRate: 0.1
+  _parryStopSeconds: 0.08
+  _parryStopRate: 0
   _parryKind: 0
 --- !u!114 &6112233445566778902
 MonoBehaviour:

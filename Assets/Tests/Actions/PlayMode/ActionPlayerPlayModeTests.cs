@@ -26,7 +26,7 @@ public sealed class ActionPlayerPlayModeTests
     [TestCase(true, false)]
     [TestCase(false, true)]
     [TestCase(true, true)]
-    public void BrakeAndParryHaveIndependentFlagsAndParryReachesCombatBuffer(bool brake, bool parry)
+    public void BrakeKeepsItsFlagAndEHasNoIndependentTimedParry(bool brake, bool parry)
     {
         KeyboardState state = brake && parry ? new KeyboardState(Key.S, Key.E) :
             brake ? new KeyboardState(Key.S) : new KeyboardState(Key.E);
@@ -35,9 +35,9 @@ public sealed class ActionPlayerPlayModeTests
         ActionInputSample sample = reader.CaptureTick(10000, out PlayerInputFrame movement);
         Assert.AreEqual(brake, movement.BrakeHeld);
         Assert.AreEqual(brake, (sample.Held & ActionInputButtons.Brake) != 0);
-        Assert.AreEqual(parry, (sample.Held & ActionInputButtons.Parry) != 0);
+        Assert.IsFalse((sample.Held & ActionInputButtons.Parry) != 0);
         Assert.AreEqual(Vector2.zero, movement.Move);
-        Assert.AreEqual(parry, reader.Battle.ConsumeParry(TimeManager.UnscaledTime));
+        Assert.IsFalse(reader.Battle.ConsumeParry(TimeManager.UnscaledTime));
     }
 
     [UnityTest]

@@ -119,7 +119,8 @@ namespace GameJam.Actions.Editor
         }
         private void UpdateVolumes()
         {
-            int count = _action?.Combat?.HitVolumes?.Count ?? 0;
+            int damageCount = _action?.Combat?.HitVolumes?.Count ?? 0;
+            int count = damageCount + (_action?.Combat?.ParryVolumes?.Count ?? 0);
             if (count > 0 && _wireBox == null)
             {
                 _wireBox = new Mesh { hideFlags = HideFlags.HideAndDontSave };
@@ -141,14 +142,14 @@ namespace GameJam.Actions.Editor
             {
                 GameObject box = _volumeObjects[i];
                 bool valid = i < count;
-                ActionHitVolume volume = valid ? _action.Combat.HitVolumes[i] : null;
+                ActionHitVolume volume = valid ? (i < damageCount ? _action.Combat.HitVolumes[i] : _action.Combat.ParryVolumes[i - damageCount]) : null;
                 Vector3 center = default, extents = default; Quaternion rotation = Quaternion.identity;
                 valid = valid && volume.TryGetPose(_model.transform, out center, out extents, out rotation);
                 box.SetActive(valid);
                 if (!valid) continue;
                 box.transform.SetPositionAndRotation(center, rotation); box.transform.localScale = extents * 2f;
                 var properties = new MaterialPropertyBlock();
-                properties.SetColor("_Color", volume.IsActive(_action, _frame) ? new Color(1f, .65f, .1f) : Color.gray);
+                properties.SetColor("_Color", volume.IsActive(_action, _frame) ? (i < damageCount ? new Color(1f, .65f, .1f) : Color.cyan) : Color.gray);
                 box.GetComponent<MeshRenderer>().SetPropertyBlock(properties);
             }
         }
