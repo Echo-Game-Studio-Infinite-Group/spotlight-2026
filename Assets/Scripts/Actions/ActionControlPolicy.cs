@@ -10,6 +10,7 @@ namespace GameJam.Actions
         public bool AllowJump = true;
         public bool AllowSlide = true;
         public bool AllowSprint = true;
+        public bool AllowBrake = true;
         public float GravityMultiplier = 1f;
         public string MovementCommand;
         public float CommandValue;

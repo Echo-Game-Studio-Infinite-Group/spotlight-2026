@@ -14,6 +14,7 @@ namespace GameJam.Actions
         Forward = 1 << 5,
         Backward = 1 << 6,
         Left = 1 << 7,
-        Right = 1 << 8
+        Right = 1 << 8,
+        Brake = 1 << 9
     }
 }

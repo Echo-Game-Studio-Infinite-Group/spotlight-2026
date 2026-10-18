@@ -20,6 +20,114 @@ public sealed class ActionPlayerPlayModeTests
     private GameObject _clock;
     private float _mobilitySpentEnergy;
     private InputSettings _previousSettings, _testSettings;
+    private MovementParams _brakingParameters;
+    private GameObject _walkReference;
+
+    [UnityTest]
+    public IEnumerator FourDirectionKeysWalkThenRunWhenGivenHighMomentum()
+    {
+        yield return PrepareMobilityGround();
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        PlayerAnimation animation = _root.GetComponentInChildren<PlayerAnimation>();
+        _brakingParameters = Object.Instantiate(motor.Params);
+        _brakingParameters.GroundFriction = 0f; _brakingParameters.Pump = PumpMode.VerbatimQuake;
+        motor.SetParams(_brakingParameters);
+        _walkReference = new GameObject("WalkingInputCameraReference");
+        motor.SetMovementReference(_walkReference.transform);
+        Vector3 origin = _root.transform.position;
+        KeyboardState[] states = { new KeyboardState(Key.A), new KeyboardState(Key.D),
+            new KeyboardState(Key.W, Key.A), new KeyboardState(Key.W, Key.D) };
+        Vector3[] directions = { Vector3.left, Vector3.right, new Vector3(-1f, 0f, 1f), new Vector3(1f, 0f, 1f) };
+        string[] clips = { "Mvm_Jog_Front_L", "Mvm_Jog_Front_R", "Mvm_Jog_Front_L45", "Mvm_Jog_Front_R45" };
+        for (int i = 0; i < states.Length; i++)
+        {
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+            motor.Teleport(origin); _root.transform.rotation = Quaternion.identity;
+            for (int j = 0; j < 2; j++) yield return new WaitForFixedUpdate();
+            InputSystem.QueueStateEvent(_keyboard, states[i]); InputSystem.Update();
+            for (int j = 0; j < 30; j++) yield return new WaitForFixedUpdate();
+            Assert.IsTrue(motor.IsWalking, clips[i]);
+            Assert.That(motor.HorizontalSpeed, Is.EqualTo(motor.Params.WalkSpeed).Within(.002f));
+            Assert.That(Vector3.Angle(_root.transform.forward, Vector3.forward), Is.LessThan(.01f));
+            Assert.IsTrue(animation.Animator.GetCurrentAnimatorClipInfo(0).Any(value => value.clip.name == clips[i] && value.weight > .99f));
+            motor.SetHorizontalSpeed(12f);
+            for (int j = 0; j < 30; j++) yield return new WaitForFixedUpdate();
+            Assert.IsFalse(motor.IsWalking);
+            Assert.That(motor.HorizontalSpeed, Is.EqualTo(12f).Within(.002f));
+            Assert.That(Vector3.Angle(_root.transform.forward, directions[i]), Is.LessThan(1f));
+            Assert.IsTrue(animation.Animator.GetCurrentAnimatorStateInfo(0).IsName("Base Layer.Move"));
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator RealSLocksFacingWhileCameraTurnsAndJumpReturnsStoredSpeed()
+    {
+        yield return PrepareMobilityGround();
+        PlayerMotor motor = _root.GetComponent<PlayerMotor>();
+        _brakingParameters = Object.Instantiate(motor.Params);
+        _brakingParameters.GroundFriction = 0f;
+        motor.SetParams(_brakingParameters); motor.SetHorizontalSpeed(12f);
+        Quaternion facing = _root.transform.rotation;
+        Transform target = new GameObject("BrakeCameraTarget").transform;
+        target.SetParent(_root.transform, false);
+        PlayerCameraRig rig = _root.AddComponent<PlayerCameraRig>(); rig.enabled = false;
+        rig.Configure(motor, _root.GetComponent<PlayerInputReader>(), target, null); rig.enabled = true;
+        motor.SetMovementReference(target);
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.S, Key.A)); InputSystem.Update();
+        for (int i = 0; i < 15; i++)
+        {
+            rig.SetViewRotation(Quaternion.Euler(0f, i * 10f, 0f));
+            yield return new WaitForFixedUpdate();
+        }
+        Assert.IsTrue(motor.IsBraking);
+        Assert.Less(motor.HorizontalSpeed, 12f);
+        Assert.That(motor.HorizontalSpeed + motor.BrakeRecoverySpeed, Is.EqualTo(12f).Within(.01f));
+        Assert.That(Quaternion.Angle(facing, _root.transform.rotation), Is.LessThan(.001f));
+        Assert.That(Quaternion.Angle(facing, rig.ViewRotation), Is.GreaterThan(30f));
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.S, Key.Space)); InputSystem.Update();
+        for (int i = 0; i < 5 && motor.JumpCount == 0; i++) yield return new WaitForFixedUpdate();
+        Assert.AreEqual(1, motor.JumpCount);
+        Assert.IsFalse(motor.IsBraking);
+        Assert.That(motor.HorizontalSpeed, Is.EqualTo(12f).Within(.01f));
+        Assert.AreEqual(0f, motor.BrakeRecoverySpeed);
+        Assert.That(Quaternion.Angle(facing, _root.transform.rotation), Is.LessThan(.001f));
+    }
+
+    [TestCase(Key.None, 0f, 0f)]
+    [TestCase(Key.W, 0f, 1f)]
+    [TestCase(Key.A, -1f, 0f)]
+    [TestCase(Key.D, 1f, 0f)]
+    public void SIsIndependentBrakeAndDoesNotCancelOtherMoveKeys(Key other, float x, float y)
+    {
+        InputSystem.QueueStateEvent(_keyboard, other == Key.None ? new KeyboardState(Key.S) : new KeyboardState(Key.S, other));
+        InputSystem.Update();
+        PlayerInputReader reader = _root.GetComponent<PlayerInputReader>();
+        ActionInputSample sample = reader.CaptureTick(10000, out PlayerInputFrame movement);
+        Assert.IsTrue(movement.BrakeHeld);
+        Assert.That(movement.Move.x, Is.EqualTo(x).Within(.001f));
+        Assert.That(movement.Move.y, Is.EqualTo(y).Within(.001f));
+        Assert.AreEqual(ActionInputButtons.Brake, sample.Held & ActionInputButtons.Brake);
+        Assert.AreEqual(ActionInputButtons.None, sample.Held & ActionInputButtons.Backward);
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState()); InputSystem.Update();
+        reader.CaptureTick(10001, out movement);
+        Assert.IsFalse(movement.BrakeHeld);
+    }
+
+    [Test]
+    public void SimultaneousSAndJumpPreserveBrakeModifierAndPauseClearsIt()
+    {
+        InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.S, Key.Space)); InputSystem.Update();
+        PlayerInputReader reader = _root.GetComponent<PlayerInputReader>();
+        ActionInputSample sample = reader.CaptureTick(10000, out PlayerInputFrame movement);
+        ActionInputEdge jump = sample.Edges.Single(edge => edge.Button == ActionInputButtons.Jump && edge.Trigger == ActionInputStep.Edge.Pressed);
+        Assert.AreEqual(ActionInputButtons.Brake, jump.HeldAtEvent & ActionInputButtons.Brake);
+        Assert.IsTrue(movement.BrakeHeld);
+        Assert.AreEqual(Vector2.zero, movement.Move);
+        reader.SetGameplayEnabled(false);
+        reader.CaptureTick(10001, out movement);
+        Assert.IsFalse(movement.BrakeHeld);
+    }
+
     [UnitySetUp]
     public IEnumerator SetUp()
     {
@@ -47,6 +155,8 @@ public sealed class ActionPlayerPlayModeTests
         if (_keyboard != null) InputSystem.RemoveDevice(_keyboard);
         if (_ground != null) Object.Destroy(_ground);
         if (_root != null) Object.Destroy(_root);
+        if (_brakingParameters != null) Object.Destroy(_brakingParameters);
+        if (_walkReference != null) Object.Destroy(_walkReference);
         if (_previousSettings != null) InputSystem.settings = _previousSettings;
         if (_testSettings != null) Object.Destroy(_testSettings);
         TimeManager.SetPaused(false);

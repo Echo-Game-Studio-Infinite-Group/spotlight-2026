@@ -27,19 +27,20 @@ public sealed class DebugHUD : MonoBehaviour
     {
         if (!_visible || _motor.Params == null) return;
         if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-        GUI.Box(new Rect(8f, 8f, 370f, 300f), GUIContent.none);
-        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 280f));
+        GUI.Box(new Rect(8f, 8f, 370f, 324f), GUIContent.none);
+        GUILayout.BeginArea(new Rect(16f, 16f, 350f, 304f));
         GUILayout.Label($"速度 {_motor.HorizontalSpeed:F2} / {_motor.Params.MaxSpeed:F0} m/s", _style);
-        GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : "")}", _style);
+        GUILayout.Label($"状态 {_motor.State}{(_motor.IsSliding ? " · 滑铲" : _motor.IsWalking ? " · 行走" : "")}", _style);
         GUILayout.Label($"支撑坡角 {_motor.GroundSupport.Angle:F1}° · 阶差 {_motor.GroundStepHeight:F3} m", _style);
         GUILayout.Label($"地面窗口 {_motor.FrictionWindowRemaining:F3}s · 墙面窗口 {_motor.WallWindowRemaining:F3}s", _style);
+        GUILayout.Label($"刹车 {(_motor.IsBraking ? "进行中" : "停止")} · 回收 {_motor.BrakeRecoverySpeed:F2} m/s · 窗口 {_motor.BrakeRecoveryRemaining:F2}s", _style);
         GUILayout.Label($"入墙角 {_motor.WallApproachAngle:F1}° · 蹬墙 {_motor.WallJumpCount}", _style);
         // 能量行改走能量账户，读不到时明确写出来，避免把"没接上"误看成"能量是 0"
         GUILayout.Label(_energy != null
             ? $"能量 {_energy.CurrentEnergy:F1} / {_energy.MaxEnergy:F0}"
             : "能量 未接入 IEnergyAccount", _style);
         DrawCombatLines();
-        GUILayout.Label("WASD 移动 · Shift 奔跑 · Ctrl 滑铲", _style);
+        GUILayout.Label("WAD 移动 · S 地面刹车 · Shift 奔跑 · Ctrl 滑铲", _style);
         GUILayout.Label("Space 跳跃/蹬墙 · 鼠标左键 攻击 · Esc 鼠标锁定 · F3 面板", _style);
         GUILayout.Label("F5 parry 闪光演示 · F6 弹道parry闪光演示", _style);
         GUILayout.EndArea();
