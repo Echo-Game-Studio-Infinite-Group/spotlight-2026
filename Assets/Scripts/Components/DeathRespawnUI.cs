@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Cinemachine;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -19,6 +19,8 @@ public class DeathRespawnUI : MonoBehaviour
     private VectorEnergy _energy;
     private PlayerInputReader _input;
     private readonly List<CinemachineBrain> _frozenBrains = new List<CinemachineBrain>();
+    private PlayerDeathAnimation playerDeath;
+    private bool waitingForDeathAnimation;
 
     private void Awake()
     {
@@ -32,22 +34,50 @@ public class DeathRespawnUI : MonoBehaviour
     private void Update()
     {
         if (_health == null) TryBindPlayer();
+        if (!waitingForDeathAnimation || _health == null) return;
+        if (_health.IsAlive) { waitingForDeathAnimation = false; return; }
+        if (playerDeath != null && playerDeath.IsPlayingDeath) return;
+        waitingForDeathAnimation = false;
+        OpenPanel();
     }
 
     private void TryBindPlayer()
     {
-        PlayerMotor motor = PlayerMotor.Active;
+        // 死亡表现会停用 Motor；玩家实体在死亡与复活期间始终可用于绑定。
+        Player player = Player.Current;
+        PlayerMotor motor = player != null ? player.Motor : PlayerMotor.Active;
         if (motor == null) return;
         _health = motor.GetComponent<HealthComponent>();
         _energy = motor.GetComponent<VectorEnergy>();
+        playerDeath = motor.GetComponent<PlayerDeathAnimation>();
         _input = motor.GetComponent<PlayerInputReader>();
-        if (_health != null) _health.Died += OnPlayerDied;
+        if (_health != null)
+        {
+            _health.Died += OnPlayerDied;
+            _health.Revived += OnPlayerRevived;
+            if (!_health.IsAlive) waitingForDeathAnimation = true;
+        }
     }
 
-    private void OnPlayerDied(HealthComponent health) => OpenPanel();
+    private void OnPlayerDied(HealthComponent health)
+    {
+        // 下一帧再检查，避免死亡事件订阅顺序让面板抢先暂停动画。
+        waitingForDeathAnimation = true;
+    }
+
+    private void OnPlayerRevived(HealthComponent health)
+    {
+        waitingForDeathAnimation = false;
+        if (panelRoot != null && panelRoot.gameObject.activeSelf) ClosePanel();
+    }
 
     public void OpenPanel()
     {
+        if (_health != null && !_health.IsAlive && playerDeath != null && playerDeath.IsPlayingDeath)
+        {
+            waitingForDeathAnimation = true;
+            return;
+        }
         if (IsOpen) return;
         // 先收起普通暂停菜单，再接管暂停，避免两套菜单互相解除暂停。
         PauseUIManager pause = FindObjectOfType<PauseUIManager>();
@@ -122,6 +152,10 @@ public class DeathRespawnUI : MonoBehaviour
     {
         ClosePanel();
         if (Instance == this) Instance = null;
-        if (_health != null) _health.Died -= OnPlayerDied;
+        if (_health != null)
+        {
+            _health.Died -= OnPlayerDied;
+            _health.Revived -= OnPlayerRevived;
+        }
     }
 }

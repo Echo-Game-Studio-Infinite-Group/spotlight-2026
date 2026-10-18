@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -249,7 +249,7 @@ public static class NasaPunkMenuBuilder
                 UnityEngine.Object.DestroyImmediate(root.transform.GetChild(i).gameObject);
             ConfigureCanvas(root, 50);
             Transform panel = Stretch(root.transform, "PauseMenuPanel");
-            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .1f);
+            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .3f);
             RectTransform content = Center(panel, "Pause content", new Vector2(540, 550), Vector2.zero);
             RawImage title = CRTImage(content, "PauseTitle", new Vector2(540, 110), Vector2.zero, titleMaterial);
             title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0, 1);
@@ -311,7 +311,7 @@ public static class NasaPunkMenuBuilder
             var controller = root.GetComponent<DeathRespawnUI>();
             if (controller == null) controller = root.AddComponent<DeathRespawnUI>();
             Transform panel = Stretch(root.transform, "DeathScreenPanel");
-            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .1f);
+            panel.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, .3f);
             RectTransform content = Center(panel, "Death content", new Vector2(540, 350), Vector2.zero);
             var titleMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "TitleCRT.mat");
             var textMaterial = AssetDatabase.LoadAssetAtPath<Material>(CRTArt + "ButtonCRT.mat");
