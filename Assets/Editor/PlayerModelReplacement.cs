@@ -115,7 +115,7 @@ public static class PlayerModelReplacement
     {
         if (animator.runtimeAnimatorController.animationClips.All(c => c.humanMotion)) return;
         var avatar = animator.avatar;
-        var oldAvatar = AssetDatabase.LoadAssetAtPath<Avatar>(AssetDatabase.GUIDToAssetPath("d6b929ff34cae3945bb1d4cb74929e4c"));
+        var oldAvatar = AssetDatabase.LoadAssetAtPath<Avatar>(AssetDatabase.GUIDToAssetPath("b831cd65aab42354c85dd6ac0e36ca9f"));
         if (oldAvatar == null) throw new InvalidOperationException("Missing source Avatar");
         animator.avatar = oldAvatar;
         animator.Rebind();

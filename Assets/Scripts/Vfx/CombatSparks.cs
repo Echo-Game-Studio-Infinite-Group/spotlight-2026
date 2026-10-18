@@ -4,7 +4,7 @@ using UnityEngine;
 
 // 战斗火花特效库 v2 —— 按「Functional / Industrial Chamfer Sci-Fi Hard Surface」基调重做。
 //   命中火花 / 近战 parry 闪光 / 弹道 parry 弹开 三类一次性爆发的统一入口
-//   （脚底摩擦火花是持续发射器，归 SlideSparks 组件）。
+//   （脚底摩擦火花是持续发射器，归 FrictionSparks 组件）。
 //
 // 全程序化：贴图运行时生成、粒子系统代码装配、实例池化——零美术资产、零外部包。
 //
@@ -26,13 +26,13 @@ using UnityEngine;
 public static class CombatSparks
 {
     // ===== 调参（RuinsFireConfig.asset 的 combatSparks 段——与火焰同一份配方） =====
-    // SlideSparks 接到配方后经 ApplyTune 注入；不接时用 CombatSparkTune 的字段默认值
+    // FrictionSparks 接到配方后经 ApplyTune 注入；不接时用 CombatSparkTune 的字段默认值
     // （= 2026-10-15 v2 字面量，行为与并入配置前一致）。模板与灯光参数是**首用快照**：
     // 改了资产要重进 Play / 重开场景才对模板生效。
 
     private static CombatSparkTune _tune;
 
-    /// <summary>注入配方（SlideSparks.Awake 调用；传 null = 回到内置默认）。</summary>
+    /// <summary>注入配方（FrictionSparks.Awake 调用；传 null = 回到内置默认）。</summary>
     public static void ApplyTune(RuinsFireConfig config) { _tune = config != null ? config.combatSparks : null; }
 
     /// <summary>当前配方（懒初始化为内置默认，读-only；模板装配期取值一次）。</summary>
@@ -46,7 +46,7 @@ public static class CombatSparks
     private static readonly Dictionary<CombatSparksInternal.Kind, GameObject> Templates = new Dictionary<CombatSparksInternal.Kind, GameObject>();
     private static readonly Dictionary<CombatSparksInternal.Kind, List<SparkInstance>> Instances = new Dictionary<CombatSparksInternal.Kind, List<SparkInstance>>();
 
-    /// <summary>火花点材质（SlideSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一份火花贴图）。
+    /// <summary>火花点材质（FrictionSparks 的持续发射器与这里的爆发特效用同一份，工程里只有这一份火花贴图）。
     /// public：编辑器装配/自检工具（Assembly-CSharp-Editor）也要取它。</summary>
     public static Material SparkMaterial { get { EnsureMaterials(); return _sparkMaterial; } }
 

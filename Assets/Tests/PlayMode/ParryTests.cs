@@ -88,6 +88,19 @@ public sealed class ParryTests
     }
 
     [Test]
+    public void Parry_HasOneSecondCooldown()
+    {
+        float now = TimeManager.UnscaledTime;
+        Assert.IsTrue(OpenParry(now), "第一次 parry 应当成功");
+        Assert.IsFalse(_playerCombat.IsParryReady(now + 0.2f), "冷却期内不该就绪");
+        Assert.IsFalse(OpenParry(now + 0.2f), "冷却期内再按不能开窗");
+        Assert.IsFalse(OpenParry(now + 0.9f), "冷却结束前一帧也不能开窗");
+        Assert.IsTrue(_playerCombat.IsParryReady(now + 1.01f), "1 秒后应当就绪");
+        Assert.IsTrue(OpenParry(now + 1.01f), "冷却走完后应当能再次 parry");
+        Assert.GreaterOrEqual(_playerCombat.ParryCooldownSeconds, 1f - 0.001f);
+    }
+
+    [Test]
     public void HitOutsideWindow_StillDamages()
     {
         float before = _playerHealth.Health;
@@ -171,13 +184,16 @@ public sealed class ParryTests
     }
 
     [Test]
-    public void Parry_CancelsOngoingAttackWindow()
+    public void Parry_DoesNotCancelOngoingAttack()
     {
+        // parry 与攻击现在是同一个键（左键，拼刀流）：开窗必须与挥砍共存，
+        // 否则「每次按下都把自己那一刀收掉」——这条以前是反着断言的。
         float now = TimeManager.UnscaledTime;
         Assert.IsTrue(_playerCombat.ReceiveAction(InputBuffer.Action.Attack, now), "攻击应当能起手");
         Assert.IsTrue(_playerCombat.IsAttacking(now));
-        Assert.IsTrue(OpenParry(now), "普攻后摇里必须能按出 parry");
-        Assert.IsFalse(_playerCombat.IsAttacking(now), "parry 要能取消普攻，连续 parry 才接得起来");
+        Assert.IsTrue(OpenParry(now), "攻击窗口里也要能开出 parry 窗口");
+        Assert.IsTrue(_playerCombat.IsAttacking(now), "parry 开窗不能取消正在挥的攻击");
+        Assert.IsTrue(_playerCombat.IsParrying(now), "parry 窗口与攻击窗口同时存在");
     }
 
     [Test]
@@ -215,7 +231,7 @@ public sealed class ParryTests
         InputAction parry = asset.FindAction("Gameplay/Parry");
         Assert.IsNotNull(parry, "Gameplay 里必须有 Parry 动作");
         Assert.IsTrue(parry.bindings.Count > 0, "Parry 必须有默认按键");
-        Assert.AreEqual("<Keyboard>/e", parry.bindings[0].path, "按 E 才是文档约定的 parry 键");
+        Assert.AreEqual("<Mouse>/leftButton", parry.bindings[0].path, "左键才是现在的 parry 键（与攻击同键，拼刀流）");
     }
 }
 #endif

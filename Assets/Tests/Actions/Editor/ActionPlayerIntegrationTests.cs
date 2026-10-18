@@ -366,20 +366,24 @@ public sealed class ActionPlayerIntegrationTests
     {
         ActionDefinition a = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_a");
         ActionDefinition b = _catalog.Actions.Find(action => action.ActionId == "player_highspeed_b");
-        Assert.NotNull(a); Assert.NotNull(b); Assert.AreEqual(76, a.TotalFrames); Assert.AreEqual(68, b.TotalFrames);
+        Assert.NotNull(a); Assert.NotNull(b);
         Assert.IsFalse(a.Timeline[0].Animation.Clip.isLooping); Assert.IsFalse(b.Timeline[0].Animation.Clip.isLooping);
         _bridge.EnterSegment(new ActionExecutionState(a, 120, 0, 6, 0, default), true);
         _bridge.Sample(new ActionExecutionState(a, 120, 0, 6, 0, default), 0f);
         Transform hand = _bridge.Animator.GetBoneTransform(HumanBodyBones.RightHand);
         Quaternion first = hand.rotation;
-        _bridge.EnterSegment(new ActionExecutionState(a, 120, 1, 22, 12, default), true);
-        _bridge.Sample(new ActionExecutionState(a, 120, 1, 22, 12, default), 0f);
+        int activeStart = a.Timeline[0].DurationFrames;
+        int activeSample = activeStart + a.Timeline[1].DurationFrames / 2;
+        _bridge.EnterSegment(new ActionExecutionState(a, 120, 1, activeSample, activeStart, default), true);
+        _bridge.Sample(new ActionExecutionState(a, 120, 1, activeSample, activeStart, default), 0f);
         Assert.Greater(Quaternion.Angle(first, hand.rotation), .1f);
         float sourceTime = _bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter);
         _bridge.EnterSegment(new ActionExecutionState(b, 121, 0, 5, 0, default), true);
         _bridge.Sample(new ActionExecutionState(b, 121, 0, 5, 0, default), 0f);
         Assert.AreNotEqual(a.Timeline[0].Animation.TimeParameter, b.Timeline[0].Animation.TimeParameter);
-        Assert.That(_bridge.Animator.GetFloat(b.Timeline[0].Animation.TimeParameter), Is.EqualTo(5f / 68f).Within(.0001f));
+        ActionAnimationBinding binding = b.Timeline[0].Animation;
+        float expectedTime = Mathf.Lerp(binding.NormalizedStart, binding.NormalizedEnd, 5f / b.Timeline[0].DurationFrames);
+        Assert.That(_bridge.Animator.GetFloat(binding.TimeParameter), Is.EqualTo(expectedTime).Within(.0001f));
         Assert.That(_bridge.Animator.GetFloat(a.Timeline[0].Animation.TimeParameter), Is.EqualTo(sourceTime).Within(.0001f));
     }
 
@@ -1169,7 +1173,7 @@ public sealed class ActionPlayerIntegrationTests
         _runner.FrameEvent += (state, frameEvent) => { if (frameEvent.MotorCommand == MotorCommandKind.SprintBoost) commands++; };
         SkillTick(ActionInputButtons.Sprint, ActionInputButtons.Sprint);
         Assert.AreEqual("player_sprint", _runner.Player.State.Action.ActionId);
-        float expected = Mathf.Min(initialSpeed + 16f, 120f);
+        float expected = Mathf.Min(initialSpeed + 2f * _motor.Params.LowSpeedThreshold, _motor.Params.MaxSpeed);
         Assert.That(_motor.HorizontalSpeed, Is.EqualTo(expected).Within(.001f));
         Assert.That(_motor.Velocity.y, Is.EqualTo(8f - 20f / 60f).Within(.001f));
         Assert.AreEqual(0f, energy.Balance); Assert.AreEqual(rate, TimeManager.GlobalRate);

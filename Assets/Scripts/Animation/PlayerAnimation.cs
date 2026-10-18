@@ -30,6 +30,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private static readonly int IsAttackingId = Animator.StringToHash("IsAttacking");
     private static readonly int IsHurtId = Animator.StringToHash("IsHurt");
     private static readonly int HurtId = Animator.StringToHash("Hurt");
+    /// <summary>Animator 里那条只驱动腿部的 Override 层（avatarMask = LegsOnly）。受击与攻击招式共用。</summary>
     public const string HurtLegLayerName = "HurtLegs";
 
     // 受伤专用参数，不复用动作序列的 ActionPlaying / ActionTime：
@@ -57,7 +58,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private PlayerCombat _combat;
     private PlayerInputReader _input;
     private GameJam.Actions.PlayerActionRunner _actionRunner;
-    private int _hurtLegLayer = -1;
+    private int _legsOnlyLayer = -1;
     private float _hurtElapsed;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
@@ -108,7 +109,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     public void Configure(Animator animator)
     {
         _animator = animator;
-        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
+        _legsOnlyLayer = _animator.GetLayerIndex(HurtLegLayerName);
         DisableRootMotion();
         CacheSlideParameter();
     }
@@ -128,7 +129,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_animator == null) _animator = GetComponentInChildren<Animator>();
         DisableRootMotion();
         CacheSlideParameter();
-        _hurtLegLayer = _animator.GetLayerIndex(HurtLegLayerName);
+        _legsOnlyLayer = _animator.GetLayerIndex(HurtLegLayerName);
     }
 
     private void CacheSlideParameter()
@@ -207,10 +208,10 @@ public sealed class PlayerAnimation : MonoBehaviour
             bool finished = hurtState.IsName(CurrentHurtState) && hurtState.normalizedTime >= 1f
                 && !_animator.IsInTransition(0);
             if (finished || _hurtElapsed >= _hurtMaxSeconds) CancelHurt();
-            else { PushHurtState(); UpdateHurtLegs(); return; }
+            else { PushHurtState(); UpdateLegsOnlyLayer(); return; }
         }
         else _motor.InputSuppressed = false;
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
 
         // CharacterController 在贴地移动时可能短暂丢失 Grounded，延迟进入下落动画；主动起跳立即播放。
         _airborneTime = _motor.IsGrounded ? 0f : _airborneTime + deltaTime;
@@ -265,7 +266,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         _animator.SetBool(IsAttackingId, false);
         // 连续同类型命中也必须从头重播。
         _animator.Play("Base Layer." + CurrentHurtState, 0, 0f);
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
     }
 
     /// <summary>
@@ -277,7 +278,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         _hurtKind = HurtKindNone;
         _hurtLockRemaining = 0f;
         if (_motor != null) _motor.InputSuppressed = false;
-        UpdateHurtLegs();
+        UpdateLegsOnlyLayer();
         // 先摘 IsHurt：控制器里受伤状态的唯一出口就是 IsHurt == false，
         // 摘掉之后状态机下一帧自己回移动状态，这里不需要再指定目标状态。
         PushHurtState();
@@ -298,14 +299,19 @@ public sealed class PlayerAnimation : MonoBehaviour
         _animator.SetInteger(MotionStateId, CurrentMotionState);
     }
 
-    private void UpdateHurtLegs()
+    // 只驱动腿部的 Override 层（Animator 里叫 HurtLegs，avatarMask = LegsOnly，默认权重 0）：
+    //   · 受击：上身播受击、腿继续走（受击锁定期不让步，否则等于用移动取消受击）
+    //   · 攻击招式：普攻片段只该管上半身，腿必须跟移动走——否则「站着出刀 → 开始移动」时腿会僵在攻击姿态
+    // 两种情况的门槛一致：接地、没滑铲、真的在动。
+    private void UpdateLegsOnlyLayer()
     {
-        if (_hurtLegLayer < 0) return;
+        if (_legsOnlyLayer < 0) return;
         bool moving = _input != null && _input.MoveInput.sqrMagnitude > 0f;
-        // 正常走跑必须完全使用基础层；空中/滑铲也不能叠加地面踏步。
-        bool active = IsHurting && !IsHurtLocked && moving && _motor != null
-            && _motor.IsGrounded && !_motor.IsSliding && _motor.HorizontalSpeed > _idleSpeed;
-        _animator.SetLayerWeight(_hurtLegLayer, active ? 1f : 0f);
+        bool groundedMoving = moving && _motor != null && _motor.IsGrounded && !_motor.IsSliding
+            && _motor.HorizontalSpeed > _idleSpeed;
+        bool hurtLegs = IsHurting && !IsHurtLocked && groundedMoving;
+        bool attackLegs = !IsHurting && _combat != null && _combat.IsAttackSequenceActive && groundedMoving;
+        _animator.SetLayerWeight(_legsOnlyLayer, hurtLegs || attackLegs ? 1f : 0f);
     }
 
     private void OnDisable()
@@ -321,7 +327,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_animator != null)
         {
             PushHurtState();
-            UpdateHurtLegs();
+            UpdateLegsOnlyLayer();
         }
     }
 }

@@ -37,8 +37,8 @@ public static class CombatVfxSelfCheck
         GameObject player = new GameObject("CombatVfxSelfCheckPlayer");
         try
         {
-            player.AddComponent<SlideSparks>(); // RequireComponent 会自动补 PlayerMotor/CharacterController
-            player.GetComponent<SlideSparks>().EnsureEmitter();
+            player.AddComponent<FrictionSparks>(); // RequireComponent 会自动补 PlayerMotor/CharacterController
+            player.GetComponent<FrictionSparks>().EnsureEmitters();
             ParticleSystem emitter = player.GetComponentInChildren<ParticleSystem>();
             bool emitterOk = emitter != null;
             Debug.Log($"[CombatVfxSelfCheck] 滑铲发射器装配={(emitterOk ? "就位" : "失败")}"
