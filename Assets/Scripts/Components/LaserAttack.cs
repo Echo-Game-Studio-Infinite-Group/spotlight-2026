@@ -22,11 +22,17 @@ public sealed class LaserAttack : MonoBehaviour
     [SerializeField] private Transform _muzzle;
     [SerializeField] private LineRenderer _beam;
 
+    [Header("视线")]
+    [Tooltip("挡视线的层：被这些层挡住就不开始蓄力（隔墙不索敌）；蓄力/汇聚中丢了视线也会中止")]
+    [SerializeField] private LayerMask _sightMask = Physics.DefaultRaycastLayers;
+
     private HealthComponent _health;
     private CombatComponent _combat;
     private AttackTelegraph _telegraph;
     private readonly RaycastHit[] _hits = new RaycastHit[32];
     private readonly Collider[] _overlaps = new Collider[32];
+    // 视线检测的非分配缓冲：每逻辑步都查，不能每次 new。
+    private readonly RaycastHit[] _sightHits = new RaycastHit[8];
     private float _remaining;
     private bool _damageAttempted;
     private Vector3 _origin, _direction;
@@ -101,6 +107,8 @@ public sealed class LaserAttack : MonoBehaviour
             Vector3 flat = target.transform.position - Muzzle.position;
             flat.y = 0f;
             if (flat.sqrMagnitude > _range * _range) return;
+            // 隔墙不索敌：射程内但炮口看不到玩家就不蓄力、不亮预警。
+            if (!HasLineOfSight(target.transform)) return;
             Phase = AttackPhase.Charging;
             _remaining = _chargeSeconds;
             _telegraph?.Play();
@@ -110,6 +118,8 @@ public sealed class LaserAttack : MonoBehaviour
             _remaining -= dt;
             _origin = Muzzle.position;
             _direction = Muzzle.forward.normalized;
+            // 蓄力中玩家躲到墙后：这一发作废，转冷却（预警一起收掉）
+            if (!HasLineOfSight(target.transform)) { BeginCooldown(); return; }
             if (_remaining <= 0f)
             {
                 // 汇聚起点即锁定点，后续不能重新读取炮口朝向，否则玩家没有稳定的躲避窗口。
@@ -117,7 +127,12 @@ public sealed class LaserAttack : MonoBehaviour
                 _remaining = Mathf.Max(0f, _convergenceSeconds);
             }
         }
-        else if (IsConverging) _remaining -= dt;
+        else if (IsConverging)
+        {
+            _remaining -= dt;
+            // 汇聚期同样要在视线内：贴上去躲进墙后不该被"已锁定"打死
+            if (!HasLineOfSight(target.transform)) { BeginCooldown(); return; }
+        }
         if (_remaining > 0f)
         {
             TraceBeam(target, false);
@@ -129,6 +144,10 @@ public sealed class LaserAttack : MonoBehaviour
         _telegraph?.Stop();
         TraceBeam(target);
     }
+
+    /// <summary>炮口到玩家之间有没有被墙挡住。蓄力、汇聚、开火前都用它，避免隔墙锁人。</summary>
+    public bool HasLineOfSight(Transform target)
+        => SightCheck.HasLineOfSight(Muzzle.position, target, transform, _sightMask, _sightHits);
 
     private void TraceBeam(HealthComponent target, bool applyDamage = true)
     {
