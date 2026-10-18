@@ -25,16 +25,24 @@ WwiseEventName
 Bank
 ```
 
-示例：
+当前分支已经实际配置的绑定：
+
+```text
+player_jump -> Jump_Normal (Bank: OneTimeAction)
+```
+
+后续一次性事件的接入示例：
 
 ```text
 player_land  -> Play_PlayerLand
-player_jump  -> Play_PlayerJump
 footstep     -> Play_Footstep
 hit_metal    -> Play_MetalHit
 draw_sword   -> Play_DrawSword
 sword_swing  -> Play_SwordSwing
 ```
+
+这些名称不是当前 Wwise 工程中已经全部存在的 Event。需要先在 Wwise Authoring
+中创建 Event，再写入 `WwiseEventBindings.asset`。
 
 `EventId` 是 gameplay 使用的逻辑 ID。`WwiseEventName` 是 Wwise Event 名称。
 `Bank` 可选，填写后会先加载对应 Bank 再 Post Event。
@@ -44,10 +52,20 @@ sword_swing  -> Play_SwordSwing
 动作、战斗、移动代码只调用：
 
 ```csharp
+WwiseEventBridge.Play("player_jump", gameObject);
 WwiseEventBridge.Play("player_land", gameObject);
 WwiseEventBridge.Play("hit_metal", gameObject);
 WwiseEventBridge.Play("draw_sword", gameObject);
 ```
+
+动作序列帧事件的 `EventKey` 使用 `audio.` 前缀，例如：
+
+```text
+audio.player_jump
+```
+
+`PlayerActionRunner` 会去掉 `audio.`，再以 `player_jump` 调用
+`WwiseEventBridge.Play(...)`。
 
 需要停止时：
 
@@ -76,6 +94,9 @@ WwiseEventBridge.Play("footstep", gameObject);
 WwiseEventBridge.SetRTPC("ActionSpeed", speed01, gameObject);
 WwiseEventBridge.SetRTPC("Contact", contact01, gameObject);
 ```
+
+这里的 RTPC 和 Switch 名称只是调用示例。对应参数必须先在 Wwise Authoring
+中创建；`WwiseEventBridge` 只负责发送值，不会自动创建 Wwise 工程对象。
 
 参数映射建议：
 

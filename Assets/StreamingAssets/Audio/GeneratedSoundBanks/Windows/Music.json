@@ -1,0 +1,65 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "154",
+  "SoundBanks": [
+   {
+    "Id": "3991942870",
+    "Type": "User",
+    "GUID": "{B9FD0FE4-8802-425B-9ECE-72D720DDD7BD}",
+    "Language": "SFX",
+    "Hash": "{222A730C-A802-11C3-967C-4727DDAF5E65}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\Music",
+    "ShortName": "Music",
+    "Path": "Music.bnk",
+    "Media": [
+     {
+      "Id": "342168031",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Music\\Run.wav",
+      "CachePath": "45/{45F49A63-C268-6D9D-8DB3-04F7BE01E170}.wem"
+     },
+     {
+      "Id": "481119151",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Music\\SnowPeak.wav",
+      "CachePath": "19/{194467A7-6C48-88F2-DAF2-5A0AE16695A4}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "3234897717",
+      "Name": "Play_Music_Run",
+      "ObjectPath": "\\Events\\Default Work Unit\\Music\\Play_Music_Run",
+      "GUID": "{73A76459-77BB-43AC-92C7-AEF52BF4CE56}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "342168031"
+       }
+      ]
+     },
+     {
+      "Id": "1638933738",
+      "Name": "Play_Music_SnowPeak",
+      "ObjectPath": "\\Events\\Default Work Unit\\Music\\Play_Music_SnowPeak",
+      "GUID": "{3BD68F0D-0736-4498-8D9A-129DCAC1C307}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "481119151"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{6C313E23-BBCD-4588-BEAB-5F331AF2AA1A}"
+ }
+}

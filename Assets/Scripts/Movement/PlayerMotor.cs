@@ -70,6 +70,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
     public GroundSupport GroundSupport => _contacts != null ? _contacts.Support : default;
     public float GroundStepHeight => _contacts != null ? _contacts.StepHeightDelta : 0f;
     public event Action<float> GroundStepped;
+    public event Action<GroundSupport, float> Landed;
     public bool IsWallSliding => State == MovementState.WallSlide;
     public bool IsSliding { get; private set; }
     public bool IsSlideHeadBlocked { get; private set; }
@@ -328,6 +329,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         _controller.slopeLimit = _params.MaxGroundAngle;
 
         bool wasGrounded = IsGrounded;
+        float landingImpactSpeed = Mathf.Max(0f, -_velocity.y);
         bool wasWallSliding = IsWallSliding;
         if (_actionMotion != null && _actionMotion.DiveInAir && !IsGrounded)
         {
@@ -338,6 +340,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         }
         _contacts.Move(ref _velocity, dt, point => MotionPathPoint?.Invoke(point), IsSliding,
             protectSlideFront ? _params.SlideForwardExtent : 0f, wasGrounded);
+        bool landedThisStep = !wasGrounded && _contacts.Grounded;
+        GroundSupport landingSupport = _contacts.Support;
         bool hasImpact = _contacts.TryGetWallImpact(_params.WallMaxApproachAngle, out WallContact impact);
         // 同平面接缝也可能换成不可滑墙，不能只在法线变化的转角检查。
         if (IsWallSliding && _contacts.HasNonSlideWall) ExitWall();
@@ -379,6 +383,7 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
         if (!CanBrake) IsBraking = false;
         if (!IsGrounded || IsSliding || HorizontalSpeed > _params.LowSpeedThreshold) IsWalking = false;
         if (hasImpact) { ClearBrakeRecovery(); WallImpact?.Invoke(impact); }
+        if (landedThisStep) Landed?.Invoke(landingSupport, landingImpactSpeed);
     }
 
     private float RequestedJumpSpeed => _params.JumpSpeed * Mathf.Sqrt(_commandJumpHeightRatio > 0f ? _commandJumpHeightRatio : 1f);

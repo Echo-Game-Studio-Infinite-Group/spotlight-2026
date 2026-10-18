@@ -83,7 +83,7 @@ MonoBehaviour:
     ParentPath: SoundBanks\Default Work Unit
     guid: 6a4132cfe9f7ee469fead27f9d8a3915
     GuidInternal: 
-    m_lastTime: -8584095609944940496
+    m_lastTime: -8584092796726887351
     List:
     - name: DynamicAction
       guid: f12b9db44258654eb843d36dd4def6be
@@ -99,6 +99,20 @@ MonoBehaviour:
         ObjectType: 7
         guid: f12b9db44258654eb843d36dd4def6be
       Path: SoundBanks\Default Work Unit\DynamicAction
+    - name: Music
+      guid: e40ffdb902885b429ece72d720ddd7bd
+      id: 3991942870
+      PathAndIcons:
+      - ElementName: SoundBanks
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 6a4132cfe9f7ee469fead27f9d8a3915
+      - ElementName: Music
+        ObjectType: 7
+        guid: e40ffdb902885b429ece72d720ddd7bd
+      Path: SoundBanks\Default Work Unit\Music
     - name: OneTimeAction
       guid: c7e0b774771d93428958c4aeaf9aff8a
       id: 448873674
@@ -125,8 +139,108 @@ MonoBehaviour:
     ParentPath: Events\Default Work Unit
     guid: 06341fb10f3b6345895936e581bfbf9d
     GuidInternal: 
-    m_lastTime: -8584095609945241111
+    m_lastTime: -8584092796726902473
     List:
+    - name: Enemy_Hit
+      guid: a9015550cb86a4418c8506b8d8552a66
+      id: 1010055213
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Enemy_Hit
+        ObjectType: 3
+        guid: a9015550cb86a4418c8506b8d8552a66
+      Path: Events\Default Work Unit\OneTimeEvent\Enemy_Hit
+      maxAttenuation: 0
+      maxDuration: 0.8076875
+      minDuration: 0.8076875
+    - name: Footstep_Normal_Left
+      guid: ee552679657d8d4893ef275d025f8320
+      id: 1924171521
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Footstep_Normal_Left
+        ObjectType: 3
+        guid: ee552679657d8d4893ef275d025f8320
+      Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Left
+      maxAttenuation: 0
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
+    - name: Footstep_Normal_Left_2
+      guid: e45c21406ac303429b6523c18af9d683
+      id: 2545955606
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Footstep_Normal_Left_2
+        ObjectType: 3
+        guid: e45c21406ac303429b6523c18af9d683
+      Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Left_2
+      maxAttenuation: 0
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
+    - name: Footstep_Normal_Right
+      guid: 7b22236ff1aad745a747efe939f892f3
+      id: 94869236
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Footstep_Normal_Right
+        ObjectType: 3
+        guid: 7b22236ff1aad745a747efe939f892f3
+      Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Right
+      maxAttenuation: 0
+      maxDuration: 0.302875
+      minDuration: 0.302875
+    - name: Footstep_Normal_Right_2
+      guid: adf942435ee3f8459e666cac247607bf
+      id: 3163909963
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Footstep_Normal_Right_2
+        ObjectType: 3
+        guid: adf942435ee3f8459e666cac247607bf
+      Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Right_2
+      maxAttenuation: 0
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
     - name: Jump_Normal
       guid: 52c14c3075dbe24f83853c1513ac44d9
       id: 3892339301
@@ -145,8 +259,8 @@ MonoBehaviour:
         guid: 52c14c3075dbe24f83853c1513ac44d9
       Path: Events\Default Work Unit\OneTimeEvent\Jump_Normal
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.8557708
+      minDuration: 0.8557708
     - name: Land_Normal
       guid: 3f0b4f6241d22c40b30e898433ea07c9
       id: 2412175904
@@ -164,6 +278,63 @@ MonoBehaviour:
         ObjectType: 3
         guid: 3f0b4f6241d22c40b30e898433ea07c9
       Path: Events\Default Work Unit\OneTimeEvent\Land_Normal
+      maxAttenuation: 0
+      maxDuration: 1.0961459
+      minDuration: 1.0961459
+    - name: Laser
+      guid: 8538847648579840b706b02c5dd42fd6
+      id: 3982605422
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Laser
+        ObjectType: 3
+        guid: 8538847648579840b706b02c5dd42fd6
+      Path: Events\Default Work Unit\OneTimeEvent\Laser
+      maxAttenuation: 0
+      maxDuration: 1.5913541
+      minDuration: 1.5913541
+    - name: Metal_Hit
+      guid: 65a95a2c82bc014b8aeaf20922861471
+      id: 2473374816
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Metal_Hit
+        ObjectType: 3
+        guid: 65a95a2c82bc014b8aeaf20922861471
+      Path: Events\Default Work Unit\OneTimeEvent\Metal_Hit
+      maxAttenuation: 0
+      maxDuration: 0.7644167
+      minDuration: 0.7644167
+    - name: Music
+      guid: 416ad3ee0963e24396a20e78fb231bee
+      id: 3991942870
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: Music
+        ObjectType: 4
+        guid: 416ad3ee0963e24396a20e78fb231bee
+      Path: Events\Default Work Unit\Music
       maxAttenuation: 0
       maxDuration: -1
       minDuration: -1
@@ -184,6 +355,46 @@ MonoBehaviour:
       maxAttenuation: 0
       maxDuration: -1
       minDuration: -1
+    - name: Play_Music_Run
+      guid: 5964a773bb77ac4392c7aef52bf4ce56
+      id: 3234897717
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: Music
+        ObjectType: 4
+        guid: 416ad3ee0963e24396a20e78fb231bee
+      - ElementName: Play_Music_Run
+        ObjectType: 3
+        guid: 5964a773bb77ac4392c7aef52bf4ce56
+      Path: Events\Default Work Unit\Music\Play_Music_Run
+      maxAttenuation: 0
+      maxDuration: 0
+      minDuration: 0
+    - name: Play_Music_SnowPeak
+      guid: 0d8fd63b360798448d9a129dcac1c307
+      id: 1638933738
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: Music
+        ObjectType: 4
+        guid: 416ad3ee0963e24396a20e78fb231bee
+      - ElementName: Play_Music_SnowPeak
+        ObjectType: 3
+        guid: 0d8fd63b360798448d9a129dcac1c307
+      Path: Events\Default Work Unit\Music\Play_Music_SnowPeak
+      maxAttenuation: 0
+      maxDuration: 0
+      minDuration: 0
     - name: Play_SlideSinePlugin
       guid: b52b1bc63f4d924b964ea24b1bf770a4
       id: 3933638459
@@ -199,8 +410,8 @@ MonoBehaviour:
         guid: b52b1bc63f4d924b964ea24b1bf770a4
       Path: Events\Default Work Unit\Play_SlideSinePlugin
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Stop_SlideSinePlugin
       guid: 2280955aa334694789cb53f5f4dd35c0
       id: 4114826401
@@ -216,8 +427,28 @@ MonoBehaviour:
         guid: 2280955aa334694789cb53f5f4dd35c0
       Path: Events\Default Work Unit\Stop_SlideSinePlugin
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
+    - name: Sword_Swing
+      guid: 8c77b4ebaf7a10468d2ca97d9b34e434
+      id: 476098351
+      PathAndIcons:
+      - ElementName: Events
+        ObjectType: 5
+        guid: 00000000000000000000000000000000
+      - ElementName: Default Work Unit
+        ObjectType: 12
+        guid: 06341fb10f3b6345895936e581bfbf9d
+      - ElementName: OneTimeEvent
+        ObjectType: 4
+        guid: 480c64ab5551794d9160d9e50f2cab6b
+      - ElementName: Sword_Swing
+        ObjectType: 3
+        guid: 8c77b4ebaf7a10468d2ca97d9b34e434
+      Path: Events\Default Work Unit\OneTimeEvent\Sword_Swing
+      maxAttenuation: 0
+      maxDuration: 2.7211459
+      minDuration: 2.7211459
   RtpcWwu:
   - PhysicalPath: Game Parameters\Default Work Unit.wwu
     PathAndIcons:
