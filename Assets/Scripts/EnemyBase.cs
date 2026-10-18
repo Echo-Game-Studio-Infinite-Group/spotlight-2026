@@ -138,7 +138,7 @@ public class EnemyBase : MonoBehaviour
 
     protected virtual void OnDisable()
     {
-        if (_combat != null) _combat.Landed -= OnLandedHit;
+        if (_combat != null) { _combat.Landed -= OnLandedHit; _combat.Parried -= OnParried; }
         if (_health != null) _health.Damaged -= OnDamaged;
         StopMoving();
         FinishAttack();
@@ -177,7 +177,7 @@ public class EnemyBase : MonoBehaviour
         EnsureHealth();
         EnsureCombat();
         _health.Damaged += OnDamaged;
-        if (_combat != null) _combat.Landed += OnLandedHit;
+        if (_combat != null) { _combat.Landed += OnLandedHit; _combat.Parried += OnParried; }
     }
 
     // 实体特有的受击反应：跳字、断肢方向、受伤/死亡动画。血量数值不在这里改。
@@ -205,6 +205,13 @@ public class EnemyBase : MonoBehaviour
     private void OnLandedHit(HealthComponent target, Vector3 point, Vector3 direction, float applied)
     {
         VCameraEffects.Emit(_impulseSource, direction, AttackDamage);
+    }
+
+    private void OnParried(ParryContact contact)
+    {
+        StopMoving();
+        _telegraph?.Stop();
+        _animation?.InterruptForParry();
     }
 
     public void FinishAttack()
@@ -313,7 +320,9 @@ public class EnemyBase : MonoBehaviour
         // 冷却与窗口由 CombatComponent 管。放在所有前置检查之后调，
         // 免得"够不着 / 播不了动画"也把冷却吃掉。
         EnsureCombat();
-        if (_combat == null || !_combat.TryBeginAttack(TimeManager.WorldTime)) return;
+        if (_combat == null) return;
+        _combat.SourceType = AttackSourceType.Melee;
+        if (!_combat.TryBeginAttack(TimeManager.WorldTime)) return;
         _animation.PlayAttack();
         _telegraph?.Play();
     }

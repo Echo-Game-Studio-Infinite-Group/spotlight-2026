@@ -51,6 +51,8 @@ public sealed class ObjectPool : MonoBehaviour
 
     private Transform Root => _idleRoot != null ? _idleRoot : transform;
 
+    public void SetIdleRoot(Transform idleRoot) => _idleRoot = idleRoot;
+
     private void Awake()
     {
         if (_idleRoot == null)

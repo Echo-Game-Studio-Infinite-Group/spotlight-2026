@@ -20,7 +20,7 @@ using UnityEngine;
 //    代价：触发器不会与墙发生物理阻挡，所以另外保留一条细射线**只查环境**，
 //    撞墙/地面就把子弹回收，避免穿墙飞出去。
 [DisallowMultipleComponent]
-public sealed class Projectile : MonoBehaviour, IPooledObject
+public sealed class Projectile : MonoBehaviour, IPooledObject, IParryMotionSource
 {
     [Header("飞行")]
     [Tooltip("子弹速度")]
@@ -52,6 +52,10 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
     private float _age;
     private float _travelled;
     private bool _isFlying;
+    private float _predictedTick = float.NaN;
+    private AttackVolumePose _predictedFrom, _predictedTo;
+    private float _motionTick = float.NaN;
+    private AttackVolumePose _motionFrom, _motionTo;
     private Rigidbody _body;
     private readonly RaycastHit[] _obstacles = new RaycastHit[8];
 
@@ -72,6 +76,7 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         _age = 0f;
         _travelled = 0f;
         _isFlying = true;
+        _motionTick = _predictedTick = float.NaN;
 
         // 朝向对齐飞行方向：弹体如果是长条模型，不用再挂跟随脚本
         transform.rotation = Quaternion.LookRotation(_direction, Vector3.up);
@@ -105,6 +110,14 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         // 先减后加保证幂等：同一颗子弹被连续发射两次也不会重复订阅。
         _combat.Landed -= OnLanded;
         _combat.Landed += OnLanded;
+        _combat.Parried -= OnParried;
+        _combat.Parried += OnParried;
+        _combat.ResetAttackState();
+        _combat.SourceType = AttackSourceType.Projectile;
+        _combat.ParryKind = source != null && source.TryGetComponent(out CombatComponent owner) ? owner.ParryKind : AttackParryKind.Normal;
+        _combat.WindowSeconds = 0f;
+        _combat.TryBeginAttack(TimeManager.WorldTime);
+        _combat.SetParryMotionSource(this);
         // Hitbox.Awake 把碰撞体关掉了，必须显式开，否则永远收不到 OnTriggerEnter。
         _combat.EnableHitbox();
 
@@ -113,12 +126,13 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         if (_body != null) _body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
     }
 
-    private void Update()
+    private void FixedUpdate() => Simulate(TimeManager.WorldFixedDeltaTime);
+
+    public void Simulate(float dt)
     {
         if (!_isFlying) return;
 
         // 时停 → WorldDeltaTime 为 0 → 本帧位移为 0，子弹冻住
-        float dt = TimeManager.WorldDeltaTime;
         if (dt <= 0f) return;
 
         // 活太久
@@ -134,17 +148,38 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         // 只查环境的细射线：撞墙/地面就回收。
         // 命中「人」时这里故意不管——交给 Hitbox 的触发器去判定与结算，
         // 否则这条射线会抢在触发器之前把子弹从玩家身上回收掉，命中反而丢了。
-        if (BlockedByEnvironment(transform.position, _direction, step, out _))
+        bool blocked = BlockedByEnvironment(transform.position, _direction, step, out RaycastHit obstacle);
+        float distance = blocked ? obstacle.distance : step;
+        if (_combat != null && _combat.TryGetParryTarget(out AttackVolumePose from))
         {
-            Recycle();
-            return;
+            Vector3 delta = _direction * distance;
+            var to = new AttackVolumePose(from.Center + delta, from.Extents, from.Rotation, from.Root + delta);
+            _motionTick = TimeManager.FixedTickTime; _motionFrom = from; _motionTo = to;
+            if (ParryResolver.ResolveIncoming(_combat, from, to)) return;
         }
-
+        if (blocked) { Recycle(); return; }
         transform.position += _direction * step;
 
         // 飞太远
         _travelled += step;
         if (_travelled >= _maxDistance) Recycle();
+    }
+
+    // 玩家比子弹先模拟时预测本 tick 弹道，子弹先模拟时复用实际路径，双方只能比较同一时刻。
+    public bool TryGetParryMotion(out AttackVolumePose from, out AttackVolumePose to)
+    {
+        from = to = default;
+        if (!_isFlying || _combat == null || !_combat.TryGetParryTarget(out from)) return false;
+        if (_motionTick == TimeManager.FixedTickTime) { from = _motionFrom; to = _motionTo; return true; }
+        if (_predictedTick == TimeManager.FixedTickTime) { from = _predictedFrom; to = _predictedTo; return true; }
+        float dt = TimeManager.WorldFixedDeltaTime;
+        if (_age + dt >= _lifetime) return false;
+        float step = Mathf.Min(_speed * _speedScale * dt, Mathf.Max(0f, _maxDistance - _travelled));
+        if (BlockedByEnvironment(transform.position, _direction, step, out RaycastHit obstacle)) step = obstacle.distance;
+        Vector3 delta = _direction * step;
+        to = new AttackVolumePose(from.Center + delta, from.Extents, from.Rotation, from.Root + delta);
+        _predictedTick = TimeManager.FixedTickTime; _predictedFrom = from; _predictedTo = to;
+        return true;
     }
 
     // 找最近的「非受击目标」遮挡物；命中受击目标时返回 false，让子弹继续飞。
@@ -180,6 +215,8 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         if (_isFlying) Recycle();
     }
 
+    private void OnParried(ParryContact contact) => Recycle();
+
     // 命中、超时、超距都走这里
     private void Recycle()
     {
@@ -202,7 +239,8 @@ public sealed class Projectile : MonoBehaviour, IPooledObject
         if (_combat != null)
         {
             _combat.Landed -= OnLanded;
-            _combat.DisableHitbox();
+            _combat.Parried -= OnParried;
+            _combat.FinishAttack();
         }
         _source = null;
     }

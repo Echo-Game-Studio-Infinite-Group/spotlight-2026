@@ -120,6 +120,7 @@ public sealed class TimeManager : MonoBehaviour
 
     public static float UnscaledDeltaTime => Time.unscaledDeltaTime;
     public static float UnscaledTime => Time.unscaledTime;
+    public static float FixedTickTime => Time.fixedUnscaledTime;
 
     public static float GameTime => Resolve() != null ? Resolve()._gameTime : Time.time;
     public static float WorldTime => Resolve() != null ? Resolve()._worldTime : Time.time;
@@ -129,6 +130,18 @@ public sealed class TimeManager : MonoBehaviour
 
     // 表现层用：任一层被压慢就是"减速中"，倍率取最慢的那层
     public static bool InSlowMotion => Mathf.Min(WorldRate, PlayerRate) < 1f;
+    public static bool IsParryStopped
+    {
+        get
+        {
+            TimeManager instance = Resolve();
+            if (instance == null) return false;
+            foreach (Source source in instance._globalSources)
+                if (ReferenceEquals(source.Owner, ParryOwner) && source.Rate == 0f
+                    && source.Until > Time.unscaledTime) return true;
+            return false;
+        }
+    }
     public static bool InHitStop
     {
         get
@@ -229,15 +242,16 @@ public sealed class TimeManager : MonoBehaviour
         }
     }
 
-    // parry 成功后的时缓：策划案里 parry 的时间变换是**全局**的（敌我一起慢），
-    // 与命中顿帧（world + player 短促一压）不是一回事，所以单独挂 global 层、单独一个来源标识：
-    // InHitStop 不会因为 parry 变真，敌人动画也不会被当成顿帧冻住。
-    // seconds <= 0 视为不放，只清掉上一次的残留。
-    public static void ParrySlow(float seconds, float rate)
+    public static void ParryStop(float seconds, float rate = 0f)
     {
         Release(TimeLayer.Global, ParryOwner);
+        Release(TimeLayer.World, ParryOwner);
+        Release(TimeLayer.Player, ParryOwner);
         if (seconds <= 0f) return;
+        Resolve()?.RegisterHitStopOwner(ParryOwner);
         Apply(TimeLayer.Global, rate, seconds, ParryOwner);
+        Apply(TimeLayer.World, rate, seconds, ParryOwner);
+        Apply(TimeLayer.Player, rate, seconds, ParryOwner);
     }
 
     // 保持真实时间的 60Hz 固定采样，只缩放逻辑推进量，避免减速后漏采输入。

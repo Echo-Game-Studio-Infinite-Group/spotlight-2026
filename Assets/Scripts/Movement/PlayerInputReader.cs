@@ -146,10 +146,6 @@ public sealed class PlayerInputReader : MonoBehaviour, IPlayerInput
     private void OnParry(InputAction.CallbackContext context)
     {
         RecordEdge(ActionInputButtons.Parry, true);
-        // parry 不是动作集里的一招（它没有动作序列，判定窗口由 PlayerCombat 自己开），
-        // 所以序列接管输入时也必须照常入队：否则普攻后摇里按 parry 会被静默丢掉。
-        // 序列期间没有人消费这个缓冲（ConsumeCombo / ConsumeAttack 都只在非序列路径调用）。
-        Battle.Push(InputBuffer.Action.Parry, TimeManager.UnscaledTime);
     }
     private void RecordEdge(ActionInputButtons button, bool pressed)
     {

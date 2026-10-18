@@ -238,4 +238,22 @@ MonoBehaviour:
   _camp: 0
   _damage: 25
   _cooldown: 0.35
-  _windowSeconds: 1.6
+  _windowSeconds: 0
+  _sourceType: 1
+  _canBeParried: 1
+  _parryTarget:
+    DisplayName: "Bullet Parry Target"
+    AnchorPath:
+    Center: {x: 0, y: 0, z: 0}
+    Rotation: {x: 0, y: 0, z: 0}
+    Size: {x: 4, y: 4, z: 4}
+    Start:
+      SegmentId:
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId:
+      RelativeTo: 3
+      OffsetFrames: 0
+    HitGroup: 0
+    SweepSpacing: 0.1

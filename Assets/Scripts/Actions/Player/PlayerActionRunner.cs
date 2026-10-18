@@ -122,6 +122,7 @@ namespace GameJam.Actions
             if (!_alive) sample = new ActionInputSample(sample.Tick);
             ActionSequencePlayer player = _player;
             player.Tick(sample, playerDeltaTime * ActionSequencePlayer.FramesPerSecond, inHitStop);
+
             // 移动回调可能触发布娃娃并断开接线，旧 tick 不能继续操作角色。
             if (!_connected || _player != player) return;
             ActionExecutionState current = _player.State;
@@ -200,7 +201,7 @@ namespace GameJam.Actions
             else if (!CanPlayAirborne(request.Target)) reason = "空中动画状态不存在";
             else
             {
-                foreach (ActionHitVolume volume in request.Target.Combat.HitVolumes)
+                foreach (ActionHitVolume volume in System.Linq.Enumerable.Concat(request.Target.Combat.HitVolumes, request.Target.Combat.ParryVolumes))
                     if (!string.IsNullOrEmpty(volume.AnchorPath) && transform.Find(volume.AnchorPath) == null) reason = "判定框挂点不存在：" + volume.AnchorPath;
                 foreach (ActionSegment segment in request.Target.Timeline)
                 {
@@ -268,7 +269,7 @@ namespace GameJam.Actions
             if (reason != ActionExitReason.Completed) _motor.CancelActionCommands();
             _motor.SetActionControl(null);
             _animation.EndAction(state.InstanceId, reason != ActionExitReason.Completed);
-            if (reason == ActionExitReason.Reset || reason == ActionExitReason.Interrupted) _animation.ClearAirborneVisual();
+            if (reason == ActionExitReason.Reset || reason == ActionExitReason.Interrupted || reason == ActionExitReason.Parried) _animation.ClearAirborneVisual();
             ActionEnded?.Invoke(state, reason);
         }
         public void OnStateSampled(ActionExecutionState state) => _animation.Sample(state, 0f);
@@ -286,6 +287,7 @@ namespace GameJam.Actions
             _animation.Sample(state, 0f);
             // 先锁定挥出时的伤害，再执行一次性前移增速，避免当前招自己抬高伤害快照。
             _combat.SampleSequenceBoundary(state);
+            if (_player.State.InstanceId != state.InstanceId) return;
             if (state.Action.Motion.IsActive(state.Action, state.FrameProgress)) _motor.BeginMotion(state.Action.Motion, state.InstanceId);
             else _motor.EndMotion(state.InstanceId);
         }
@@ -299,6 +301,7 @@ namespace GameJam.Actions
         private void SimulateMovement(ActionControlPolicy control, double frames)
         {
             _motionPath.Clear();
+            if (TimeManager.IsParryStopped) return;
             float dt = (float)(frames / ActionSequencePlayer.FramesPerSecond);
             _motor.SetActionControl(control);
             // 外部接管模拟后仍须尊重 Motor 的禁用状态，场景工具与演出会用它暂停角色位移。
@@ -308,6 +311,12 @@ namespace GameJam.Actions
             LastSimulatedSeconds += dt;
         }
         public void ClearPendingInput() => _player?.ClearPendingInput();
+        public void CancelForParry()
+        {
+            _pendingLandingStop = false;
+            _animation?.HoldParryPose();
+            _player?.CancelForParry();
+        }
         public void Interrupt()
         {
             ActionsReset?.Invoke();

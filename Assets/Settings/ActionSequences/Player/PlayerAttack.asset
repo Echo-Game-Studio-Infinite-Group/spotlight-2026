@@ -251,3 +251,19 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     HitVolumes: []
+    ParryVolumes:
+    - DisplayName: "Parry"
+      AnchorPath:
+      Center: {x: 0, y: 0.6, z: 1}
+      Rotation: {x: 0, y: 0, z: 0}
+      Size: {x: 1.3, y: 1.2, z: 0.8}
+      Start:
+        SegmentId: active
+        RelativeTo: 0
+        OffsetFrames: 0
+      End:
+        SegmentId: active
+        RelativeTo: 1
+        OffsetFrames: 0
+      HitGroup: 0
+      SweepSpacing: 0.1

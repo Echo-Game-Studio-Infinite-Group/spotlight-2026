@@ -45,7 +45,7 @@ namespace GameJam.Actions.Editor
             {"DiveInAir", "空中前移时俯冲并脱墙"}, {"DiveAngle", "俯冲角度"}, {"MaxDiveSpeed", "最大俯冲速度"},
             {"DiveResponse", "竖直速度响应（每秒）"}, {"ClearMomentumOnCompletion", "自然收招后落地清空水平动量"},
             {"ScaleDamageWithSpeed", "伤害随挥出时水平速度变化"}, {"SpeedDamage", "速度倍率→伤害倍率曲线"},
-            {"HitVolumes", "伤害判定框（空则沿用预制体）"}, {"AnchorPath", "相对玩家根节点的挂点路径（空=根节点）"},
+            {"ParryVolumes", "Parry 拼刀框（空则不能拼刀）"}, {"HitVolumes", "伤害判定框（空则沿用预制体）"}, {"AnchorPath", "相对玩家根节点的挂点路径（空=根节点）"},
             {"Center", "局部中心"}, {"Rotation", "局部旋转角度"}, {"Size", "局部尺寸"}, {"SweepSpacing", "扫掠最大采样间距"}
         };
         private static readonly Dictionary<string, string> EnumLabels = new Dictionary<string, string>

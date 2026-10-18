@@ -7,7 +7,6 @@ using UnityEngine;
 public sealed class EnemyAudioSource : MonoBehaviour
 {
     private CombatComponent _combat;
-    private RangeComponent _range;
     private LaserAttack _laser;
     private bool _playHitSound;
 
@@ -20,21 +19,18 @@ public sealed class EnemyAudioSource : MonoBehaviour
     {
         CacheReferences();
         if (_combat != null) _combat.Landed += OnLanded;
-        if (_range != null) _range.Landed += OnLanded;
         if (_laser != null) _laser.Fired += OnLaserFired;
     }
 
     private void OnDisable()
     {
         if (_combat != null) _combat.Landed -= OnLanded;
-        if (_range != null) _range.Landed -= OnLanded;
         if (_laser != null) _laser.Fired -= OnLaserFired;
     }
 
     private void CacheReferences()
     {
         _combat = GetComponent<CombatComponent>();
-        _range = GetComponent<RangeComponent>();
         _laser = GetComponent<LaserAttack>();
         _playHitSound = _laser == null;
     }

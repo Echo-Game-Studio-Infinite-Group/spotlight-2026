@@ -1,237 +1,331 @@
 #if UNITY_EDITOR
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using GameJam.Actions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-// Parry 链路的回归测试。
-//
-// 断言的是整条链路，而不是某个内部字段：
-//   敌人命中 → CombatComponent.TryHit → IParryReceiver（PlayerCombat）→ 窗口判定 → 掉不掉血 / 慢不慢 / 有无敌
-// 远端那一半走 RangeComponent.ReportHit，因为那里是**另一条**入口（子弹不经 Hitbox）；
-// 两条入口任意一条漏接，parry 都会「时灵时不灵」，只测一条是查不出来的。
 public sealed class ParryTests
 {
-    private readonly List<GameObject> _created = new List<GameObject>();
-    private GameObject _player;
-    private CharacterController _playerBody;
-    private HealthComponent _playerHealth;
-    private CombatComponent _playerCombat;
-    private CombatComponent _attacker;
-    private RangeComponent _ranged;
+    private readonly List<Object> _created = new List<Object>();
+    private readonly Vector3 _origin = new Vector3(11000f, 40f, 11000f);
+    private PlayerCombat _player;
+    private HealthComponent _health;
+    private ActionDefinition _action;
+    private int _successes;
+    private IReadOnlyList<ParryContact> _last;
+    private long _instance;
 
     [SetUp]
     public void SetUp()
     {
-        // TimeManager 全是静态入口：没有实例时 GlobalRate 读不到自己登记的效果，时缓断言会假绿。
-        var clock = new GameObject("ParryTestClock"); _created.Add(clock);
-        clock.AddComponent<TimeManager>();
+        _successes = 0; _last = null; _instance = 0;
+        Create("ParryClock", Vector3.zero).AddComponent<TimeManager>();
         TimeManager.ClearSlowMotion();
-
-        _player = new GameObject("ParryTestPlayer"); _created.Add(_player);
-        _playerHealth = _player.AddComponent<HealthComponent>();
-        // 默认 0.6s 无敌会把「窗口外照样受伤」测成不受伤，这里必须先关掉。
-        _playerHealth.SetInvulnerableTime(0f);
-        _playerCombat = _player.AddComponent<CombatComponent>();
-        _playerCombat.Camp = CampType.Player;
-        // PlayerCombat 要求 CharacterController，AddComponent 会自动补上；判定盒留空，走 parry 分支即可。
-        _player.AddComponent<PlayerCombat>();
-        _playerBody = _player.GetComponent<CharacterController>();
-
-        var attacker = new GameObject("ParryTestAttacker"); _created.Add(attacker);
-        _attacker = attacker.AddComponent<CombatComponent>();
-        _attacker.Camp = CampType.Enemy;
-        _attacker.Damage = 25f;
-        _ranged = attacker.AddComponent<RangeComponent>();
-        _ranged.Camp = CampType.Enemy;
-        Physics.SyncTransforms();
+        GameObject root = Create("ParryPlayer", _origin);
+        _health = root.AddComponent<HealthComponent>();
+        _health.SetInvulnerableTime(0f);
+        _player = root.AddComponent<PlayerCombat>();
+        _player.SetSequenceDriven(true);
+        _player.ParrySucceeded += contacts => { _successes++; _last = contacts; };
+        _action = ScriptableObject.CreateInstance<ActionDefinition>(); _created.Add(_action);
+        _action.ActionId = "parry_test";
+        _action.Timeline.Add(new ActionSegment { SegmentId = "startup", DurationFrames = 22 });
+        _action.Timeline.Add(new ActionSegment { SegmentId = "active", DurationFrames = 16 });
+        _action.Timeline.Add(new ActionSegment { SegmentId = "recovery", DurationFrames = 10 });
+        _action.Combat.Enabled = true;
+        _action.Combat.ParryVolumes.Add(new ActionHitVolume {
+            Center = new Vector3(0f, .9f, 1f), Size = new Vector3(1.5f, 1.5f, 1f),
+            Start = new ActionFrameAnchor { SegmentId = "active" },
+            End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd }
+        });
+        Begin(0);
     }
 
     [TearDown]
     public void TearDown()
     {
-        TimeManager.ClearSlowMotion();
-        TimeManager.SetPaused(false);
+        TimeManager.ClearSlowMotion(); TimeManager.SetPaused(false);
         for (int i = _created.Count - 1; i >= 0; i--)
             if (_created[i] != null) Object.DestroyImmediate(_created[i]);
         _created.Clear();
     }
 
-    private AttackDamageResult Hit(AttackSourceType source)
-        => _attacker.TryHit(_playerBody, _playerHealth,
-            new AttackDamageRequest(25f, _player.transform.position, Vector3.forward, 0L, 0,
-                source, _attacker.ParryKind));
-
-    private bool OpenParry(float now) => _playerCombat.ReceiveAction(InputBuffer.Action.Parry, now);
-
-    [Test]
-    public void ParryWindow_OpensAndExpiresAfterConfiguredSeconds()
+    private GameObject Create(string name, Vector3 position)
     {
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(OpenParry(now), "按下 parry 应当开窗");
-        Assert.IsTrue(_playerCombat.IsParrying(now), "开窗后当帧必须可判定");
-        Assert.IsFalse(_playerCombat.IsParrying(now + _playerCombat.ParryWindowSeconds + 0.01f),
-            "窗口结束后不应再判定成功");
+        var root = new GameObject(name); root.transform.position = position; _created.Add(root); return root;
+    }
+    private CombatComponent Enemy(float z = 1.5f, bool attack = true)
+    {
+        GameObject root = Create("ParryEnemy", _origin + Vector3.forward * z);
+        root.AddComponent<HealthComponent>();
+        var combat = root.AddComponent<CombatComponent>(); combat.Camp = CampType.Enemy; combat.WindowSeconds = 0f;
+        if (attack) Assert.IsTrue(combat.TryBeginAttack(TimeManager.WorldTime));
+        return combat;
+    }
+    private ActionExecutionState State(double frame)
+        => new ActionExecutionState(_action, _instance, frame < 22 ? 0 : frame < 38 ? 1 : 2, frame, frame < 22 ? 0 : frame < 38 ? 22 : 38, default);
+    private void Begin(double frame)
+    {
+        _instance++; _player.BeginSequenceAction(State(frame));
+    }
+    private void Sample(double frame) => _player.SampleSequenceBoundary(State(frame));
+    private AttackDamageResult Hit(CombatComponent enemy)
+        => enemy.TryHit(_player.GetComponent<CharacterController>(), _health,
+            new AttackDamageRequest(25f, _origin, Vector3.back, 0, 0, enemy.SourceType, enemy.ParryKind));
+    private Projectile Bullet(Vector3 position)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Bullet.prefab");
+        Assert.IsNotNull(prefab);
+        GameObject root = Object.Instantiate(prefab, position, Quaternion.identity); _created.Add(root);
+        var projectile = root.GetComponent<Projectile>(); projectile.Launch(Vector3.back, null); return projectile;
     }
 
     [Test]
-    public void ParryWindow_CannotBeRefreshedWhileOpen()
+    public void StartupHasNoBodyGuardAndDoesNotConsumeIndependentCooldown()
     {
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(OpenParry(now));
-        // 窗口内再按一次不延长窗口：否则按住不放就能刷出无限判定。
-        Assert.IsFalse(OpenParry(now + 0.15f), "窗口开着时不应再开新窗口");
-        Assert.IsFalse(_playerCombat.IsParrying(now + _playerCombat.ParryWindowSeconds + 0.01f),
-            "第二次按键不能把窗口往后推");
+        CombatComponent enemy = Enemy();
+        Assert.IsFalse(_player.GetComponent<CombatComponent>().ReceiveAction(InputBuffer.Action.Parry, TimeManager.UnscaledTime));
+        Hit(enemy);
+        Assert.AreEqual(75f, _health.Health); Assert.AreEqual(0, _successes);
     }
-
     [Test]
-    public void Parry_HasOneSecondCooldown()
+    public void BladeFramesParryDuringEnemyStartupAndCancelBothAttacks()
     {
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(OpenParry(now), "第一次 parry 应当成功");
-        Assert.IsFalse(_playerCombat.IsParryReady(now + 0.2f), "冷却期内不该就绪");
-        Assert.IsFalse(OpenParry(now + 0.2f), "冷却期内再按不能开窗");
-        Assert.IsFalse(OpenParry(now + 0.9f), "冷却结束前一帧也不能开窗");
-        Assert.IsTrue(_playerCombat.IsParryReady(now + 1.01f), "1 秒后应当就绪");
-        Assert.IsTrue(OpenParry(now + 1.01f), "冷却走完后应当能再次 parry");
-        Assert.GreaterOrEqual(_playerCombat.ParryCooldownSeconds, 1f - 0.001f);
+        CombatComponent enemy = Enemy();
+        Sample(22);
+        Assert.AreEqual(1, _successes); Assert.AreEqual(100f, _health.Health);
+        Assert.IsFalse(enemy.IsAttacking(TimeManager.WorldTime)); Assert.IsFalse(_player.IsAttacking);
+        Assert.IsTrue(_health.IsInvulnerable); Assert.IsTrue(TimeManager.InHitStop);
+        Assert.AreEqual(0f, TimeManager.GlobalRate); Assert.AreEqual(0f, TimeManager.PlayerFixedDeltaTime);
+        Assert.AreEqual(AttackSourceType.Melee, _last[0].SourceType);
     }
-
     [Test]
-    public void HitOutsideWindow_StillDamages()
+    public void BodyTriggerFallbackUsesTheSameGeometryBeforeDamage()
     {
-        float before = _playerHealth.Health;
-        AttackDamageResult result = Hit(AttackSourceType.Melee);
-        Assert.Greater(result.AppliedDamage, 0f, "没开 parry 窗口时必须按原逻辑受伤");
-        Assert.Less(_playerHealth.Health, before);
+        Sample(22); CombatComponent enemy = Enemy(); Hit(enemy);
+        Assert.AreEqual(1, _successes); Assert.AreEqual(100f, _health.Health);
     }
-
     [Test]
-    public void MeleeParry_BlocksDamage_AndSlowsGlobalTime()
+    public void ActiveFrameBehindPlayerCannotParry()
     {
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(OpenParry(now));
-        float before = _playerHealth.Health;
-
-        AttackDamageResult result = Hit(AttackSourceType.Melee);
-
-        Assert.AreEqual(0f, result.AppliedDamage, "parry 成功时不得扣血");
-        Assert.AreEqual(before, _playerHealth.Health);
-        Assert.Less(TimeManager.GlobalRate, 1f, "近战 parry 必须触发全局时缓");
-        // 全局倍率必须真的传到玩家 / 世界的推进速率上，否则只是登记了个数字：
-        // 「没慢放」这个 bug 就长在这条断链上。
-        Assert.Less(TimeManager.PlayerRate, 1f, "玩家推进速率必须被压慢");
-        Assert.Less(TimeManager.WorldRate, 1f, "世界推进速率必须被压慢");
-        Assert.Less(TimeManager.PlayerFixedDeltaTime, Time.fixedUnscaledDeltaTime * 0.5f,
-            "每个逻辑帧推进的量必须明显变小，不然画面上不会有慢放");
-        Assert.IsFalse(_playerCombat.IsParrying(now), "一次开窗只能挡一下，成功后立即消耗");
+        Sample(22); CombatComponent enemy = Enemy(-2f); Hit(enemy);
+        Assert.AreEqual(0, _successes); Assert.AreEqual(75f, _health.Health);
     }
-
     [Test]
-    public void ProjectileParry_BlocksDamage_WithoutSlowMotion()
+    public void RecoveryAndIdleEnemyHaveNoClash()
     {
-        _ranged.Damage = 8f;
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(OpenParry(now));
-        float before = _playerHealth.Health;
-
-        // 走真实远端入口：子弹命中 → RangeComponent.ReportHit（不经 Hitbox）。
-        _ranged.ReportHit(_playerHealth, _player.transform.position, Vector3.forward);
-
-        Assert.AreEqual(before, _playerHealth.Health, "远程 parry 成功时不得扣血");
-        Assert.AreEqual(1f, TimeManager.GlobalRate, "飞行道具 parry 不触发时缓");
+        CombatComponent idle = Enemy(1.5f, false); Sample(22); Assert.AreEqual(0, _successes);
+        CombatComponent attack = Enemy(); Sample(38); Hit(attack);
+        Assert.AreEqual(0, _successes); Assert.AreEqual(75f, _health.Health);
     }
-
     [Test]
-    public void ProjectileWithoutParryWindow_StillDamages()
+    public void EndedPlayerActionCannotLeaveParryGeometryBehind()
     {
-        _ranged.Damage = 8f;
-        float before = _playerHealth.Health;
-        _ranged.ReportHit(_playerHealth, _player.transform.position, Vector3.forward);
-        Assert.Less(_playerHealth.Health, before, "窗口外被子弹打中要照常掉血");
+        Sample(22); _player.EndSequenceAction(_instance);
+        CombatComponent enemy = Enemy(); Hit(enemy);
+        Assert.AreEqual(0, _successes); Assert.AreEqual(75f, _health.Health);
     }
-
     [Test]
-    public void Parry_GrantsImmediateInvulnerability()
+    public void DisadvantageInterruptsSourceAndUsesTheSameTimeStop()
     {
-        Assert.IsTrue(OpenParry(TimeManager.UnscaledTime));
-        Hit(AttackSourceType.Melee);
-        Assert.IsTrue(_playerHealth.IsInvulnerable, "parry 成功后必须立刻获得无敌");
-
-        // 窗口已经消耗掉，这一下不是被 parry 挡的，只能是被无敌档下的。
-        float before = _playerHealth.Health;
-        AttackDamageResult followUp = Hit(AttackSourceType.Melee);
-        Assert.AreEqual(0f, followUp.AppliedDamage, "parry 后的无敌窗口内不应再次受伤");
-        Assert.AreEqual(before, _playerHealth.Health);
-        Assert.GreaterOrEqual(_playerCombat.ParryInvulnerableSeconds, 0.8f - 0.001f);
+        CombatComponent enemy = Enemy(); enemy.ParryKind = AttackParryKind.Disadvantage; Sample(22);
+        Assert.AreEqual(AttackParryKind.Disadvantage, _last[0].Kind);
+        Assert.IsFalse(enemy.IsAttacking(TimeManager.WorldTime)); Assert.IsTrue(TimeManager.IsParryStopped);
     }
-
     [Test]
-    public void DisadvantageParry_BlocksDamage_WithoutSlowMotion()
+    public void BatchConsumesTwoSourcesButNotifiesPlayerOnce()
     {
-        _attacker.ParryKind = AttackParryKind.Disadvantage;
-        Assert.IsTrue(OpenParry(TimeManager.UnscaledTime));
-        float before = _playerHealth.Health;
-
-        AttackDamageResult result = Hit(AttackSourceType.Melee);
-
-        Assert.AreEqual(0f, result.AppliedDamage, "劣势 parry 同样要挡下这一击");
-        Assert.AreEqual(before, _playerHealth.Health);
-        Assert.AreEqual(1f, TimeManager.GlobalRate, "劣势 parry 不触发时缓，只把玩家弹开");
+        CombatComponent first = Enemy(), second = Enemy(1.7f); Sample(22);
+        Assert.AreEqual(1, _successes); Assert.AreEqual(2, _last.Count);
+        Assert.IsFalse(first.IsAttacking(TimeManager.WorldTime)); Assert.IsFalse(second.IsAttacking(TimeManager.WorldTime));
+        Hit(first); Hit(second); Assert.AreEqual(1, _successes);
     }
-
     [Test]
-    public void Parry_DoesNotCancelOngoingAttack()
+    public void AttackTokenRejectsDuplicateAndPreviousGeneration()
     {
-        // parry 与攻击现在是同一个键（左键，拼刀流）：开窗必须与挥砍共存，
-        // 否则「每次按下都把自己那一刀收掉」——这条以前是反着断言的。
-        float now = TimeManager.UnscaledTime;
-        Assert.IsTrue(_playerCombat.ReceiveAction(InputBuffer.Action.Attack, now), "攻击应当能起手");
-        Assert.IsTrue(_playerCombat.IsAttacking(now));
-        Assert.IsTrue(OpenParry(now), "攻击窗口里也要能开出 parry 窗口");
-        Assert.IsTrue(_playerCombat.IsAttacking(now), "parry 开窗不能取消正在挥的攻击");
-        Assert.IsTrue(_playerCombat.IsParrying(now), "parry 窗口与攻击窗口同时存在");
+        CombatComponent enemy = Enemy(); enemy.Cooldown = 0f;
+        var old = new ParryContact(enemy, _origin, Vector3.back);
+        Assert.IsTrue(enemy.ConsumeParry(old)); Assert.IsFalse(enemy.ConsumeParry(old));
+        enemy.ResetAttackState(); enemy.TryBeginAttack(TimeManager.WorldTime);
+        Assert.AreNotEqual(old.AttackId, enemy.AttackId); Assert.IsFalse(enemy.ConsumeParry(old));
     }
-
     [Test]
-    public void TargetWithoutParryReceiver_StillTakesDamage()
+    public void ConsecutiveActionsDoNotHaveAnExtraParryCooldown()
     {
-        var plain = new GameObject("ParryTestPlainTarget"); _created.Add(plain);
-        var body = plain.AddComponent<CapsuleCollider>();
-        HealthComponent health = plain.AddComponent<HealthComponent>();
-        health.SetInvulnerableTime(0f);
+        Enemy(); Sample(22); TimeManager.ClearSlowMotion();
+        Begin(22); Enemy(); Sample(22);
+        Assert.AreEqual(2, _successes);
+    }
+    [Test]
+    public void CoverPreventsParryThroughWall()
+    {
+        Enemy(1.5f);
+        GameObject wall = Create("Cover", _origin + new Vector3(0f, .9f, .6f));
+        wall.AddComponent<BoxCollider>().size = new Vector3(4f, 4f, .1f);
+        Physics.SyncTransforms(); Sample(22); Assert.AreEqual(0, _successes);
+    }
+    [Test]
+    public void RealBulletTriggerIsProjectileAndRecyclesWithoutLandedDamageEvent()
+    {
+        Sample(22); Projectile bullet = Bullet(_origin + new Vector3(0f, .9f, 1f));
+        CombatComponent combat = bullet.GetComponent<CombatComponent>(); int landed = 0;
+        combat.Landed += (target, point, direction, damage) => landed++;
+        Hitbox hitbox = bullet.GetComponent<Hitbox>();
+        typeof(Hitbox).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic)
+            .Invoke(hitbox, new object[] { _player.GetComponent<CharacterController>() });
+        Assert.AreEqual(1, _successes); Assert.AreEqual(0, landed); Assert.AreEqual(100f, _health.Health);
+        Assert.AreEqual(AttackSourceType.Projectile, _last[0].SourceType);
+        Assert.IsFalse(bullet.gameObject.activeSelf);
+    }
+    [Test]
+    public void FastBulletCrossesWholeParryVolumeWithinOneTickAndIsConsumed()
+    {
+        Sample(22); Projectile bullet = Bullet(_origin + new Vector3(0f, .9f, 4f));
+        bullet.Launch(Vector3.back, null, 60f);
+        bullet.Simulate(1f / 60f);
+        Assert.AreEqual(1, _successes); Assert.IsFalse(bullet.gameObject.activeSelf);
+    }
+    [Test]
+    public void BulletPoolRelaunchHasFreshTokenAndCanBeParriedAgain()
+    {
+        Sample(22); Projectile bullet = Bullet(_origin + new Vector3(0f, .9f, 1f));
+        long token = bullet.GetComponent<CombatComponent>().AttackId;
+        bullet.Simulate(.01f); Assert.AreEqual(1, _successes);
+        TimeManager.ClearSlowMotion(); Begin(22); Sample(22);
+        bullet.gameObject.SetActive(true); bullet.transform.position = _origin + new Vector3(0f, .9f, 1f);
+        bullet.Launch(Vector3.back, null);
+        Assert.AreNotEqual(token, bullet.GetComponent<CombatComponent>().AttackId);
+        bullet.Simulate(.01f); Assert.AreEqual(2, _successes);
+    }
+    [Test]
+    public void BulletTargetIsWiderThanDamageColliderInActualPrefabScale()
+    {
+        Projectile bullet = Bullet(_origin + Vector3.forward * 4f);
+        var combat = bullet.GetComponent<CombatComponent>(); Assert.IsTrue(combat.TryGetParryTarget(out AttackVolumePose pose));
         Physics.SyncTransforms();
-
-        AttackDamageResult result = _attacker.TryHit(body, health,
-            new AttackDamageRequest(25f, plain.transform.position, Vector3.forward, 0L, 0));
-
-        Assert.Greater(result.AppliedDamage, 0f, "没有 IParryReceiver 的目标不能因为 parry 改造而免疫");
+        Assert.Greater(pose.Extents.x, bullet.GetComponent<BoxCollider>().bounds.extents.x);
+    }
+    [Test]
+    public void SlowMotionDoesNotCloseFrameOwnedWindowByRealTime()
+    {
+        Sample(22); TimeManager.Apply(TimeManager.TimeLayer.Player, .1f, 1f, this);
+        Enemy(); Sample(22.1); Assert.AreEqual(1, _successes);
+    }
+    [UnityTest]
+    public IEnumerator StopExpiresOnUnscaledClockAndZeroDurationDoesNotFreeze()
+    {
+        Enemy(); Sample(22); Assert.IsTrue(TimeManager.IsParryStopped);
+        yield return new WaitForSecondsRealtime(.12f);
+        Assert.AreEqual(1f, TimeManager.GlobalRate); Assert.IsFalse(TimeManager.InHitStop);
+        TimeManager.ParryStop(0f); Assert.AreEqual(1f, TimeManager.PlayerRate);
+    }
+    [Test]
+    public void RelativeSweepHandlesBothBoxesMovingAcrossEachOther()
+    {
+        var a0 = new AttackVolumePose(new Vector3(-3f, 0f, 0f), Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var a1 = new AttackVolumePose(new Vector3(3f, 0f, 0f), Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var b0 = new AttackVolumePose(new Vector3(3f, 0f, 0f), Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var b1 = new AttackVolumePose(new Vector3(-3f, 0f, 0f), Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        Assert.IsFalse(ParryGeometry.Overlaps(a0, b0)); Assert.IsFalse(ParryGeometry.Overlaps(a1, b1));
+        Assert.IsTrue(ParryGeometry.Swept(a0, a1, b0, b1, .05f, out _));
+    }
+    [Test]
+    public void RealBeamParryTerminatesBeamAndStartsCooldown()
+    {
+        Sample(22);
+        GameObject root = Create("ParryLaser", _origin + new Vector3(0f, .9f, 5f)); root.SetActive(false);
+        root.transform.rotation = Quaternion.LookRotation(Vector3.back);
+        LaserAttack laser = root.AddComponent<LaserAttack>();
+        typeof(LaserAttack).GetField("_chargeSeconds", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(laser, 0f);
+        typeof(LaserAttack).GetField("_convergenceSeconds", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(laser, 0f);
+        root.SetActive(true); Physics.SyncTransforms(); laser.Simulate(.01f, _health);
+        Assert.AreEqual(1, _successes); Assert.AreEqual(100f, _health.Health);
+        Assert.AreEqual(AttackSourceType.Beam, _last[0].SourceType);
+        Assert.AreEqual(LaserAttack.AttackPhase.Cooldown, laser.Phase);
+        laser.Simulate(0f, _health); Assert.AreEqual(1, _successes);
+    }
+    [Test]
+    public void ActualBulletReturnsToOwningPoolAndReusesWithFreshAttackIdentity()
+    {
+        ObjectPool pool = Create("ParryBulletPool", _origin).AddComponent<ObjectPool>();
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Bullet.prefab");
+        Sample(22);
+        GameObject first = pool.Spawn(prefab, _origin + new Vector3(0f, .9f, 1f), Quaternion.identity);
+        Projectile bullet = first.GetComponent<Projectile>(); bullet.Launch(Vector3.back, null);
+        long token = first.GetComponent<CombatComponent>().AttackId;
+        bullet.Simulate(.01f);
+        Assert.AreEqual(0, pool.BorrowedCount); Assert.AreEqual(1, pool.IdleCount);
+        TimeManager.ClearSlowMotion(); Begin(22); Sample(22);
+        GameObject second = pool.Spawn(prefab, _origin + new Vector3(0f, .9f, 1f), Quaternion.identity);
+        Assert.AreSame(first, second); bullet.Launch(Vector3.back, null);
+        Assert.AreNotEqual(token, second.GetComponent<CombatComponent>().AttackId);
+        bullet.Simulate(.01f); Assert.AreEqual(2, _successes);
+        Assert.AreEqual(0, pool.BorrowedCount);
+    }
+    [Test]
+    public void RealEnemyPrefabInterruptsAnimationAndStaleEventsCannotReopenDamage()
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/EnemyTest.prefab");
+        GameObject root = Object.Instantiate(prefab, _origin + Vector3.forward * 1.5f, Quaternion.identity); _created.Add(root);
+        EnemyBase enemy = root.GetComponent<EnemyBase>(); enemy.SetChasePlayer(false);
+        CombatComponent source = root.GetComponent<CombatComponent>();
+        EnemyAnimation animation = root.GetComponentInChildren<EnemyAnimation>();
+        Assert.IsTrue(source.TryBeginAttack(TimeManager.WorldTime)); animation.PlayAttack();
+        Sample(22); Assert.AreEqual(1, _successes); Assert.IsFalse(enemy.IsAttacking);
+        animation.EnableHitbox(); Assert.IsFalse(source.Hitbox.GetComponent<BoxCollider>().enabled);
+        TimeManager.ClearSlowMotion();
+        typeof(EnemyAnimation).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(animation, null);
+        animation.GetComponent<Animator>().Update(.1f);
+        Assert.IsTrue(animation.IsHurting, "恢复后应进入真正的受击硬直状态");
+    }
+    [Test]
+    public void LaserChargeCanBeInterruptedBeforeBeamIsCreated()
+    {
+        GameObject root = Create("ChargingParryLaser", _origin + Vector3.forward * 1.5f); root.SetActive(false);
+        LaserAttack laser = root.AddComponent<LaserAttack>(); root.SetActive(true);
+        laser.Simulate(.01f, _health); Assert.IsTrue(laser.IsCharging);
+        Sample(22); Assert.AreEqual(1, _successes);
+        Assert.AreEqual(LaserAttack.AttackPhase.Cooldown, laser.Phase);
+    }
+    [Test]
+    public void RangeChargeCancelsBeforeAnyBulletCanSpawn()
+    {
+        GameObject root = Create("ChargingParryRange", _origin + Vector3.forward * 1.5f); root.SetActive(false);
+        RangeComponent ranged = root.AddComponent<RangeComponent>();
+        typeof(RangeComponent).GetField("_projectilePrefab", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(ranged, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Bullet.prefab").GetComponent<Projectile>());
+        root.SetActive(true); Assert.IsFalse(ranged.TryFire(TimeManager.WorldTime, _player.transform, _health));
+        Sample(22); Assert.AreEqual(1, _successes);
+        Assert.IsFalse(ranged.TryFire(TimeManager.WorldTime, _player.transform, _health));
+        Assert.AreEqual(0, root.GetComponent<ObjectPool>().BorrowedCount);
+    }
+    [Test]
+    public void RelativeSweepDoesNotInventContactForParallelMotion()
+    {
+        var a0 = new AttackVolumePose(Vector3.zero, Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var a1 = new AttackVolumePose(Vector3.right * 5f, Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var b0 = new AttackVolumePose(Vector3.right, Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        var b1 = new AttackVolumePose(Vector3.right * 6f, Vector3.one * .1f, Quaternion.identity, Vector3.zero);
+        Assert.IsFalse(ParryGeometry.Swept(a0, a1, b0, b1, .05f, out _));
     }
 
     [Test]
-    public void InputBuffer_ParryIsConsumedOnce()
+    public void MovingPlayerAndRealBulletInParallelDoNotClashFromSeparatePathSweeps()
     {
-        var buffer = new InputBuffer();
-        buffer.Push(InputBuffer.Action.Parry, 0f);
-        Assert.IsTrue(buffer.ConsumeParry(0.05f));
-        Assert.IsFalse(buffer.ConsumeParry(0.05f), "同一次按键不能被消费两次");
-
-        buffer.Push(InputBuffer.Action.Parry, 0f);
-        Assert.IsFalse(buffer.ConsumeParry(1f), "超过缓冲窗口的输入应当过期");
+        _action.Combat.ParryVolumes[0].Size = Vector3.one * .2f;
+        Begin(22); Sample(22);
+        Projectile bullet = Bullet(_origin + new Vector3(1f, .9f, 1f)); bullet.Launch(Vector3.right, null, 30f);
+        float distance = 300f * TimeManager.WorldFixedDeltaTime;
+        _player.transform.position += Vector3.right * distance;
+        _player.SampleSequenceHitbox(State(22), State(23), new[] { _player.transform.position });
+        Sample(23); bullet.Simulate(TimeManager.WorldFixedDeltaTime);
+        Assert.AreEqual(0, _successes); Assert.IsTrue(bullet.gameObject.activeSelf);
     }
 
-    [Test]
-    public void PlayerControls_ExposesParryBoundToE()
-    {
-        var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/Input/PlayerControls.inputactions");
-        Assert.IsNotNull(asset, "找不到 PlayerControls.inputactions");
-        InputAction parry = asset.FindAction("Gameplay/Parry");
-        Assert.IsNotNull(parry, "Gameplay 里必须有 Parry 动作");
-        Assert.IsTrue(parry.bindings.Count > 0, "Parry 必须有默认按键");
-        Assert.AreEqual("<Mouse>/leftButton", parry.bindings[0].path, "左键才是现在的 parry 键（与攻击同键，拼刀流）");
-    }
 }
 #endif
