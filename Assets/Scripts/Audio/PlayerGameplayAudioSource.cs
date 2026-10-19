@@ -22,6 +22,7 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
     private Animator _animator;
     private GameObject _footstepEmitter;
     private int _lastWallJumpCount;
+    private int _parryFrame = -1;
     private bool _leftFootPlanted;
     private bool _rightFootPlanted;
     private bool _wallFootLeft;
@@ -76,7 +77,11 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
             _lastWallJumpCount = _motor.WallJumpCount;
             _motor.Landed += OnLanded;
         }
-        if (_combat != null) _combat.SequenceHitLanded += OnSequenceHitLanded;
+        if (_combat != null)
+        {
+            _combat.SequenceHitLanded += OnSequenceHitLanded;
+            _combat.ParrySucceeded += OnParrySucceeded;
+        }
         _subscribed = true;
     }
 
@@ -84,7 +89,11 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
     {
         if (!_subscribed) return;
         if (_motor != null) _motor.Landed -= OnLanded;
-        if (_combat != null) _combat.SequenceHitLanded -= OnSequenceHitLanded;
+        if (_combat != null)
+        {
+            _combat.SequenceHitLanded -= OnSequenceHitLanded;
+            _combat.ParrySucceeded -= OnParrySucceeded;
+        }
         _leftFootPlanted = false;
         _rightFootPlanted = false;
         _wallFootstepTimer = 0f;
@@ -209,6 +218,26 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
         AttackDamageResult result)
     {
         if (result.AppliedDamage <= 0f) return;
+        if (Time.frameCount == _parryFrame) return;
         WwiseEventBridge.Play("metal_hit", gameObject);
+    }
+
+    private void OnParrySucceeded(
+        System.Collections.Generic.IReadOnlyList<ParryContact> contacts)
+    {
+        _parryFrame = Time.frameCount;
+        bool melee = false;
+        bool ranged = false;
+        for (int i = 0; i < contacts.Count; i++)
+        {
+            AttackSourceType source = contacts[i].SourceType;
+            if (source == AttackSourceType.Projectile || source == AttackSourceType.Beam)
+                ranged = true;
+            else
+                melee = true;
+        }
+
+        if (melee) WwiseEventBridge.Play("parry_melee", gameObject);
+        if (ranged) WwiseEventBridge.Play("parry_ranged", gameObject);
     }
 }
