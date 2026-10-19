@@ -23,6 +23,7 @@ public sealed class LevelSelectUI : MonoBehaviour
             var buttons = new System.Collections.Generic.List<Button>();
             foreach (var variant in LevelSelection.GetLevels(_config))
             {
+                if (_config.AlwaysStartAtInitialRoom && variant != _config.InitialRoom) continue;
                 var button = Instantiate(_template, _content);
                 button.name = variant.Id;
                 button.GetComponentInChildren<TMP_Text>(true).text = variant.Room.DisplayName + " / " + variant.Id;

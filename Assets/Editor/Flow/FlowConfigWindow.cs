@@ -27,7 +27,8 @@ namespace GameJam.FlowEditor
         private void OnEnable()
         {
             minSize = new Vector2(850f, 540f);
-            if (_config == null) _config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>(FlowExampleSetup.ConfigPath);
+            if (_config == null) _config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset")
+                ?? AssetDatabase.LoadAssetAtPath<RunFlowConfig>(FlowExampleSetup.ConfigPath);
             RefreshAssets(); EditorApplication.projectChanged += RefreshAssets;
         }
         private void OnDisable() { EditorApplication.projectChanged -= RefreshAssets; if (_editor != null) DestroyImmediate(_editor); }

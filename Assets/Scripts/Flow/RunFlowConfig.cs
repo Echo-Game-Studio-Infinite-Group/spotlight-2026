@@ -23,12 +23,16 @@ namespace GameJam.Flow
         [Header("房间与抽取")]
         [Tooltip("整局开始时加载的差分，通常为教程箱庭。")]
         [InspectorName("教程差分")] public RoomVariantDefinition InitialRoom;
+        [Tooltip("新游戏固定从教程开始，忽略关卡选择；继续游戏仍按存档恢复。")]
+        [InspectorName("新游戏固定进入教程")] public bool AlwaysStartAtInitialRoom;
         [Tooltip("混乱度达到普通上限时进入的终点差分。")]
         [InspectorName("最终房差分")] public RoomVariantDefinition FinalRoom;
         [Tooltip("没有命中循环规则时，从这些地图池中的有效差分按权重抽取。")]
         [InspectorName("普通选房池")] public RoomPoolDefinition[] NormalPools = new RoomPoolDefinition[0];
         [Tooltip("按混乱度区间选择循环规则；各规则的区间不能重叠。")]
         [InspectorName("循环规则")] public LoopRuleDefinition[] Loops = new LoopRuleDefinition[0];
+        [Tooltip("保留已从新流程移除的差分，仅供继续旧存档使用，不参与抽房和关卡选择。")]
+        [InspectorName("旧存档兼容差分")] public RoomVariantDefinition[] ContinueOnlyRooms = new RoomVariantDefinition[0];
         [Header("特殊路线")]
         [Tooltip("开启后允许低于普通下限及命中特殊混乱度值时使用独立地图池；需要先制作并登记对应差分。")]
         [InspectorName("启用特殊路线")] public bool EnableSpecialRoutes;

@@ -18,6 +18,7 @@ namespace GameJam.Flow
             var variants = new HashSet<RoomVariantDefinition>();
             var pools = new HashSet<RoomPoolDefinition>();
             Add(variants, config.InitialRoom); Add(variants, config.FinalRoom);
+            foreach (RoomVariantDefinition variant in config.ContinueOnlyRooms) Add(variants, variant);
             foreach (RoomPoolDefinition pool in config.NormalPools) if (pool != null) pools.Add(pool);
             if (config.EnableSpecialRoutes)
             {

@@ -31,7 +31,8 @@ namespace GameJam.Flow
         }
         public static RoomVariantDefinition Consume(RunFlowConfig config)
         {
-            var result = _config == config ? _pending : null; Clear(); return result;
+            var result = _config == config && config != null && !config.AlwaysStartAtInitialRoom ? _pending : null;
+            Clear(); return result;
         }
     }
 }

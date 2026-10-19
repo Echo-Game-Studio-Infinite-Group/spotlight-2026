@@ -210,6 +210,9 @@ public static class SaveManager
         if (_pending == null || string.IsNullOrEmpty(_pending.roomVariantId)) return null;
         foreach (var variant in LevelSelection.GetLevels(config))
             if (variant.Id == _pending.roomVariantId) return variant;
+        if (config != null)
+            foreach (var variant in config.ContinueOnlyRooms)
+                if (variant != null && variant.Id == _pending.roomVariantId) return variant;
         Debug.LogWarning("[SaveManager] 存档关卡已不在流程配置中，将从起始关卡开始");
         CancelContinue();
         return null;
