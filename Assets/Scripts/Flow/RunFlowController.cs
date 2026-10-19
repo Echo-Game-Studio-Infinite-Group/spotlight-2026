@@ -45,9 +45,33 @@ namespace GameJam.Flow
 
         private void Awake() => Current = this;
         public void Configure(RunFlowConfig config, PlayerMotor motor) { _config = config; _motor = motor; }
-        private void Start() { if (_config != null && !_started) StartRun(); }
+        private void Start()
+        {
+            if (_config == null || _started) return;
+            if (SaveManager.HasPendingContinue) ContinueRun();
+            else StartRun();
+        }
 
         public bool StartRun()
+        {
+            if (_started) return false;
+            SaveManager.CancelContinue();
+            RoomVariantDefinition variant = LevelSelection.Consume(_config) ?? _config?.InitialRoom;
+            return InitializeRun(variant, null, null);
+        }
+
+        // 菜单先准备跨场景请求；房间激活且玩家重置后才允许恢复存档。
+        public bool ContinueRun()
+        {
+            if (_started || !SaveManager.HasPendingContinue) return false;
+            RoomVariantDefinition variant = SaveManager.GetContinueVariant(_config);
+            if (!SaveManager.HasPendingContinue) return StartRun();
+            LevelSelection.Clear();
+            return InitializeRun(variant ?? _config?.InitialRoom,
+                SaveManager.ContinueCheckpointId, SaveManager.RestorePending);
+        }
+
+        private bool InitializeRun(RoomVariantDefinition variant, string checkpointId, Action restore)
         {
             if (_started) return false;
             List<string> errors = FlowConfigValidator.Validate(_config);
@@ -68,23 +92,29 @@ namespace GameJam.Flow
             _health.Died += OnDied; _motor.Teleported += OnTeleported;
             if (_respawn != null) _respawn.SetFallHandler(HandleFall);
             _maps.RegisterPersistentScene(gameObject.scene);
-            IsBusy = true; LockPlayer(); StartCoroutine(BeginRun()); return true;
+            IsBusy = true; LockPlayer(); StartCoroutine(BeginRun(variant, checkpointId, restore)); return true;
         }
 
-        private IEnumerator BeginRun()
+        private IEnumerator BeginRun(RoomVariantDefinition variant = null, string checkpointId = null, Action restore = null)
         {
+            variant = variant ?? _config.InitialRoom;
             Chaos = new ChaosService(_config);
             Planner = new RoomSelectionPlanner(_config, _config.Seed);
+            int startingChaos = Mathf.Clamp(_config.InitialChaos, variant.MinimumChaos, variant.MaximumChaos);
+            if (startingChaos < _config.MinimumChaos || startingChaos > _config.MaximumChaos)
+                Chaos.TrySetSpecial(startingChaos, "关卡选择");
+            else Chaos.Add(startingChaos - Chaos.Value, "关卡选择");
             Chaos.Changed += OnChaosChanged;
-            FlowPlacement.TryFind(null, _config.InitialRoom.Room.Template, _maps.FlowRooms, _config, out Pose pose);
-            FlowRoomInstance first = Load(_config.InitialRoom, pose);
+            FlowPlacement.TryFind(null, variant.Room.Template, _maps.FlowRooms, _config, out Pose pose);
+            FlowRoomInstance first = Load(variant, pose);
             while (first.IsLoading) yield return null;
             if (!first.IsReady) { Fail(first.Error); yield break; }
             Activate(first, false);
-            FlowCheckpoint entry = FirstCheckpoint(first);
-            if (entry == null) { Fail("教程房没有可用的记录点"); yield break; }
+            FlowCheckpoint entry = first.Root.FindCheckpoint(checkpointId) ?? FirstCheckpoint(first);
+            if (entry == null) { Fail("起始房间没有可用的记录点"); yield break; }
             PlaceAtCheckpoint(entry);
             GameManager.Instance.StartGame();
+            restore?.Invoke();
             CommitCheckpoint(entry);
             IsReady = true; IsBusy = false; UnlockPlayer(); RequestSuccessor();
         }
@@ -264,6 +294,8 @@ namespace GameJam.Flow
         public bool RestartRun()
         {
             if (!_started || (IsBusy && string.IsNullOrEmpty(LastError))) return false;
+            SaveManager.CancelContinue();
+            LevelSelection.Clear();
             IsBusy = true; IsReady = false; IsComplete = false; _revision++;
             LockPlayer(); StartCoroutine(Restart()); return true;
         }

@@ -85,6 +85,9 @@ public sealed class PlayerRagdollRecoveryTests
         return ground;
     }
 
+    private Transform Hips => (Transform)typeof(PlayerRagdollHitStun)
+        .GetField("_hips", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_hitStun);
+
     private bool GettingUp => (bool)typeof(PlayerRagdollHitStun)
         .GetField("_inGetUp", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_hitStun);
 
@@ -98,7 +101,7 @@ public sealed class PlayerRagdollRecoveryTests
         Assert.IsFalse(_controller.enabled);
         Assert.IsFalse(_motor.enabled);
         float bottom = float.PositiveInfinity;
-        foreach (Rigidbody body in _root.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Hips)
+        foreach (Rigidbody body in Hips
             .GetComponentsInChildren<Rigidbody>())
             bottom = Mathf.Min(bottom, body.GetComponent<Collider>().bounds.min.y);
         GameObject floor = CreateFloor(bottom - .02f);
@@ -123,7 +126,7 @@ public sealed class PlayerRagdollRecoveryTests
     public IEnumerator AirborneRagdollKeepsFallingAfterTimerWithoutStartingGetUp()
     {
         _hitStun.EnterHitStun();
-        Transform hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Transform hips = Hips;
         Vector3 start = hips.position;
         TimeManager.SetPaused(false);
         float deadline = Time.time + 1.2f;
@@ -248,7 +251,7 @@ public sealed class PlayerRagdollRecoveryTests
     {
         _hitStun.EnterHitStun();
         float bottom = float.PositiveInfinity;
-        foreach (Rigidbody body in _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponentsInChildren<Rigidbody>())
+        foreach (Rigidbody body in Hips.GetComponentsInChildren<Rigidbody>())
             bottom = Mathf.Min(bottom, body.GetComponent<Collider>().bounds.min.y);
         GameObject floor = CreateFloor(bottom - .02f);
         if (trigger) floor.GetComponent<Collider>().isTrigger = true;
@@ -261,7 +264,7 @@ public sealed class PlayerRagdollRecoveryTests
 
     private void DropRagdollBelow(float height)
     {
-        Transform hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Transform hips = Hips;
         Rigidbody[] bodies = hips.GetComponentsInChildren<Rigidbody>();
         var positions = new Vector3[bodies.Length];
         for (int i = 0; i < bodies.Length; i++) positions[i] = bodies[i].transform.position;
@@ -311,7 +314,7 @@ public sealed class PlayerRagdollRecoveryTests
         Assert.IsTrue(_motor.enabled);
         Assert.IsTrue(_runner.IsConnected);
         Assert.IsTrue(_input.GameplayEnabled);
-        foreach (Rigidbody body in _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponentsInChildren<Rigidbody>())
+        foreach (Rigidbody body in Hips.GetComponentsInChildren<Rigidbody>())
             Assert.IsTrue(body.isKinematic);
         Assert.AreEqual(Vector3.zero, _motor.Velocity);
     }
@@ -334,7 +337,7 @@ public sealed class PlayerRagdollRecoveryTests
     public void OnlyWalkableSlopesAllowGetUp(float angle, bool expected)
     {
         _hitStun.EnterHitStun();
-        Rigidbody hips = _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponent<Rigidbody>();
+        Rigidbody hips = Hips.GetComponent<Rigidbody>();
         // 固定查询一个真实骨骼形状，排除其他肢体位于斜面另一侧的干扰。
         FieldInfo bodiesField = typeof(PlayerRagdollHitStun).GetField("_ragdollBodies", BindingFlags.Instance | BindingFlags.NonPublic);
         var bodies = (Rigidbody[])bodiesField.GetValue(_hitStun);

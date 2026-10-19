@@ -135,7 +135,17 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     {
         // 可见模型由当前 Avatar 驱动，不能让旧骨架的名字抢先匹配。
         if (_animator != null && _animator.isHuman)
-            return _animator.GetBoneTransform(HumanBodyBones.Hips);
+        {
+            Transform avatarHips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+            if (avatarHips != null)
+            {
+                if (avatarHips.GetComponent<Rigidbody>() != null) return avatarHips;
+                // 新模型可能把 Humanoid 髋部映射到静态骨架根；物理位置必须取该骨架内的真实骨盆。
+                if (_hips != null && _hips.IsChildOf(avatarHips) && _hips.GetComponent<Rigidbody>() != null) return _hips;
+                Rigidbody body = avatarHips.GetComponentInChildren<Rigidbody>(true);
+                return body != null ? body.transform : avatarHips;
+            }
+        }
         if (_hips != null) return _hips;
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
         {

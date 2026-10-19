@@ -68,7 +68,19 @@ public class PauseUIManager : MonoBehaviour
         _pauseMenuPanel.SetActive(false);
     }
 
-    public void RetryGame() => LoadScene(SceneManager.GetActiveScene().path);
+    public void RetryGame()
+    {
+        var flow = GameJam.Flow.RunFlowController.Current;
+        if (flow == null)
+        {
+            LoadScene(_input.gameObject.scene.path);
+            return;
+        }
+        // 活动场景是叠加加载的房间，重载它会丢失玩家和流程宿主。
+        if (!flow.RestartRun()) return;
+        ResumeGame();
+        _input.SetGameplayEnabled(false);
+    }
     private void ShowSettings(bool visible)
     {
         _settingsPanel.SetActive(visible);
@@ -76,7 +88,15 @@ public class PauseUIManager : MonoBehaviour
         EventSystem.current.SetSelectedGameObject(visible ? _fullscreenButton.gameObject : _resumeButton.gameObject);
     }
 
-    public void ReturnToTitle() => LoadScene("Assets/Scenes/MainMenu.unity");
+    public void ReturnToTitle()
+    {
+        if (PlayerMotor.Active != null)
+        {
+            SaveManager.PlayerObj = PlayerMotor.Active.gameObject;
+            SaveManager.SavePlayer();
+        }
+        LoadScene("Assets/Scenes/MainMenu.unity");
+    }
 
     private void LoadScene(string path)
     {

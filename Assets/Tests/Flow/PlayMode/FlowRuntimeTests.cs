@@ -217,7 +217,7 @@ namespace GameJam.FlowTests
             Transform hips = _motor.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Hips);
             Rigidbody[] bodies = hips.GetComponentsInChildren<Rigidbody>();
             Vector3[] positions = bodies.Select(body => body.transform.position).ToArray();
-            Vector3 offset = Vector3.up * (killHeight - 2f - hips.position.y);
+            Vector3 offset = Vector3.up * (killHeight - 2f - ragdoll.FallCheckPosition.y);
             for (int i = 0; i < bodies.Length; i++) bodies[i].transform.position = positions[i] + offset;
             Physics.SyncTransforms();
             Assert.That(_motor.transform.position, Is.EqualTo(rootPosition));
