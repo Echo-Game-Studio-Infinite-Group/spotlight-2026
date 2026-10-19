@@ -1,4 +1,4 @@
-using GameJam.Flow;
+﻿using GameJam.Flow;
 using UnityEngine;
 
 public sealed class FlowHUD : MonoBehaviour
@@ -9,7 +9,8 @@ public sealed class FlowHUD : MonoBehaviour
     private void OnGUI()
     {
         if (_flow == null || _flow.Chaos == null) return;
-        GUI.Label(new Rect(Screen.width - 190, 20, 180, 40), "混乱度  " + _flow.Chaos.Value);
+        if (!ChaosHUD.IsDisplaying(_flow.Chaos))
+            GUI.Label(new Rect(Screen.width - 190, 20, 180, 40), "混乱度  " + _flow.Chaos.Value);
         if (!_showDiagnostics) return;
         GUILayout.BeginArea(new Rect(12, Screen.height - 205, 650, 195), GUI.skin.box);
         FlowRoomInstance room = _flow.CurrentRoom;
