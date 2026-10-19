@@ -10,11 +10,19 @@
     "Type": "User",
     "GUID": "{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}",
     "Language": "SFX",
-    "Hash": "{27B3BD93-8EC5-CDC2-988D-C761A2BA7586}",
+    "Hash": "{0F91D382-6DB4-2F35-2B43-C3DF5AD7E307}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\OneTimeAction",
     "ShortName": "OneTimeAction",
     "Path": "OneTimeAction.bnk",
     "Media": [
+     {
+      "Id": "183020156",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Combat\\parry_1.wav",
+      "CachePath": "74/{7474541A-0BC7-995E-3715-3E4E601D3ADB}.wem"
+     },
      {
       "Id": "361747846",
       "Language": "SFX",
@@ -22,6 +30,14 @@
       "Location": "Memory",
       "ShortName": "Footsteps\\footstep_normal_right_2.wav",
       "CachePath": "D1/{D14CDFBC-C7EB-74E4-B5F1-A2706482CCF5}.wem"
+     },
+     {
+      "Id": "411112246",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Combat\\parry_2.wav",
+      "CachePath": "FC/{FCAD258D-F000-EEF7-E685-51EF1364D5C4}.wem"
      },
      {
       "Id": "510201513",
@@ -32,12 +48,12 @@
       "CachePath": "DD/{DDAF0FB8-D07F-B9D8-A34C-9CD9DA47A556}.wem"
      },
      {
-      "Id": "625423893",
+      "Id": "596783337",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
-      "ShortName": "Combat\\metal_hit_2.wav",
-      "CachePath": "9F/{9FC9B291-AC85-B154-0296-D06D17ADA2B5}.wem"
+      "ShortName": "Combat\\metal_hit_4.wav",
+      "CachePath": "40/{40225475-2F71-99BE-FA7F-E78C353B2CD4}.wem"
      },
      {
       "Id": "638996786",
@@ -171,11 +187,39 @@
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Metal_Hit",
       "GUID": "{2C5AA965-BC82-4B01-8AEA-F20922861471}",
       "DurationType": "OneShot",
+      "DurationMin": "0.6730833",
+      "DurationMax": "0.6730833",
+      "MediaRefs": [
+       {
+        "Id": "596783337"
+       }
+      ]
+     },
+     {
+      "Id": "1939962520",
+      "Name": "Parry_Melee",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Parry_Melee",
+      "GUID": "{0795A8CD-FF3B-4A5B-BAB4-49930C2CA495}",
+      "DurationType": "OneShot",
       "DurationMin": "0.7644167",
       "DurationMax": "0.7644167",
       "MediaRefs": [
        {
-        "Id": "625423893"
+        "Id": "183020156"
+       }
+      ]
+     },
+     {
+      "Id": "2964842581",
+      "Name": "Parry_Ranged",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Parry_Ranged",
+      "GUID": "{0A5CA520-6908-4B3F-BB76-EC48E4644F38}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.7644167",
+      "DurationMax": "0.7644167",
+      "MediaRefs": [
+       {
+        "Id": "411112246"
        }
       ]
      },
@@ -196,6 +240,6 @@
     ]
    }
   ],
-  "FileHash": "{52F043B2-4EC9-9569-A161-FA58571DC788}"
+  "FileHash": "{CFEE2824-8754-7EA6-E4DA-F0CB652BBC4B}"
  }
 }

@@ -29,7 +29,23 @@ Bank
 
 ```text
 player_jump -> Jump_Normal (Bank: OneTimeAction)
+player_land -> Land_Normal (Bank: OneTimeAction)
+sword_swing -> Sword_Swing (Bank: OneTimeAction)
+metal_hit   -> Metal_Hit (Bank: OneTimeAction)
+parry_melee -> Parry_Melee (Bank: OneTimeAction)
+parry_ranged -> Parry_Ranged (Bank: OneTimeAction)
+music_stand -> Play_Music_Stand (Bank: Music)
+music_walk  -> Play_Music_Walk (Bank: Music)
+music_run   -> Play_Music_Run (Bank: Music)
 ```
+
+`PlayerGameplayAudioSource` 通过 `PlayerCombat.ParrySucceeded` 获取拼刀结果：
+近战攻击播放 `parry_melee`，子弹或激光播放 `parry_ranged`；同一帧已经
+成功的 parry 会抑制普通命中声，但起手帧事件里的 `sword_swing` 不受影响。
+
+`FlowGame` 的 `WwiseMusicSource` 订阅 `RunFlowController.Chaos`，按
+`0..30 / 31..79 / 80..100` 三档切换 `Stand / Walk / Run`。阈值在
+MusicController 的 Inspector 上可调，MainMenu 仍使用固定的 SnowPeak。
 
 后续一次性事件的接入示例：
 

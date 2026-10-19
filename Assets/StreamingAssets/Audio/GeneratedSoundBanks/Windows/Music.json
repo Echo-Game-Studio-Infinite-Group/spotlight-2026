@@ -10,11 +10,19 @@
     "Type": "User",
     "GUID": "{B9FD0FE4-8802-425B-9ECE-72D720DDD7BD}",
     "Language": "SFX",
-    "Hash": "{222A730C-A802-11C3-967C-4727DDAF5E65}",
+    "Hash": "{9CA51E9D-2953-2E0E-6037-D3A97B65379B}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Music",
     "ShortName": "Music",
     "Path": "Music.bnk",
     "Media": [
+     {
+      "Id": "181096942",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Music\\Walk.wav",
+      "CachePath": "BA/{BA75C705-0A0F-5CAA-65D3-20660D70C9C0}.wem"
+     },
      {
       "Id": "342168031",
       "Language": "SFX",
@@ -30,6 +38,14 @@
       "Location": "Memory",
       "ShortName": "Music\\SnowPeak.wav",
       "CachePath": "19/{194467A7-6C48-88F2-DAF2-5A0AE16695A4}.wem"
+     },
+     {
+      "Id": "606843890",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Music\\Stand.wav",
+      "CachePath": "10/{1015D587-7EA1-6D4B-B051-43ACEE5A51A5}.wem"
      }
     ],
     "Events": [
@@ -56,10 +72,34 @@
         "Id": "481119151"
        }
       ]
+     },
+     {
+      "Id": "4267098686",
+      "Name": "Play_Music_Stand",
+      "ObjectPath": "\\Events\\Default Work Unit\\Music\\Play_Music_Stand",
+      "GUID": "{4E1E1E3D-6E50-4DDF-AFFB-79D7027EAC49}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "606843890"
+       }
+      ]
+     },
+     {
+      "Id": "2010243813",
+      "Name": "Play_Music_Walk",
+      "ObjectPath": "\\Events\\Default Work Unit\\Music\\Play_Music_Walk",
+      "GUID": "{A94B4FDA-F445-4DC8-868A-FB1E65F81BFF}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "181096942"
+       }
+      ]
      }
     ]
    }
   ],
-  "FileHash": "{6C313E23-BBCD-4588-BEAB-5F331AF2AA1A}"
+  "FileHash": "{EC305B6A-FF02-BF9A-7CBA-613B482ECD7A}"
  }
 }
