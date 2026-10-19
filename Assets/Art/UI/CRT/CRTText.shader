@@ -23,11 +23,14 @@ Shader "UI/CRT/Text"
    #pragma vertex vert
    #pragma fragment frag
    #include "UnityCG.cginc"
+   #include "UnityUI.cginc"
+   #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
    struct app {float4 vertex:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
-   struct output {float4 vertex:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;};
+   struct output {float4 vertex:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR;float4 worldPosition:TEXCOORD1;};
+   float4 _ClipRect;
    sampler2D _MainTex;float4 _MainTex_TexelSize,_GlowColor;float _ScanStrength,_ScanCount,_Glitch,_Clock,_GlowRadius,_GlowStrength;
    float _CRTMenuUnscaledClock,_GlowBreathPeriod,_GlowBreathDepth;
-   output vert(app v){output o;o.vertex=UnityObjectToClipPos(v.vertex);o.uv=v.uv;o.color=v.color;return o;}
+   output vert(app v){output o;o.worldPosition=v.vertex;o.vertex=UnityObjectToClipPos(v.vertex);o.uv=v.uv;o.color=v.color;return o;}
    fixed4 frag(output i):SV_Target
    {
     float band=floor(i.uv.y*25);float n=frac(sin(band*73.7+floor(_Clock*18)*31.3)*43758.5);
@@ -57,6 +60,9 @@ Shader "UI/CRT/Text"
      c.rgb=(c.rgb*c.a+_GlowColor.rgb*a*scan)/max(total,.0001);
      c.a=total;
     }
+    #ifdef UNITY_UI_CLIP_RECT
+    c.a*=UnityGet2DClipping(i.worldPosition.xy,_ClipRect);
+    #endif
     return c;
    }
    ENDCG

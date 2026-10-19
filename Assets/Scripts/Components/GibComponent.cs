@@ -382,6 +382,12 @@ public sealed class GibComponent : MonoBehaviour
         _ownedAssets.Add(material);
         // 保留 URP Lit 的贴图、HDR 自发光、表面参数和关键字，仅在运行时副本上追加裁切。
         if (source != null) material.CopyPropertiesFromMaterial(source);
+        // 贴图开关改用材质统一分支，既保留源材质语义，也不依赖构建时收集死亡材质。
+        material.SetVector("_GibSurfaceFeatures", new Vector4(
+            source != null && source.IsKeywordEnabled("_EMISSION") ? 1f : 0f,
+            source != null && source.IsKeywordEnabled("_METALLICSPECGLOSSMAP") ? 1f : 0f,
+            source != null && source.IsKeywordEnabled("_OCCLUSIONMAP") ? 1f : 0f,
+            source != null && source.IsKeywordEnabled("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A") ? 1f : 0f));
         material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
         string map = source != null && source.HasProperty("_BaseMap") ? "_BaseMap" : "_MainTex";
         string color = source != null && source.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";

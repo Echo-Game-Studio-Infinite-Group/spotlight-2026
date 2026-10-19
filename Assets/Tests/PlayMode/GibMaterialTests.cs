@@ -93,7 +93,8 @@ public sealed class GibMaterialTests
                 Assert.AreEqual(_source.GetColor(color), body.GetColor(color), color);
             foreach (string value in new[] { "_Metallic", "_Smoothness", "_BumpScale", "_OcclusionStrength", "_Cull" })
                 Assert.AreEqual(_source.GetFloat(value), body.GetFloat(value), value);
-            foreach (string keyword in _source.shaderKeywords) Assert.IsTrue(body.IsKeywordEnabled(keyword), keyword);
+            Assert.IsTrue(body.IsKeywordEnabled("_NORMALMAP"));
+            Assert.AreEqual(new Vector4(1f, 1f, 1f, 0f), body.GetVector("_GibSurfaceFeatures"));
             Assert.AreEqual(_source.GetTextureScale("_BaseMap"), body.GetTextureScale("_BaseMap"));
             Assert.AreEqual(_source.GetTextureOffset("_BaseMap"), body.GetTextureOffset("_BaseMap"));
             var upperRenderer = _upper.GetComponentInChildren<MeshRenderer>();
@@ -220,6 +221,36 @@ public sealed class GibMaterialTests
         body.SetFloat("_CutEdge", 3f);
         Color edge = Render(body, false, true, "gib_edge");
         Assert.Greater(edge.r, edge.g * 5f, "窄边也必须使用断口色");
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Render_SurfaceMapsAndAlphaCutout_MatchLit(bool albedoSmoothness)
+    {
+        RequireGraphics();
+        var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false, true);
+        try
+        {
+            texture.SetPixel(0, 0, new Color(0.3f, 0.4f, 0.5f, 0.2f));
+            texture.Apply();
+            foreach (string map in new[] { "_BaseMap", "_MetallicGlossMap", "_OcclusionMap" })
+                _source.SetTexture(map, texture);
+            _source.DisableKeyword("_EMISSION");
+            _source.EnableKeyword("_METALLICSPECGLOSSMAP");
+            _source.EnableKeyword("_OCCLUSIONMAP");
+            _source.EnableKeyword("_ALPHATEST_ON");
+            _source.SetFloat("_Cutoff", 0.5f);
+            if (albedoSmoothness) _source.EnableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
+            Material body = Slice();
+            Assert.AreEqual(new Vector4(0f, 1f, 1f, albedoSmoothness ? 1f : 0f),
+                body.GetVector("_GibSurfaceFeatures"));
+            Color before = Render(_source, false, true, "lit_surface_" + albedoSmoothness);
+            Color after = Render(body, false, true, "gib_surface_" + albedoSmoothness);
+            AssertColor(before, after, "贴图与基础贴图 alpha 的用途必须保持 URP Lit 语义");
+            if (albedoSmoothness) Assert.Greater(after.maxColorComponent, 0.02f);
+            else Assert.Less(after.maxColorComponent, 0.01f, "alpha 低于阈值时必须裁切");
+        }
+        finally { Object.DestroyImmediate(texture); }
     }
 
     private static void RequireGraphics()
