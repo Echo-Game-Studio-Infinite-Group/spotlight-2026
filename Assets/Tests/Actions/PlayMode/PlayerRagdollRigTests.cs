@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 public sealed class PlayerRagdollRigTests
 {
-    private GameObject _root;
+    private GameObject _root, _ground;
     private PlayerRagdollHitStun _stun;
     private Animator _animator;
     private Transform _hips;
@@ -38,6 +38,7 @@ public sealed class PlayerRagdollRigTests
     {
         if (_stun != null) _stun.ExitHitStun();
         if (_root != null) Object.DestroyImmediate(_root);
+        if (_ground != null) Object.DestroyImmediate(_ground);
         TimeManager.SetPaused(false);
         TimeManager.ClearSlowMotion();
     }
@@ -109,6 +110,10 @@ public sealed class PlayerRagdollRigTests
     [UnityTest]
     public IEnumerator RagdollLastsOneSecondThenRestoresAnimatedRecovery()
     {
+        _ground = new GameObject("RagdollRigFloor");
+        _ground.transform.position = _root.transform.position + Vector3.down * .5f;
+        _ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
+        Physics.SyncTransforms();
         var data = new SerializedObject(_stun);
         Assert.That(data.FindProperty("_ragdollSeconds").floatValue, Is.EqualTo(1f));
         TimeManager.SetPaused(false);

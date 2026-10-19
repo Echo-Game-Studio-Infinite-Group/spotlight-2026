@@ -7,7 +7,7 @@ using UnityEngine;
 public sealed class PlayerRagdollHitStun : MonoBehaviour
 {
     [Header("硬直（两段：布娃娃 → 起身）")]
-    [Tooltip("布娃娃段时长（秒）：从触发到开始播起身动画。")]
+    [Tooltip("布娃娃最短时长（秒）。时间到后仍未落地则继续布娃娃下落，落地后才起身。")]
     [SerializeField, Min(0f)] private float _ragdollSeconds = 1f;
 
     [Tooltip("起身动画在 Animator 里的状态名（Base Layer）。留空或找不到该状态 → 退回占位（直接 Rebind 回 Idle）。")]
@@ -33,8 +33,8 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     [Tooltip("触发瞬间先沿墙面法线把人挪出去的距离。贴墙激活布娃娃会挂在墙上，靠这个挪开。")]
     [SerializeField, Min(0f)] private float _impactPushOut = 0.6f;
 
-    [Tooltip("起身前向下探地面的距离。找到就把根节点落到地面上；找不到就从布娃娃当前位置继续下落。")]
-    [SerializeField, Min(0f)] private float _groundProbeDistance = 3f;
+    [Tooltip("骨骼碰撞体向下确认落地的距离（米），只覆盖接触余量，不能用长距离探地代替实际落地。")]
+    [SerializeField, Min(0f)] private float _groundContactDistance = 0.05f;
 
     [Header("引用")]
     [Tooltip("Humanoid 优先使用当前 Avatar 的 Hips，避免换模型后选中残留的旧骨架。非 Humanoid 可显式指定根骨骼。")]
@@ -68,7 +68,6 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private float _getUpEndAt;
     private bool _inGetUp;
     private int _getUpUsedLayer = -1;   // 这次起身实际用的是哪一层（结束时把权重还原）
-    private float _hipsRootHeight;
     private readonly ActionControlPolicy _getUpControl = new ActionControlPolicy
     {
         AllowMove = false,
@@ -163,7 +162,6 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         _rootSkin.Begin();
         _active = true;
         _inGetUp = false;
-        _hipsRootHeight = _hips != null ? _hips.position.y - transform.position.y : 0f;
         _ragdollEndAt = Time.time + _ragdollSeconds;
 
         // 顺序很要紧：先把所有会「碰 Animator」的东西关掉，最后才关 Animator。
@@ -195,22 +193,22 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         FinishHitStun();
     }
 
-    // 第二段：布娃娃时间到 → 冻住布娃娃、对齐根节点、播起身动画
+    // 时间到只允许申请起身；未落地时必须继续由骨骼物理接管。
     private void BeginGetUp()
     {
+        if (!TryRagdollGround(out RaycastHit ground)) return;
         _inGetUp = true;
 
         SetRagdollActive(false);   // 刚体回 kinematic：姿势就冻在最后一帧
 
-        // 对齐起点：x/z 用 Hips 的落点（不搬的话人会瞬移回撞击点站起来），
-        // y 向下探地面 —— 高速撞墙基本都发生在空中，不贴地就会在半空起身。
+        // 根节点跟随真实骨骼落点，并对齐支撑面，不能用撞击前的根节点位置判断落地。
         if (_hips != null)
         {
             Vector3 p = _hips.position;
-            float y = p.y - _hipsRootHeight;
-            if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out RaycastHit ground,
-                    _groundProbeDistance, ~0, QueryTriggerInteraction.Ignore))
-                y = ground.point.y;
+            float y = ground.point.y - (ground.normal.x * (p.x - ground.point.x)
+                + ground.normal.z * (p.z - ground.point.z)) / ground.normal.y;
+            if (_controller != null)
+                y += _controller.radius * (1f / ground.normal.y - 1f);
             transform.position = new Vector3(p.x, y, p.z);
         }
 
@@ -263,6 +261,29 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         // 没配起身动画、或 Animator 里没有这个状态 → 退回占位：直接恢复
         Debug.LogWarning("[PlayerRagdollHitStun] 没有可用的起身状态 → 直接恢复（占位行为）", this);
         FinishHitStun();
+    }
+
+    private bool TryRagdollGround(out RaycastHit ground)
+    {
+        ground = default;
+        MovementParams parameters = _motor.Params;
+        float minNormalY = Mathf.Cos(parameters.MaxGroundAngle * Mathf.Deg2Rad);
+        float nearest = float.PositiveInfinity;
+        foreach (Rigidbody body in _ragdollBodies)
+        {
+            // Motor 在布娃娃期间关闭，其接地状态不能代表当前骨骼；按实际物理形状短扫。
+            if (body == null || body.isKinematic) continue;
+            RaycastHit[] hits = body.SweepTestAll(Vector3.down, _groundContactDistance, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null || hit.transform.IsChildOf(transform)
+                    || (parameters.CollisionMask.value & (1 << hit.collider.gameObject.layer)) == 0
+                    || hit.normal.y < minNormalY || hit.distance >= nearest) continue;
+                ground = hit;
+                nearest = hit.distance;
+            }
+        }
+        return ground.collider != null;
     }
 
     // 第三段：起身播完（或占位）→ 恢复全部控制

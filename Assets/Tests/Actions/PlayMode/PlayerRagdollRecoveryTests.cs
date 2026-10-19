@@ -56,8 +56,6 @@ public sealed class PlayerRagdollRecoveryTests
         _hitStun = _root.GetComponent<PlayerRagdollHitStun>();
         var data = new SerializedObject(_hitStun);
         data.FindProperty("_getUpTargetSeconds").floatValue = 3f;
-        // 禁止预先吸附地面，验收起身期间真实的下落和胶囊落地。
-        data.FindProperty("_groundProbeDistance").floatValue = 0f;
         data.ApplyModifiedPropertiesWithoutUndo();
         Physics.SyncTransforms();
         // 玩家预制体自带 TimeManager，须在它 Awake 接管静态入口后设置暂停。
@@ -77,19 +75,42 @@ public sealed class PlayerRagdollRecoveryTests
         TimeManager.ClearSlowMotion();
     }
 
-    private void BeginGetUp()
+    private GameObject CreateFloor(float top)
+    {
+        var ground = new GameObject("RagdollRecoveryFloor");
+        _created.Add(ground);
+        ground.transform.position = new Vector3(_root.transform.position.x, top - .5f, _root.transform.position.z);
+        ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
+        Physics.SyncTransforms();
+        return ground;
+    }
+
+    private bool GettingUp => (bool)typeof(PlayerRagdollHitStun)
+        .GetField("_inGetUp", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_hitStun);
+
+    private void TryGetUp() => typeof(PlayerRagdollHitStun)
+        .GetMethod("BeginGetUp", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(_hitStun, null);
+
+    private void BeginGetUp(bool keepGround = false)
     {
         _hitStun.EnterHitStun();
         Assert.IsTrue(_hitStun.IsActive);
         Assert.IsFalse(_controller.enabled);
         Assert.IsFalse(_motor.enabled);
-        // 只跳过布娃娃等待时间；起身姿态、Animator 和碰撞切换仍执行实际生产代码。
-        typeof(PlayerRagdollHitStun).GetMethod("BeginGetUp", BindingFlags.Instance | BindingFlags.NonPublic)
-            .Invoke(_hitStun, null);
+        float bottom = float.PositiveInfinity;
+        foreach (Rigidbody body in _root.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Hips)
+            .GetComponentsInChildren<Rigidbody>())
+            bottom = Mathf.Min(bottom, body.GetComponent<Collider>().bounds.min.y);
+        GameObject floor = CreateFloor(bottom - .02f);
+        // 只跳过布娃娃等待时间；仍需真实支撑面才能进入生产代码的起身阶段。
+        TryGetUp();
+        Assert.IsTrue(GettingUp);
         Assert.IsTrue(_hitStun.IsActive);
         int layer = _animator.GetLayerIndex("GetUp");
         Assert.GreaterOrEqual(layer, 0);
         Assert.AreEqual(Animator.StringToHash("GetUp"), _animator.GetCurrentAnimatorStateInfo(layer).shortNameHash);
+        // 验收起身后支撑面消失时仍有重力，不能借空中开始起身绕过落地条件。
+        if (!keepGround) Object.DestroyImmediate(floor);
     }
 
     private void FixedSteps(int count)
@@ -99,38 +120,39 @@ public sealed class PlayerRagdollRecoveryTests
     }
 
     [UnityTest]
-    public IEnumerator AirborneGetUpFallsWhileAnimationAndInputLockRemainActive()
+    public IEnumerator AirborneRagdollKeepsFallingAfterTimerWithoutStartingGetUp()
     {
-        BeginGetUp();
-        Vector3 start = _root.transform.position;
+        _hitStun.EnterHitStun();
+        Transform hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Vector3 start = hips.position;
         TimeManager.SetPaused(false);
-        for (int i = 0; i < 6; i++) yield return new WaitForFixedUpdate();
-        Assert.Less(_root.transform.position.y, start.y - .02f, "起身动画尚未结束就必须开始下落");
-        Assert.Less(_motor.Velocity.y, 0f);
+        float deadline = Time.time + 1.2f;
+        while (Time.time < deadline) yield return new WaitForFixedUpdate();
+        Assert.Less(hips.position.y, start.y - .02f, "等待落地期间骨骼必须继续受重力驱动");
         Assert.IsTrue(_hitStun.IsActive);
-        Assert.IsTrue(_controller.enabled);
-        Assert.IsTrue(_motor.enabled);
+        Assert.IsFalse(GettingUp);
+        Assert.IsFalse(_controller.enabled);
+        Assert.IsFalse(_motor.enabled);
         Assert.IsFalse(_input.GameplayEnabled);
         Assert.IsFalse(_runner.IsConnected);
-        Assert.IsTrue(_animator.enabled);
-        Assert.That(_root.transform.position.x, Is.EqualTo(start.x).Within(.001f));
-        Assert.That(_root.transform.position.z, Is.EqualTo(start.z).Within(.001f));
+        Assert.IsFalse(_animator.enabled);
+        foreach (Rigidbody body in hips.GetComponentsInChildren<Rigidbody>()) Assert.IsFalse(body.isKinematic);
     }
 
     [UnityTest]
-    public IEnumerator GetUpLandsOnFloorAndRemainsSupportedUntilAnimationEnds()
+    public IEnumerator RagdollWaitsForLandingThenGetUpRemainsSupportedUntilAnimationEnds()
     {
-        var ground = new GameObject("RagdollRecoveryFloor");
-        _created.Add(ground);
-        ground.transform.position = _root.transform.position + Vector3.down * 1.5f;
-        BoxCollider floor = ground.AddComponent<BoxCollider>();
-        floor.size = new Vector3(100f, 1f, 100f);
-        Physics.SyncTransforms();
-        BeginGetUp();
-        Assert.Greater(_root.transform.position.y - floor.bounds.max.y, .5f);
+        BoxCollider floor = CreateFloor(_root.transform.position.y - 2f).GetComponent<BoxCollider>();
+        _hitStun.EnterHitStun();
+        typeof(PlayerRagdollHitStun).GetField("_ragdollEndAt", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(_hitStun, Time.time);
+        TryGetUp();
+        Assert.IsFalse(GettingUp, "地板距离不到原来的 3 米探地范围也不能提前起身");
         TimeManager.SetPaused(false);
-        for (int i = 0; i < 120 && !_motor.IsGrounded; i++) yield return new WaitForFixedUpdate();
-        Assert.IsTrue(_motor.IsGrounded, "起身时仍须通过 CharacterController 碰撞落地");
+        for (int i = 0; i < 120 && !GettingUp; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(GettingUp, "布娃娃接触地面后应自动开始起身");
+        for (int i = 0; i < 6 && !_motor.IsGrounded; i++) yield return new WaitForFixedUpdate();
+        Assert.IsTrue(_motor.IsGrounded);
         Assert.IsTrue(_hitStun.IsActive);
         Assert.That(_root.transform.position.y, Is.EqualTo(floor.bounds.max.y).Within(_controller.skinWidth + .01f));
         float landedY = _root.transform.position.y;
@@ -162,13 +184,8 @@ public sealed class PlayerRagdollRecoveryTests
     [Test]
     public void GetUpRejectsHeldMovementJumpSlideAndTurn()
     {
-        var ground = new GameObject("RagdollRecoveryInputFloor");
-        _created.Add(ground);
-        ground.transform.position = _root.transform.position + Vector3.down * .5f;
-        ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
         _motor.Params.SlideSpeedRatio = 0f;
-        Physics.SyncTransforms();
-        BeginGetUp();
+        BeginGetUp(keepGround: true);
         Assert.IsTrue(_motor.enabled);
         TimeManager.SetPaused(false);
         FixedSteps(2);
@@ -210,17 +227,59 @@ public sealed class PlayerRagdollRecoveryTests
     }
 
     [Test]
-    public void GetUpKeepsCurrentRagdollHeightWhenGroundProbeMisses()
+    public void MissingGroundDoesNotFreezeBonesOrMoveRootToRagdoll()
     {
         Vector3 start = _root.transform.position;
         _hitStun.EnterHitStun();
         var hips = (Transform)typeof(PlayerRagdollHitStun)
             .GetField("_hips", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_hitStun);
         hips.position += Vector3.down * 5f;
-        typeof(PlayerRagdollHitStun).GetMethod("BeginGetUp", BindingFlags.Instance | BindingFlags.NonPublic)
-            .Invoke(_hitStun, null);
-        Assert.That(_root.transform.position.y, Is.EqualTo(start.y - 5f).Within(.005f),
-            "探不到地面时应从布娃娃当前位置起身，不能回到碰撞前的根节点高度");
+        Physics.SyncTransforms();
+        TryGetUp();
+        Assert.IsFalse(GettingUp);
+        Assert.AreEqual(start, _root.transform.position, "未落地时不能提前对齐起身位置");
+        Assert.IsFalse(_animator.enabled);
+        Assert.IsFalse(hips.GetComponent<Rigidbody>().isKinematic);
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void TriggersAndExcludedLayersDoNotCountAsGround(bool trigger)
+    {
+        _hitStun.EnterHitStun();
+        float bottom = float.PositiveInfinity;
+        foreach (Rigidbody body in _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponentsInChildren<Rigidbody>())
+            bottom = Mathf.Min(bottom, body.GetComponent<Collider>().bounds.min.y);
+        GameObject floor = CreateFloor(bottom - .02f);
+        if (trigger) floor.GetComponent<Collider>().isTrigger = true;
+        else _motor.Params.CollisionMask = 0;
+        Physics.SyncTransforms();
+        TryGetUp();
+        Assert.IsFalse(GettingUp);
+        Assert.IsFalse(_animator.enabled);
+    }
+
+    [TestCase(30f, true)]
+    [TestCase(80f, false)]
+    [TestCase(90f, false)]
+    public void OnlyWalkableSlopesAllowGetUp(float angle, bool expected)
+    {
+        _hitStun.EnterHitStun();
+        Rigidbody hips = _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponent<Rigidbody>();
+        // 固定查询一个真实骨骼形状，排除其他肢体位于斜面另一侧的干扰。
+        FieldInfo bodiesField = typeof(PlayerRagdollHitStun).GetField("_ragdollBodies", BindingFlags.Instance | BindingFlags.NonPublic);
+        var bodies = (Rigidbody[])bodiesField.GetValue(_hitStun);
+        bodiesField.SetValue(_hitStun, new[] { hips });
+        Vector3 normal = Quaternion.Euler(0f, 0f, angle) * Vector3.up;
+        Collider bone = hips.GetComponent<Collider>();
+        Vector3 contact = bone.ClosestPoint(bone.bounds.center - normal * 100f);
+        GameObject floor = CreateFloor(0f);
+        floor.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        floor.transform.position = contact - normal * .505f;
+        Physics.SyncTransforms();
+        try { TryGetUp(); }
+        finally { bodiesField.SetValue(_hitStun, bodies); }
+        Assert.AreEqual(expected, GettingUp, "竖墙和超出最大可行走角度的斜面不能算落地");
     }
 
     [Test]
