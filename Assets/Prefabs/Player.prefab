@@ -27460,7 +27460,7 @@ MonoBehaviour:
   _cooldown: 0
   _windowSeconds: 1.6
   _parryInvulnerableSeconds: 1.5
-  _parryStopSeconds: 1
+  _parryStopSeconds: 0.5
   _parryStopRate: 0.361
   _parryKind: 0
   _sourceType: 0
@@ -27717,7 +27717,7 @@ MonoBehaviour:
   _zeroSpeedOnImpact: 1
   _impactCooldown: 0.5
   _impactPushOut: 0.4
-  _groundProbeDistance: 3
+  _groundContactDistance: 0.05
   _hips: {fileID: 8543742647459187242}
   _controller: {fileID: 7740984542976240113}
   _animator: {fileID: 3935457739758834283}

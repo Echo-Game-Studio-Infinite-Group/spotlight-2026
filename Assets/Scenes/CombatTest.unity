@@ -247,7 +247,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &73879521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -700,7 +700,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6321473744218458539, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_LocalPosition.x
@@ -750,6 +750,10 @@ PrefabInstance:
       propertyPath: _damage
       value: 12
       objectReference: {fileID: 0}
+    - target: {fileID: 7139187032569165066, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+      propertyPath: _sightMask.m_Bits
+      value: 1011
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -795,11 +799,11 @@ MonoBehaviour:
   m_LookAt: {fileID: 4556680379290461721}
   m_Follow: {fileID: 4556680379290461721}
   m_Lens:
-    FieldOfView: 60.000004
+    FieldOfView: 60
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
-    Dutch: 2.643265e-11
+    Dutch: 0
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
@@ -822,7 +826,7 @@ Transform:
   m_GameObject: {fileID: 1056056691}
   serializedVersion: 2
   m_LocalRotation: {x: 0.1305262, y: -0, z: -0, w: 0.9914449}
-  m_LocalPosition: {x: 5.35, y: 2.7529144, z: -13.795555}
+  m_LocalPosition: {x: 5.35, y: 2.5761614, z: -13.135904}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1549,7 +1553,7 @@ MonoBehaviour:
   ShoulderOffset: {x: 0, y: 0, z: 0}
   VerticalArmLength: 0
   CameraSide: 1
-  CameraDistance: 6
+  CameraDistance: 5.317079
   CameraCollisionFilter:
     serializedVersion: 2
     m_Bits: 0
@@ -1723,7 +1727,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 60.000004
+  field of view: 60
   orthographic: 0
   orthographic size: 10
   m_Depth: -1
@@ -1750,7 +1754,7 @@ Transform:
   m_GameObject: {fileID: 1393982553}
   serializedVersion: 2
   m_LocalRotation: {x: 0.1305262, y: 0, z: 0, w: 0.9914449}
-  m_LocalPosition: {x: 5.35, y: 2.7529144, z: -13.795555}
+  m_LocalPosition: {x: 5.35, y: 2.5761614, z: -13.135904}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2564,7 +2568,7 @@ MonoBehaviour:
   _beam: {fileID: 888422423573404240}
   _sightMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 1011
 --- !u!1 &1391353707386286908
 GameObject:
   m_ObjectHideFlags: 0
@@ -2590,7 +2594,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &1948235525849922340
 GameObject:
   m_ObjectHideFlags: 0
@@ -2789,12 +2793,29 @@ MonoBehaviour:
   _damage: 40
   _cooldown: 2
   _windowSeconds: 0
-  _parryWindowSeconds: 0.2
   _parryInvulnerableSeconds: 0.8
-  _parrySlowSeconds: 0.35
-  _parryCooldownSeconds: 1
-  _parrySlowRate: 0.1
+  _parryStopSeconds: 0.08
+  _parryStopRate: 0
   _parryKind: 1
+  _sourceType: 0
+  _parryTarget:
+    DisplayName: "\u88AB Parry \u6846"
+    AnchorPath: 
+    Center: {x: 0, y: 0.9, z: 0.5}
+    Rotation: {x: 0, y: 0, z: 0}
+    Size: {x: 1.5, y: 1.8, z: 1.5}
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    HitGroup: 1
+    SweepSpacing: 0.1
+  _canBeParried: 1
+  _parryStaggerSeconds: 0.3
 --- !u!212 &4831835008162157151
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -3039,6 +3060,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
+      propertyPath: m_DefaultVelocity.x
+      value: -0.970655
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
+      propertyPath: m_DefaultVelocity.z
+      value: 0.2404763
+      objectReference: {fileID: 0}
     - target: {fileID: 5767604575959199393, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
       propertyPath: serializeData2.initData.clothType
       value: 1
@@ -4401,7 +4434,7 @@ MonoBehaviour:
     m_DissipationMode: 2
     m_DissipationDistance: 100
     m_PropagationSpeed: 343
-  m_DefaultVelocity: {x: -0.8061603, y: 0.5185766, z: -0.2849279}
+  m_DefaultVelocity: {x: -0.1389006, y: 0.3754079, z: -0.9163927}
 --- !u!4 &7287481027586029607
 Transform:
   m_ObjectHideFlags: 0
@@ -4464,7 +4497,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _visual: {fileID: 0}
-  _kind: 1
   _normalSprite: {fileID: 21300000, guid: 80eed4cd6e5e1d842b68a47e5be4819e, type: 3}
   _disadvantageSprite: {fileID: 21300000, guid: 6aed4b813cd302a49900265a54d41531, type: 3}
   _renderer: {fileID: 0}
