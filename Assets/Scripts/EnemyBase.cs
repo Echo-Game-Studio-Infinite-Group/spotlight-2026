@@ -1,4 +1,4 @@
-﻿using Cinemachine;
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -260,18 +260,16 @@ public class EnemyBase : MonoBehaviour
         Player player = Player.Current;
         PlayerMotor target = player != null ? player.Motor : null;
         HealthComponent health = player != null ? player.Health : null;
-        if (target == null || health == null || !health.IsAlive) { _ranged?.CancelCharge(); StopMoving(); return; }
+        if (target == null || health == null || !health.IsAlive) { StopMoving(); return; }
 
         Vector3 toTarget = target.transform.position - transform.position;
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
 
-        if (distance > _sightRange) { _ranged?.CancelCharge(); StopMoving(); return; }
+        if (distance > _sightRange) { StopMoving(); return; }
 
         if (distance - StopDistance > 0.001f)
         {
-            // 追击分支不会调用 TryFire，必须在离开射程时主动撤掉瞄准。
-            _ranged?.CancelCharge();
             // 进跑与退跑分开阈值，避免跟随移动玩家时在边界反复切换。
             _runningChase = _runningChase
                 ? distance > Mathf.Max(StopDistance, _runDistance - _runHysteresis)

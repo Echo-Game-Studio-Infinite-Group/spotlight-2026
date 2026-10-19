@@ -25,7 +25,6 @@ namespace GameJam.Flow
         private int _revision;
         private Vector3 _previous;
         private RoomVariantDefinition _plannedVariant;
-        private RoomVariantDefinition _startingVariant;
         private int _plannedChaos;
         private long _plannedSourceId;
         public static RunFlowController Current { get; private set; }
@@ -54,7 +53,6 @@ namespace GameJam.Flow
             List<string> errors = FlowConfigValidator.Validate(_config);
             if (_motor == null) errors.Add("缺少玩家 PlayerMotor");
             if (errors.Count > 0) { LastError = string.Join("\n", errors); Debug.LogError("[流程] " + LastError, this); return false; }
-            _startingVariant = LevelSelection.Consume(_config) ?? _config.InitialRoom;
             _started = true; _maps = MapManager.Instance;
             _health = _motor.GetComponent<HealthComponent>();
             _input = _motor.GetComponent<PlayerInputReader>();
@@ -76,18 +74,15 @@ namespace GameJam.Flow
         private IEnumerator BeginRun()
         {
             Chaos = new ChaosService(_config);
-            int startingChaos = Mathf.Clamp(_config.InitialChaos, _startingVariant.MinimumChaos, _startingVariant.MaximumChaos);
-            if (startingChaos < _config.MinimumChaos || startingChaos > _config.MaximumChaos) Chaos.TrySetSpecial(startingChaos, "关卡选择");
-            else Chaos.Add(startingChaos - Chaos.Value, "关卡选择");
             Planner = new RoomSelectionPlanner(_config, _config.Seed);
             Chaos.Changed += OnChaosChanged;
-            FlowPlacement.TryFind(null, _startingVariant.Room.Template, _maps.FlowRooms, _config, out Pose pose);
-            FlowRoomInstance first = Load(_startingVariant, pose);
+            FlowPlacement.TryFind(null, _config.InitialRoom.Room.Template, _maps.FlowRooms, _config, out Pose pose);
+            FlowRoomInstance first = Load(_config.InitialRoom, pose);
             while (first.IsLoading) yield return null;
             if (!first.IsReady) { Fail(first.Error); yield break; }
             Activate(first, false);
             FlowCheckpoint entry = FirstCheckpoint(first);
-            if (entry == null) { Fail("起始关卡没有可用的记录点"); yield break; }
+            if (entry == null) { Fail("教程房没有可用的记录点"); yield break; }
             PlaceAtCheckpoint(entry);
             GameManager.Instance.StartGame();
             CommitCheckpoint(entry);

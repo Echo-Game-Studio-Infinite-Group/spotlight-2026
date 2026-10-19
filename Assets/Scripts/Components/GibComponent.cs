@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 
 // 上半身定格击飞，下半身跟随原骨骼；在模型插值之后同步网格，不复制 AI 或攻击事件。
@@ -131,8 +131,7 @@ public sealed class GibComponent : MonoBehaviour
         {
             Mesh sourceMesh = GetSourceMesh(source);
             var mesh = source is SkinnedMeshRenderer ? new Mesh() : Instantiate(sourceMesh);
-            // 导入骨架带缩放时，默认烘焙会丢失比例；上下半身都需与原渲染网格一致。
-            if (source is SkinnedMeshRenderer skin) skin.BakeMesh(mesh, true);
+            if (source is SkinnedMeshRenderer skin) skin.BakeMesh(mesh);
             Vector3[] vertices = mesh.vertices;
             Vector3[] normals = mesh.normals;
             Vector4[] tangents = mesh.tangents;
@@ -383,12 +382,6 @@ public sealed class GibComponent : MonoBehaviour
         _ownedAssets.Add(material);
         // 保留 URP Lit 的贴图、HDR 自发光、表面参数和关键字，仅在运行时副本上追加裁切。
         if (source != null) material.CopyPropertiesFromMaterial(source);
-        // 贴图开关改用材质统一分支，既保留源材质语义，也不依赖构建时收集死亡材质。
-        material.SetVector("_GibSurfaceFeatures", new Vector4(
-            source != null && source.IsKeywordEnabled("_EMISSION") ? 1f : 0f,
-            source != null && source.IsKeywordEnabled("_METALLICSPECGLOSSMAP") ? 1f : 0f,
-            source != null && source.IsKeywordEnabled("_OCCLUSIONMAP") ? 1f : 0f,
-            source != null && source.IsKeywordEnabled("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A") ? 1f : 0f));
         material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
         string map = source != null && source.HasProperty("_BaseMap") ? "_BaseMap" : "_MainTex";
         string color = source != null && source.HasProperty("_BaseColor") ? "_BaseColor" : "_Color";
@@ -447,7 +440,7 @@ public sealed class GibComponent : MonoBehaviour
             Matrix4x4 matrix = lower.Root.worldToLocalMatrix * lower.Source.transform.localToWorldMatrix;
             if (lower.Source is SkinnedMeshRenderer skin)
             {
-                skin.BakeMesh(lower.BakedMesh, true);
+                skin.BakeMesh(lower.BakedMesh);
                 lower.BakedMesh.GetVertices(lower.Vertices);
                 lower.BakedMesh.GetNormals(lower.Normals);
                 lower.BakedMesh.GetTangents(lower.Tangents);

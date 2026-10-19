@@ -247,7 +247,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &73879521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -700,7 +700,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6321473744218458539, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: m_LocalPosition.x
@@ -749,10 +749,6 @@ PrefabInstance:
     - target: {fileID: 7139187032569165066, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
       propertyPath: _damage
       value: 12
-      objectReference: {fileID: 0}
-    - target: {fileID: 7139187032569165066, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
-      propertyPath: _sightMask.m_Bits
-      value: 1011
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2568,7 +2564,7 @@ MonoBehaviour:
   _beam: {fileID: 888422423573404240}
   _sightMask:
     serializedVersion: 2
-    m_Bits: 1011
+    m_Bits: 4294967291
 --- !u!1 &1391353707386286908
 GameObject:
   m_ObjectHideFlags: 0
@@ -2594,7 +2590,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!1 &1948235525849922340
 GameObject:
   m_ObjectHideFlags: 0
