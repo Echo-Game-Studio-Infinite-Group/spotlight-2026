@@ -6,8 +6,8 @@
 ## 当前状态
 
 - 当前分支：`feat/audio_wwise`
-- 已合并：`7c688a1 Merge remote-tracking branch 'origin/dev' into feat/audio_wwise`
-- 最近提交：`4db89fd chore(audio): update Wwise project and soundbank assets`
+- 已合并：`616b1d6 Merge branch 'dev' ... into dev`
+- 最近提交：`f10af0d Merge origin/dev into feat/audio_wwise`
 - 当前动态链路：
   ```text
   IDynamicAudioActionSource
@@ -1439,6 +1439,35 @@ Unity.exe -batchmode -nographics `
   -executeMethod WwisePcmBridgeSmokeTest.Run `
   -quit `
   -logFile "...\Logs\pcm-bridge-slide-smoke-3.log"
+```
+
+本次仍未 commit。
+
+## 2026-10-19：金属命中、Parry 与混乱度战斗音乐
+
+- 玩家普攻命中替换为 `metal_hit_4.wav`，保留原 `Metal_Hit` Event ID，
+  Wwise 内部只替换 Audio File Source。
+- 新增 `Parry_Melee` / `Parry_Ranged`：
+  - 近战 parry 使用 `parry_1.wav`。
+  - 子弹与激光 parry 使用 `parry_2.wav`。
+  - `PlayerGameplayAudioSource` 订阅 `PlayerCombat.ParrySucceeded` 分流。
+  - parry 成功的同一帧抑制普通命中声；攻击动画帧里的挥刀声保持不变。
+- `FlowGame` 的战斗音乐改为随混乱度切换：
+  ```text
+  低：0..30   -> Play_Music_Stand -> Stand.wav
+  中：31..79  -> Play_Music_Walk  -> Walk.wav
+  高：80..100 -> Play_Music_Run   -> Run.wav
+  ```
+- 三首战斗音乐均为循环、3D、`-10 dB`；MainMenu 的 SnowPeak 保持固定播放。
+- Wwise 工程重新校验并生成 `OneTimeAction` / `Music` Bank，已同步到
+  `Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows`。
+
+验证：
+
+```text
+Wwise verify: Process completed successfully.
+Unity batchmode compile: exit 0, no error CS
+Logs/audio-parry-chaos-music-compile.log
 ```
 
 本次仍未 commit。

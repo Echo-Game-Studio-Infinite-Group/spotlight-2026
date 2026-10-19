@@ -25,6 +25,12 @@ MonoBehaviour:
   - EventId: metal_hit
     WwiseEventName: Metal_Hit
     Bank: OneTimeAction
+  - EventId: parry_melee
+    WwiseEventName: Parry_Melee
+    Bank: OneTimeAction
+  - EventId: parry_ranged
+    WwiseEventName: Parry_Ranged
+    Bank: OneTimeAction
   - EventId: footstep_normal_left_2
     WwiseEventName: Footstep_Normal_Left_2
     Bank: OneTimeAction
@@ -36,6 +42,12 @@ MonoBehaviour:
     Bank: Music
   - EventId: music_run
     WwiseEventName: Play_Music_Run
+    Bank: Music
+  - EventId: music_stand
+    WwiseEventName: Play_Music_Stand
+    Bank: Music
+  - EventId: music_walk
+    WwiseEventName: Play_Music_Walk
     Bank: Music
   - EventId: enemy_hit
     WwiseEventName: Enemy_Hit

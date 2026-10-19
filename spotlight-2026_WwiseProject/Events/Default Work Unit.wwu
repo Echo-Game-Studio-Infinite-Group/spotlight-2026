@@ -140,6 +140,28 @@
 								</Action>
 							</ChildrenList>
 						</Event>
+						<Event Name="Parry_Melee" ID="{0795A8CD-FF3B-4A5B-BAB4-49930C2CA495}">
+							<ChildrenList>
+								<Action Name="" ID="{5DDDBF45-5364-4906-893E-17E7AE7045DF}" ShortID="943645796">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="ParryMelee" ID="{D0CFE50C-4A2C-4E6B-BEE9-279B4B18D015}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Parry_Ranged" ID="{0A5CA520-6908-4B3F-BB76-EC48E4644F38}">
+							<ChildrenList>
+								<Action Name="" ID="{60593FA7-D9CB-427C-AB81-D1FBF4BF6DC4}" ShortID="165405343">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="ParryRanged" ID="{90B529CB-3BF9-45C1-BA90-BC0C82BBD7B2}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="Music" ID="{EED36A41-6309-43E2-96A2-0E78FB231BEE}" ShortID="545767990">
@@ -161,6 +183,28 @@
 									<ReferenceList>
 										<Reference Name="Target">
 											<ObjectRef Name="Run" ID="{534D5610-DCD3-42AD-92A6-58F673D9BD06}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_Music_Stand" ID="{4E1E1E3D-6E50-4DDF-AFFB-79D7027EAC49}">
+							<ChildrenList>
+								<Action Name="" ID="{769DB61D-9ADE-48EB-93AE-FDE8EC62DE75}" ShortID="88090437">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Stand" ID="{8A568BBB-F5F1-4E0B-BE82-B9F88AE22372}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_Music_Walk" ID="{A94B4FDA-F445-4DC8-868A-FB1E65F81BFF}">
+							<ChildrenList>
+								<Action Name="" ID="{1C0D5B44-9153-4C0E-BCEF-294173D0DE7F}" ShortID="275601962">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Walk" ID="{E0776E87-78A3-4841-837F-A1D39B7711F1}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
 										</Reference>
 									</ReferenceList>
 								</Action>
