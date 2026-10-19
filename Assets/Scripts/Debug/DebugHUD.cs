@@ -28,7 +28,7 @@ public sealed class DebugHUD : MonoBehaviour
     private void Toggle() => _visible = !_visible;
     private void OnGUI()
     {
-        if (!_visible || _motor.Params == null) return;
+        if (!BuildInfo.IsDebugBuild() || !_visible || _motor.Params == null) return;
         if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
         GUI.Box(new Rect(8f, 8f, 370f, 344f), GUIContent.none);
         GUILayout.BeginArea(new Rect(16f, 16f, 350f, 324f));

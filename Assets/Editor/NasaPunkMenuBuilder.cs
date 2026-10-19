@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 // 仅在显式菜单操作或本地请求文件存在时重建，避免导入资源覆盖人工调整。
 [InitializeOnLoad]
-public static class NasaPunkMenuBuilder
+public static partial class NasaPunkMenuBuilder
 {
     private const string DeathRequest = "Temp/BuildCRTDeath.request";
     private const string PauseRequest = "Temp/BuildCRTPause.request";
@@ -131,7 +131,7 @@ public static class NasaPunkMenuBuilder
         RawImage fill = CRTImage(rect, "Shutter", new Vector2(460, 80), Vector2.zero, shutter);
         fill.texture = Texture2D.whiteTexture; fill.color = Hex("64161E");
         fill.rectTransform.localScale = new Vector3(0, 1, 1);
-        CRTImage(rect, name, new Vector2(440, 74), Vector2.zero, text);
+        ButtonText(rect, name);
         var motion = rect.gameObject.AddComponent<CRTMenuButton>(); Wire(motion, "_shutter", fill.rectTransform);
         var so = new SerializedObject(motion); so.FindProperty("_phase").floatValue = phase; so.ApplyModifiedPropertiesWithoutUndo();
         return button;
@@ -202,6 +202,7 @@ public static class NasaPunkMenuBuilder
             serialized.ApplyModifiedPropertiesWithoutUndo(); EditorUtility.SetDirty(presentation);
             var events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
+            AttachPages();
             if (!EditorSceneManager.SaveScene(scene, "Assets/Scenes/MainMenu.unity")) throw new IOException("主菜单保存失败。");
             MenuVisualSettingsExport.Export(root);
             Snapshot(root, "MainMenu"); Snapshot(root, "MainMenu-Hover"); Snapshot(root, "MainMenu-Entry"); Snapshot(root, "MainMenu-Glitch"); Snapshot(root, "MainMenu-TravelStart"); Snapshot(root, "MainMenu-TravelMiddle");
@@ -505,7 +506,7 @@ public static class NasaPunkMenuBuilder
             Camera camera = cameraObject.GetComponent<Camera>();
             camera.scene = scene;
             camera.overrideSceneCullingMask = EditorSceneManager.GetSceneCullingMask(scene);
-            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Dark;
+            camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black;
             camera.orthographic = true; camera.orthographicSize = 540; camera.targetTexture = rt;
             camera.transform.position = new Vector3(0, 0, -100);
             camera.farClipPlane = 1000;

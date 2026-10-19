@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -7,10 +7,15 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuUI : MonoBehaviour
 {
+    [SerializeField] private GameObject _mainPanel;
     [SerializeField] private Button _startButton;
     [SerializeField] private Button _continueButton;
     [SerializeField] private Button _settingsButton;
     [SerializeField] private Button _exitButton;
+    [SerializeField] private Button _levelSelectButton;
+    [SerializeField] private Button _thanksButton;
+    [SerializeField] private LevelSelectUI _levelSelectPanel;
+    [SerializeField] private ThanksUI _thanksPanel;
     [SerializeField] private GameObject _settingsPanel;
     [SerializeField] private Button _closeSettingsButton;
     [SerializeField] private Button _fullscreenButton;
@@ -21,12 +26,16 @@ public class MainMenuUI : MonoBehaviour
 
     private void Awake()
     {
-        _startButton.onClick.AddListener(StartGame);
+        _startButton.onClick.AddListener(() => { GameJam.Flow.LevelSelection.Clear(); StartGame(); });
+        _levelSelectButton.onClick.AddListener(() => ShowPage(_levelSelectPanel.gameObject));
+        _thanksButton.onClick.AddListener(() => ShowPage(_thanksPanel.gameObject));
+        _levelSelectPanel.Selected += _ => StartGame();
+        _levelSelectPanel.Closed += () => ReturnToMenu(_levelSelectButton);
+        _thanksPanel.Closed += () => ReturnToMenu(_thanksButton);
         _continueButton.onClick.AddListener(ContinueGame);
         _settingsButton.onClick.AddListener(() => ShowSettings(true));
         _exitButton.onClick.AddListener(ExitGame);
-        _closeSettingsButton.onClick.AddListener(() => ShowSettings(false));
-        _fullscreenButton.onClick.AddListener(() => Screen.fullScreen = !Screen.fullScreen);
+        _settingsPanel.GetComponent<SettingsUI>().Closed += () => ReturnToMenu(_settingsButton);
     }
 
     private void Start()
@@ -39,9 +48,9 @@ public class MainMenuUI : MonoBehaviour
 
     private void Update()
     {
+        if (!_mainPanel.activeSelf) return;
         var keyboard = Keyboard.current;
         if (keyboard == null) return;
-        if (keyboard.escapeKey.wasPressedThisFrame && _settingsPanel.activeSelf) ShowSettings(false);
         if (EventSystem.current.currentSelectedGameObject == null &&
             (keyboard.downArrowKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame ||
              keyboard.wKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame))
@@ -57,12 +66,12 @@ public class MainMenuUI : MonoBehaviour
 
     private void ContinueGame() => _resume?.Invoke();
 
-    private void RefreshButtons()
+    public void RefreshButtons()
     {
         bool canContinue = _resume != null;
         _continueButton.gameObject.SetActive(canContinue);
-        Button[] buttons = canContinue ? new[] { _startButton, _continueButton, _settingsButton, _exitButton }
-            : new[] { _startButton, _settingsButton, _exitButton };
+        Button[] buttons = canContinue ? new[] { _startButton, _continueButton, _levelSelectButton, _settingsButton, _thanksButton, _exitButton }
+            : new[] { _startButton, _levelSelectButton, _settingsButton, _thanksButton, _exitButton };
         for (int i = 0; i < buttons.Length; i++)
         {
             ((RectTransform)buttons[i].transform).anchoredPosition = new Vector2(0, _buttonTop - i * _buttonSpacing);
@@ -74,8 +83,26 @@ public class MainMenuUI : MonoBehaviour
 
     private void ShowSettings(bool visible)
     {
-        _settingsPanel.SetActive(visible);
-        EventSystem.current.SetSelectedGameObject(visible ? _fullscreenButton.gameObject : _settingsButton.gameObject);
+        if (visible) ShowPage(_settingsPanel);
+        else ReturnToMenu(_settingsButton);
+    }
+
+    private void ShowPage(GameObject page)
+    {
+        EventSystem.current.SetSelectedGameObject(null);
+        _mainPanel.SetActive(false);
+        _settingsPanel.SetActive(page == _settingsPanel);
+        _levelSelectPanel.gameObject.SetActive(page == _levelSelectPanel.gameObject);
+        _thanksPanel.gameObject.SetActive(page == _thanksPanel.gameObject);
+    }
+
+    private void ReturnToMenu(Button selected)
+    {
+        _settingsPanel.SetActive(false);
+        _levelSelectPanel.gameObject.SetActive(false);
+        _thanksPanel.gameObject.SetActive(false);
+        _mainPanel.SetActive(true);
+        EventSystem.current.SetSelectedGameObject(selected.gameObject);
     }
 
     public void StartGame()

@@ -8,7 +8,7 @@ public sealed class FlowHUD : MonoBehaviour
     public void Configure(RunFlowController flow, bool diagnostics) { _flow = flow; _showDiagnostics = diagnostics; }
     private void OnGUI()
     {
-        if (_flow == null || _flow.Chaos == null) return;
+        if (!BuildInfo.IsDebugBuild() || _flow == null || _flow.Chaos == null) return;
         GUI.Label(new Rect(Screen.width - 190, 20, 180, 40), "混乱度  " + _flow.Chaos.Value);
         if (!_showDiagnostics) return;
         GUILayout.BeginArea(new Rect(12, Screen.height - 205, 650, 195), GUI.skin.box);

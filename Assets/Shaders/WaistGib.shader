@@ -23,6 +23,7 @@ Shader "GameJam/EnemyWaistCutout"
         _CutSide ("Kept Side", Float) = 1
         _UseCutDistance ("Use Death Pose Distance", Float) = 0
         _CutEdge ("Edge Width", Float) = 0.015
+        [HideInInspector] _GibSurfaceFeatures ("Emission / Gloss Map / Occlusion / Albedo Smoothness", Vector) = (0,0,0,0)
     }
     SubShader
     {
@@ -45,6 +46,7 @@ Shader "GameJam/EnemyWaistCutout"
             half _Smoothness;
             half _OcclusionStrength;
             half _Cutoff;
+            half4 _GibSurfaceFeatures;
             half4 _CutColor;
             float _CutSurface;
             float4 _CutPlane;
@@ -93,7 +95,11 @@ Shader "GameJam/EnemyWaistCutout"
         {
             clip(input.distance * _CutSide);
             #if defined(_ALPHATEST_ON)
-                Alpha(SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a, _BaseColor, _Cutoff);
+                // 基础贴图 alpha 用于光滑度时，URP 只用颜色 alpha 做裁切。
+                half alpha = _BaseColor.a;
+                if (_GibSurfaceFeatures.w < 0.5)
+                    alpha *= SampleAlbedoAlpha(input.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap)).a;
+                clip(alpha - _Cutoff);
             #endif
         }
         bool IsCutSurface(Varyings input) { return _CutSurface > 0.5 || abs(input.distance) < _CutEdge; }
@@ -110,7 +116,8 @@ Shader "GameJam/EnemyWaistCutout"
             #else
                 surface.metallic = _Metallic;
             #endif
-            #if defined(_METALLICSPECGLOSSMAP)
+            if (_GibSurfaceFeatures.y > 0.5)
+            {
                 #if defined(_SPECULAR_SETUP)
                     half4 gloss = SAMPLE_TEXTURE2D(_SpecGlossMap, sampler_SpecGlossMap, input.uv);
                     surface.specular = gloss.rgb;
@@ -119,17 +126,18 @@ Shader "GameJam/EnemyWaistCutout"
                     surface.metallic = gloss.r;
                 #endif
                 surface.smoothness *= gloss.a;
-            #endif
-            #if defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)
+            }
+            if (_GibSurfaceFeatures.w > 0.5)
                 surface.smoothness = _Smoothness * base.a;
-            #endif
             surface.occlusion = 1;
-            #if defined(_OCCLUSIONMAP)
+            if (_GibSurfaceFeatures.z > 0.5)
+            {
                 half occlusion = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, input.uv).g;
                 surface.occlusion = lerp(1, occlusion, _OcclusionStrength);
-            #endif
+            }
             surface.normalTS = SampleNormal(input.uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
-            surface.emission = SampleEmission(input.uv, _EmissionColor.rgb, TEXTURE2D_ARGS(_EmissionMap, sampler_EmissionMap));
+            if (_GibSurfaceFeatures.x > 0.5)
+                surface.emission = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv).rgb * _EmissionColor.rgb;
             // 薄片背面仍是原材质，只有补出的断口与裁切窄边使用断口色。
             if (IsCutSurface(input))
             {
@@ -162,14 +170,10 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma target 3.0
-            // 材质在死亡时才生成，构建时不能按静态材质剔除这些变体。
+            // 四种表面开关走材质统一分支，避免产生 16 倍组合；运行时材质仍保留光照变体。
             #pragma multi_compile_local _ _NORMALMAP
             #pragma multi_compile_local _ _RECEIVE_SHADOWS_OFF
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _EMISSION
-            #pragma multi_compile_local_fragment _ _METALLICSPECGLOSSMAP
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-            #pragma multi_compile_local_fragment _ _OCCLUSIONMAP
             #pragma multi_compile_local_fragment _ _SPECULAR_SETUP
             #pragma multi_compile_local_fragment _ _SPECULARHIGHLIGHTS_OFF
             #pragma multi_compile_local_fragment _ _ENVIRONMENTREFLECTIONS_OFF
@@ -215,7 +219,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma vertex ShadowVert
             #pragma fragment Depth
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
             float3 _LightDirection;
             float3 _LightPosition;
@@ -247,7 +250,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma vertex Vert
             #pragma fragment Depth
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             ENDHLSL
         }
         Pass
@@ -259,7 +261,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma fragment Normals
             #pragma multi_compile_local _ _NORMALMAP
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             half4 Normals(Varyings input, FRONT_FACE_TYPE frontFace : FRONT_FACE_SEMANTIC) : SV_Target
             {
