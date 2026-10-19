@@ -36,6 +36,7 @@ public sealed class SparkInstance : MonoBehaviour
     /// parry 层不受影响、保持恒定反馈。</summary>
     public void Play(float strength)
     {
+        gameObject.SetActive(true);
         float scale = Mathf.Lerp(0.85f, 1.2f, Mathf.Clamp01(strength));
         float longest = 0f;
         for (int i = 0; i < _layers.Count; i++)

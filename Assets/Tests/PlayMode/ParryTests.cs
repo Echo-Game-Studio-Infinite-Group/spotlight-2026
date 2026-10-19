@@ -181,6 +181,88 @@ public sealed class ParryTests
         Assert.AreEqual(1, _successes); Assert.AreEqual(0, landed); Assert.AreEqual(100f, _health.Health);
         Assert.AreEqual(AttackSourceType.Projectile, _last[0].SourceType);
         Assert.IsFalse(bullet.gameObject.activeSelf);
+        Assert.IsFalse(TimeManager.InHitStop);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+        Assert.AreEqual(1f, TimeManager.WorldRate);
+        Assert.AreEqual(1f, TimeManager.PlayerRate);
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void MixedBulletAndMeleeBatchStillStopsTime(bool bulletFirst)
+    {
+        CombatComponent melee = Enemy();
+        CombatComponent bullet = Bullet(_origin + new Vector3(0f, .9f, 1f)).GetComponent<CombatComponent>();
+        var meleeContact = new ParryContact(melee, _origin, Vector3.back);
+        var bulletContact = new ParryContact(bullet, _origin, Vector3.back);
+        _player.ReceiveParry(bulletFirst ? new[] { bulletContact, meleeContact } : new[] { meleeContact, bulletContact });
+        Assert.IsTrue(TimeManager.InHitStop);
+        Assert.AreEqual(0f, TimeManager.GlobalRate);
+    }
+    [Test]
+    public void BatchParriesTwoBulletsWithoutStoppingTime()
+    {
+        Projectile first = Bullet(_origin + new Vector3(0f, .9f, 1f));
+        Projectile second = Bullet(_origin + new Vector3(.2f, .9f, 1f));
+        Sample(22);
+        Assert.AreEqual(1, _successes);
+        Assert.AreEqual(2, _last.Count);
+        Assert.IsFalse(first.gameObject.activeSelf);
+        Assert.IsFalse(second.gameObject.activeSelf);
+        Assert.IsFalse(TimeManager.InHitStop);
+        Assert.AreEqual(1f, TimeManager.GlobalRate);
+    }
+    [Test]
+    public void BulletParryPreservesExistingSlowMotion()
+    {
+        Sample(22);
+        TimeManager.ParryStop(1f, .25f);
+        Projectile bullet = Bullet(_origin + new Vector3(0f, .9f, 1f));
+        bullet.Simulate(.01f);
+        Assert.AreEqual(1, _successes);
+        Assert.AreEqual(.25f, TimeManager.GlobalRate);
+        Assert.AreEqual(.25f, TimeManager.WorldRate);
+        Assert.AreEqual(.25f, TimeManager.PlayerRate);
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ParryMetalSparksEmitAndReplayFromPool(bool projectile)
+    {
+        CombatSparksInternal.Kind kind = projectile ? CombatSparksInternal.Kind.ParryProjectile : CombatSparksInternal.Kind.Parry;
+        foreach (SparkInstance candidate in Object.FindObjectsOfType<SparkInstance>())
+        {
+            if (candidate.Kind != kind) continue;
+            foreach (ParticleSystem layer in candidate.GetComponentsInChildren<ParticleSystem>())
+                layer.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            candidate.gameObject.SetActive(false);
+        }
+        if (projectile) CombatSparks.PlayParryProjectile(_origin, Vector3.forward);
+        else CombatSparks.PlayParry(_origin, Vector3.forward);
+        SparkInstance spark = null;
+        foreach (SparkInstance candidate in Object.FindObjectsOfType<SparkInstance>())
+            if (candidate.Kind == kind && candidate.transform.position == _origin) { spark = candidate; break; }
+        Assert.IsNotNull(spark);
+        Transform metal = spark.transform.Find("MetalSparks");
+        Assert.IsNotNull(metal);
+        var particles = metal.GetComponent<ParticleSystem>();
+        Assert.IsTrue(particles.main.useUnscaledTime);
+        Assert.IsFalse(particles.main.loop);
+        particles.Simulate(.02f, true, false, false);
+        Assert.Greater(particles.particleCount, 0);
+
+        foreach (ParticleSystem layer in spark.GetComponentsInChildren<ParticleSystem>())
+            layer.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        spark.gameObject.SetActive(false);
+        // 招架点可能在近身碰撞体内，反馈不能在散出角色轮廓前被碰撞耗尽。
+        GameObject actor = Create("ParrySparkActor", _origin);
+        actor.layer = LayerMask.NameToLayer("Enemy");
+        actor.AddComponent<BoxCollider>().size = Vector3.one * 2f;
+        Physics.SyncTransforms();
+        // 模拟池回收后的复播，避免只验证首次创建成功。
+        if (projectile) CombatSparks.PlayParryProjectile(_origin, Vector3.forward);
+        else CombatSparks.PlayParry(_origin, Vector3.forward);
+        Assert.IsTrue(spark.gameObject.activeSelf);
+        particles.Simulate(.2f, true, false, false);
+        Assert.Greater(particles.particleCount, 0);
     }
     [Test]
     public void FastBulletCrossesWholeParryVolumeWithinOneTickAndIsConsumed()

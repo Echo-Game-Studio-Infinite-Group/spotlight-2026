@@ -205,6 +205,37 @@ namespace GameJam.FlowTests
             Assert.That(_flow.Planner.Random.State, Is.EqualTo(random));
         }
         [UnityTest]
+        public IEnumerator RagdollFallUsesBodyHeightAndRestoresControlAtCheckpoint()
+        {
+            var ragdoll = _motor.GetComponent<PlayerRagdollHitStun>();
+            var controller = _motor.GetComponent<CharacterController>();
+            Vector3 rootPosition = _motor.transform.position;
+            float health = _health.Health;
+            float killHeight = _flow.CurrentRoom.Position.y + _flow.CurrentRoom.Root.FallHeight;
+            ragdoll.EnterHitStun();
+            Assert.That(ragdoll.IsActive, Is.True);
+            Transform hips = _motor.GetComponent<Animator>().GetBoneTransform(HumanBodyBones.Hips);
+            Rigidbody[] bodies = hips.GetComponentsInChildren<Rigidbody>();
+            Vector3[] positions = bodies.Select(body => body.transform.position).ToArray();
+            Vector3 offset = Vector3.up * (killHeight - 2f - ragdoll.FallCheckPosition.y);
+            for (int i = 0; i < bodies.Length; i++) bodies[i].transform.position = positions[i] + offset;
+            Physics.SyncTransforms();
+            Assert.That(_motor.transform.position, Is.EqualTo(rootPosition));
+            Assert.That(rootPosition.y, Is.GreaterThan(killHeight));
+            yield return Until(() => !ragdoll.IsActive);
+            yield return Ready();
+            FlowCheckpoint checkpoint = _flow.CurrentRoom.Root.FindCheckpoint(_flow.Checkpoints.Id);
+            Assert.That(Vector3.Distance(_motor.transform.position, checkpoint.transform.position), Is.LessThan(.01f));
+            Assert.That(_health.Health, Is.EqualTo(health - _flow.Config.FallDamage));
+            Assert.That(controller.enabled, Is.True, "不能把布娃娃期间关闭的胶囊状态作为恢复后的状态");
+            Assert.That(_motor.enabled, Is.True);
+            Assert.That(_motor.GetComponent<PlayerInputReader>().GameplayEnabled, Is.True);
+            foreach (Rigidbody body in bodies) Assert.That(body.isKinematic, Is.True);
+            yield return new WaitForFixedUpdate();
+            Assert.That(_health.Health, Is.EqualTo(health - _flow.Config.FallDamage), "同一次掉落不能重复扣血");
+        }
+
+        [UnityTest]
         public IEnumerator CombatInvulnerabilityDoesNotCancelTheFallPenalty()
         {
             _health.SetInvulnerableTime(10f); _health.TakeDamage(1f);

@@ -552,6 +552,26 @@ MonoBehaviour:
         hot: {r: 1, g: 1, b: 0.97, a: 1}
         mid: {r: 1, g: 0.85, b: 0.6, a: 1}
         extinct: {r: 1, g: 0.62, b: 0.28, a: 1}
+    parryMetalSparks:
+      count: 48
+      coneAngle: 0
+      speedMin: 4.5
+      speedMax: 8
+      sizeMin: 0.14
+      sizeMax: 0.24
+      lifeMin: 0.24
+      lifeMax: 0.42
+      gravity: 0.8
+      stretch: 0.065
+      drag: 0
+      bounce: 0
+      dampen: 0.25
+      lifetimeLoss: 0.35
+      color:
+        hot: {r: 1, g: 0.98, b: 0.92, a: 1}
+        mid: {r: 1, g: 0.66, b: 0.26, a: 1}
+        extinct: {r: 0.85, g: 0.28, b: 0.05, a: 1}
+    parryMetalMinScreenSize: 0.016
     parryLight:
       color: {r: 1, g: 0.92, b: 0.78, a: 1}
       intensity: 5
