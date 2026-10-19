@@ -141,7 +141,6 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void Awake()
     {
-        if (Active == null) Active = this;
         _controller = GetComponent<CharacterController>();
         _initialMovementRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
         _groundStepOffset = _controller.stepOffset;
@@ -164,6 +163,8 @@ public sealed class PlayerMotor : MonoBehaviour, IMotorCommand, IMotorActionMoti
 
     private void OnEnable()
     {
+        // 死亡会暂时停用控制器，复活时需要重新提供全局玩家引用。
+        if (Active == null) Active = this;
         if (_input is PlayerInputReader reader) reader.Cleared += OnInputCleared;
     }
     public bool InputSuppressed
