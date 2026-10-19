@@ -124,8 +124,10 @@ public static class PlayerHurtAnimationSetup
         layer.defaultWeight = 0f;
         var state = layer.stateMachine.states.FirstOrDefault(item => item.state.name == "Move").state
             ?? layer.stateMachine.AddState("Move");
-        // 直接复用现有混合树，确保普通走跑素材和阈值保持一致。
-        state.motion = layers[0].stateMachine.states.First(item => item.state.name == "Move").state.motion;
+        // 腿部层复用基础跑步的素材和倍率，避免重新装配后步频不一致。
+        var run = layers[0].stateMachine.states.First(item => item.state.name == "Move").state;
+        state.motion = run.motion;
+        state.speed = run.speed;
         layer.stateMachine.defaultState = state;
         controller.layers = layers;
 

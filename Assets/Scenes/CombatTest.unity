@@ -795,11 +795,11 @@ MonoBehaviour:
   m_LookAt: {fileID: 4556680379290461721}
   m_Follow: {fileID: 4556680379290461721}
   m_Lens:
-    FieldOfView: 60
+    FieldOfView: 60.00675
     OrthographicSize: 10
     NearClipPlane: 0.1
     FarClipPlane: 5000
-    Dutch: 0
+    Dutch: 4.681084e-11
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
@@ -1723,7 +1723,7 @@ Camera:
     height: 1
   near clip plane: 0.1
   far clip plane: 5000
-  field of view: 60
+  field of view: 60.00675
   orthographic: 0
   orthographic size: 10
   m_Depth: -1
@@ -3058,15 +3058,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
       propertyPath: m_DefaultVelocity.x
-      value: -0.970655
-      objectReference: {fileID: 0}
-    - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
-      propertyPath: m_DefaultVelocity.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
+      propertyPath: m_DefaultVelocity.y
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2066287590154686313, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
       propertyPath: m_DefaultVelocity.z
-      value: 0.2404763
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5767604575959199393, guid: 096f0263255b669408cb20ed709d60b6, type: 3}
       propertyPath: serializeData2.initData.clothType
@@ -4430,7 +4430,7 @@ MonoBehaviour:
     m_DissipationMode: 2
     m_DissipationDistance: 100
     m_PropagationSpeed: 343
-  m_DefaultVelocity: {x: -0.1389006, y: 0.3754079, z: -0.9163927}
+  m_DefaultVelocity: {x: -0.4837007, y: 0.3122096, z: 0.8176544}
 --- !u!4 &7287481027586029607
 Transform:
   m_ObjectHideFlags: 0

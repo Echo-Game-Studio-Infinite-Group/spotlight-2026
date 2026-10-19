@@ -50,6 +50,11 @@ public sealed class PlayerAnimation : MonoBehaviour
     [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
     [SerializeField, Min(0f)] private float _fallGrace = 0.08f;
     [SerializeField, Range(0f, 1f)] private float _wallSideDeadZone = 0.05f;
+    [Header("七方向行走混合")]
+    [Tooltip("方向参数的平滑时间；0 表示立即切换，按玩家逻辑时间推进。")]
+    [SerializeField, Min(0f)] private float _walkDirectionBlendSeconds = 0.12f;
+    [Tooltip("步频跟随实际行走速度的平滑时间；0 表示立即跟随。")]
+    [SerializeField, Min(0f)] private float _walkRateBlendSeconds = 0.08f;
     [Header("滑铲动画")]
     [SerializeField] private AnimationClip _slideClip;
     [Tooltip("播放到完全铲下的姿态后保持；退出物理滑铲后继续播放剩余起身段。")]
@@ -64,6 +69,9 @@ public sealed class PlayerAnimation : MonoBehaviour
     private int _wallMotionState = MotionStateWallDashLeft;
     private bool _hasSlideTime;
     private bool _hasWalkParameters;
+    private bool _wasWalking;
+    private Vector2 _walkBlendDirection;
+    private float _walkBlendRate;
     private bool _wasSliding;
     private int _slideStartJumpCount;
     private float _slideProgress;
@@ -135,6 +143,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private void CacheSlideParameter()
     {
         _hasSlideTime = false;
+        _wasWalking = false;
         bool walkX = false, walkZ = false, walkRate = false;
         foreach (AnimatorControllerParameter parameter in _animator.parameters)
         {
@@ -197,6 +206,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_combat == null) _combat = GetComponentInParent<PlayerCombat>();
         if (_motor == null || _animator == null || _motor.Params == null) return;
         UpdateSlide(deltaTime);
+        UpdateWalkBlend(deltaTime);
 
         // 移动不能取消受击，否则上身受击与腿部行走无法同时存在。
         if (IsHurting)
@@ -224,14 +234,6 @@ public sealed class PlayerAnimation : MonoBehaviour
             else if (side < -_wallSideDeadZone) _wallMotionState = MotionStateWallDashRight;
         }
         else _wallMotionState = MotionStateWallDashLeft;
-        if (_hasWalkParameters && _motor.IsWalking)
-        {
-            Vector3 direction = _motor.transform.InverseTransformDirection(MovementMath.Horizontal(_motor.Velocity)).normalized;
-            _animator.SetFloat(WalkXId, direction.x);
-            _animator.SetFloat(WalkZId, direction.z);
-            _animator.SetFloat(WalkRateId, Mathf.Min(_motor.Params.WalkMaxAnimationRate,
-                _motor.HorizontalSpeed / _motor.Params.WalkSpeed));
-        }
         int state = _motor.IsWallSliding ? _wallMotionState : _motor.IsSliding || IsSlideRecovering ? MotionStateSlide : airborne ? MotionStateJump :
             _motor.IsWalking && _motor.HorizontalSpeed > _idleSpeed ? MotionStateWalk :
             (_motor.IsBraking ? _motor.HorizontalSpeed > _idleSpeed : _motor.HasMovementInput) ? MotionStateMove : MotionStateIdle;
@@ -246,6 +248,36 @@ public sealed class PlayerAnimation : MonoBehaviour
         // 显式的攻击布尔：状态机的进/出边由它驱动，语义比复用 MotionState 编号清晰，
         // 也不会被每帧重写的移动编号互相干扰。
         _animator.SetBool(IsAttackingId, attacking);
+    }
+
+    private void UpdateWalkBlend(float deltaTime)
+    {
+        if (!_hasWalkParameters || !_motor.IsWalking)
+        {
+            _wasWalking = false;
+            return;
+        }
+        Vector3 local = _motor.transform.InverseTransformDirection(MovementMath.Horizontal(_motor.Velocity)).normalized;
+        var direction = new Vector2(local.x, local.z);
+        float rate = Mathf.Min(_motor.Params.WalkMaxAnimationRate, _motor.HorizontalSpeed / _motor.Params.WalkSpeed);
+        if (!_wasWalking)
+        {
+            // 入场姿态交给状态过渡混合，不能沿用上次行走的方向或从无中心动画的原点起步。
+            _walkBlendDirection = direction;
+            _walkBlendRate = rate;
+        }
+        else
+        {
+            // 执行器会额外发送零时长边界采样；指数平滑只消耗传入的玩家逻辑时间。
+            float directionWeight = _walkDirectionBlendSeconds > 0f ? 1f - Mathf.Exp(-deltaTime / _walkDirectionBlendSeconds) : 1f;
+            float rateWeight = _walkRateBlendSeconds > 0f ? 1f - Mathf.Exp(-deltaTime / _walkRateBlendSeconds) : 1f;
+            _walkBlendDirection = Vector2.Lerp(_walkBlendDirection, direction, directionWeight);
+            _walkBlendRate = Mathf.Lerp(_walkBlendRate, rate, rateWeight);
+        }
+        _wasWalking = true;
+        _animator.SetFloat(WalkXId, _walkBlendDirection.x);
+        _animator.SetFloat(WalkZId, _walkBlendDirection.y);
+        _animator.SetFloat(WalkRateId, _walkBlendRate);
     }
 
     /// <summary>
@@ -318,6 +350,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     {
         if (_motor != null) _motor.SetSlidePoseActive(false);
         _wasSliding = IsSlideRecovering = false;
+        _wasWalking = false;
         _slideProgress = 0f;
         // 组件被关掉时不能把输入门控留在打开状态，否则玩家的移动会永久失效。
         if (_motor != null) _motor.InputSuppressed = false;
