@@ -64,11 +64,13 @@ public static class CombatSparks
     }
 
     /// <summary>近战 parry 成功的闪光：白热圆闪 + 极细白环 + 环形火花——金属对金属，偏白热接地。</summary>
-    public static void PlayParry(Vector3 point)
+    public static void PlayParry(Vector3 point, Vector3 incomingDirection = default)
     {
         SparkInstance spark = Acquire(CombatSparksInternal.Kind.Parry);
         if (spark == null) return;
-        spark.transform.SetPositionAndRotation(point, Quaternion.identity);
+        Quaternion rotation = incomingDirection.sqrMagnitude > 0.0001f
+            ? Quaternion.LookRotation(-incomingDirection.normalized) : Quaternion.identity;
+        spark.transform.SetPositionAndRotation(point, rotation);
         spark.Play(1f);
         SparkFlashTune light = T.parryLight;
         SparkLightFader.Flash(point, light.color, light.intensity, light.range, light.duration);
@@ -238,6 +240,24 @@ public static class CombatSparks
             Unscaled = true,
         });
         instance.Register(sprayPs, scaleWithStrength: false);
+
+        // 招架点常被角色躯干遮挡，四散火花必须有时间越过轮廓，不能直接套短促的命中配方。
+        SparkSprayTune metal = t.parryMetalSparks;
+        ParticleSystem metalPs = NewChildSystem(host, "MetalSparks");
+        ConfigureLayer(metalPs, new LayerConfig
+        {
+            Material = _sparkMaterial, Count = metal.count,
+            ShapeType = metal.coneAngle > 0f ? ParticleSystemShapeType.Cone : ParticleSystemShapeType.Sphere,
+            ConeAngle = metal.coneAngle,
+            Speed = new Vector2(metal.speedMin, metal.speedMax),
+            Size = new Vector2(metal.sizeMin, metal.sizeMax),
+            Lifetime = new Vector2(metal.lifeMin, metal.lifeMax),
+            Gravity = metal.gravity, Stretch = metal.stretch, Drag = metal.drag,
+            Bounce = metal.bounce, Dampen = metal.dampen, LifetimeLoss = metal.lifetimeLoss,
+            Color = BuildGradient(metal.color), Unscaled = true,
+        });
+        metalPs.GetComponent<ParticleSystemRenderer>().minParticleSize = t.parryMetalMinScreenSize;
+        instance.Register(metalPs, scaleWithStrength: false);
 
         if (projectile)
         {

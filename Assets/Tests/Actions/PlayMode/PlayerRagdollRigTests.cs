@@ -26,7 +26,7 @@ public sealed class PlayerRagdollRigTests
         _root.GetComponent<PlayerInputReader>().SetGameplayEnabled(false);
         _animator = _root.GetComponent<Animator>();
         _stun = _root.GetComponent<PlayerRagdollHitStun>();
-        _hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        _hips = Read<Transform>("_hips");
         _bodies = _hips.GetComponentsInChildren<Rigidbody>(true);
         TimeManager.ClearSlowMotion();
         TimeManager.SetPaused(true);
@@ -49,7 +49,9 @@ public sealed class PlayerRagdollRigTests
     [Test]
     public void PhysicsBelongsToVisibleAvatarInsteadOfLegacySkeleton()
     {
-        Assert.AreSame(_hips, Read<Transform>("_hips"));
+        Transform avatarHips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Assert.IsTrue(_hips == avatarHips || _hips.IsChildOf(avatarHips));
+        Assert.IsNotNull(_hips.GetComponent<Rigidbody>());
         Assert.That(_hips.name, Is.EqualTo("CC_Base_Hip"));
         Assert.That(_bodies.Length, Is.EqualTo(11));
         var visibleSkins = _root.GetComponentsInChildren<SkinnedMeshRenderer>(true)

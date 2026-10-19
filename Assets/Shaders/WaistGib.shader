@@ -120,9 +120,6 @@ Shader "GameJam/EnemyWaistCutout"
                 #endif
                 surface.smoothness *= gloss.a;
             #endif
-            #if defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)
-                surface.smoothness = _Smoothness * base.a;
-            #endif
             surface.occlusion = 1;
             #if defined(_OCCLUSIONMAP)
                 half occlusion = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, input.uv).g;
@@ -163,16 +160,18 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma fragment Frag
             #pragma target 3.0
             // 材质在死亡时才生成，构建时不能按静态材质剔除这些变体。
+            // 变体数 = 本地关键字之积 × URP 全局关键字，砍掉 4 个用不到的轴后 ForwardLit 从 8192 降到 512：
+            //   _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A / _SPECULARHIGHLIGHTS_OFF / _ENVIRONMENTREFLECTIONS_OFF
+            //     —— 敌人材质（EnemyMelee/EnemyRange）从不设置，URP 侧缺省即"开反射/开高光"。
+            //   _LIGHT_LAYERS —— URP-Asset 里 m_SupportsLightLayers=0，URP 永远不开。
+            // 保留 _EMISSION：URP 的 SampleEmission 被这个关键字挡着，砍了就丢自发光（GibMaterialTests 有覆盖）。
             #pragma multi_compile_local _ _NORMALMAP
             #pragma multi_compile_local _ _RECEIVE_SHADOWS_OFF
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
             #pragma multi_compile_local_fragment _ _EMISSION
             #pragma multi_compile_local_fragment _ _METALLICSPECGLOSSMAP
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma multi_compile_local_fragment _ _OCCLUSIONMAP
             #pragma multi_compile_local_fragment _ _SPECULAR_SETUP
-            #pragma multi_compile_local_fragment _ _SPECULARHIGHLIGHTS_OFF
-            #pragma multi_compile_local_fragment _ _ENVIRONMENTREFLECTIONS_OFF
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -181,7 +180,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
             #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #pragma multi_compile_fragment _ _LIGHT_COOKIES
-            #pragma multi_compile _ _LIGHT_LAYERS
             #pragma multi_compile _ _FORWARD_PLUS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             half4 Frag(Varyings input, FRONT_FACE_TYPE frontFace : FRONT_FACE_SEMANTIC) : SV_Target
@@ -215,7 +213,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma vertex ShadowVert
             #pragma fragment Depth
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
             float3 _LightDirection;
             float3 _LightPosition;
@@ -247,7 +244,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma vertex Vert
             #pragma fragment Depth
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             ENDHLSL
         }
         Pass
@@ -259,7 +255,6 @@ Shader "GameJam/EnemyWaistCutout"
             #pragma fragment Normals
             #pragma multi_compile_local _ _NORMALMAP
             #pragma multi_compile_local_fragment _ _ALPHATEST_ON
-            #pragma multi_compile_local_fragment _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             half4 Normals(Varyings input, FRONT_FACE_TYPE frontFace : FRONT_FACE_SEMANTIC) : SV_Target
             {

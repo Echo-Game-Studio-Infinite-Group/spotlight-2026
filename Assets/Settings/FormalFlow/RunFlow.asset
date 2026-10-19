@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c04c9a653cf9384392b158555a74116, type: 3}
+  m_Name: RunFlow
+  m_EditorClassIdentifier: 
+  Seed: 2026
+  InitialChaos: 0
+  MinimumChaos: 0
+  MaximumChaos: 100
+  DeathPenalty: 10
+  VisitWeightMultiplier: 0.25
+  DecayOnlyOnce: 0
+  InitialRoom: {fileID: 11400000, guid: ca646e140a742a44991838abe2d244bc, type: 2}
+  AlwaysStartAtInitialRoom: 1
+  FinalRoom: {fileID: 11400000, guid: 51c5c03ac52258f4d8c244ad1452a0cb, type: 2}
+  NormalPools:
+  - {fileID: 11400000, guid: 112fbcaf01c40f34693bccaf29dc3ce8, type: 2}
+  - {fileID: 11400000, guid: 00d70ef7a5e8341499addc0f7a6ef7c7, type: 2}
+  Loops:
+  - {fileID: 11400000, guid: a4c0a1556959fe64fa398c3c484a8f5c, type: 2}
+  - {fileID: 11400000, guid: 5e1b106aaae196641b7dc5e2d4cac2cb, type: 2}
+  EnableSpecialRoutes: 0
+  ContinueOnlyRooms:
+  - {fileID: 11400000, guid: 73db067ea386a254dba35ec718b59062, type: 2}
+  NegativePool: {fileID: 0}
+  ExceptionalPool: {fileID: 0}
+  ExceptionalChaos: 999
+  FallDamage: 20
+  RestoreHealth: 1
+  ResetEnergy: 1
+  ResetViewOnRecovery: 1
+  ConnectionLength: 8
+  ConnectionGrowth: 2
+  PlacementAttempts: 6
+  RoomClearance: 0.2
+  FloorThickness: 0.3
+  RailThickness: 0.2
+  RailHeight: 2
+  GateThickness: 0.2
+  EntryCommitDistance: 1
+  ConnectionMaterial: {fileID: 2100000, guid: e0a05cf88cfc16642a70fd76d5a4b6c8, type: 2}

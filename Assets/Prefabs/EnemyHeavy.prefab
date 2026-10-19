@@ -306,11 +306,29 @@ MonoBehaviour:
   _damage: 40
   _cooldown: 2
   _windowSeconds: 0
-  _parryWindowSeconds: 0.2
   _parryInvulnerableSeconds: 0.8
-  _parrySlowSeconds: 0.35
-  _parrySlowRate: 0.1
+  _parryStopSeconds: 0.08
+  _parryStopRate: 0
   _parryKind: 1
+  _sourceType: 0
+  _parryTarget:
+    DisplayName: "\u88AB Parry \u6846"
+    AnchorPath: 
+    Center: {x: 0, y: 0.9, z: 0.5}
+    Rotation: {x: 0, y: 0, z: 0}
+    Size: {x: 1.5, y: 1.8, z: 1.5}
+    Start:
+      SegmentId: 
+      RelativeTo: 0
+      OffsetFrames: 0
+    End:
+      SegmentId: 
+      RelativeTo: 3
+      OffsetFrames: 0
+    HitGroup: 1
+    SweepSpacing: 0.1
+  _canBeParried: 1
+  _parryStaggerSeconds: 0.3
 --- !u!114 &8648443380718486350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -362,6 +380,9 @@ MonoBehaviour:
     m_Bits: 243
   _muzzle: {fileID: 8679126172601607079}
   _beam: {fileID: 888422423840382229}
+  _sightMask:
+    serializedVersion: 2
+    m_Bits: 1011
 --- !u!114 &910020001
 MonoBehaviour:
   m_ObjectHideFlags: 0

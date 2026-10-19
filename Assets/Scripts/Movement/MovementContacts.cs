@@ -13,6 +13,8 @@ public sealed class MovementContacts
     private int _normalCount;
     private int _wallContactCount;
     private Vector3 _incoming;
+    private EnemyTopSlide _enemyTop;
+    private Vector3 _enemyTopNormal;
     private bool _sliding;
     private bool _collectHits = true;
     private bool _supported;
@@ -42,6 +44,12 @@ public sealed class MovementContacts
     {
         if (!_collectHits || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         if (_normalCount < _normals.Length) _normals[_normalCount++] = hit.normal;
+        EnemyTopSlide top = hit.collider.GetComponentInParent<EnemyTopSlide>();
+        if (top != null && top.TryGetSlideVelocity(_controller, hit.normal, _incoming, out _))
+        {
+            _enemyTop = top;
+            _enemyTopNormal = hit.normal;
+        }
         if (!IsWall(hit.normal) || ((_params.CollisionMask.value & (1 << hit.gameObject.layer)) == 0)) return;
         RecordWall(hit.point, hit.normal, hit.collider);
     }
@@ -145,10 +153,34 @@ public sealed class MovementContacts
             }
             _supported = hasSupport && (_supported || (last & CollisionFlags.Below) != 0);
         }
+        // 滑到胶囊侧边后法线可能变平；保留已确认的顶部接触，直到身体真正离开。
+        if (_enemyTop != null && _enemyTop.TryGetSlideVelocity(_controller, _enemyTopNormal, velocity, out Vector3 slip))
+        {
+            SlideOffEnemy(slip * dt, pathPoint);
+            // 被身体托住期间不积累下落速度，也不把敌人顶部当作可起跳的地面。
+            velocity.y = 0f;
+            _supported = false;
+        }
+        else _enemyTop = null;
         Grounded = _supported && velocity.y <= 0f;
         if (!Grounded) _support = default;
     }
 
+    private void SlideOffEnemy(Vector3 displacement, System.Action<Vector3> pathPoint)
+    {
+        Vector3 side = Vector3.Cross(Vector3.up, displacement);
+        float remaining = displacement.magnitude;
+        for (int attempt = 0; attempt < 4 && remaining > .0001f; attempt++)
+        {
+            Vector3 direction = attempt == 0 ? displacement : attempt == 1 ? side : attempt == 2 ? -side : -displacement;
+            Vector3 before = _controller.transform.position;
+            // 始终通过原生胶囊碰撞移动；首选方向被墙挡住时，再尝试沿墙侧面离开。
+            AuxiliaryMove(direction.normalized * remaining, pathPoint);
+            float moved = MovementMath.Horizontal(_controller.transform.position - before).magnitude;
+            remaining -= moved;
+            if (moved > displacement.magnitude * .25f) break;
+        }
+    }
     private void AuxiliaryMove(Vector3 displacement, System.Action<Vector3> pathPoint)
     {
         _collectHits = false;
