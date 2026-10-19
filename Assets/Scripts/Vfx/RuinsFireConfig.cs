@@ -426,6 +426,16 @@ namespace Spotlight.VFX
         public SparkPopTune parryPop = new SparkPopTune();
         public SparkRingTune parryRing = new SparkRingTune();
         public SparkSprayTune parrySpray = new SparkSprayTune();
+        [Tooltip("第三人称招架火花：四散越过角色轮廓，不与近身角色碰撞")]
+        public SparkSprayTune parryMetalSparks = new SparkSprayTune
+        {
+            count = 48, speedMin = 4.5f, speedMax = 8f,
+            sizeMin = 0.14f, sizeMax = 0.24f, lifeMin = 0.24f, lifeMax = 0.42f,
+            gravity = 0.8f, stretch = 0.065f, bounce = 0f,
+            color = new SparkGradient { hot = new Color(1f, 0.98f, 0.92f), mid = new Color(1f, 0.66f, 0.26f), extinct = new Color(0.85f, 0.28f, 0.05f) },
+        };
+        [Tooltip("招架金属火花占屏幕高度的最小比例，避免第三人称远景变成亚像素")]
+        [Range(0f, 0.05f)] public float parryMetalMinScreenSize = 0.016f;
         public SparkFlashTune parryLight = new SparkFlashTune();
 
         public SparkPopTune parryProjectilePop = new SparkPopTune

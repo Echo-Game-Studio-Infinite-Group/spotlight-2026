@@ -11,7 +11,7 @@ namespace GameJam.Actions.Editor
     {
         public const string LeftClipPath = "Assets/Animations/Player/LoWall_LDash_Loop_InPlace.anim";
         public const string RightClipPath = "Assets/Animations/Player/LoWall_RDash_Loop_InPlace.anim";
-        public const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
+        public const string RunClipPath = "Assets/Animations/Player/Running_two.anim";
         public const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
         private const string LeftSourcePath = "Assets/Animations/Player/LoWall_LDash_Loop_Root.anim";
         private const string RightSourcePath = "Assets/Animations/Player/LoWall_RDash_Loop_Root.anim";

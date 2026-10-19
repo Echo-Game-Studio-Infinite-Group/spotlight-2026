@@ -77,6 +77,76 @@ public sealed class ActionPlayerIntegrationTests
         Assert.AreEqual(7, tree.children.Length);
     }
 
+    [TestCase(-1f, 0f, -1f, 1f, "Front_L", "Front_L45")]
+    [TestCase(-1f, 1f, 1f, 1f, "Front_L45", "Front_R45")]
+    [TestCase(1f, 1f, 1f, 0f, "Front_R45", "Front_R")]
+    [TestCase(1f, 0f, 1f, -1f, "Front_R", "Back_R45")]
+    [TestCase(1f, -1f, 0f, -1f, "Back_R45", "Back")]
+    [TestCase(0f, -1f, -1f, -1f, "Back", "Back_L45")]
+    [TestCase(-1f, -1f, -1f, 0f, "Back_L45", "Front_L")]
+    public void WalkDirectionChangesBlendRealClipsWithoutRestartingOrDelayingMovement(
+        float fromX, float fromZ, float toX, float toZ, string fromClip, string toClip)
+    {
+        PrepareWalkBlend(new Vector2(fromX, fromZ));
+        Animator animator = _bridge.Animator;
+        float phase = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+        Vector2 target = new Vector2(toX, toZ).normalized;
+        Tick(direction: target);
+        Vector2 blended = new Vector2(animator.GetFloat(PlayerAnimation.WalkXParameter), animator.GetFloat(PlayerAnimation.WalkZParameter));
+        Assert.Greater(Vector2.Distance(blended, target), .01f, "方向动画不能一帧硬切到目标");
+        Assert.That(Vector3.Angle(MovementMath.Horizontal(_motor.Velocity), new Vector3(target.x, 0f, target.y)), Is.LessThan(.01f));
+        AnimatorClipInfo[] clips = animator.GetCurrentAnimatorClipInfo(0);
+        Assert.IsTrue(clips.Any(value => value.clip.name == "Mvm_Jog_" + fromClip && value.weight > .01f && value.weight < .99f));
+        Assert.IsTrue(clips.Any(value => value.clip.name == "Mvm_Jog_" + toClip && value.weight > .01f && value.weight < .99f));
+        Assert.That(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, Is.InRange(phase, phase + .1f));
+        for (int i = 0; i < 60; i++) Tick(direction: target);
+        Assert.IsTrue(animator.GetCurrentAnimatorClipInfo(0).Any(value => value.clip.name == "Mvm_Jog_" + toClip && value.weight > .99f));
+    }
+
+    [Test]
+    public void WalkBlendDoesNotAdvanceDuringZeroTimeBoundarySamples()
+    {
+        PrepareWalkBlend(Vector2.left);
+        Animator animator = _bridge.Animator;
+        Vector2 before = new Vector2(animator.GetFloat(PlayerAnimation.WalkXParameter), animator.GetFloat(PlayerAnimation.WalkZParameter));
+        float rate = animator.GetFloat(PlayerAnimation.WalkRateParameter);
+        _motor.SetHorizontalSpeed(_motor.Params.WalkSpeed * 2f);
+        _motor.Simulate(new PlayerInputFrame { Move = new Vector2(-1f, 1f) }, 1f / 60f, TimeManager.UnscaledTime);
+        for (int i = 0; i < 10; i++) _bridge.Sample(default, 0f);
+        Assert.AreEqual(before.x, animator.GetFloat(PlayerAnimation.WalkXParameter));
+        Assert.AreEqual(before.y, animator.GetFloat(PlayerAnimation.WalkZParameter));
+        Assert.AreEqual(rate, animator.GetFloat(PlayerAnimation.WalkRateParameter));
+        _bridge.Sample(default, 1f / 60f);
+        Assert.Greater(animator.GetFloat(PlayerAnimation.WalkZParameter), before.y);
+        Assert.That(animator.GetFloat(PlayerAnimation.WalkRateParameter), Is.InRange(rate,
+            _motor.HorizontalSpeed / _motor.Params.WalkSpeed));
+        Assert.Less(animator.GetFloat(PlayerAnimation.WalkRateParameter), _motor.HorizontalSpeed / _motor.Params.WalkSpeed);
+    }
+
+    [Test]
+    public void EnteringWalkAgainUsesCurrentDirectionInsteadOfPreviousWalk()
+    {
+        PrepareWalkBlend(Vector2.left);
+        Tick();
+        Vector2 target = new Vector2(1f, -1f).normalized;
+        Tick(direction: target);
+        Assert.That(_bridge.Animator.GetFloat(PlayerAnimation.WalkXParameter), Is.EqualTo(target.x).Within(.001f));
+        Assert.That(_bridge.Animator.GetFloat(PlayerAnimation.WalkZParameter), Is.EqualTo(target.y).Within(.001f));
+    }
+
+    private void PrepareWalkBlend(Vector2 direction)
+    {
+        Ground();
+        _motor.Params.GroundFriction = 0f;
+        _motor.Params.Pump = PumpMode.VerbatimQuake;
+        var reference = new GameObject("WalkBlendReference"); _created.Add(reference);
+        _motor.SetMovementReference(reference.transform);
+        _root.transform.rotation = Quaternion.identity;
+        _motor.SetHorizontalSpeed(0f);
+        for (int i = 0; i < 60; i++) Tick(direction: direction);
+        Assert.AreEqual(PlayerAnimation.MotionStateWalk, _root.GetComponentInChildren<PlayerAnimation>().CurrentMotionState);
+    }
+
     [TestCase(-1f, "Back_L45")]
     [TestCase(0f, "Back")]
     [TestCase(1f, "Back_R45")]

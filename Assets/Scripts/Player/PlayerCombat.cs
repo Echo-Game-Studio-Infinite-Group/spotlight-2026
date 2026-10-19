@@ -175,7 +175,11 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
         if (contacts.Count == 0) return;
         EnsureReferences();
         if (_self != null) _self.GrantInvulnerability(Combat.ParryInvulnerableSeconds);
-        TimeManager.ParryStop(Combat.ParryStopSeconds, Combat.ParryStopRate);
+        // 混合招架保留近战的时停，纯子弹招架也不能清掉此前已生效的时间效果。
+        bool stopTime = false;
+        foreach (ParryContact contact in contacts)
+            stopTime |= contact.SourceType != AttackSourceType.Projectile;
+        if (stopTime) TimeManager.ParryStop(Combat.ParryStopSeconds, Combat.ParryStopRate);
         _runner?.CancelForParry();
         if (_runner == null) { ResetAttackState(); Combat.FinishAttack(); }
         VCameraEffects.PlayParryZoom();
@@ -185,10 +189,10 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
             disadvantage |= contact.Kind == AttackParryKind.Disadvantage;
             if (contact.SourceType == AttackSourceType.Projectile || contact.SourceType == AttackSourceType.Beam)
                 CombatSparks.PlayParryProjectile(contact.Point, contact.Direction);
-            else CombatSparks.PlayParry(contact.Point);
+            else CombatSparks.PlayParry(contact.Point, contact.Direction);
         }
         if (disadvantage) ApplyDisadvantageKnockback();
-        if (_logParry) Debug.Log($"[PlayerCombat] 拼刀成功：{contacts.Count} 个攻击，时停 {Combat.ParryStopSeconds:0.##} 秒", this);
+        if (_logParry) Debug.Log($"[PlayerCombat] 拼刀成功：{contacts.Count} 个攻击，时停 {(stopTime ? Combat.ParryStopSeconds : 0f):0.##} 秒", this);
         ParrySucceeded?.Invoke(contacts);
     }
 

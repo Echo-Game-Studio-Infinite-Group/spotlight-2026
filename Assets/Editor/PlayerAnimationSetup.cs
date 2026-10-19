@@ -11,7 +11,7 @@ public static class PlayerAnimationSetup
     // 片段路径写成常量：这几个 fbx 在工程整理时被改过名（Idle (1).fbx → Idle.fbx、
     // Soccer Tackle.fbx → Tackle.fbx），散落在代码里的硬编码路径会直接抛「动画片段缺失」。
     private const string IdleClipPath = "Assets/Animations/fbx/Idle.fbx";
-    private const string RunClipPath = "Assets/Animations/fbx/Running.fbx";
+    private const string RunClipPath = GameJam.Actions.Editor.PlayerLocomotionAnimatorSetup.RunClipPath;
     private const string JumpClipPath = "Assets/Animations/fbx/Jump.fbx";
     private const string SlideClipPath = "Assets/Animations/fbx/Running Slide.fbx";
     private const string AttackParameterName = "IsAttacking";

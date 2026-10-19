@@ -1459,6 +1459,9 @@ Unity.exe -batchmode -nographics `
   高：80..100 -> Play_Music_Run   -> Run.wav
   ```
 - 三首战斗音乐均为循环、3D、`-10 dB`；MainMenu 的 SnowPeak 保持固定播放。
+- 最新 dev 将主菜单入口切到 `FormalFlowGame` 后，新场景的 MusicController
+  未继承混乱度跟随字段；现已同步为 `0..30 / 31..79 / 80..100` 三档，
+  避免正式流程只播放固定 `Run`。
 - Wwise 工程重新校验并生成 `OneTimeAction` / `Music` Bank，已同步到
   `Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows`。
 
