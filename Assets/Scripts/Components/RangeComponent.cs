@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // 远程层只负责蓄力与生成子弹；伤害及 Parry 统一由每颗子弹的 CombatComponent 结算。
 //
@@ -55,6 +55,9 @@ public sealed class RangeComponent : MonoBehaviour
 
     /// <summary>配置齐了没有。AI 用它决定「这个敌人会不会远程」。</summary>
     public bool CanFire => _projectilePrefab != null;
+    public bool IsCharging => _charging;
+    public float TelegraphSeconds => _telegraphSeconds;
+    public event System.Action Fired;
 
     private void Awake()
     {
@@ -90,31 +93,25 @@ public sealed class RangeComponent : MonoBehaviour
     /// </summary>
     public bool TryFire(float now, Transform target, HealthComponent targetHealth)
     {
-        // 第二段：预警窗口到点 → 真正出膛。
-        // Enemy 每个逻辑步都会再调一次这里，所以不需要额外的 Update / Tick。
+        // 蓄力中也要先验证目标，不能等前摇结束才取消过期的瞄准。
         if (_charging)
         {
-            if (now < _chargeUntil) return false;           // 还在预警，等着
-
-            _charging = false;
-            _combat.FinishAttack();
-            // 预警期间目标死了 / 丢了 / 躲到墙后 → 这一次作废，别隔墙打空气
-            if (target == null || targetHealth == null || !targetHealth.IsAlive || !HasLineOfSight(target))
+            if (target == null || targetHealth == null || !targetHealth.IsAlive || !CanFire
+                || !IsInRange(target) || !HasLineOfSight(target))
             {
-                StopTelegraph();
+                CancelCharge();
                 return false;
             }
+            if (now < _chargeUntil) return false;
+            _charging = false;
+            _combat.FinishAttack();
             return Fire(target);
         }
 
         if (target == null || targetHealth == null || !targetHealth.IsAlive) return false;
         if (!CanFire) return false;
         if (now < _readyAt) return false;
-
-        // 射程按「水平距离」算（与敌人的近战判定同口径）
-        Vector3 flat = SightCheck.AimPoint(target) - Muzzle.position;
-        flat.y = 0f;
-        if (flat.magnitude > _range) return false;
+        if (!IsInRange(target)) return false;
 
         // 隔墙不索敌：射程内但视线被挡就不开火，也不亮预警、不扣冷却。
         // 放在扣冷却之前——「看不到」不该算一次开火机会。
@@ -136,6 +133,22 @@ public sealed class RangeComponent : MonoBehaviour
         return Fire(target);
     }
 
+    public void CancelCharge()
+    {
+        if (!_charging) return;
+        _charging = false;
+        _combat.FinishAttack();
+        StopTelegraph();
+    }
+
+    // 与原有射程保持同一口径：枪口到目标的水平距离，不受高度差影响。
+    private bool IsInRange(Transform target)
+    {
+        Vector3 flat = SightCheck.AimPoint(target) - Muzzle.position;
+        flat.y = 0f;
+        return flat.sqrMagnitude <= _range * _range;
+    }
+
     // 真正生成子弹：秒发路径和预警路径共用的出口。
     // 瞄准点在「出膛这一刻」重算 —— 策划案写的是「始终瞄准发射时人物所在位置」，不做追踪。
     private bool Fire(Transform target)
@@ -148,6 +161,7 @@ public sealed class RangeComponent : MonoBehaviour
         GameObject instance = _pool.Spawn(_projectilePrefab.gameObject, origin, Quaternion.identity);
         if (instance == null) return false;
         instance.GetComponent<Projectile>().Launch(direction, this);
+        Fired?.Invoke();
         StopTelegraph();
         return true;
     }
