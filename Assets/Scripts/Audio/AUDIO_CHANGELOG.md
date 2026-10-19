@@ -1475,6 +1475,19 @@ Logs/audio-parry-chaos-music-compile.log
 
 本次仍未 commit。
 
+## 2026-10-20：混乱度 HUD 空引用中断换曲与装置破坏
+
+- `ChaosDisplay.prefab` 中 `_maximumText`、`_stateText` 未绑定，导致
+  `ChaosHUD.Refresh()` 在 `ChaosService.Changed` 回调中抛空引用。
+- 多播事件被该异常中断，后续 `WwiseMusicSource.OnChaosChanged` 收不到通知，
+  所以混乱度已经变成 40，音乐仍停在 `Stand`。
+- 同一异常使 `RunFlowController.TryBreakDevice()` 未返回成功，
+  `StabilityDevice` 没执行隐藏/关碰撞，表现为“装置没碎但混乱度加了”。
+- `ChaosHUD` 现已把最大值、状态文字和数字槽位按可选 UI 处理，避免再次中断
+  混乱度事件链。
+
+本次仍未 commit。
+
 ## 2026-10-06：动态动作源显式注册
 
 - 新增 `WwiseAudioRegistry`。
