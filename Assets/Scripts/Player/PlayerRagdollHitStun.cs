@@ -80,6 +80,8 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private bool _active;
 
     public bool IsActive => _active;
+    // 空中布娃娃只移动骨骼；根节点要等落地起身才对齐，掉落检测不能继续读取旧位置。
+    public Vector3 FallCheckPosition => _active && !_inGetUp && _hips != null ? _hips.position : transform.position;
 
     private void Awake()
     {

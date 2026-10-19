@@ -259,6 +259,75 @@ public sealed class PlayerRagdollRecoveryTests
         Assert.IsFalse(_animator.enabled);
     }
 
+    private void DropRagdollBelow(float height)
+    {
+        Transform hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Rigidbody[] bodies = hips.GetComponentsInChildren<Rigidbody>();
+        var positions = new Vector3[bodies.Length];
+        for (int i = 0; i < bodies.Length; i++) positions[i] = bodies[i].transform.position;
+        Vector3 offset = Vector3.up * (height - hips.position.y);
+        for (int i = 0; i < bodies.Length; i++) bodies[i].transform.position = positions[i] + offset;
+        Physics.SyncTransforms();
+    }
+
+    private void CheckFall() => typeof(PlayerRespawn)
+        .GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic)
+        .Invoke(_root.GetComponent<PlayerRespawn>(), null);
+
+    [Test]
+    public void RagdollFallUsesBodyHeightAndKeepsRejectedRecoveryUnderFlowControl()
+    {
+        PlayerRespawn respawn = _root.GetComponent<PlayerRespawn>();
+        Vector3 start = _root.transform.position;
+        respawn.SetCheckpoint(start, start.y - 10f);
+        int falls = 0;
+        respawn.SetFallHandler(() => { falls++; return false; });
+        _hitStun.EnterHitStun();
+        CheckFall();
+        Assert.AreEqual(0, falls);
+        DropRagdollBelow(respawn.KillHeight - 2f);
+        Assert.AreEqual(start, _root.transform.position);
+        Assert.Less(respawn.FallCheckPosition.y, respawn.KillHeight);
+        CheckFall();
+        Assert.AreEqual(1, falls);
+        Assert.IsTrue(_hitStun.IsActive, "流程拒绝期间不能绕过加载锁自行恢复控制");
+        Assert.AreEqual(start, _root.transform.position);
+    }
+
+    [Test]
+    public void StandaloneRagdollFallReturnsToCheckpointAndRestoresControls()
+    {
+        TimeManager.SetPaused(false);
+        _input.SetGameplayEnabled(true);
+        PlayerRespawn respawn = _root.GetComponent<PlayerRespawn>();
+        Vector3 checkpoint = _root.transform.position + Vector3.forward * 10f;
+        respawn.SetCheckpoint(checkpoint, _root.transform.position.y - 10f);
+        _hitStun.EnterHitStun();
+        DropRagdollBelow(respawn.KillHeight - 2f);
+        CheckFall();
+        Assert.AreEqual(checkpoint, _root.transform.position);
+        Assert.IsFalse(_hitStun.IsActive);
+        Assert.IsTrue(_controller.enabled);
+        Assert.IsTrue(_motor.enabled);
+        Assert.IsTrue(_runner.IsConnected);
+        Assert.IsTrue(_input.GameplayEnabled);
+        foreach (Rigidbody body in _animator.GetBoneTransform(HumanBodyBones.Hips).GetComponentsInChildren<Rigidbody>())
+            Assert.IsTrue(body.isKinematic);
+        Assert.AreEqual(Vector3.zero, _motor.Velocity);
+    }
+
+    [Test]
+    public void StandingFallStillUsesRootHeight()
+    {
+        PlayerRespawn respawn = _root.GetComponent<PlayerRespawn>();
+        Vector3 checkpoint = _root.transform.position;
+        respawn.SetCheckpoint(checkpoint, checkpoint.y - 10f);
+        _motor.Teleport(checkpoint + Vector3.down * 10.1f);
+        CheckFall();
+        Assert.AreEqual(checkpoint, _root.transform.position);
+        Assert.IsFalse(_hitStun.IsActive);
+    }
+
     [TestCase(30f, true)]
     [TestCase(80f, false)]
     [TestCase(90f, false)]

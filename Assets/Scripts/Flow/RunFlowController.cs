@@ -152,7 +152,8 @@ namespace GameJam.Flow
         {
             if (!IsReady || IsBusy || IsComplete || TimeManager.IsPaused || TimeManager.PlayerFixedDeltaTime <= 0f) return;
             Vector3 position = _motor.transform.position;
-            if (position.y < CurrentRoom.Position.y + CurrentRoom.Root.FallHeight) { HandleFall(); return; }
+            Vector3 fallPosition = _respawn != null ? _respawn.FallCheckPosition : position;
+            if (fallPosition.y < CurrentRoom.Position.y + CurrentRoom.Root.FallHeight) { HandleFall(); return; }
             FlowCheckpoint best = null;
             foreach (FlowCheckpoint checkpoint in CurrentRoom.Root.Checkpoints)
                 if (checkpoint.gameObject.activeInHierarchy && checkpoint.Poll(_previous, position) && (best == null || checkpoint.Priority > best.Priority)) best = checkpoint;
@@ -219,6 +220,7 @@ namespace GameJam.Flow
         public bool Recover(bool death)
         {
             if (IsBusy || IsComplete || Checkpoints.Room == null) return false;
+            _respawn?.PrepareForRecovery();
             IsBusy = true; _revision++; LockPlayer();
             if (death) Chaos.ApplyDeath(Checkpoints.AllowNegativeChaos);
             StartCoroutine(RecoverAtCheckpoint(death)); return true;
