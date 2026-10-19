@@ -1,0 +1,1349 @@
+{
+  "kit": "GREEBLE_KIT",
+  "version": "v1",
+  "units": "meters",
+  "generator": "scripts/greeble_kit/gen_greeble.py",
+  "texture_generator": "scripts/greeble_kit/gen_greeble_tex.py",
+  "fbx_axis": {
+    "axis_forward": "Y",
+    "axis_up": "Z",
+    "note": "Blender native Z-up; Unity converts to Y-up. Blender +Y -> Unity +Z, Blender +Z -> Unity +Y."
+  },
+  "origin_convention": "每件原点 = 安装面中心；墙面件背面 Y=0 朝 +Y，地面/平台件底面 Z=0 朝 +Z，顶棚灯安装面 Z=0、发光面朝下。FBX 内每件都在原点，Unity 侧摆放。",
+  "chamfer": "结构 8–12 mm，细节 5 mm，45°；贴合件倒角形成 135° 内角；六角螺栓对边 26–38 mm。",
+  "texture_convention": {
+    "BC": "sRGB base color",
+    "N": "tangent-space normal, OpenGL +Y (Unity default)",
+    "MS": "R=Metallic, G=Roughness, A=Smoothness (URP metallic-smoothness)",
+    "AO": "grayscale ambient occlusion",
+    "E": "sRGB emission (<=1.0)",
+    "density": "4–6 mm/px nominal, UV 0–1"
+  },
+  "items": [
+    {
+      "id": "CABLE_TRAY_2m",
+      "asset": "SM_Greeble_CABLE_TRAY_2m",
+      "fbx": "CABLE_TRAY_2m/SM_Greeble_CABLE_TRAY_2m.fbx",
+      "folder": "CABLE_TRAY_2m",
+      "dims_m": [
+        2.0,
+        0.3,
+        0.2126
+      ],
+      "max_dim_m": 2.0,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 2216,
+      "vertices": 1158,
+      "materials": {
+        "slots": [
+          "M_Greeble_CABLE_TRAY_2m"
+        ],
+        "zones": [
+          "paint2",
+          "paint",
+          "hose_gold",
+          "hose_blue",
+          "rubber",
+          "dark",
+          "metal",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "CABLE_TRAY_2m/T_Greeble_CABLE_TRAY_2m_BC.png",
+        "N": "CABLE_TRAY_2m/T_Greeble_CABLE_TRAY_2m_N.png",
+        "MS": "CABLE_TRAY_2m/T_Greeble_CABLE_TRAY_2m_MS.png",
+        "AO": "CABLE_TRAY_2m/T_Greeble_CABLE_TRAY_2m_AO.png",
+        "E": "CABLE_TRAY_2m/T_Greeble_CABLE_TRAY_2m_E.png"
+      },
+      "texture_resolution_px": 448,
+      "mm_per_px": 4.46,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "2.0 m 桥架 + 3 根波纹管（金/蓝/黑），3 组墙撑，背轨 10 颗螺栓",
+      "stats": {
+        "id": "CABLE_TRAY_2m",
+        "texture_set": "T_Greeble_CABLE_TRAY_2m",
+        "resolution_px": [
+          448,
+          448
+        ],
+        "mm_per_px": 4.46,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.45
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0096,
+        "accent_area_fraction": 0.003,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "CONDUIT_RUN_3m",
+      "asset": "SM_Greeble_CONDUIT_RUN_3m",
+      "fbx": "CONDUIT_RUN_3m/SM_Greeble_CONDUIT_RUN_3m.fbx",
+      "folder": "CONDUIT_RUN_3m",
+      "dims_m": [
+        2.98,
+        0.165,
+        0.28
+      ],
+      "max_dim_m": 2.98,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 2312,
+      "vertices": 1216,
+      "materials": {
+        "slots": [
+          "M_Greeble_CONDUIT_RUN_3m"
+        ],
+        "zones": [
+          "paint2",
+          "metal",
+          "dark",
+          "accent_c"
+        ]
+      },
+      "textures": {
+        "BC": "CONDUIT_RUN_3m/T_Greeble_CONDUIT_RUN_3m_BC.png",
+        "N": "CONDUIT_RUN_3m/T_Greeble_CONDUIT_RUN_3m_N.png",
+        "MS": "CONDUIT_RUN_3m/T_Greeble_CONDUIT_RUN_3m_MS.png",
+        "AO": "CONDUIT_RUN_3m/T_Greeble_CONDUIT_RUN_3m_AO.png",
+        "E": "CONDUIT_RUN_3m/T_Greeble_CONDUIT_RUN_3m_E.png"
+      },
+      "texture_resolution_px": 640,
+      "mm_per_px": 4.69,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "cyan",
+        "hex": "#0D9DBA",
+        "srgb": [
+          0.0511,
+          0.6168,
+          0.73
+        ]
+      },
+      "label": null,
+      "notes": "2 大 1 小管线，4 组卡箍，青色小导视环",
+      "stats": {
+        "id": "CONDUIT_RUN_3m",
+        "texture_set": "T_Greeble_CONDUIT_RUN_3m",
+        "resolution_px": [
+          640,
+          640
+        ],
+        "mm_per_px": 4.69,
+        "body_zone": "paint2",
+        "body_srgb": {
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.4758,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0089,
+        "accent_area_fraction": 0.0075,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "VENT_GRILLE_1m",
+      "asset": "SM_Greeble_VENT_GRILLE_1m",
+      "fbx": "VENT_GRILLE_1m/SM_Greeble_VENT_GRILLE_1m.fbx",
+      "folder": "VENT_GRILLE_1m",
+      "dims_m": [
+        1.0,
+        0.14,
+        0.6
+      ],
+      "max_dim_m": 1.0,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 792,
+      "vertices": 432,
+      "materials": {
+        "slots": [
+          "M_Greeble_VENT_GRILLE_1m"
+        ],
+        "zones": [
+          "paint",
+          "paint2",
+          "dark",
+          "metal",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "VENT_GRILLE_1m/T_Greeble_VENT_GRILLE_1m_BC.png",
+        "N": "VENT_GRILLE_1m/T_Greeble_VENT_GRILLE_1m_N.png",
+        "MS": "VENT_GRILLE_1m/T_Greeble_VENT_GRILLE_1m_MS.png",
+        "AO": "VENT_GRILLE_1m/T_Greeble_VENT_GRILLE_1m_AO.png",
+        "E": "VENT_GRILLE_1m/T_Greeble_VENT_GRILLE_1m_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 3.91,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "内凹 60 mm，8 片 45° 叶片，四角螺栓",
+      "stats": {
+        "id": "VENT_GRILLE_1m",
+        "texture_set": "T_Greeble_VENT_GRILLE_1m",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 3.91,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0029,
+        "accent_area_fraction": 0.0012,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "ACCESS_HATCH_0.8m",
+      "asset": "SM_Greeble_ACCESS_HATCH_0.8m",
+      "fbx": "ACCESS_HATCH_0.8m/SM_Greeble_ACCESS_HATCH_0.8m.fbx",
+      "folder": "ACCESS_HATCH_0.8m",
+      "dims_m": [
+        0.8,
+        0.12,
+        0.6
+      ],
+      "max_dim_m": 0.8,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 836,
+      "vertices": 456,
+      "materials": {
+        "slots": [
+          "M_Greeble_ACCESS_HATCH_0.8m"
+        ],
+        "zones": [
+          "paint2",
+          "paint",
+          "metal",
+          "dark",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "ACCESS_HATCH_0.8m/T_Greeble_ACCESS_HATCH_0.8m_BC.png",
+        "N": "ACCESS_HATCH_0.8m/T_Greeble_ACCESS_HATCH_0.8m_N.png",
+        "MS": "ACCESS_HATCH_0.8m/T_Greeble_ACCESS_HATCH_0.8m_MS.png",
+        "AO": "ACCESS_HATCH_0.8m/T_Greeble_ACCESS_HATCH_0.8m_AO.png",
+        "E": "ACCESS_HATCH_0.8m/T_Greeble_ACCESS_HATCH_0.8m_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 3.12,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "四点螺栓 + 拉手 + 合页 + 橙色警示标签",
+      "stats": {
+        "id": "ACCESS_HATCH_0.8m",
+        "texture_set": "T_Greeble_ACCESS_HATCH_0.8m",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 3.12,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0192,
+        "accent_area_fraction": 0.0171,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "JUNCTION_BOX",
+      "asset": "SM_Greeble_JUNCTION_BOX",
+      "fbx": "JUNCTION_BOX/SM_Greeble_JUNCTION_BOX.fbx",
+      "folder": "JUNCTION_BOX",
+      "dims_m": [
+        0.4,
+        0.23,
+        0.505
+      ],
+      "max_dim_m": 0.505,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 1312,
+      "vertices": 696,
+      "materials": {
+        "slots": [
+          "M_Greeble_JUNCTION_BOX"
+        ],
+        "zones": [
+          "paint2",
+          "paint",
+          "dark",
+          "metal",
+          "glow_c",
+          "accent_c"
+        ]
+      },
+      "textures": {
+        "BC": "JUNCTION_BOX/T_Greeble_JUNCTION_BOX_BC.png",
+        "N": "JUNCTION_BOX/T_Greeble_JUNCTION_BOX_N.png",
+        "MS": "JUNCTION_BOX/T_Greeble_JUNCTION_BOX_MS.png",
+        "AO": "JUNCTION_BOX/T_Greeble_JUNCTION_BOX_AO.png",
+        "E": "JUNCTION_BOX/T_Greeble_JUNCTION_BOX_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 1.95,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [
+        "status_lens"
+      ],
+      "accent": {
+        "name": "cyan",
+        "hex": "#0D9DBA",
+        "srgb": [
+          0.0511,
+          0.6168,
+          0.73
+        ]
+      },
+      "label": null,
+      "notes": "0.4×0.5 m 箱体，青色发光状态灯，底部双电缆格兰头",
+      "stats": {
+        "id": "JUNCTION_BOX",
+        "texture_set": "T_Greeble_JUNCTION_BOX",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 1.95,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.3,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.009,
+        "accent_area_fraction": 0.0037,
+        "emissive_coverage": 0.0085,
+        "emission_max": [
+          0.349,
+          0.902,
+          1.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "PIPE_VERTICAL_3m",
+      "asset": "SM_Greeble_PIPE_VERTICAL_3m",
+      "fbx": "PIPE_VERTICAL_3m/SM_Greeble_PIPE_VERTICAL_3m.fbx",
+      "folder": "PIPE_VERTICAL_3m",
+      "dims_m": [
+        0.3,
+        0.278,
+        3.0
+      ],
+      "max_dim_m": 3.0,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 1924,
+      "vertices": 1024,
+      "materials": {
+        "slots": [
+          "M_Greeble_PIPE_VERTICAL_3m"
+        ],
+        "zones": [
+          "metal",
+          "paint2",
+          "dark",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "PIPE_VERTICAL_3m/T_Greeble_PIPE_VERTICAL_3m_BC.png",
+        "N": "PIPE_VERTICAL_3m/T_Greeble_PIPE_VERTICAL_3m_N.png",
+        "MS": "PIPE_VERTICAL_3m/T_Greeble_PIPE_VERTICAL_3m_MS.png",
+        "AO": "PIPE_VERTICAL_3m/T_Greeble_PIPE_VERTICAL_3m_AO.png",
+        "E": "PIPE_VERTICAL_3m/T_Greeble_PIPE_VERTICAL_3m_E.png"
+      },
+      "texture_resolution_px": 640,
+      "mm_per_px": 4.69,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "立管 + 2 道法兰（各 6 螺栓）+ 3 组墙卡箍 + 橙色管带",
+      "stats": {
+        "id": "PIPE_VERTICAL_3m",
+        "texture_set": "T_Greeble_PIPE_VERTICAL_3m",
+        "resolution_px": [
+          640,
+          640
+        ],
+        "mm_per_px": 4.69,
+        "body_zone": "paint2",
+        "body_srgb": {
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.4758,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0115,
+        "accent_area_fraction": 0.022,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "RAILING_2m",
+      "asset": "SM_Greeble_RAILING_2m",
+      "fbx": "RAILING_2m/SM_Greeble_RAILING_2m.fbx",
+      "folder": "RAILING_2m",
+      "dims_m": [
+        2.03,
+        0.13,
+        1.101
+      ],
+      "max_dim_m": 2.03,
+      "mount": "floor",
+      "forward": "+Z",
+      "forward_unity": "+Y",
+      "origin": "installation face center",
+      "install_face": "bottom plane Z=0",
+      "triangles": 1372,
+      "vertices": 720,
+      "materials": {
+        "slots": [
+          "M_Greeble_RAILING_2m"
+        ],
+        "zones": [
+          "paint",
+          "dark",
+          "accent_y",
+          "metal"
+        ]
+      },
+      "textures": {
+        "BC": "RAILING_2m/T_Greeble_RAILING_2m_BC.png",
+        "N": "RAILING_2m/T_Greeble_RAILING_2m_N.png",
+        "MS": "RAILING_2m/T_Greeble_RAILING_2m_MS.png",
+        "AO": "RAILING_2m/T_Greeble_RAILING_2m_AO.png",
+        "E": "RAILING_2m/T_Greeble_RAILING_2m_E.png"
+      },
+      "texture_resolution_px": 448,
+      "mm_per_px": 4.46,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "safety-orange",
+        "hex": "#BF8717",
+        "srgb": [
+          0.75,
+          0.53,
+          0.09
+        ]
+      },
+      "label": null,
+      "notes": "细圆管钢双横杆 + 3 立柱，深灰主体 + 三段黄橙导视",
+      "stats": {
+        "id": "RAILING_2m",
+        "texture_set": "T_Greeble_RAILING_2m",
+        "resolution_px": [
+          448,
+          448
+        ],
+        "mm_per_px": 4.46,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.43
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0428,
+        "accent_area_fraction": 0.0571,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "LADDER_3m",
+      "asset": "SM_Greeble_LADDER_3m",
+      "fbx": "LADDER_3m/SM_Greeble_LADDER_3m.fbx",
+      "folder": "LADDER_3m",
+      "dims_m": [
+        0.718,
+        0.459,
+        3.01
+      ],
+      "max_dim_m": 3.01,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 2060,
+      "vertices": 1096,
+      "materials": {
+        "slots": [
+          "M_Greeble_LADDER_3m"
+        ],
+        "zones": [
+          "metal",
+          "dark",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "LADDER_3m/T_Greeble_LADDER_3m_BC.png",
+        "N": "LADDER_3m/T_Greeble_LADDER_3m_N.png",
+        "MS": "LADDER_3m/T_Greeble_LADDER_3m_MS.png",
+        "AO": "LADDER_3m/T_Greeble_LADDER_3m_AO.png",
+        "E": "LADDER_3m/T_Greeble_LADDER_3m_E.png"
+      },
+      "texture_resolution_px": 640,
+      "mm_per_px": 4.69,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "10 踏棍 + 5 道 U 形护笼 + 3 根竖向护笼条 + 墙撑",
+      "stats": {
+        "id": "LADDER_3m",
+        "texture_set": "T_Greeble_LADDER_3m",
+        "resolution_px": [
+          640,
+          640
+        ],
+        "mm_per_px": 4.69,
+        "body_zone": "metal",
+        "body_srgb": {
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.5386,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.42
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0094,
+        "accent_area_fraction": 0.0075,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "SUPPORT_BRACKET",
+      "asset": "SM_Greeble_SUPPORT_BRACKET",
+      "fbx": "SUPPORT_BRACKET/SM_Greeble_SUPPORT_BRACKET.fbx",
+      "folder": "SUPPORT_BRACKET",
+      "dims_m": [
+        0.4,
+        0.36,
+        0.5
+      ],
+      "max_dim_m": 0.5,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 428,
+      "vertices": 234,
+      "materials": {
+        "slots": [
+          "M_Greeble_SUPPORT_BRACKET"
+        ],
+        "zones": [
+          "paint2",
+          "paint",
+          "metal",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "SUPPORT_BRACKET/T_Greeble_SUPPORT_BRACKET_BC.png",
+        "N": "SUPPORT_BRACKET/T_Greeble_SUPPORT_BRACKET_N.png",
+        "MS": "SUPPORT_BRACKET/T_Greeble_SUPPORT_BRACKET_MS.png",
+        "AO": "SUPPORT_BRACKET/T_Greeble_SUPPORT_BRACKET_AO.png",
+        "E": "SUPPORT_BRACKET/T_Greeble_SUPPORT_BRACKET_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 1.95,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "三角撑 + 水平托板 + 底板 6 螺栓 + 橙色端条",
+      "stats": {
+        "id": "SUPPORT_BRACKET",
+        "texture_set": "T_Greeble_SUPPORT_BRACKET",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 1.95,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": null,
+        "dark_luma": null,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0291,
+        "accent_area_fraction": 0.0186,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "LIGHT_FIXTURE_1.2m",
+      "asset": "SM_Greeble_LIGHT_FIXTURE_1.2m",
+      "fbx": "LIGHT_FIXTURE_1.2m/SM_Greeble_LIGHT_FIXTURE_1.2m.fbx",
+      "folder": "LIGHT_FIXTURE_1.2m",
+      "dims_m": [
+        1.2,
+        0.2073,
+        0.19
+      ],
+      "max_dim_m": 1.2,
+      "mount": "ceiling",
+      "forward": "-Z (emit down)",
+      "forward_unity": "-Y (emit down)",
+      "origin": "installation face center",
+      "install_face": "top plane Z=0, emits downward",
+      "triangles": 912,
+      "vertices": 496,
+      "materials": {
+        "slots": [
+          "M_Greeble_LIGHT_FIXTURE_1.2m"
+        ],
+        "zones": [
+          "paint2",
+          "metal",
+          "paint",
+          "dark",
+          "glow_w",
+          "accent_c"
+        ]
+      },
+      "textures": {
+        "BC": "LIGHT_FIXTURE_1.2m/T_Greeble_LIGHT_FIXTURE_1.2m_BC.png",
+        "N": "LIGHT_FIXTURE_1.2m/T_Greeble_LIGHT_FIXTURE_1.2m_N.png",
+        "MS": "LIGHT_FIXTURE_1.2m/T_Greeble_LIGHT_FIXTURE_1.2m_MS.png",
+        "AO": "LIGHT_FIXTURE_1.2m/T_Greeble_LIGHT_FIXTURE_1.2m_AO.png",
+        "E": "LIGHT_FIXTURE_1.2m/T_Greeble_LIGHT_FIXTURE_1.2m_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 4.69,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [
+        "diffuser"
+      ],
+      "accent": {
+        "name": "cyan",
+        "hex": "#0D9DBA",
+        "srgb": [
+          0.0511,
+          0.6168,
+          0.73
+        ]
+      },
+      "label": null,
+      "notes": "吊杆 + 灯体 + 反光罩，发光扩散板朝下（E 图独立）",
+      "stats": {
+        "id": "LIGHT_FIXTURE_1.2m",
+        "texture_set": "T_Greeble_LIGHT_FIXTURE_1.2m",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 4.69,
+        "body_zone": "paint",
+        "body_srgb": {
+          "paint": [
+            0.502,
+            0.502,
+            0.502
+          ],
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.502,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.3,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0067,
+        "accent_area_fraction": 0.0027,
+        "emissive_coverage": 0.1966,
+        "emission_max": [
+          0.949,
+          1.0,
+          1.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "SIGN_PLATE_0.6m",
+      "asset": "SM_Greeble_SIGN_PLATE_0.6m",
+      "fbx": "SIGN_PLATE_0.6m/SM_Greeble_SIGN_PLATE_0.6m.fbx",
+      "folder": "SIGN_PLATE_0.6m",
+      "dims_m": [
+        0.6,
+        0.029,
+        0.3
+      ],
+      "max_dim_m": 0.6,
+      "mount": "wall",
+      "forward": "+Y",
+      "forward_unity": "+Z",
+      "origin": "installation face center",
+      "install_face": "back plane Y=0.0",
+      "triangles": 592,
+      "vertices": 318,
+      "materials": {
+        "slots": [
+          "M_Greeble_SIGN_PLATE_0.6m"
+        ],
+        "zones": [
+          "paint2",
+          "dark",
+          "text_w",
+          "metal",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "SIGN_PLATE_0.6m/T_Greeble_SIGN_PLATE_0.6m_BC.png",
+        "N": "SIGN_PLATE_0.6m/T_Greeble_SIGN_PLATE_0.6m_N.png",
+        "MS": "SIGN_PLATE_0.6m/T_Greeble_SIGN_PLATE_0.6m_MS.png",
+        "AO": "SIGN_PLATE_0.6m/T_Greeble_SIGN_PLATE_0.6m_AO.png",
+        "E": "SIGN_PLATE_0.6m/T_Greeble_SIGN_PLATE_0.6m_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 2.34,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": "A01",
+      "notes": "几何字 A01（非贴图），深色内框 + 四角螺栓 + 橙色小条",
+      "stats": {
+        "id": "SIGN_PLATE_0.6m",
+        "texture_set": "T_Greeble_SIGN_PLATE_0.6m",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 2.34,
+        "body_zone": "paint2",
+        "body_srgb": {
+          "paint2": [
+            0.4706,
+            0.4745,
+            0.4824
+          ],
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.4758,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.44
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0093,
+        "accent_area_fraction": 0.0055,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    },
+    {
+      "id": "FLOOR_GRATE_1m",
+      "asset": "SM_Greeble_FLOOR_GRATE_1m",
+      "fbx": "FLOOR_GRATE_1m/SM_Greeble_FLOOR_GRATE_1m.fbx",
+      "folder": "FLOOR_GRATE_1m",
+      "dims_m": [
+        1.0,
+        0.5,
+        0.07
+      ],
+      "max_dim_m": 1.0,
+      "mount": "floor",
+      "forward": "+Z",
+      "forward_unity": "+Y",
+      "origin": "installation face center",
+      "install_face": "bottom plane Z=0",
+      "triangles": 1100,
+      "vertices": 600,
+      "materials": {
+        "slots": [
+          "M_Greeble_FLOOR_GRATE_1m"
+        ],
+        "zones": [
+          "metal",
+          "dark",
+          "accent_o"
+        ]
+      },
+      "textures": {
+        "BC": "FLOOR_GRATE_1m/T_Greeble_FLOOR_GRATE_1m_BC.png",
+        "N": "FLOOR_GRATE_1m/T_Greeble_FLOOR_GRATE_1m_N.png",
+        "MS": "FLOOR_GRATE_1m/T_Greeble_FLOOR_GRATE_1m_MS.png",
+        "AO": "FLOOR_GRATE_1m/T_Greeble_FLOOR_GRATE_1m_AO.png",
+        "E": "FLOOR_GRATE_1m/T_Greeble_FLOOR_GRATE_1m_E.png"
+      },
+      "texture_resolution_px": 256,
+      "mm_per_px": 3.91,
+      "uv": "UVMap, 0-1, smart projection (non-overlapping)",
+      "emissive": [],
+      "accent": {
+        "name": "orange",
+        "hex": "#BA6C0D",
+        "srgb": [
+          0.73,
+          0.4245,
+          0.0511
+        ]
+      },
+      "label": null,
+      "notes": "几何镂空：9 根承载扁钢 + 4 根横杆 + 四角安装夹",
+      "stats": {
+        "id": "FLOOR_GRATE_1m",
+        "texture_set": "T_Greeble_FLOOR_GRATE_1m",
+        "resolution_px": [
+          256,
+          256
+        ],
+        "mm_per_px": 3.91,
+        "body_zone": "metal",
+        "body_srgb": {
+          "metal": [
+            0.5294,
+            0.5373,
+            0.549
+          ]
+        },
+        "body_luma": 0.5386,
+        "dark_srgb": [
+          0.251,
+          0.2549,
+          0.2627
+        ],
+        "dark_luma": 0.2562,
+        "roughness_range": [
+          0.34,
+          0.42
+        ],
+        "grime_coverage": 0.08,
+        "accent_coverage": 0.0284,
+        "accent_area_fraction": 0.0114,
+        "emissive_coverage": 0.0,
+        "emission_max": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ms_convention": "R=Metallic G=Roughness A=Smoothness (URP)",
+        "normal_convention": "tangent-space, OpenGL +Y (Unity default)",
+        "gates": {
+          "grime_8pct": true,
+          "body_mid_gray": true,
+          "dark_structure": true,
+          "roughness_band": true,
+          "emission_le_1": true,
+          "uv_density_4_6mm": true,
+          "accent_small_area": true
+        }
+      },
+      "source": "scripts/greeble_kit/gen_greeble.py"
+    }
+  ],
+  "stats": {
+    "count": 12,
+    "total_triangles": 15856,
+    "max_triangles": 2312,
+    "names": [
+      "CABLE_TRAY_2m",
+      "CONDUIT_RUN_3m",
+      "VENT_GRILLE_1m",
+      "ACCESS_HATCH_0.8m",
+      "JUNCTION_BOX",
+      "PIPE_VERTICAL_3m",
+      "RAILING_2m",
+      "LADDER_3m",
+      "SUPPORT_BRACKET",
+      "LIGHT_FIXTURE_1.2m",
+      "SIGN_PLATE_0.6m",
+      "FLOOR_GRATE_1m"
+    ]
+  },
+  "unity_scatter": {
+    "wall_runs": "沿墙每 3–6 m 放一件（长件用 3m 管线/立管，短件补空）",
+    "platform_edges": "平台边缘每 2 m 一件栏杆；格栅沿检修口成排铺",
+    "variation": "只做 90° 旋转与缩放 0.95–1.05 的微差，不要镜像（螺栓/标签方向）"
+  }
+}
