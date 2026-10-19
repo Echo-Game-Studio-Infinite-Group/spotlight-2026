@@ -207,7 +207,7 @@ MonoBehaviour:
   _waist: {fileID: 7786989000934208194}
   _waistOffset: -0.12
   _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
+  _cutColor: {r: 0.6301887, g: 0.6301887, b: 0.6301887, a: 1}
   _edgeWidth: 0.015
   _separationSpeed: 2.5
   _liftSpeed: 2
@@ -217,7 +217,7 @@ MonoBehaviour:
   _protectedArmRoots:
   - {fileID: 461244842513529433}
   - {fileID: 8626096268350966039}
-  _lifetime: 0
+  _lifetime: 10
   _groundMask:
     serializedVersion: 2
     m_Bits: 51
@@ -366,6 +366,19 @@ MonoBehaviour:
     SweepSpacing: 0.1
   _canBeParried: 1
   _parryStaggerSeconds: 0.3
+--- !u!114 &910019901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2438456557468304048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6a4867e95f947b3a6de98bb51084560, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _slideSpeed: 2.5
 --- !u!1 &3513626799524064279
 GameObject:
   m_ObjectHideFlags: 0
@@ -1179,16 +1192,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7224308996911193127, guid: 477cf57976bcc8445a9043af023760b4, type: 3}
   m_PrefabInstance: {fileID: 1438876011242263856}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &910019901
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2438456557468304048}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c6a4867e95f947b3a6de98bb51084560, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _slideSpeed: 2.5

@@ -207,7 +207,7 @@ MonoBehaviour:
   _waist: {fileID: 5986844733915732736}
   _waistOffset: -0.12
   _fallbackHeight: 0.55
-  _cutColor: {r: 0.24, g: 0.025, b: 0.02, a: 1}
+  _cutColor: {r: 0.6313726, g: 0.6313726, b: 0.6313726, a: 1}
   _edgeWidth: 0.015
   _separationSpeed: 2.5
   _liftSpeed: 2
@@ -215,7 +215,7 @@ MonoBehaviour:
   _spinSpeed: 110
   _colliderRadiusScale: 0.85
   _protectedArmRoots: []
-  _lifetime: 0
+  _lifetime: 10
   _groundMask:
     serializedVersion: 2
     m_Bits: 51
@@ -393,6 +393,19 @@ MonoBehaviour:
   _healthPickup: {fileID: 3351717601451807541, guid: 9ddaae401e43e554a9454a24b2d8d278, type: 3}
   _energyPickup: {fileID: 4156707659257163327, guid: c7e949a7713965442af385b3a791078b, type: 3}
   _dropOffset: {x: 0, y: 0.25, z: 0}
+--- !u!114 &910019901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391353707647759481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6a4867e95f947b3a6de98bb51084560, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _slideSpeed: 2.5
 --- !u!1 &1948235523986193505
 GameObject:
   m_ObjectHideFlags: 0
@@ -1795,16 +1808,3 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 8816361695169602120, guid: 3a7fe54ec298b1a4fa463c429d32da73, type: 3}
   m_PrefabInstance: {fileID: 3455431167993428474}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &910019901
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1391353707647759481}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c6a4867e95f947b3a6de98bb51084560, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _slideSpeed: 2.5
