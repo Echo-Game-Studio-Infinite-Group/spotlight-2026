@@ -24,6 +24,8 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
     // 每帧轮询的读路径（HUD、AI 判死）直接读 Health / IsAlive，不要走事件。
     /// <summary>参数：自己、实际扣掉的血、命中点、命中方向。</summary>
     public event Action<HealthComponent, float, Vector3, Vector3> Damaged;
+    /// <summary>任何实际的生命值变化，包括伤害、治疗和恢复。</summary>
+    public event Action<HealthComponent> HealthChanged;
     public event Action<HealthComponent> Died;
     public event Action<HealthComponent> Revived;
 
@@ -54,6 +56,7 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
 
         // 先报 Damaged：订阅者要在这里完成跳字与死亡表现（它需要命中点与方向）。
         Damaged?.Invoke(this, applied, hitPoint, hitDirection);
+        HealthChanged?.Invoke(this);
         if (!IsAlive) Died?.Invoke(this);
         return applied;
     }
@@ -62,15 +65,20 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
     {
         EnsureStarted();
         if (amount <= 0f) return;
-        _health = Mathf.Min(_maxHealth, _health + amount);
+        float next = Mathf.Min(_maxHealth, _health + amount);
+        if (Mathf.Approximately(next, _health)) return;
+        _health = next;
+        HealthChanged?.Invoke(this);
     }
 
     public void Reset()
     {
         EnsureStarted();
         bool wasDead = _health <= 0f;
+        float previous = _health;
         _health = _maxHealth;
         _invulnerableUntil = float.NegativeInfinity;
+        if (!Mathf.Approximately(previous, _health)) HealthChanged?.Invoke(this);
         if (wasDead) Revived?.Invoke(this);
     }
 
@@ -84,8 +92,10 @@ public sealed class HealthComponent : MonoBehaviour, IAttackDamageReceiver
     {
         EnsureStarted();
         bool wasDead = _health <= 0f;
+        float previous = _health;
         _health = Mathf.Clamp(amount, 1f, _maxHealth);
         _invulnerableUntil = float.NegativeInfinity;
+        if (!Mathf.Approximately(previous, _health)) HealthChanged?.Invoke(this);
         if (wasDead) Revived?.Invoke(this);
     }
 

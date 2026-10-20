@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -16,6 +17,7 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
 
     private PlayerMotor _motor;
     private PlayerCombat _combat;
+    private HealthComponent _health;
     private PlayerDynamicAudioActionSource _dynamicActions;
     private PlayerGroundPose _groundPose;
     private PlayerAnimation _locomotion;
@@ -58,10 +60,18 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
         TickFootsteps();
     }
 
+    private IEnumerator Start()
+    {
+        while (!AkUnitySoundEngine.IsInitialized())
+            yield return null;
+        UpdateHealthRTPC();
+    }
+
     private void CacheReferences()
     {
         _motor = GetComponent<PlayerMotor>();
         _combat = GetComponent<PlayerCombat>();
+        _health = GetComponent<HealthComponent>();
         _dynamicActions = GetComponent<PlayerDynamicAudioActionSource>();
         _groundPose = GetComponent<PlayerGroundPose>();
         _locomotion = GetComponent<PlayerAnimation>();
@@ -82,6 +92,11 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
             _combat.SequenceHitLanded += OnSequenceHitLanded;
             _combat.ParrySucceeded += OnParrySucceeded;
         }
+        if (_health != null)
+        {
+            _health.HealthChanged += OnHealthChanged;
+            UpdateHealthRTPC();
+        }
         _subscribed = true;
     }
 
@@ -93,6 +108,10 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
         {
             _combat.SequenceHitLanded -= OnSequenceHitLanded;
             _combat.ParrySucceeded -= OnParrySucceeded;
+        }
+        if (_health != null)
+        {
+            _health.HealthChanged -= OnHealthChanged;
         }
         _leftFootPlanted = false;
         _rightFootPlanted = false;
@@ -239,5 +258,13 @@ public sealed class PlayerGameplayAudioSource : MonoBehaviour
 
         if (melee) WwiseEventBridge.Play("parry_melee", gameObject);
         if (ranged) WwiseEventBridge.Play("parry_ranged", gameObject);
+    }
+
+    private void OnHealthChanged(HealthComponent source) => UpdateHealthRTPC();
+
+    private void UpdateHealthRTPC()
+    {
+        if (_health == null) return;
+        WwiseEventBridge.SetGlobalRTPC("PlayerHealth01", _health.HealthRatio);
     }
 }
