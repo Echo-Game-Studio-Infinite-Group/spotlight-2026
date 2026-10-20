@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{74B7E0C7-1D77-4293-8958-C4AEAF9AFF8A}",
     "Language": "SFX",
-    "Hash": "{0F91D382-6DB4-2F35-2B43-C3DF5AD7E307}",
+    "Hash": "{0F6C2342-4488-819F-7CA8-ADA8A03E59B2}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\OneTimeAction",
     "ShortName": "OneTimeAction",
     "Path": "OneTimeAction.bnk",
@@ -48,6 +48,14 @@
       "CachePath": "DD/{DDAF0FB8-D07F-B9D8-A34C-9CD9DA47A556}.wem"
      },
      {
+      "Id": "515448165",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Footsteps\\footstep_tech_left.wav",
+      "CachePath": "91/{911B5033-ED1E-DF48-E19B-509908EF74A6}.wem"
+     },
+     {
       "Id": "596783337",
       "Language": "SFX",
       "Streaming": "false",
@@ -80,6 +88,14 @@
       "CachePath": "81/{8137CC10-43DF-2462-6871-106E26284CA9}.wem"
      },
      {
+      "Id": "775468215",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "Footsteps\\footstep_tech_right.wav",
+      "CachePath": "DF/{DF2FFCE7-C667-CE46-C690-B68B5DA4BD29}.wem"
+     },
+     {
       "Id": "842838349",
       "Language": "SFX",
       "Streaming": "false",
@@ -98,10 +114,71 @@
     ],
     "Events": [
      {
+      "Id": "3077533294",
+      "Name": "Enemy_Footstep_Normal_Left",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Footstep_Normal_Left",
+      "GUID": "{12AAA4A6-15D4-4469-A476-52F5EF0CD8ED}",
+      "MaxAttenuation": "40",
+      "DurationType": "OneShot",
+      "DurationMin": "0.39904165",
+      "DurationMax": "0.39904165",
+      "MediaRefs": [
+       {
+        "Id": "714536053"
+       }
+      ]
+     },
+     {
+      "Id": "3992451469",
+      "Name": "Enemy_Footstep_Normal_Right",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Footstep_Normal_Right",
+      "GUID": "{A4EE2DB1-E7AE-46D9-BB5C-60A728B4735C}",
+      "MaxAttenuation": "40",
+      "DurationType": "OneShot",
+      "DurationMin": "0.39904165",
+      "DurationMax": "0.39904165",
+      "MediaRefs": [
+       {
+        "Id": "361747846"
+       }
+      ]
+     },
+     {
+      "Id": "1296175617",
+      "Name": "Enemy_Footstep_Tech_Left",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Footstep_Tech_Left",
+      "GUID": "{B164FCB2-D8AE-4F17-8AA2-BE9AFA3D73AD}",
+      "MaxAttenuation": "40",
+      "DurationType": "OneShot",
+      "DurationMin": "0.7878748",
+      "DurationMax": "0.7878748",
+      "MediaRefs": [
+       {
+        "Id": "515448165"
+       }
+      ]
+     },
+     {
+      "Id": "415590388",
+      "Name": "Enemy_Footstep_Tech_Right",
+      "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Footstep_Tech_Right",
+      "GUID": "{F1324A3C-7B40-4AC2-BEC4-2491B9803D23}",
+      "MaxAttenuation": "40",
+      "DurationType": "OneShot",
+      "DurationMin": "0.7824964",
+      "DurationMax": "0.7824964",
+      "MediaRefs": [
+       {
+        "Id": "775468215"
+       }
+      ]
+     },
+     {
       "Id": "1010055213",
       "Name": "Enemy_Hit",
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Enemy_Hit",
       "GUID": "{505501A9-86CB-41A4-8C85-06B8D8552A66}",
+      "MaxAttenuation": "40",
       "DurationType": "OneShot",
       "DurationMin": "0.8076875",
       "DurationMax": "0.8076875",
@@ -172,6 +249,7 @@
       "Name": "Laser",
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Laser",
       "GUID": "{76843885-5748-4098-B706-B02C5DD42FD6}",
+      "MaxAttenuation": "40",
       "DurationType": "OneShot",
       "DurationMin": "1.5913541",
       "DurationMax": "1.5913541",
@@ -187,8 +265,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Metal_Hit",
       "GUID": "{2C5AA965-BC82-4B01-8AEA-F20922861471}",
       "DurationType": "OneShot",
-      "DurationMin": "0.6730833",
-      "DurationMax": "0.6730833",
+      "DurationMin": "0.6634335",
+      "DurationMax": "0.68287355",
       "MediaRefs": [
        {
         "Id": "596783337"
@@ -201,8 +279,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Parry_Melee",
       "GUID": "{0795A8CD-FF3B-4A5B-BAB4-49930C2CA495}",
       "DurationType": "OneShot",
-      "DurationMin": "0.7644167",
-      "DurationMax": "0.7644167",
+      "DurationMin": "0.75563663",
+      "DurationMax": "0.7732988",
       "MediaRefs": [
        {
         "Id": "183020156"
@@ -215,8 +293,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Parry_Ranged",
       "GUID": "{0A5CA520-6908-4B3F-BB76-EC48E4644F38}",
       "DurationType": "OneShot",
-      "DurationMin": "0.7644167",
-      "DurationMax": "0.7644167",
+      "DurationMin": "0.75563663",
+      "DurationMax": "0.7732988",
       "MediaRefs": [
        {
         "Id": "411112246"
@@ -229,8 +307,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\OneTimeEvent\\Sword_Swing",
       "GUID": "{EBB4778C-7AAF-4610-8D2C-A97D9B34E434}",
       "DurationType": "OneShot",
-      "DurationMin": "2.7211459",
-      "DurationMax": "2.7211459",
+      "DurationMin": "2.6976707",
+      "DurationMax": "2.7448254",
       "MediaRefs": [
        {
         "Id": "1049468607"
@@ -240,6 +318,6 @@
     ]
    }
   ],
-  "FileHash": "{CFEE2824-8754-7EA6-E4DA-F0CB652BBC4B}"
+  "FileHash": "{40FAD850-7A24-85D0-BB9A-168E6DA9B245}"
  }
 }
