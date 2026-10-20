@@ -22,10 +22,16 @@ public sealed class DebugHUD : MonoBehaviour
         _input = GetComponent<PlayerInputReader>();
         _energy = GetComponent<IEnergyAccount>();
         _combat = GetComponent<CombatComponent>();
+        _visible = AudioDebugOverlay.Visible;
     }
     private void OnEnable() { if (_input != null) _input.ToggleHUD += Toggle; }
     private void OnDisable() { if (_input != null) _input.ToggleHUD -= Toggle; }
-    private void Toggle() => _visible = !_visible;
+    // 运动面板和音频面板由同一次 F3 一起切换，避免两边绑定时机不同而脱节。
+    private void Toggle()
+    {
+        _visible = !_visible;
+        AudioDebugOverlay.Visible = _visible;
+    }
     private void OnGUI()
     {
         if (!_visible || _motor.Params == null) return;

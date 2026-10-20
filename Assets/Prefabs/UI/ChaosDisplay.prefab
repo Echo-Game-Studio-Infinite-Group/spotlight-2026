@@ -495,6 +495,7 @@ GameObject:
   - component: {fileID: 3538007333926341367}
   - component: {fileID: 7946801486482932871}
   - component: {fileID: 7714470753101401698}
+  - component: {fileID: 8999000000000000002}
   m_Layer: 5
   m_Name: ChaosDisplay
   m_TagString: Untagged
@@ -557,3 +558,20 @@ MonoBehaviour:
   _fallbackText: {fileID: 7775681106851721520}
   _stateText: {fileID: 0}
   _maximumText: {fileID: 0}
+--- !u!114 &8999000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8447212916988344407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64ae85d15e8909440ac9406c938f3681, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  xOffsetRate: 1
+  yOffsetRate: 1
+  xReturnRate: 1.2
+  yReturnRate: 1.2
+  _maxOffset: 18
