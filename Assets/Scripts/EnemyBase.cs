@@ -64,6 +64,26 @@ public class EnemyBase : MonoBehaviour
     [SerializeField, Min(0f)] private float _sightRange = 14f;
     [SerializeField, Min(0f)] private float _attackRange = 2.2f;
 
+    [Header("残血保护")]
+    // 玩家血量掉到阈值以下时，敌人出手更慢，给玩家留出喘息窗口。
+    // 只拉长「冷却」，不动「前摇」，原因是两种改法的代价相反：
+    //   · 远程的冷却判定排在视线检测之前 —— 拉长冷却直接减少射线次数；
+    //   · 远程的前摇（_telegraphSeconds）期间每帧都要复验视线 —— 拉长前摇反而让射线变多。
+    //
+    // 近战和远程分开配，因为两者的基线差得远，同一个倍率会得到完全不同的手感：
+    //   · 近战节奏 = max(冷却, 攻击动画时长)。EnemyTest 的 MeleeAttack1 约 1.52s，
+    //     而 _cooldown 只有 1.1s，所以倍率必须让 1.1 × 倍率 > 1.52（即 > 1.38）才有任何效果。
+    //     配 2.0 → 冷却 2.2s，节奏 1.52 → 2.2s。
+    //   · 远程节奏就是冷却本身（1.2s），配 1.6 → 1.92s，同时把每轮视线射线从约 21 条/秒压到 13 条/秒。
+    [SerializeField, Min(0f), Tooltip("玩家当前血量低于等于此值即视为残血。绝对值，不是比例（玩家满血 100）。")]
+    private float _playerLowHealthThreshold = 25f;
+
+    [SerializeField, Min(1f), Tooltip("玩家残血时【近战】攻击冷却的倍率。1 = 关闭。注意近战节奏受攻击动画时长限制，倍率需让冷却超过动画长度才有效。")]
+    private float _lowHealthMeleeCooldownScale = 2f;
+
+    [SerializeField, Min(1f), Tooltip("玩家残血时【远程】开火冷却的倍率。1 = 关闭。")]
+    private float _lowHealthRangedCooldownScale = 1.6f;
+
     private Hitbox _attackHitbox;
     private CombatComponent _combat;
     private RangeComponent _ranged;
@@ -324,7 +344,8 @@ public class EnemyBase : MonoBehaviour
         EnsureCombat();
         if (_combat == null) return;
         _combat.SourceType = AttackSourceType.Melee;
-        if (!_combat.TryBeginAttack(TimeManager.WorldTime)) return;
+        // 残血保护：玩家血量低时把这一次的冷却拉长，倍率只在起手这一刻生效。
+        if (!_combat.TryBeginAttack(TimeManager.WorldTime, LowHealthCooldownScale(health, _lowHealthMeleeCooldownScale))) return;
         _animation.PlayAttack();
         _telegraph?.Play();
     }
@@ -334,7 +355,20 @@ public class EnemyBase : MonoBehaviour
     private void TryFireAt(PlayerMotor target, HealthComponent health)
     {
         if (_ranged == null || !_ranged.CanFire) return;
-        _ranged.TryFire(TimeManager.WorldTime, target.transform, health);
+        // 残血保护走冷却倍率，不碰 _telegraphSeconds：前摇期间每帧都要查视线，拉长它只会更耗。
+        _ranged.TryFire(TimeManager.WorldTime, target.transform, health,
+            LowHealthCooldownScale(health, _lowHealthRangedCooldownScale));
+    }
+
+    /// <summary>
+    /// 残血保护用的冷却倍率：玩家血量 ≤ 阈值时返回该分支配置的倍率，否则返回 1。
+    /// 每帧都会调，所以只做一次比较，不取组件、不分配。
+    /// </summary>
+    private float LowHealthCooldownScale(HealthComponent playerHealth, float configuredScale)
+    {
+        // 倍率配成 1 视为关闭，省掉血量读取。
+        if (configuredScale <= 1f || playerHealth == null) return 1f;
+        return playerHealth.Health <= _playerLowHealthThreshold ? configuredScale : 1f;
     }
 
     // 玩家从场景级注册点取，不再经 GameManager —— 没有 GameManager 的场景里敌人 AI 照样工作。
