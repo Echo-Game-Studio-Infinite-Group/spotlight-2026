@@ -188,6 +188,7 @@ GameObject:
   - component: {fileID: 365078475}
   - component: {fileID: 365078474}
   - component: {fileID: 365078473}
+  - component: {fileID: 365078476}
   m_Layer: 0
   m_Name: "\u6D41\u7A0B\u4E0E\u5730\u56FE"
   m_TagString: Untagged
@@ -223,6 +224,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _config: {fileID: 11400000, guid: 580fe3200e187b14c8902ad6c665e1a8, type: 2}
   _motor: {fileID: 1942894696}
+--- !u!114 &365078476
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365078472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a316a2fbd0f5ef747a520a4ac57bd5fd, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _endingScenePath: Assets/Scenes/Ending.unity
+  _delay: 1
 --- !u!4 &365078475
 Transform:
   m_ObjectHideFlags: 0

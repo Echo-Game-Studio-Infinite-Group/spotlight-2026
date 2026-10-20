@@ -24,6 +24,13 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private float _buttonSpacing = 105;
     [SerializeField] private string _gameScenePath = "Assets/Scenes/FormalFlowGame.unity";
     private UnityAction _resume;
+    private static bool _showThanksOnLoad;
+
+    // 跨场景只传递一次展示请求，复用主菜单已有的致谢实例与返回逻辑。
+    public static void RequestThanksOnLoad() => _showThanksOnLoad = true;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetThanksRequest() => _showThanksOnLoad = false;
 
     private void Awake()
     {
@@ -46,6 +53,11 @@ public class MainMenuUI : MonoBehaviour
         Cursor.visible = true;
         ConfigureContinue(SaveManager.HasSave, ResumeSave);
         EventSystem.current.SetSelectedGameObject(null);
+        if (_showThanksOnLoad)
+        {
+            _showThanksOnLoad = false;
+            ShowPage(_thanksPanel.gameObject);
+        }
     }
 
     private void Update()
