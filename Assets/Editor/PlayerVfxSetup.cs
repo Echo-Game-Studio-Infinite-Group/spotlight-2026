@@ -40,6 +40,34 @@ public static class PlayerVfxSetup
     // 已删除的旧刀光（AttackTrail 动态 Mesh 版 / 更早的网格刀光）：三个预制体上都不该再留着。
     private static readonly string[] StaleAttackNodeNames = { "AttackTrail", "Attack1", "Attack2" };
 
+    [MenuItem("超高速行者/装配受伤行走与固定刀光")]
+    public static void InstallAttackAndHurtFeedback()
+    {
+        PlayerHurtAnimationSetup.Build();
+        ConfigureFixedAttackSlashes();
+    }
+
+    [MenuItem("超高速行者/装配三种普攻固定刀光")]
+    public static void ConfigureFixedAttackSlashes()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new System.InvalidOperationException("请先退出播放模式");
+        string[] names = { "PlayerAttack", "PlayerHighspeed_Attack", "PlayerHighspeed_Attack_B" };
+        int[] indices = { PlayerVFXManager.BasicSlashIndex, PlayerVFXManager.HighspeedASlashIndex, PlayerVFXManager.HighspeedBSlashIndex };
+        for (int i = 0; i < names.Length; i++)
+        {
+            var action = AssetDatabase.LoadAssetAtPath<GameJam.Actions.ActionDefinition>("Assets/Settings/ActionSequences/Player/" + names[i] + ".asset");
+            if (action == null) throw new System.InvalidOperationException("找不到普攻动作：" + names[i]);
+            bool changed = false;
+            foreach (var segment in action.Timeline)
+                foreach (var frameEvent in segment.Events)
+                    if (frameEvent.EventKey == "vfx.attack" && frameEvent.Value != indices[i])
+                    { frameEvent.Value = indices[i]; changed = true; }
+            if (changed) EditorUtility.SetDirty(action);
+        }
+        Setup();
+        AssetDatabase.SaveAssets();
+    }
+
     static PlayerVfxSetup()
     {
         // 域重载刚结束时 AssetDatabase 未必就绪，推迟一帧再动资产。
@@ -91,6 +119,7 @@ public static class PlayerVfxSetup
         FrictionSparks friction = prefab.GetComponent<FrictionSparks>();
         PlayerVFXManager manager = prefab.GetComponent<PlayerVFXManager>();
         if (friction == null || manager == null) return false;
+        if (Vector3.Distance(attackVfx.localScale, Vector3.one * manager.AttackVfxScale) > .001f) return false;
 
         // 节点在还不够：引用也得接上，否则运行起来是「有对象没人驱动」
         var frictionSerialized = new SerializedObject(friction);
@@ -276,6 +305,7 @@ public static class PlayerVfxSetup
                 managerSerialized.ApplyModifiedPropertiesWithoutUndo();
             }
 
+            if (attackVfx != null && manager != null) attackVfx.transform.localScale = Vector3.one * manager.AttackVfxScale;
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             Debug.Log("[PlayerVfxSetup] Player.prefab 已装配 " + VfxNodeName + "/" + FootName + "、" + WallSparksName
                 + "、" + HurtName + "、" + WallImpactName + "、" + AttackVfxName
@@ -444,6 +474,14 @@ public static class PlayerVfxSetup
             if (root == null) continue;
             index++;
             child.name = "AttackTrail" + index;
+            if (index <= 3)
+            {
+                // 根据当前 Avatar 的剑尖轨迹选平面；低速刀光沿自身平面转 -100°，让白光峰值朝前，旋转方向不变。
+                Vector3[] normals = { new Vector3(.402f, .916f, .013f), new Vector3(.785f, -.482f, -.389f), new Vector3(.110f, .759f, .642f) };
+                Vector3[] originalRotations = { new Vector3(0, 0, 0), new Vector3(0, 30, 210), new Vector3(0, 0, 11) };
+                Quaternion originalRotation = Quaternion.Euler(originalRotations[index - 1]);
+                child.localRotation = Quaternion.FromToRotation(originalRotation * Vector3.up, normals[index - 1]) * originalRotation;
+            }
 
             float offset = FirstBurstTime(root.emission);
             ParticleSystem[] systems = child.GetComponentsInChildren<ParticleSystem>(true);

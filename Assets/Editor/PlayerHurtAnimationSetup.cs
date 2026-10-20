@@ -45,12 +45,20 @@ public static class PlayerHurtAnimationSetup
 
     [MenuItem("超高速行者/动画/验证受伤腿部层")]
     public static void Validate()
+        => RunValidation(new[] { "PlayerHurtLegTests" });
+
+    [MenuItem("超高速行者/动画/验证受伤行走与固定刀光")]
+    public static void ValidateAttackFeedback()
+        => RunValidation(new[] { "PlayerHurtLegTests", "PlayerAttackVfxTests", "DirectionalWalkingTests" });
+
+    private static void RunValidation(string[] tests)
     {
+        if (!EditorApplication.isPlaying) UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
         SessionState.SetBool("HurtLegTests.Running", true);
         TestRunner.Execute(new ExecutionSettings(new Filter
         {
             testMode = TestMode.PlayMode,
-            testNames = new[] { "PlayerHurtLegTests" }
+            testNames = tests
         }));
     }
 
@@ -122,12 +130,25 @@ public static class PlayerHurtAnimationSetup
         layer.avatarMask = mask;
         layer.blendingMode = AnimatorLayerBlendingMode.Override;
         layer.defaultWeight = 0f;
+        GameJam.Actions.Editor.PlayerWalkAnimatorSetup.Ensure(controller);
+        if (!controller.parameters.Any(p => p.name == PlayerAnimation.WalkLegsParameter))
+            controller.AddParameter(PlayerAnimation.WalkLegsParameter, AnimatorControllerParameterType.Bool);
         var state = layer.stateMachine.states.FirstOrDefault(item => item.state.name == "Move").state
             ?? layer.stateMachine.AddState("Move");
         // 腿部层复用基础跑步的素材和倍率，避免重新装配后步频不一致。
         var run = layers[0].stateMachine.states.First(item => item.state.name == "Move").state;
         state.motion = run.motion;
         state.speed = run.speed;
+        var walkSource = layers[0].stateMachine.states.First(item => item.state.name == "Walk").state;
+        var walk = layer.stateMachine.states.FirstOrDefault(item => item.state.name == "Walk").state
+            ?? layer.stateMachine.AddState("Walk");
+        // 与基础层共用七向混合树、方向和步频，受伤与攻击都不能把慢走腿部替换成跑步。
+        walk.motion = walkSource.motion;
+        walk.speed = walkSource.speed;
+        walk.speedParameter = walkSource.speedParameter;
+        walk.speedParameterActive = walkSource.speedParameterActive;
+        EnsureLegTransition(state, walk, AnimatorConditionMode.If);
+        EnsureLegTransition(walk, state, AnimatorConditionMode.IfNot);
         layer.stateMachine.defaultState = state;
         controller.layers = layers;
 
@@ -140,10 +161,21 @@ public static class PlayerHurtAnimationSetup
                         EditorUtility.SetDirty(transition);
                     }
         EditorUtility.SetDirty(state);
+        EditorUtility.SetDirty(walk);
         EditorUtility.SetDirty(layer.stateMachine);
         EditorUtility.SetDirty(mask);
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssets();
         Debug.Log("[PlayerHurtAnimationSetup] 已保存腿部 Override 层：仅 LeftLeg/RightLeg，默认权重 0。");
+    }
+
+    private static void EnsureLegTransition(AnimatorState source, AnimatorState target, AnimatorConditionMode mode)
+    {
+        var transition = source.transitions.FirstOrDefault(t => t.destinationState == target) ?? source.AddTransition(target);
+        transition.hasExitTime = false;
+        transition.hasFixedDuration = true;
+        transition.duration = .1f;
+        transition.conditions = new[] { new AnimatorCondition { parameter = PlayerAnimation.WalkLegsParameter, mode = mode } };
+        EditorUtility.SetDirty(transition);
     }
 }

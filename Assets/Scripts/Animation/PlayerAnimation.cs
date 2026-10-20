@@ -19,9 +19,11 @@ public sealed class PlayerAnimation : MonoBehaviour
     public const string WalkXParameter = "WalkX";
     public const string WalkZParameter = "WalkZ";
     public const string WalkRateParameter = "WalkRate";
+    public const string WalkLegsParameter = "WalkLegs";
     private static readonly int WalkXId = Animator.StringToHash(WalkXParameter);
     private static readonly int WalkZId = Animator.StringToHash(WalkZParameter);
     private static readonly int WalkRateId = Animator.StringToHash(WalkRateParameter);
+    private static readonly int WalkLegsId = Animator.StringToHash(WalkLegsParameter);
 
     public const string SlideTimeParameter = "SlideTime";
     private static readonly int SlideTimeId = Animator.StringToHash(SlideTimeParameter);
@@ -45,6 +47,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     [Tooltip("受击后禁止移动和攻击取消的秒数；解锁后移动只覆盖腿部。")]
     [SerializeField, Min(0f)] private float _hurtLockSeconds = 0.1f;
     [SerializeField, Min(0.1f)] private float _hurtMaxSeconds = 1.6f;
+    [SerializeField, Min(0f)] private float _hurtExitBlendSeconds = 0.1f;
 
     [SerializeField] private Animator _animator;
     [SerializeField, Min(0f)] private float _idleSpeed = 0.1f;
@@ -69,6 +72,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private int _wallMotionState = MotionStateWallDashLeft;
     private bool _hasSlideTime;
     private bool _hasWalkParameters;
+    private bool _hasWalkLegsParameter;
     private bool _wasWalking;
     private Vector2 _walkBlendDirection;
     private float _walkBlendRate;
@@ -143,10 +147,12 @@ public sealed class PlayerAnimation : MonoBehaviour
     private void CacheSlideParameter()
     {
         _hasSlideTime = false;
+        _hasWalkLegsParameter = false;
         _wasWalking = false;
         bool walkX = false, walkZ = false, walkRate = false;
         foreach (AnimatorControllerParameter parameter in _animator.parameters)
         {
+            _hasWalkLegsParameter |= parameter.nameHash == WalkLegsId && parameter.type == AnimatorControllerParameterType.Bool;
             if (parameter.nameHash == SlideTimeId && parameter.type == AnimatorControllerParameterType.Float)
                 _hasSlideTime = true;
             if (parameter.type != AnimatorControllerParameterType.Float) continue;
@@ -207,6 +213,7 @@ public sealed class PlayerAnimation : MonoBehaviour
         if (_motor == null || _animator == null || _motor.Params == null) return;
         UpdateSlide(deltaTime);
         UpdateWalkBlend(deltaTime);
+        bool hurtFinished = false;
 
         // 移动不能取消受击，否则上身受击与腿部行走无法同时存在。
         if (IsHurting)
@@ -217,7 +224,7 @@ public sealed class PlayerAnimation : MonoBehaviour
             AnimatorStateInfo hurtState = _animator.GetCurrentAnimatorStateInfo(0);
             bool finished = hurtState.IsName(CurrentHurtState) && hurtState.normalizedTime >= 1f
                 && !_animator.IsInTransition(0);
-            if (finished || _hurtElapsed >= _hurtMaxSeconds) CancelHurt();
+            if (finished || _hurtElapsed >= _hurtMaxSeconds) { CancelHurt(); hurtFinished = true; }
             else { PushHurtState(); UpdateLegsOnlyLayer(); return; }
         }
         else _motor.InputSuppressed = false;
@@ -248,6 +255,9 @@ public sealed class PlayerAnimation : MonoBehaviour
         // 显式的攻击布尔：状态机的进/出边由它驱动，语义比复用 MotionState 编号清晰，
         // 也不会被每帧重写的移动编号互相干扰。
         _animator.SetBool(IsAttackingId, attacking);
+        // 受伤旧出口指向 Idle；显式回到当前移动姿态，避免七向行走被旧出口顶回跑步或待机。
+        if (hurtFinished && !attacking)
+            _animator.CrossFadeInFixedTime("Base Layer." + LocomotionStateName(state), _hurtExitBlendSeconds, 0);
     }
 
     private void UpdateWalkBlend(float deltaTime)
@@ -338,6 +348,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private void UpdateLegsOnlyLayer()
     {
         if (_legsOnlyLayer < 0) return;
+        if (_hasWalkLegsParameter) _animator.SetBool(WalkLegsId, _motor != null && _motor.IsWalking);
         bool moving = _input != null && _input.MoveInput.sqrMagnitude > 0f;
         bool groundedMoving = moving && _motor != null && _motor.IsGrounded && !_motor.IsSliding
             && _motor.HorizontalSpeed > _idleSpeed;

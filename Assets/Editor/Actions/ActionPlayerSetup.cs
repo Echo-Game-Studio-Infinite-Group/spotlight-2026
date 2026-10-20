@@ -118,7 +118,7 @@ namespace GameJam.Actions.Editor
                 attack.Timeline.Find(segment => segment.SegmentId == "active").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
                 attack.Timeline.Find(segment => segment.SegmentId == "recovery").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.close" });
                 if (vfx != null) AddEvent(attack, Mathf.Clamp(Mathf.RoundToInt(vfx.time / clip.length * total), 0, total - 1),
-                    new ActionFrameEvent { EventKey = "vfx.attack", Value = vfx.intParameter });
+                    new ActionFrameEvent { EventKey = "vfx.attack", Value = PlayerVFXManager.BasicSlashIndex });
                 attack.CancelWindows.Add(new ActionCancelWindow { DisplayName = "收招接移动跳跃", Start = new ActionFrameAnchor { SegmentId = "recovery" },
                     Targets = new List<ActionDefinition> { jump }, RequireAll = new List<string> { "non_stationary_jump", "speed_low" } });
                 AssetDatabase.CreateAsset(attack, folder + "/PlayerAttack.asset");

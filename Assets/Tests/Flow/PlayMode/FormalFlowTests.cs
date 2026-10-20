@@ -63,6 +63,21 @@ namespace GameJam.FlowTests
         }
 
         [UnityTest]
+        public IEnumerator NewGamesAndFullRestartsChooseNewSeeds()
+        {
+            yield return Load();
+            Assert.That(_flow.Config.RandomizeSeed, Is.True);
+            int first = _flow.RunSeed;
+            yield return _flow.ReleaseRooms();
+            yield return Load();
+            Assert.That(_flow.RunSeed, Is.Not.EqualTo(first));
+            int second = _flow.RunSeed;
+            Assert.That(_flow.RestartRun(), Is.True);
+            yield return Ready();
+            Assert.That(_flow.RunSeed, Is.Not.EqualTo(second));
+        }
+
+        [UnityTest]
         public IEnumerator MainMenuNewGameLoadsFormalSceneAndCancelsContinue()
         {
             var data = new SaveManager.SaveData { scenePath = "Assets/Scenes/FormalFlowGame.unity", roomVariantId = "room01.low" };
@@ -102,9 +117,12 @@ namespace GameJam.FlowTests
             Assert.That(_flow.CommitCheckpoint(checkpoint), Is.True);
             yield return Ready();
             string id = target.Variant.Id;
+            int seed = _flow.RunSeed;
             SaveManager.Init(_ownedMotor.gameObject); SaveManager.SavePlayer();
             Assert.That(SaveManager.PrepareContinue("Assets/Scenes/FormalFlowGame.unity", out _), Is.True);
+            Assert.That(SaveManager.ContinueRunSeed, Is.EqualTo(seed));
             yield return Load();
+            Assert.That(_flow.RunSeed, Is.EqualTo(seed));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.EqualTo(id));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.Not.EqualTo("boxtr.default"));
             Assert.That(_flow.Checkpoints.Id, Is.EqualTo(checkpoint.Id));

@@ -59,7 +59,8 @@ namespace GameJam.Actions.Editor
                 AddSegment(action, clip, state, "startup", "引刀", ActionPhase.Startup, 0, startup, total);
                 AddSegment(action, clip, state, "active", "高速挥砍", ActionPhase.Active, startup, startup + active, total);
                 AddSegment(action, clip, state, "recovery", "收招", ActionPhase.Recovery, startup + active, total, total);
-                action.Timeline[1].Events.Add(new ActionFrameEvent { EventKey = "vfx.attack", Value = state.EndsWith("A") ? 1 : 2 });
+                action.Timeline[1].Events.Add(new ActionFrameEvent { EventKey = "vfx.attack", Value = state.EndsWith("A")
+                    ? PlayerVFXManager.HighspeedASlashIndex : PlayerVFXManager.HighspeedBSlashIndex });
                 action.StartConditions = new List<string> { "speed_high" };
                 action.CooldownFrames = 21; action.CooldownGroup = "player_basic_attack";
                 action.Input.PreInputFrames = 8; action.Input.BufferGroup = "main";

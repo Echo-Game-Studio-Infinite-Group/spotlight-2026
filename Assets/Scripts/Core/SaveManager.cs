@@ -15,6 +15,8 @@ public static class SaveManager
         public Vector3 roomLocalPosition;
         // 旧存档没有此标记，不能把缺失的混乱度当作 0 恢复。
         public bool hasFlowState;
+        public bool hasRunSeed;
+        public int runSeed;
         public int chaos;
         public string[] brokenDeviceIds;
         public string checkpointId;
@@ -28,6 +30,7 @@ public static class SaveManager
     public static bool HasSave => TryReadSave(out _);
     public static bool HasPendingContinue => _pending != null;
     public static string ContinueCheckpointId => _pending?.checkpointId;
+    public static int? ContinueRunSeed => _pending != null && _pending.hasRunSeed ? _pending.runSeed : (int?)null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntime()
@@ -170,6 +173,8 @@ public static class SaveManager
             data.roomVariantId = flow.CurrentRoom.Variant.Id;
             data.roomLocalPosition = flow.CurrentRoom.Root.transform.InverseTransformPoint(position);
             data.hasFlowState = true;
+            data.hasRunSeed = true;
+            data.runSeed = flow.RunSeed;
             data.chaos = flow.Chaos.Value;
             data.brokenDeviceIds = new string[flow.CurrentRoom.BrokenDevices.Count];
             flow.CurrentRoom.BrokenDevices.CopyTo(data.brokenDeviceIds);

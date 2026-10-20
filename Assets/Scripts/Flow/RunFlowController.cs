@@ -31,6 +31,7 @@ namespace GameJam.Flow
         public RunFlowConfig Config => _config;
         public ChaosService Chaos { get; private set; }
         public RoomSelectionPlanner Planner { get; private set; }
+        public int RunSeed { get; private set; }
         public CheckpointManager Checkpoints { get; } = new CheckpointManager();
         public FlowRoomInstance CurrentRoom { get; private set; }
         public FlowRoomInstance NextRoom { get; private set; }
@@ -99,7 +100,10 @@ namespace GameJam.Flow
         {
             variant = variant ?? _config.InitialRoom;
             Chaos = new ChaosService(_config);
-            Planner = new RoomSelectionPlanner(_config, _config.Seed);
+            // 独立于 Unity 全局随机状态，特效或敌人抽样不会影响新局种子；旧存档沿用原固定种子。
+            RunSeed = restore != null ? SaveManager.ContinueRunSeed ?? _config.Seed :
+                _config.RandomizeSeed ? Guid.NewGuid().GetHashCode() : _config.Seed;
+            Planner = new RoomSelectionPlanner(_config, RunSeed);
             int startingChaos = Mathf.Clamp(_config.InitialChaos, variant.MinimumChaos, variant.MaximumChaos);
             if (startingChaos < _config.MinimumChaos || startingChaos > _config.MaximumChaos)
                 Chaos.TrySetSpecial(startingChaos, "关卡选择");
