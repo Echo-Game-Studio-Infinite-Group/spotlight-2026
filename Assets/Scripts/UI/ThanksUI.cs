@@ -17,7 +17,7 @@ public sealed class ThanksUI : MonoBehaviour
     [SerializeField] private GameObject _divider;
     [SerializeField] private string[] _specialLines =
     {
-        "特别鸣谢", "大连理工大学\nEcho Game Studio", "TA/社长大人\nKiiye", "And……", "You"
+        "特别鸣谢", "Echo Game Studio", "TA/社长大人\nKiiye", "And……", "You"
     };
     [Min(0)] public float ScrollSpeed = 32f;
     [Min(.01f)] public float FadeDuration = 1.2f;
