@@ -37,6 +37,10 @@ parry_ranged -> Parry_Ranged (Bank: OneTimeAction)
 music_stand -> Play_Music_Stand (Bank: Music)
 music_walk  -> Play_Music_Walk (Bank: Music)
 music_run   -> Play_Music_Run (Bank: Music)
+enemy_footstep_tech_left   -> Enemy_Footstep_Tech_Left (Bank: OneTimeAction)
+enemy_footstep_tech_right  -> Enemy_Footstep_Tech_Right (Bank: OneTimeAction)
+enemy_footstep_normal_left -> Enemy_Footstep_Normal_Left (Bank: OneTimeAction)
+enemy_footstep_normal_right -> Enemy_Footstep_Normal_Right (Bank: OneTimeAction)
 ```
 
 `PlayerGameplayAudioSource` 通过 `PlayerCombat.ParrySucceeded` 获取拼刀结果：
@@ -110,6 +114,15 @@ WwiseEventBridge.Play("footstep", gameObject);
 WwiseEventBridge.SetRTPC("ActionSpeed", speed01, gameObject);
 WwiseEventBridge.SetRTPC("Contact", contact01, gameObject);
 ```
+
+跨对象或音乐共享的全局参数使用：
+
+```csharp
+WwiseEventBridge.SetGlobalRTPC("PlayerHealth01", health01);
+```
+
+`PlayerHealth01` 由 `PlayerGameplayAudioSource` 在初始化、受伤和复活事件中更新，
+不进行逐帧轮询。
 
 这里的 RTPC 和 Switch 名称只是调用示例。对应参数必须先在 Wwise Authoring
 中创建；`WwiseEventBridge` 只负责发送值，不会自动创建 Wwise 工程对象。

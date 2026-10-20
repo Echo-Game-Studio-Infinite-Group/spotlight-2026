@@ -13,6 +13,10 @@ namespace AK
 {
     namespace EVENTS
     {
+        static const AkUniqueID ENEMY_FOOTSTEP_NORMAL_LEFT = 3077533294U;
+        static const AkUniqueID ENEMY_FOOTSTEP_NORMAL_RIGHT = 3992451469U;
+        static const AkUniqueID ENEMY_FOOTSTEP_TECH_LEFT = 1296175617U;
+        static const AkUniqueID ENEMY_FOOTSTEP_TECH_RIGHT = 415590388U;
         static const AkUniqueID ENEMY_HIT = 1010055213U;
         static const AkUniqueID FOOTSTEP_NORMAL_LEFT = 1924171521U;
         static const AkUniqueID FOOTSTEP_NORMAL_LEFT_2 = 2545955606U;
@@ -32,6 +36,11 @@ namespace AK
         static const AkUniqueID STOP_SLIDESINEPLUGIN = 4114826401U;
         static const AkUniqueID SWORD_SWING = 476098351U;
     } // namespace EVENTS
+
+    namespace GAME_PARAMETERS
+    {
+        static const AkUniqueID PLAYERHEALTH01 = 1670241813U;
+    } // namespace GAME_PARAMETERS
 
     namespace BANKS
     {

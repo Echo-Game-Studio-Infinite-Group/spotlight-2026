@@ -57,6 +57,8 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
         {
             if (enemy.GetComponent<EnemyAudioSource>() == null)
                 enemy.gameObject.AddComponent<EnemyAudioSource>();
+            if (enemy.GetComponent<EnemyFootstepAudioSource>() == null)
+                enemy.gameObject.AddComponent<EnemyFootstepAudioSource>();
         }
 
         PlayerInputReader input = motor.GetComponent<PlayerInputReader>();

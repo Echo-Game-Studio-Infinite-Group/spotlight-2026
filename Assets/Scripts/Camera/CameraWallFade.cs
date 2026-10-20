@@ -152,14 +152,17 @@ public sealed class CameraWallFade : MonoBehaviour
 
     private Material CreateFadeMaterial(Material original)
     {
-        var material = new Material(original) { name = original.name + " (Camera Fade)" };
+        Shader shader = original.shader;
         // 不透明 NPR 的 Pass 固定写深度，必须使用项目内相同属性布局的透明版本。
         if (original.shader.name == "OurFunction/NPR/Deferred Toon")
         {
             if (_transparentToonShader == null)
                 _transparentToonShader = Shader.Find("OurFunction/NPR/Transparent Toon");
-            if (_transparentToonShader != null) material.shader = _transparentToonShader;
+            if (_transparentToonShader != null) shader = _transparentToonShader;
         }
+        // 地图使用材质变体；从 Shader 新建独立材质，避免继承父材质后无法切换透明 Shader。
+        var material = new Material(shader) { name = original.name + " (Camera Fade)" };
+        material.CopyPropertiesFromMaterial(original);
         material.SetOverrideTag("RenderType", "Transparent");
         SetFloat(material, "_Surface", 1f);
         SetFloat(material, "_Mode", 3f);

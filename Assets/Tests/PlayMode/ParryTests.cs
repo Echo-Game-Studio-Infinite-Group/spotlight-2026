@@ -104,6 +104,79 @@ public sealed class ParryTests
         Assert.AreEqual(0f, TimeManager.GlobalRate); Assert.AreEqual(0f, TimeManager.PlayerFixedDeltaTime);
         Assert.AreEqual(AttackSourceType.Melee, _last[0].SourceType);
     }
+
+    [TestCase(AttackParryKind.Normal)]
+    [TestCase(AttackParryKind.Disadvantage)]
+    public void ParryDamagesEnemyUsingCurrentActionBeforeCancellation(AttackParryKind kind)
+    {
+        _player.GetComponent<CombatComponent>().Damage = 9f;
+        _action.Combat.Damage = 37f; Begin(22);
+        CombatComponent enemy = Enemy(); enemy.ParryKind = kind; enemy.Damage = 99f;
+        Sample(22);
+        Assert.AreEqual(63f, enemy.Self.Health);
+        Assert.AreEqual(100f, _health.Health);
+        Assert.IsFalse(_player.IsAttackSequenceActive);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ParryDamageIncludesSpeedScalingAndReusesHitGroupSnapshot(bool cached)
+    {
+        GameObject root = _player.gameObject; root.SetActive(false);
+        var motor = root.AddComponent<PlayerMotor>();
+        var parameters = ScriptableObject.CreateInstance<MovementParams>(); _created.Add(parameters);
+        parameters.GroundSpeedThreshold = 6f; motor.SetParams(parameters);
+        root.SetActive(true); motor.SetHorizontalSpeed(12f);
+        _action.Combat.Damage = 20f; _action.Combat.ScaleDamageWithSpeed = true;
+        _action.Combat.SpeedDamage = AnimationCurve.Linear(0f, 1f, 2f, 2f);
+        var volume = new ActionHitVolume { HitGroup = 7,
+            Start = new ActionFrameAnchor { SegmentId = "active" },
+            End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd } };
+        _action.Combat.HitVolumes.Add(volume); Begin(22);
+        if (cached)
+        {
+            Assert.AreEqual(40f, _player.SequenceDamage(7));
+            motor.SetHorizontalSpeed(0f);
+        }
+        CombatComponent enemy = Enemy(); Sample(22);
+        Assert.AreEqual(60f, enemy.Self.Health);
+    }
+
+    [Test]
+    public void ParryDamagesEachEnemyOnceEvenWhenAttackSourcesShareHealth()
+    {
+        CombatComponent first = Enemy(), second = Enemy(1.7f);
+        first.Self.SetInvulnerableTime(0f);
+        second.SetOwner(CampType.Enemy, null, first.Self);
+        Sample(22);
+        Assert.AreEqual(2, _last.Count);
+        Assert.AreEqual(75f, first.Self.Health);
+        Hit(first); Hit(second);
+        Assert.AreEqual(75f, first.Self.Health);
+    }
+
+    [Test]
+    public void ParryDamageCanKillEnemyAndUsesNormalDeathNotification()
+    {
+        CombatComponent enemy = Enemy(); enemy.Self.SetMaxHealth(10f);
+        int deaths = 0; enemy.Self.Died += _ => deaths++;
+        Sample(22);
+        Assert.IsFalse(enemy.Self.IsAlive); Assert.AreEqual(1, deaths);
+        Assert.AreEqual(1, _successes);
+    }
+
+    [Test]
+    public void BulletParryDoesNotDamageShooterOrAddHitSlowMotion()
+    {
+        CombatComponent shooter = Enemy(20f, false);
+        RangeComponent ranged = shooter.gameObject.AddComponent<RangeComponent>();
+        Sample(22);
+        Projectile bullet = Bullet(_origin + new Vector3(0f, .9f, 1f));
+        bullet.Launch(Vector3.back, ranged); bullet.Simulate(.01f);
+        Assert.AreEqual(1, _successes); Assert.IsFalse(bullet.gameObject.activeSelf);
+        Assert.AreEqual(100f, shooter.Self.Health);
+        Assert.IsFalse(TimeManager.InHitStop); Assert.AreEqual(1f, TimeManager.GlobalRate);
+    }
     [Test]
     public void BodyTriggerFallbackUsesTheSameGeometryBeforeDamage()
     {
@@ -115,6 +188,7 @@ public sealed class ParryTests
     {
         Sample(22); CombatComponent enemy = Enemy(-2f); Hit(enemy);
         Assert.AreEqual(0, _successes); Assert.AreEqual(75f, _health.Health);
+        Assert.AreEqual(100f, enemy.Self.Health);
     }
     [Test]
     public void RecoveryAndIdleEnemyHaveNoClash()
@@ -143,6 +217,7 @@ public sealed class ParryTests
         CombatComponent first = Enemy(), second = Enemy(1.7f); Sample(22);
         Assert.AreEqual(1, _successes); Assert.AreEqual(2, _last.Count);
         Assert.IsFalse(first.IsAttacking(TimeManager.WorldTime)); Assert.IsFalse(second.IsAttacking(TimeManager.WorldTime));
+        Assert.AreEqual(75f, first.Self.Health); Assert.AreEqual(75f, second.Self.Health);
         Hit(first); Hit(second); Assert.AreEqual(1, _successes);
     }
     [Test]
@@ -329,6 +404,7 @@ public sealed class ParryTests
         Assert.AreEqual(1, _successes); Assert.AreEqual(100f, _health.Health);
         Assert.AreEqual(AttackSourceType.Beam, _last[0].SourceType);
         Assert.AreEqual(LaserAttack.AttackPhase.Cooldown, laser.Phase);
+        Assert.AreEqual(75f, root.GetComponent<HealthComponent>().Health);
         laser.Simulate(0f, _health); Assert.AreEqual(1, _successes);
     }
     [Test]

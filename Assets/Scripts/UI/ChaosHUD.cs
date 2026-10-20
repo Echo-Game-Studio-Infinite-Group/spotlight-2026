@@ -54,18 +54,31 @@ public sealed class ChaosHUD : MonoBehaviour
     private void Refresh()
     {
         int value = _chaos.Value;
-        bool useDigits = value >= 0 && value <= 999 && NixieDigitsReady;
+        bool digitsReady = _digits != null && _digits.Length >= 3;
+        if (digitsReady)
+            for (int i = 0; i < 3; i++)
+                if (_digits[i] == null) { digitsReady = false; break; }
+        bool useDigits = value >= 0 && value <= 999 && NixieDigitsReady && digitsReady;
         string number = value.ToString("000");
-        for (int i = 0; i < _digits.Length; i++)
+        if (_digits != null)
         {
-            _digits[i].gameObject.SetActive(useDigits);
-            if (useDigits) _digits[i].texture = _textures[number[i] - '0'];
+            for (int i = 0; i < _digits.Length; i++)
+            {
+                if (_digits[i] == null) continue;
+                _digits[i].gameObject.SetActive(useDigits);
+                if (useDigits && i < number.Length) _digits[i].texture = _textures[number[i] - '0'];
+            }
         }
-        _fallbackText.gameObject.SetActive(!useDigits);
-        _fallbackText.text = number;
-        _maximumText.text = "/ " + _config.MaximumChaos;
-        _stateText.text = _config.EnableSpecialRoutes && value == _config.ExceptionalChaos ? "SPECIAL" :
-            value < 0 ? "NEGATIVE" : value >= _config.MaximumChaos ? "LIMIT" : "CURRENT VALUE";
+        if (_fallbackText != null)
+        {
+            _fallbackText.gameObject.SetActive(!useDigits);
+            _fallbackText.text = number;
+        }
+        if (_maximumText != null)
+            _maximumText.text = "/ " + _config.MaximumChaos;
+        if (_stateText != null)
+            _stateText.text = _config.EnableSpecialRoutes && value == _config.ExceptionalChaos ? "SPECIAL" :
+                value < 0 ? "NEGATIVE" : value >= _config.MaximumChaos ? "LIMIT" : "CURRENT VALUE";
     }
 
     private void UnbindChaos()
