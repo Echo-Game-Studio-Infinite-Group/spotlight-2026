@@ -16,10 +16,11 @@ MonoBehaviour:
   Room: {fileID: 11400000, guid: 0dcca67f54e46f040a810add0ea9621f, type: 2}
   MinimumChaos: 0
   MaximumChaos: 100
-  ContentGroups: []
-  Narrative: 
-  OverrideLightColor: 0
-  LightColor: {r: 1, g: 1, b: 1, a: 1}
+  ContentGroups:
+  - narrative
+  Narrative: "\u62B5\u8FBE\u51FA\u53E3\uFF0C\u7ED3\u675F\u8FD9\u6B21\u5FAA\u73AF\u3002"
+  OverrideLightColor: 1
+  LightColor: {r: 1, g: 0.9, b: 0.6, a: 1}
   LightIntensityMultiplier: 1
   StabilizerGain: 0
   EnemySpawns: []

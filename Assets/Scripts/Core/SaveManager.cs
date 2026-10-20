@@ -209,13 +209,22 @@ public static class SaveManager
     {
         if (_pending == null || string.IsNullOrEmpty(_pending.roomVariantId)) return null;
         foreach (var variant in LevelSelection.GetLevels(config))
-            if (variant.Id == _pending.roomVariantId) return variant;
+            if (variant.Id == _pending.roomVariantId) return ResolveContinueVariant(variant);
         if (config != null)
             foreach (var variant in config.ContinueOnlyRooms)
-                if (variant != null && variant.Id == _pending.roomVariantId) return variant;
+                if (variant != null && variant.Id == _pending.roomVariantId) return ResolveContinueVariant(variant);
         Debug.LogWarning("[SaveManager] 存档关卡已不在流程配置中，将从起始关卡开始");
         CancelContinue();
         return null;
+    }
+
+    private static RoomVariantDefinition ResolveContinueVariant(RoomVariantDefinition saved)
+    {
+        if (!_pending.hasFlowState || saved.Room == null || saved.Id != saved.Room.Id + ".default") return saved;
+        // 仅迁移沿用旧单差分编号的地图；显式差分存档仍恢复原访问快照，死亡时再按混乱度换档。
+        RoomVariantDefinition current = saved.Room.ResolveVariant(_pending.chaos, saved) ?? saved;
+        _pending.roomVariantId = current.Id;
+        return current;
     }
 
     public static void RestorePending()

@@ -22,7 +22,7 @@ namespace GameJam.FlowTests
         private bool _hadSave;
         private string _save;
         private FlowEnemySpawnBinding[] _tutorialSpawns;
-        private bool[] _tutorialSpawnEnabled;
+        private RoomVariantDefinition _tutorialVariant;
 
         [SetUp]
         public void SetUp()
@@ -30,9 +30,9 @@ namespace GameJam.FlowTests
             _hadSave = PlayerPrefs.HasKey("playerSave"); _save = PlayerPrefs.GetString("playerSave");
             SaveManager.CancelContinue(); LevelSelection.Clear(); TimeManager.SetPaused(false);
             // 流程测试隔离策划正在编辑的教学敌人点，避免敌人攻击或未烘焙点位影响过门与恢复验证。
-            _tutorialSpawns = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset").InitialRoom.EnemySpawns;
-            _tutorialSpawnEnabled = _tutorialSpawns.Select(spawn => spawn.Enabled).ToArray();
-            foreach (var spawn in _tutorialSpawns) spawn.Enabled = false;
+            _tutorialVariant = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset").InitialRoom;
+            _tutorialSpawns = _tutorialVariant.EnemySpawns;
+            _tutorialVariant.EnemySpawns = new FlowEnemySpawnBinding[0];
         }
 
         [UnityTearDown]
@@ -43,7 +43,7 @@ namespace GameJam.FlowTests
             SaveManager.CancelContinue(); LevelSelection.Clear(); TimeManager.SetPaused(false);
             if (_hadSave) PlayerPrefs.SetString("playerSave", _save); else PlayerPrefs.DeleteKey("playerSave");
             PlayerPrefs.Save();
-            for (int i = 0; i < _tutorialSpawns.Length; i++) _tutorialSpawns[i].Enabled = _tutorialSpawnEnabled[i];
+            _tutorialVariant.EnemySpawns = _tutorialSpawns;
         }
 
         private IEnumerator Load()
@@ -157,10 +157,10 @@ namespace GameJam.FlowTests
             Assert.That(FlowConfigValidator.Validate(config), Is.Empty);
             var ordinary = config.NormalPools.Single(p => !p.ChangesChaos).Entries.Select(e => e.Variant).ToArray();
             var chaos = config.NormalPools.Single(p => p.ChangesChaos).Entries.Select(e => e.Variant).ToArray();
-            Assert.That(ordinary.Select(v => v.Room.DisplayName), Is.EquivalentTo(new[] { "BOX_S_001", "BOX_S_002", "BOX_S_004", "BOX_S_005", "BOX_S_006", "BOX_S_007" }));
-            Assert.That(chaos.Select(v => v.Room.DisplayName), Is.EqualTo(new[] { "BOX_S_003" }));
+            Assert.That(ordinary.Select(v => v.Room.DisplayName).Distinct(), Is.EquivalentTo(new[] { "BOX_S_001", "BOX_S_002", "BOX_S_004", "BOX_S_005", "BOX_S_006", "BOX_S_007" }));
+            Assert.That(chaos.Select(v => v.Room.DisplayName).Distinct(), Is.EqualTo(new[] { "BOX_S_003" }));
             Assert.That(ordinary.Contains(config.FinalRoom), Is.False, "普通池抽到 007 不能提前终局");
-            Assert.That(config.FinalRoom.Room.Template, Is.SameAs(ordinary.Single(v => v.Room.DisplayName == "BOX_S_007").Room.Template));
+            Assert.That(config.FinalRoom.Room.Template, Is.SameAs(ordinary.First(v => v.Room.DisplayName == "BOX_S_007").Room.Template));
             foreach (var variant in LevelSelection.GetLevels(config))
             {
                 Assert.That(AssetDatabase.GetAssetPath(variant), Does.StartWith("Assets/Settings/FormalFlow/"));
@@ -172,7 +172,8 @@ namespace GameJam.FlowTests
         public IEnumerator EveryFormalBoxHasSafeSpawnRecoveryAndTraversableConnection()
         {
             var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
-            var boxes = config.NormalPools.SelectMany(p => p.Entries).Select(e => e.Variant).OrderBy(v => v.Id).ToArray();
+            var boxes = config.NormalPools.SelectMany(p => p.Entries).Select(e => e.Variant.Room).Distinct()
+                .Select(room => room.ResolveVariant(0, null)).OrderBy(v => v.Id).ToArray();
             foreach (var variant in boxes)
             {
                 var initial = variant.Room.Template.GetComponentInChildren<FlowCheckpoint>();
@@ -226,6 +227,96 @@ namespace GameJam.FlowTests
                 _ownedMotor.ReleaseSimulation(this); _ownedMotor = null;
                 yield return Ready();
                 Debug.Log("[正式箱庭验证] " + variant.Id + "：出生、导航、掉落恢复、过门成功");
+            }
+        }
+
+        [Test]
+        public void FormalChaosVariantsCoverBoundariesAndAppearInBothPools()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
+            var rooms = config.NormalPools.SelectMany(pool => pool.Entries).Select(entry => entry.Variant.Room).Distinct().ToArray();
+            Assert.That(rooms.Length, Is.EqualTo(7));
+            Assert.That(config.NormalPools.Single(pool => !pool.ChangesChaos).Entries.Length, Is.EqualTo(18));
+            Assert.That(config.NormalPools.Single(pool => pool.ChangesChaos).Entries.Length, Is.EqualTo(3));
+            foreach (var room in rooms)
+            {
+                Assert.That(room.Variants.Length, Is.EqualTo(3), room.Id);
+                Assert.That(room.ResolveVariant(0, null), Is.SameAs(room.ResolveVariant(30, null)));
+                Assert.That(room.ResolveVariant(31, null), Is.SameAs(room.ResolveVariant(79, null)));
+                Assert.That(room.ResolveVariant(80, null), Is.SameAs(room.ResolveVariant(100, null)));
+                Assert.That(room.ResolveVariant(0, null).Id, Is.EqualTo(room.Id + ".default"), "保留旧存档编号");
+                Assert.That(room.Variants.Select(v => v.LightColor).Distinct().Count(), Is.EqualTo(3));
+                Assert.That(room.Variants.Select(v => v.Narrative).Distinct().Count(), Is.EqualTo(3));
+                Assert.That(room.Variants.Select(v => v.StabilizerGain), room.Id == "box_s_003" ? Is.EqualTo(new[] { 10, 15, 10 }) : Is.EqualTo(new[] { 0, 0, 0 }));
+                for (int chaos = 0; chaos <= 100; chaos++)
+                    Assert.That(room.Variants.Count(v => v.Supports(chaos)), Is.EqualTo(1), room.Id + " / " + chaos);
+            }
+            Assert.That(config.InitialRoom.Room.Variants.Length, Is.EqualTo(1));
+            Assert.That(config.FinalRoom.Room.Variants.Length, Is.EqualTo(1));
+            Assert.That(new RoomSelectionPlanner(config, config.Seed).Plan(100), Is.SameAs(config.FinalRoom));
+            Assert.That(FlowConfigValidator.Validate(config), Is.Empty);
+        }
+
+        [Test]
+        public void EveryFormalBoxAppliesAllThreeVisualVariantsWithoutShowingPreloadedNarrative()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
+            var rooms = config.NormalPools.SelectMany(pool => pool.Entries).Select(entry => entry.Variant.Room).Distinct();
+            foreach (var room in rooms)
+            {
+                GameObject copy = Object.Instantiate(room.Template.gameObject);
+                try
+                {
+                    var template = copy.GetComponent<FlowRoomTemplate>();
+                    var controller = new RoomVariantController(template);
+                    var text = template.Narratives.Single();
+                    Assert.That(text.font, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/UI/Fonts/NanoDotSong.ttf")));
+                    var lights = copy.GetComponentsInChildren<Light>(true);
+                    Assert.That(lights.Length, Is.GreaterThan(0));
+                    foreach (var variant in room.Variants)
+                    {
+                        controller.Apply(variant, false);
+                        Assert.That(text.gameObject.activeInHierarchy, Is.False, "预加载不能提前显示叙事");
+                        controller.SetCurrent(true);
+                        Assert.That(text.gameObject.activeInHierarchy, Is.True);
+                        Assert.That(text.text, Is.EqualTo(variant.Narrative));
+                        foreach (var light in lights) Assert.That(light.color, Is.EqualTo(variant.LightColor));
+                    }
+                }
+                finally { Object.DestroyImmediate(copy); }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OldDefaultSaveSelectsChaosVariantAndDeathKeepsCheckpointAndBrokenLamp()
+        {
+            var room = AssetDatabase.LoadAssetAtPath<RoomDefinition>("Assets/Settings/FormalFlow/BOX_S_003.asset");
+            var initial = room.Template.GetComponentInChildren<FlowCheckpoint>();
+            foreach (int savedChaos in new[] { 31, 80 })
+            {
+                var data = new SaveManager.SaveData
+                {
+                    scenePath = "Assets/Scenes/FormalFlowGame.unity", roomVariantId = "box_s_003.default",
+                    roomLocalPosition = initial.transform.localPosition, checkpointId = initial.Id,
+                    hasFlowState = true, chaos = savedChaos, brokenDeviceIds = new[] { "lamp" }
+                };
+                PlayerPrefs.SetString("playerSave", JsonUtility.ToJson(data));
+                Assert.That(SaveManager.PrepareContinue(data.scenePath, out _), Is.True);
+                yield return Load();
+                Assert.That(_flow.CurrentRoom.Variant, Is.SameAs(room.ResolveVariant(savedChaos, null)));
+                Assert.That(_flow.Chaos.Value, Is.EqualTo(savedChaos));
+                Assert.That(_flow.Checkpoints.Id, Is.EqualTo(initial.Id));
+                Assert.That(Vector3.Distance(Player.Current.Motor.transform.position, _flow.CurrentRoom.Root.FindCheckpoint(initial.Id).transform.position), Is.LessThan(.25f));
+                Assert.That(_flow.CurrentRoom.Root.Narratives.Single().text, Is.EqualTo(_flow.CurrentRoom.Variant.Narrative));
+                Assert.That(_flow.Recover(true), Is.True);
+                yield return Ready();
+                Assert.That(_flow.Chaos.Value, Is.EqualTo(savedChaos - _flow.Config.DeathPenalty));
+                Assert.That(_flow.CurrentRoom.Variant, Is.SameAs(room.ResolveVariant(_flow.Chaos.Value, null)));
+                Assert.That(_flow.Checkpoints.Id, Is.EqualTo(initial.Id));
+                Assert.That(_flow.CurrentRoom.Root.GetComponentInChildren<StabilityDevice>(true).IsBroken, Is.True);
+                Assert.That(_flow.TryBreakDevice(_flow.CurrentRoom, "lamp"), Is.False, "换差分不能重新结算同一次访问的稳定装置");
+                Assert.That(_flow.Chaos.Value, Is.EqualTo(savedChaos - _flow.Config.DeathPenalty));
+                Assert.That(_flow.CurrentRoom.Root.Narratives.Single().text, Is.EqualTo(_flow.CurrentRoom.Variant.Narrative));
             }
         }
 

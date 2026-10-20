@@ -17,6 +17,9 @@ namespace GameJam.FlowEditor
         private const string Folder = "Assets/Settings/FormalFlow";
         private const string ConfigPath = Folder + "/RunFlow.asset";
 
+        [MenuItem("超高速行者/流程与地图/配置正式箱庭混乱度差分")]
+        public static void BuildChaosVariants() => Build();
+
         [MenuItem("超高速行者/流程与地图/接入七个正式箱庭")]
         public static void Build()
         {
@@ -36,7 +39,7 @@ namespace GameJam.FlowEditor
             AssetDatabase.SaveAssets();
             var errors = FlowConfigValidator.Validate(config);
             if (errors.Count > 0) throw new InvalidOperationException(string.Join("\n", errors));
-            Debug.Log("[流程] BOX_S_001～007 已接入正式流程，BOX_TR 仍为新游戏入口；已有模板与差分编辑不会被重建。");
+            Debug.Log("[流程] BOX_S_001～007 已配置低、中、高三档混乱度差分；BOX_TR 与终点保持独立。已有三档差分内容不会被覆盖。");
         }
 
         private static RoomDefinition BuildRoom(int index, Material material)
@@ -61,7 +64,79 @@ namespace GameJam.FlowEditor
                 AssetDatabase.CreateAsset(variant, Folder + "/" + name + ".default.asset");
                 room.Variants = new[] { variant }; EditorUtility.SetDirty(room);
             }
+            EnsureChaosVariants(room, index);
             return room;
+        }
+
+        private static void EnsureChaosVariants(RoomDefinition room, int index)
+        {
+            if (room.Variants.Length != 1 || room.Variants[0].Id != room.Id + ".default") return;
+            EnsureNarrative(room.Template);
+            // 低档沿用已发布的 default 资产和编号，旧存档仍能识别所在箱庭。
+            RoomVariantDefinition low = room.Variants[0];
+            ConfigureVariant(low, 0, 30, new Color(.5f, .8f, 1f), index == 3 ? 10 : 0, Narrative(index, 0));
+            RoomVariantDefinition middle = ChaosVariant(room, "middle", 31, 79, new Color(1f, .7f, .25f), index == 3 ? 15 : 0, Narrative(index, 1));
+            RoomVariantDefinition high = ChaosVariant(room, "high", 80, 100, new Color(1f, .25f, .18f), index == 3 ? 10 : 0, Narrative(index, 2));
+            room.Variants = new[] { low, middle, high };
+            EditorUtility.SetDirty(room);
+        }
+
+        private static RoomVariantDefinition ChaosVariant(RoomDefinition room, string suffix, int min, int max, Color color, int gain, string narrative)
+        {
+            string path = Folder + "/" + room.DisplayName + "." + suffix + ".asset";
+            RoomVariantDefinition variant = AssetDatabase.LoadAssetAtPath<RoomVariantDefinition>(path);
+            if (variant != null) return variant;
+            variant = ScriptableObject.CreateInstance<RoomVariantDefinition>();
+            variant.Id = room.Id + "." + suffix; variant.Room = room;
+            ConfigureVariant(variant, min, max, color, gain, narrative);
+            AssetDatabase.CreateAsset(variant, path); return variant;
+        }
+
+        private static void ConfigureVariant(RoomVariantDefinition variant, int min, int max, Color color, int gain, string narrative)
+        {
+            variant.MinimumChaos = min; variant.MaximumChaos = max;
+            variant.OverrideLightColor = true; variant.LightColor = color;
+            variant.StabilizerGain = gain; variant.Narrative = narrative;
+            variant.ContentGroups = variant.ContentGroups.Union(gain > 0 ? new[] { "narrative", "stability" } : new[] { "narrative" }).ToArray();
+            EditorUtility.SetDirty(variant);
+        }
+
+        private static string Narrative(int index, int stage)
+        {
+            string[][] lines = {
+                new[] { "沿平台向前，出口在对面。", "熟悉的平台，陌生的灯光。", "灯光失序，出口仍在对面。" },
+                new[] { "绕过中庭，从侧面离开。", "标识开始偏移，留意侧面的出口。", "别跟随阴影，找到侧面的出口。" },
+                new[] { "保持速度，穿过折返通道。", "稳定装置亮起，击碎它继续前进。", "通道没有改变，别在这里停下。" },
+                new[] { "沿着两侧的平台前进。", "这片空间似曾相识。", "房间在重复，前进才有出口。" },
+                new[] { "留意平台之间的距离。", "光线开始摇晃，看清下一处落点。", "信任脚下的落点，别停下来。" },
+                new[] { "沿通道前进，在尽头转向。", "转角后的光线正在改变。", "穿过转角，出口就在前面。" },
+                new[] { "长廊通向另一端。", "走廊还在延伸。", "别回头，出口在前方。" }
+            };
+            return lines[index - 1][stage];
+        }
+
+        private static void EnsureNarrative(FlowRoomTemplate template)
+        {
+            if (template.Narratives.Length > 0) return;
+            string path = AssetDatabase.GetAssetPath(template);
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var loaded = root.GetComponent<FlowRoomTemplate>();
+                FlowCheckpoint checkpoint = loaded.GetComponentsInChildren<FlowCheckpoint>(true).OrderBy(p => p.Priority).First();
+                var group = Anchor(root.transform, "差分叙事内容组", Vector3.zero).gameObject.AddComponent<FlowContentGroup>();
+                group.Id = "narrative"; group.GameplayOnly = true;
+                var text = Anchor(group.transform, "入口差分叙事", checkpoint.transform.localPosition + new Vector3(0, 2.6f, 6)).gameObject.AddComponent<TextMesh>();
+                // 沿用示例的叙事接口，指定项目中文字体，避免默认 Arial 缺失中文字形。
+                text.font = AssetDatabase.LoadAssetAtPath<Font>("Assets/Art/UI/Fonts/NanoDotSong.ttf");
+                if (text.font == null) throw new InvalidOperationException("找不到地图叙事所需的中文字体");
+                text.GetComponent<MeshRenderer>().sharedMaterial = text.font.material;
+                text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center;
+                text.fontSize = 64; text.characterSize = .06f; text.color = Color.white; text.text = string.Empty;
+                loaded.Narratives = new[] { text };
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
         private static RoomVariantDefinition FinalRoom(FlowRoomTemplate template)
@@ -82,7 +157,10 @@ namespace GameJam.FlowEditor
                 AssetDatabase.CreateAsset(variant, Folder + "/Final.default.asset");
                 room.Variants = new[] { variant }; EditorUtility.SetDirty(room);
             }
-            return room.Variants[0];
+            RoomVariantDefinition final = room.Variants[0];
+            if (string.IsNullOrEmpty(final.Narrative))
+                ConfigureVariant(final, 0, 100, new Color(1f, .9f, .6f), 0, "抵达出口，结束这次循环。");
+            return final;
         }
 
         private static FlowRoomTemplate ExportTemplate(string name, string path, Material material, bool changesChaos)
@@ -199,7 +277,9 @@ namespace GameJam.FlowEditor
             RoomPoolDefinition pool = AssetDatabase.LoadAssetAtPath<RoomPoolDefinition>(path);
             if (pool == null) { pool = ScriptableObject.CreateInstance<RoomPoolDefinition>(); AssetDatabase.CreateAsset(pool, path); }
             pool.Id = "formal_" + id; pool.ChangesChaos = changesChaos;
-            pool.Entries = variants.Select(variant => new RoomPoolEntry { Variant = variant }).ToArray();
+            RoomPoolEntry[] existing = pool.Entries;
+            pool.Entries = variants.Select(variant => existing.FirstOrDefault(entry => entry != null && entry.Variant == variant)
+                ?? new RoomPoolEntry { Variant = variant }).ToArray();
             EditorUtility.SetDirty(pool); return pool;
         }
 
