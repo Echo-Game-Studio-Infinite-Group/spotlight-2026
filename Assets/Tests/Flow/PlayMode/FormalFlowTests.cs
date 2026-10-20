@@ -418,7 +418,9 @@ namespace GameJam.FlowTests
             yield return Load();
             Assert.That(_flow.IsComplete, Is.False);
             Assert.That(_flow.NextRoom, Is.Null);
-            Player.Current.Motor.Teleport(_flow.CurrentRoom.Root.Exit.position - _flow.CurrentRoom.Root.Exit.forward + Vector3.up * .15f);
+            Assert.That(_flow.CurrentRoom.Root.FinishArea, Is.Not.Null);
+            Transform exit = _flow.CurrentRoom.Root.Exit;
+            Player.Current.Motor.Teleport(exit.position - exit.forward + exit.right * (_flow.CurrentRoom.Root.ExitSize.x * .5f - 1f) + Vector3.up * .15f);
             yield return new WaitForFixedUpdate();
             Assert.That(_flow.IsComplete, Is.True);
         }

@@ -211,8 +211,7 @@ namespace GameJam.Flow
             if (best != null) CommitCheckpoint(best);
             if (NextRoom != null && NextRoom.IsReady && !_preparing &&
                 FlowPlacement.CrossedEntry(NextRoom.Root, _previous, position, _config.EntryCommitDistance)) TryEnterNextRoom();
-            if (CurrentRoom.Variant == _config.FinalRoom &&
-                (position - CurrentRoom.Root.Exit.position).sqrMagnitude <= CurrentRoom.Root.FinishRadius * CurrentRoom.Root.FinishRadius) CompleteRun();
+            if (CurrentRoom.Root.FinishArea != null && CurrentRoom.Root.FinishArea.ContainsPlayer(_motor.transform)) CompleteRun();
             _previous = position;
         }
 
@@ -225,6 +224,8 @@ namespace GameJam.Flow
         private void Activate(FlowRoomInstance room, bool advance)
         {
             if (!_maps.TryActivateFlowRoom(room)) throw new InvalidOperationException("无法激活房间实例 " + room.Id);
+            if (room.Variant == _config.FinalRoom && room.Root.FinishArea == null)
+                Debug.LogError("[流程] 最终房缺少终点判定区域", room.Root);
             CurrentRoom = room;
             if (!_history.Contains(room)) _history.Add(room);
             if (advance) Planner.CommitSuccessor();
@@ -344,8 +345,10 @@ namespace GameJam.Flow
         }
         public void CompleteRun()
         {
-            if (IsBusy || IsComplete || CurrentRoom == null || CurrentRoom.Variant != _config.FinalRoom) return;
-            IsComplete = true; GameManager.Instance.EndGame();
+            if (IsBusy || IsComplete || CurrentRoom == null) return;
+            IsComplete = true;
+            Debug.Log("[流程] 到达终点：" + CurrentRoom.Variant.Room.Id, this);
+            GameManager.Instance.EndGame();
             if (_input != null) _input.SetGameplayEnabled(false);
         }
         private static FlowCheckpoint FirstCheckpoint(FlowRoomInstance room)

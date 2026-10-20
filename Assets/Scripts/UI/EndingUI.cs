@@ -88,7 +88,7 @@ public sealed class EndingUI : MonoBehaviour
             yield return ShowPage();
             yield break;
         }
-        if (!Application.CanStreamedLevelBeLoaded(_mainMenuScenePath))
+        if (SceneUtility.GetBuildIndexByScenePath(_mainMenuScenePath) < 0)
         {
             Debug.LogError("[Ending] 主菜单场景未加入 Build Settings：" + _mainMenuScenePath, this);
             _pageIndex = Mathf.Max(0, (_pages?.Length ?? 0) - 1);

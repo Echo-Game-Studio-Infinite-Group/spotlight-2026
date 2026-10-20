@@ -25,8 +25,8 @@ namespace GameJam.Flow
         [InspectorName("导航数据")] public NavMeshData Navigation;
         [Tooltip("接收当前差分叙事文本的场景文字组件。")]
         [InspectorName("叙事文字")] public TextMesh[] Narratives = new TextMesh[0];
-        [Tooltip("最终房中到达出口判定通关的半径，单位为米。")]
-        [InspectorName("终点半径"), Min(0.1f)] public float FinishRadius = 3f;
+        [Tooltip("最终房出口的终点判定区域，摆放在出口门洞里；留空表示该模板没有终点。")]
+        [InspectorName("终点判定区域")] public FlowFinishArea FinishArea;
         public FlowCheckpoint[] Checkpoints { get; private set; }
         public RoomVariantController Variants { get; private set; }
         public FlowRoomEnemies Enemies { get; private set; }
