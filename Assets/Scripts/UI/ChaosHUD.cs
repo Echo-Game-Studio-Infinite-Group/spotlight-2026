@@ -63,8 +63,9 @@ public sealed class ChaosHUD : MonoBehaviour
         }
         _fallbackText.gameObject.SetActive(!useDigits);
         _fallbackText.text = number;
-        _maximumText.text = "/ " + _config.MaximumChaos;
-        _stateText.text = _config.EnableSpecialRoutes && value == _config.ExceptionalChaos ? "SPECIAL" :
+        // 精简 HUD 预制体只保留数码管，状态与上限文字是可选项。
+        if (_maximumText != null) _maximumText.text = "/ " + _config.MaximumChaos;
+        if (_stateText != null) _stateText.text = _config.EnableSpecialRoutes && value == _config.ExceptionalChaos ? "SPECIAL" :
             value < 0 ? "NEGATIVE" : value >= _config.MaximumChaos ? "LIMIT" : "CURRENT VALUE";
     }
 
