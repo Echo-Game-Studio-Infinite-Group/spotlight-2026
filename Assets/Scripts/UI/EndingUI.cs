@@ -25,8 +25,7 @@ public sealed class EndingUI : MonoBehaviour
     private int _pageIndex;
     private float _readyAt;
     private bool _changing;
-    private AudioDebugOverlay[] _audioDebug;
-    private bool[] _audioDebugVisibility;
+    private bool _audioDebugWasVisible;
 
     private void Awake()
     {
@@ -40,13 +39,8 @@ public sealed class EndingUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         // 调试层跨场景常驻，结局期间暂时隐藏，离开后恢复原先开关。
-        _audioDebug = FindObjectsOfType<AudioDebugOverlay>();
-        _audioDebugVisibility = new bool[_audioDebug.Length];
-        for (int i = 0; i < _audioDebug.Length; i++)
-        {
-            _audioDebugVisibility[i] = _audioDebug[i].Visible;
-            _audioDebug[i].Visible = false;
-        }
+        _audioDebugWasVisible = AudioDebugOverlay.Visible;
+        AudioDebugOverlay.Visible = false;
         _pageIndex = 0;
         _changing = true;
         StartCoroutine(ShowPage());
@@ -55,8 +49,7 @@ public sealed class EndingUI : MonoBehaviour
     private void OnDisable()
     {
         StopAllCoroutines();
-        for (int i = 0; i < _audioDebug.Length; i++)
-            if (_audioDebug[i] != null) _audioDebug[i].Visible = _audioDebugVisibility[i];
+        AudioDebugOverlay.Visible = _audioDebugWasVisible;
     }
 
     private void Update()

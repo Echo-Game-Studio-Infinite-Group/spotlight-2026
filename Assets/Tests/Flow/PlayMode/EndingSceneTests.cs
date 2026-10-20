@@ -64,7 +64,7 @@ namespace GameJam.FlowTests
             Assert.That(Get<CanvasGroup>(ending, "_textOpacity").alpha, Is.EqualTo(1).Within(.001));
             Assert.That(text.color, Is.EqualTo(Color.white));
             Assert.That(text.fontSharedMaterial.IsKeywordEnabled("GLOW_ON"), Is.False);
-            foreach (var overlay in Object.FindObjectsOfType<AudioDebugOverlay>()) Assert.That(overlay.Visible, Is.False);
+            Assert.That(AudioDebugOverlay.Visible, Is.False);
             Assert.That(GameObject.Find("Black Background").GetComponent<Image>().color, Is.EqualTo(Color.black));
             Assert.That(Object.FindObjectsOfType<PlayerMotor>(), Is.Empty);
             text.ForceMeshUpdate();
