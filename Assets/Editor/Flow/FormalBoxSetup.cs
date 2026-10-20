@@ -92,7 +92,7 @@ namespace GameJam.FlowEditor
             AssetDatabase.CreateAsset(variant, path); return variant;
         }
 
-        private static void ConfigureVariant(RoomVariantDefinition variant, int min, int max, Color color, int gain, string narrative)
+        internal static void ConfigureVariant(RoomVariantDefinition variant, int min, int max, Color color, int gain, string narrative)
         {
             variant.MinimumChaos = min; variant.MaximumChaos = max;
             variant.OverrideLightColor = true; variant.LightColor = color;
@@ -115,7 +115,7 @@ namespace GameJam.FlowEditor
             return lines[index - 1][stage];
         }
 
-        private static void EnsureNarrative(FlowRoomTemplate template)
+        internal static void EnsureNarrative(FlowRoomTemplate template)
         {
             if (template.Narratives.Length > 0) return;
             string path = AssetDatabase.GetAssetPath(template);
@@ -164,8 +164,13 @@ namespace GameJam.FlowEditor
         }
 
         private static FlowRoomTemplate ExportTemplate(string name, string path, Material material, bool changesChaos)
+            => ExportTemplate("Assets/Prefabs/" + name + ".prefab", name, path, material, changesChaos,
+                Vector3.forward, name == "BOX_S_002" || name == "BOX_S_006" ? Vector3.right : Vector3.forward);
+
+        internal static FlowRoomTemplate ExportTemplate(string sourcePath, string name, string path, Material material,
+            bool changesChaos, Vector3 entryForward, Vector3 exitForward, bool includeLowerPlatforms = false)
         {
-            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/" + name + ".prefab");
+            GameObject source = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
             if (source == null) throw new InvalidOperationException("找不到源预制体：" + name);
             Scene preview = EditorSceneManager.NewPreviewScene();
             try
@@ -179,38 +184,51 @@ namespace GameJam.FlowEditor
                 Collider[] platforms = geometry.GetComponentsInChildren<Collider>(true)
                     .Where(c => c.name.StartsWith("Torch 01", StringComparison.Ordinal) && c.enabled &&
                         c.bounds.size.y < 2 && c.bounds.size.x > 10 && c.bounds.size.z > 10)
-                    .OrderBy(c => c.bounds.center.z).ToArray();
+                    .OrderBy(c => Vector3.Dot(c.bounds.center, entryForward)).ToArray();
                 if (platforms.Length != 4) throw new InvalidOperationException(name + "：需要人工确认两个门口平台");
                 Collider entryFloor = platforms.Take(2).OrderBy(c => c.bounds.center.y).First();
                 Collider exitFloor = platforms.Skip(2).OrderBy(c => c.bounds.center.y).First();
                 Collider entryCeiling = platforms.Take(2).OrderByDescending(c => c.bounds.center.y).First();
                 Collider exitCeiling = platforms.Skip(2).OrderByDescending(c => c.bounds.center.y).First();
                 Vector3 entryCenter = FloorPoint(entryFloor), exitCenter = FloorPoint(exitFloor);
-                Vector3 origin = entryCenter; origin.z = entryFloor.bounds.min.z;
-                // 002、006 的出口位于侧面；平台的 Z 顺序仍决定入口/出口，门朝向须沿真实通道。
-                bool sideExit = name == "BOX_S_002" || name == "BOX_S_006";
+                Vector3 origin = entryCenter - entryForward * Vector3.Dot(entryFloor.bounds.extents, Abs(entryForward));
                 Vector3 exit = exitCenter;
-                if (sideExit) exit.x = exitFloor.bounds.max.x; else exit.z = exitFloor.bounds.max.z;
+                exit += exitForward * Vector3.Dot(exitFloor.bounds.extents, Abs(exitForward));
                 Vector2 entrySize = new Vector2(16, Mathf.Min(7.5f, entryCeiling.bounds.min.y - entryCenter.y - .1f));
                 Vector2 exitSize = new Vector2(16, Mathf.Min(7.5f, exitCeiling.bounds.min.y - exitCenter.y - .1f));
-                geometry.transform.position -= origin;
+                // 保留美术预制体嵌套引用，将任意轴向的门口统一到模板入口 +Z。
+                Quaternion normalize = Quaternion.Inverse(Quaternion.LookRotation(entryForward, Vector3.up));
+                geometry.transform.position = normalize * (geometry.transform.position - origin);
+                geometry.transform.rotation = normalize * geometry.transform.rotation;
                 Physics.SyncTransforms();
                 var template = wrapper.AddComponent<FlowRoomTemplate>();
                 template.Entry = Anchor(wrapper.transform, "Entry", Vector3.zero);
-                template.Exit = Anchor(wrapper.transform, "Exit", exit - origin);
-                template.Exit.localRotation = sideExit ? Quaternion.Euler(0, 90, 0) : Quaternion.identity;
+                template.Exit = Anchor(wrapper.transform, "Exit", normalize * (exit - origin));
+                template.Exit.localRotation = Quaternion.LookRotation(normalize * exitForward, Vector3.up);
                 template.EntrySize = entrySize; template.ExitSize = exitSize;
                 template.EntryDoor = Door(wrapper.transform, "入口保护门", template.Entry, entrySize, material);
                 template.ExitDoor = Door(wrapper.transform, "出口保护门", template.Exit, exitSize, material);
-                var checkpoint = Anchor(wrapper.transform, "入口出生记录点", entryCenter - origin + Vector3.up * .15f).gameObject.AddComponent<FlowCheckpoint>();
+                var checkpoint = Anchor(wrapper.transform, "入口出生记录点", normalize * (entryCenter - origin) + Vector3.up * .15f).gameObject.AddComponent<FlowCheckpoint>();
                 checkpoint.Id = "entry";
-                if (changesChaos) AddDevice(wrapper.transform, exitCenter - origin, material);
+                if (changesChaos) AddDevice(wrapper.transform, normalize * (exitCenter - origin), material);
                 Renderer[] renderers = geometry.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled && r.bounds.size.sqrMagnitude > 0).ToArray();
                 Bounds bounds = renderers[0].bounds;
                 foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
                 template.GeometryBounds = bounds;
                 // 裂隙恢复应在跌离可玩平台后触发，不能等到高耸装饰的最低包围盒。
                 template.FallHeight = Mathf.Min(entryCenter.y, exitCenter.y) - origin.y - 6;
+                if (includeLowerPlatforms)
+                {
+                    // Cdwy 箱庭内有低于两端门口的可走地面，不能把正常落地误判为裂隙掉落。
+                    foreach (Collider floor in geometry.GetComponentsInChildren<Collider>(true))
+                    {
+                        Bounds floorBounds = floor.bounds;
+                        if (!floor.enabled || floor.isTrigger || floorBounds.size.y >= 2 || floorBounds.size.x < 8 || floorBounds.size.z < 8) continue;
+                        var ray = new Ray(floorBounds.center + Vector3.up * (floorBounds.extents.y + 1), Vector3.down);
+                        if (floor.Raycast(ray, out var hit, floorBounds.size.y + 2) && hit.normal.y > .9f)
+                            template.FallHeight = Mathf.Min(template.FallHeight, hit.point.y - 6);
+                    }
+                }
                 var surface = wrapper.AddComponent<NavMeshSurface>();
                 surface.collectObjects = CollectObjects.Children; surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
                 string navigationPath = Folder + "/Navigation/" + name + ".asset";
@@ -234,6 +252,8 @@ namespace GameJam.FlowEditor
             }
             finally { EditorSceneManager.ClosePreviewScene(preview); }
         }
+
+        private static Vector3 Abs(Vector3 vector) => new Vector3(Mathf.Abs(vector.x), Mathf.Abs(vector.y), Mathf.Abs(vector.z));
 
         private static Vector3 FloorPoint(Collider floor)
         {
@@ -278,8 +298,10 @@ namespace GameJam.FlowEditor
             if (pool == null) { pool = ScriptableObject.CreateInstance<RoomPoolDefinition>(); AssetDatabase.CreateAsset(pool, path); }
             pool.Id = "formal_" + id; pool.ChangesChaos = changesChaos;
             RoomPoolEntry[] existing = pool.Entries;
+            // 接入其他批次后，重跑七图装配不能清掉这些地图及其手调权重。
             pool.Entries = variants.Select(variant => existing.FirstOrDefault(entry => entry != null && entry.Variant == variant)
-                ?? new RoomPoolEntry { Variant = variant }).ToArray();
+                ?? new RoomPoolEntry { Variant = variant }).Concat(existing.Where(entry => entry != null && entry.Variant != null
+                    && !variants.Contains(entry.Variant))).ToArray();
             EditorUtility.SetDirty(pool); return pool;
         }
 

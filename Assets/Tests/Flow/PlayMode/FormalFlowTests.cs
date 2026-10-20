@@ -151,13 +151,17 @@ namespace GameJam.FlowTests
         }
 
         [Test]
-        public void FormalConfigContainsSevenBoxesAndSeparateFinalVariant()
+        public void FormalConfigContainsElevenBoxesAndSeparateFinalVariant()
         {
             var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
             Assert.That(FlowConfigValidator.Validate(config), Is.Empty);
             var ordinary = config.NormalPools.Single(p => !p.ChangesChaos).Entries.Select(e => e.Variant).ToArray();
             var chaos = config.NormalPools.Single(p => p.ChangesChaos).Entries.Select(e => e.Variant).ToArray();
-            Assert.That(ordinary.Select(v => v.Room.DisplayName).Distinct(), Is.EquivalentTo(new[] { "BOX_S_001", "BOX_S_002", "BOX_S_004", "BOX_S_005", "BOX_S_006", "BOX_S_007" }));
+            Assert.That(ordinary.Select(v => v.Room.DisplayName).Distinct(), Is.EquivalentTo(new[]
+            {
+                "BOX_S_001", "BOX_S_002", "BOX_S_004", "BOX_S_005", "BOX_S_006", "BOX_S_007",
+                "CDWY_BOX_S01_2", "CDWY_BOX_S02_2", "CDWY_BOX_S03_2", "CDWY_BOX_S04_2"
+            }));
             Assert.That(chaos.Select(v => v.Room.DisplayName).Distinct(), Is.EqualTo(new[] { "BOX_S_003" }));
             Assert.That(ordinary.Contains(config.FinalRoom), Is.False, "普通池抽到 007 不能提前终局");
             Assert.That(config.FinalRoom.Room.Template, Is.SameAs(ordinary.First(v => v.Room.DisplayName == "BOX_S_007").Room.Template));
@@ -235,8 +239,8 @@ namespace GameJam.FlowTests
         {
             var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
             var rooms = config.NormalPools.SelectMany(pool => pool.Entries).Select(entry => entry.Variant.Room).Distinct().ToArray();
-            Assert.That(rooms.Length, Is.EqualTo(7));
-            Assert.That(config.NormalPools.Single(pool => !pool.ChangesChaos).Entries.Length, Is.EqualTo(18));
+            Assert.That(rooms.Length, Is.EqualTo(11));
+            Assert.That(config.NormalPools.Single(pool => !pool.ChangesChaos).Entries.Length, Is.EqualTo(30));
             Assert.That(config.NormalPools.Single(pool => pool.ChangesChaos).Entries.Length, Is.EqualTo(3));
             foreach (var room in rooms)
             {
@@ -284,6 +288,33 @@ namespace GameJam.FlowTests
                     }
                 }
                 finally { Object.DestroyImmediate(copy); }
+            }
+        }
+
+        [Test]
+        public void CdwyRoomsKeepArtPrefabReferencesAndNormalizeDoorDirection()
+        {
+            string[] sources = { "BOX_S01_2", "BOX_S02_2", "BOX_S03 _2", "BOX_S04 _2" };
+            for (int i = 0; i < sources.Length; i++)
+            {
+                string name = "CDWY_BOX_S" + (i + 1).ToString("00") + "_2";
+                var room = AssetDatabase.LoadAssetAtPath<RoomDefinition>("Assets/Settings/FormalFlow/" + name + ".asset");
+                Assert.That(room, Is.Not.Null, name);
+                var template = room.Template;
+                var geometry = template.transform.Cast<Transform>().Select(t => PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject))
+                    .FirstOrDefault(source => source != null && AssetDatabase.GetAssetPath(source) == "Assets/Scenes/LevelTest_Cdwy 1/Prefabs/" + sources[i] + ".prefab");
+                Assert.That(geometry, Is.Not.Null, "必须嵌套资产版预制件，不能导入同名白盒或复制丢失资产引用");
+                Assert.That(template.GetComponentsInChildren<Renderer>(true).Length, Is.GreaterThan(50));
+                Assert.That(template.Entry.parent, Is.SameAs(template.transform));
+                Assert.That(template.Exit.parent, Is.SameAs(template.transform));
+                Assert.That(template.Entry.localPosition, Is.EqualTo(Vector3.zero));
+                Assert.That(Vector3.Dot(template.Entry.forward, template.transform.forward), Is.GreaterThan(.999f));
+                Assert.That(Vector3.Dot(template.Exit.forward, template.transform.forward), Is.GreaterThan(.999f));
+                Assert.That(template.Exit.localPosition.z, Is.GreaterThan(100));
+                Assert.That(template.GetComponentsInChildren<MonoBehaviour>(true).Any(c => c != null && c.GetType().FullName == "UnityEngine.ProBuilder.ProBuilderMesh"), Is.False);
+                var entry = template.GetComponentInChildren<FlowCheckpoint>();
+                Assert.That(entry.Id, Is.EqualTo("entry"));
+                Assert.That(template.FallHeight, Is.LessThan(Mathf.Min(entry.transform.localPosition.y, template.Exit.localPosition.y) - 5));
             }
         }
 
