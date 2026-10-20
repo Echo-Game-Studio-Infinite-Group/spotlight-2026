@@ -34,7 +34,7 @@ namespace GameJam.FlowEditor
             config.Loops = new[] { Loop("low", 0, 30, neutral, chaos), Loop("high", 80, 99, neutral, chaos) };
             config.FinalRoom = FinalRoom(rooms[6].Template);
             config.ContinueOnlyRooms = new RoomVariantDefinition[0];
-            config.AlwaysStartAtInitialRoom = true;
+            config.AlwaysStartAtInitialRoom = false;
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             var errors = FlowConfigValidator.Validate(config);

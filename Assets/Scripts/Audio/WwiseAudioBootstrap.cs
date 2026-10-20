@@ -10,8 +10,6 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
 {
     private static WwiseAudioBootstrap _instance;
 
-    private AudioDebugOverlay _overlay;
-    private PlayerInputReader _boundInput;
     private float _playerScanTimer;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -32,7 +30,7 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        _overlay = gameObject.AddComponent<AudioDebugOverlay>();
+        gameObject.AddComponent<AudioDebugOverlay>();
     }
 
     private void Update()
@@ -60,24 +58,10 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
             if (enemy.GetComponent<EnemyFootstepAudioSource>() == null)
                 enemy.gameObject.AddComponent<EnemyFootstepAudioSource>();
         }
-
-        PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
-        if (input != null && input != _boundInput)
-        {
-            if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
-            _boundInput = input;
-            _boundInput.ToggleHUD += ToggleDebug;
-        }
     }
 
     private void OnDestroy()
     {
         if (_instance == this) _instance = null;
-        if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
-    }
-
-    private void ToggleDebug()
-    {
-        if (_overlay != null) _overlay.Visible = !_overlay.Visible;
     }
 }
