@@ -17,6 +17,8 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
     [Header("Parry")]
     [Tooltip("劣势 parry 把玩家向后弹开的小速度。策划案：速度清零 + 一个较小的向后速度")]
     [SerializeField, Min(0f)] private float _disadvantageKnockback = 3f;
+    [Tooltip("成功招架敌人本体或激光时，对该敌人造成当前招式实际伤害的倍率；不包含子弹。")]
+    [SerializeField, Min(0f)] private float _parryDamageMultiplier = 1f;
     [Tooltip("parry 成功时打一行日志：走的是哪条分支、压到多少倍率")]
     [SerializeField] private bool _logParry = true;
 
@@ -36,6 +38,8 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
     private readonly ActionHitboxSampler _parrySampler = new ActionHitboxSampler();
     private readonly System.Collections.Generic.Dictionary<CombatComponent, ParryContact> _parryContacts
         = new System.Collections.Generic.Dictionary<CombatComponent, ParryContact>();
+    private readonly System.Collections.Generic.HashSet<HealthComponent> _parryDamageTargets
+        = new System.Collections.Generic.HashSet<HealthComponent>();
     private ActionExecutionState _parryState;
     private readonly System.Collections.Generic.List<ParryVolumeSweep> _parryMotion = new System.Collections.Generic.List<ParryVolumeSweep>();
     private float _parryMotionTick = float.NaN;
@@ -169,11 +173,13 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
         return Combat != null && Combat.TryBeginAttack(now);
     }
 
-    // 成功已经由统一几何判定消费所有来源，此处只提交一次玩家状态和反馈。
+    // 几何判定已消费所有来源，这里结算招架伤害并提交一次玩家反馈。
     public void ReceiveParry(System.Collections.Generic.IReadOnlyList<ParryContact> contacts)
     {
         if (contacts.Count == 0) return;
         EnsureReferences();
+        // 取消动作会清空招式伤害，劣势招架也会改变速度，必须先保留这一击的实际数值。
+        float parryDamage = SnapshotParryDamage();
         if (_self != null) _self.GrantInvulnerability(Combat.ParryInvulnerableSeconds);
         // 混合招架保留近战的时停，纯子弹招架也不能清掉此前已生效的时间效果。
         bool stopTime = false;
@@ -191,9 +197,39 @@ public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
                 CombatSparks.PlayParryProjectile(contact.Point, contact.Direction);
             else CombatSparks.PlayParry(contact.Point, contact.Direction);
         }
+        ApplyParryDamage(contacts, parryDamage);
         if (disadvantage) ApplyDisadvantageKnockback();
         if (_logParry) Debug.Log($"[PlayerCombat] 拼刀成功：{contacts.Count} 个攻击，时停 {(stopTime ? Combat.ParryStopSeconds : 0f):0.##} 秒", this);
         ParrySucceeded?.Invoke(contacts);
+    }
+
+    private float SnapshotParryDamage()
+    {
+        if (_sequenceCombat != null)
+        {
+            foreach (ActionHitVolume volume in _sequenceCombat.HitVolumes)
+                if (volume.IsActive(_parryState.Action, _parryState.FrameProgress))
+                    return SequenceDamage(volume.HitGroup) * _parryDamageMultiplier;
+            foreach (ActionHitVolume volume in _sequenceCombat.ParryVolumes)
+                if (volume.IsActive(_parryState.Action, _parryState.FrameProgress))
+                    return SequenceDamage(volume.HitGroup) * _parryDamageMultiplier;
+        }
+        return AttackDamage * _parryDamageMultiplier;
+    }
+
+    private void ApplyParryDamage(System.Collections.Generic.IReadOnlyList<ParryContact> contacts, float damage)
+    {
+        _parryDamageTargets.Clear();
+        if (damage <= 0f) return;
+        foreach (ParryContact contact in contacts)
+        {
+            if (contact.SourceType == AttackSourceType.Projectile || contact.Source == null
+                || contact.Source.Camp != CampType.Enemy) continue;
+            HealthComponent target = contact.Source.Self;
+            if (target == null || target == _self || !_parryDamageTargets.Add(target)) continue;
+            // 沿用受伤、无敌和死亡结算；Parry 已有反馈，不重复触发普攻命中的额外时缓。
+            target.ReceiveAttack(new AttackDamageRequest(damage, contact.Point, contact.Direction, 0, 0));
+        }
     }
 
     private int EnvironmentMask => _motor != null && _motor.Params != null ? _motor.Params.CollisionMask.value : ~0;

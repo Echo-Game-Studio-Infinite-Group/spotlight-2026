@@ -19,7 +19,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
     [Header("撞击触发（判定条件在移动层里，这里只管数值）")]
     [Tooltip("最低触发速度，单位是「地速阈值的倍数」。低于它撞墙不算撞击。")]
-    [SerializeField, Min(0f)] private float _minSpeedFactor = 1.2f;
+    [SerializeField, Min(0f)] private float _minSpeedFactor = 2.5f;
 
     [Tooltip("伤害 = 速度（地速阈值倍数）× 这个系数。策划案原文是「伤害等于其速度」，所以默认 1。")]
     [SerializeField, Min(0f)] private float _damagePerSpeed = 1f;

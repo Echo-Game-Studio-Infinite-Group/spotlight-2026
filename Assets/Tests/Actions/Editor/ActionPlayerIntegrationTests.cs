@@ -1331,6 +1331,7 @@ public sealed class ActionPlayerIntegrationTests
     {
         var clock = new GameObject("ParryRunnerClock"); _created.Add(clock); Invoke(clock.AddComponent<TimeManager>(), "Awake");
         Ground(); ShortAttack();
+        _attack.Combat.Damage = 37f; _attack.Combat.ScaleDamageWithSpeed = false;
         Enemy enemy = Target(); enemy.GetComponent<BoxCollider>().size = Vector3.one * .2f;
         enemy.transform.position = _root.transform.position + Vector3.forward * 1.5f;
         CombatComponent source = enemy.GetComponent<CombatComponent>();
@@ -1340,6 +1341,8 @@ public sealed class ActionPlayerIntegrationTests
         _combat.ParrySucceeded += contacts => parries++;
         Tick(ActionInputButtons.Attack);
         Assert.AreEqual(1, parries); Assert.AreEqual(0, hits);
+        Assert.AreEqual(enemy.MaxHealth - 37f, enemy.Health);
+        Assert.AreEqual(1, enemy.DamagedCount);
         Assert.IsFalse(_runner.Player.IsRunning); Assert.IsFalse(source.IsAttacking(TimeManager.WorldTime));
         Assert.IsFalse(_combat.Hitbox.SequenceWindowOpen);
         float pose = _bridge.Animator.GetFloat("ActionTime");
