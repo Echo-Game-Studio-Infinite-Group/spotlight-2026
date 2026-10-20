@@ -14,6 +14,20 @@ public sealed class CameraWallFade : MonoBehaviour
     [SerializeField, Min(0f)] private float _probeRadius = 0.1f;
     [SerializeField] private LayerMask _wallLayers = ~0;
 
+    [Header("遮挡隐藏黑名单")]
+    [SerializeField, Tooltip("这些 Renderer 保持原样；要排除整个子树，在根节点添加 CameraWallFadeIgnore。")]
+    private Renderer[] _excludedRenderers = Array.Empty<Renderer>();
+    [SerializeField, Tooltip("共享这些材质的槽位不会被替换或修改属性块。")]
+    private Material[] _excludedMaterials = Array.Empty<Material>();
+    [SerializeField, Tooltip("特殊 Shader 的裁切、溶解和颜色混合不能套用墙体透明化。")]
+    private string[] _excludedShaderNames =
+    {
+        "GameJam/EnemyWaistCutout", "GameJam/Dissolve", "GameJam/Text3D",
+        "GameJam/PlayerAfterimage", "GameJam/UI/EnemyMarkOverlay",
+        "GameJam/ProceduralLaser", "GameJam/SparkAdditive", "GameJam/DustSoft",
+        "OurFunction/VFX/RuinsFireFlipbook"
+    };
+
     private Collider[] _hits = new Collider[64];
     private readonly Dictionary<Renderer, FadeState> _fading = new Dictionary<Renderer, FadeState>();
     private readonly HashSet<Renderer> _occluded = new HashSet<Renderer>();
@@ -91,7 +105,13 @@ public sealed class CameraWallFade : MonoBehaviour
         {
             Renderer renderer = entry.Key;
             if (renderer == null) { _finished.Add(renderer); continue; }
+            if (IsExcludedRenderer(renderer)) { _finished.Add(renderer); continue; }
             FadeState state = entry.Value;
+            bool newlyExcluded = false;
+            for (int i = 0; i < state.OriginalMaterials.Length; i++)
+                if (state.ColorProperties[i] != null && IsExcludedMaterial(state.OriginalMaterials[i]))
+                { newlyExcluded = true; break; }
+            if (newlyExcluded) { _finished.Add(renderer); continue; }
             float wanted = _occluded.Contains(renderer) ? _occludedAlpha : 1f;
             state.Alpha = Mathf.MoveTowards(state.Alpha, wanted, Mathf.Max(0f, _fadeSpeed) * deltaTime);
             for (int i = 0; i < state.FadeMaterials.Length; i++)
@@ -109,14 +129,49 @@ public sealed class CameraWallFade : MonoBehaviour
 
     private void AddOccluder(Renderer renderer)
     {
-        if (renderer.enabled && !renderer.transform.IsChildOf(_playerRoot) &&
+        if (renderer.enabled && !IsExcludedRenderer(renderer) &&
             (renderer is MeshRenderer || renderer is SkinnedMeshRenderer))
             _occluded.Add(renderer);
+    }
+
+    private bool IsExcludedRenderer(Renderer renderer)
+    {
+        // 敌人原材质也必须保护，否则断肢生成时会继承已经透明化的材质。
+        return (_playerRoot != null && renderer.transform.IsChildOf(_playerRoot)) || Array.IndexOf(_excludedRenderers, renderer) >= 0
+            || renderer.GetComponentInParent<CameraWallFadeIgnore>(true) != null
+            || renderer.GetComponentInParent<PlayerMotor>(true) != null
+            || renderer.GetComponentInParent<EnemyBase>(true) != null
+            || renderer.GetComponentInParent<GibPieceLifetime>(true) != null
+            || renderer.GetComponentInParent<Projectile>(true) != null
+            || renderer.GetComponentInParent<ParticleSystem>(true) != null
+            || renderer.GetComponentInParent<Canvas>(true) != null
+            || renderer.GetComponentInParent<TextMesh>(true) != null
+            || renderer.GetComponentInParent<TMPro.TMP_Text>(true) != null;
+    }
+
+    private bool IsExcludedMaterial(Material material)
+    {
+        if (material == null || material.shader == null || Array.IndexOf(_excludedMaterials, material) >= 0) return true;
+        string shaderName = material.shader.name;
+        if (Array.IndexOf(_excludedShaderNames, shaderName) >= 0
+            || shaderName.IndexOf("/Particles/", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        // 已透明的特效与镂空材质保持自己的混合、深度和裁切规则，不能被墙体淡出重写。
+        string renderType = material.GetTag("RenderType", false, string.Empty);
+        return material.renderQueue >= (int)RenderQueue.AlphaTest
+            || renderType == "Transparent" || renderType == "TransparentCutout"
+            || material.IsKeywordEnabled("_ALPHATEST_ON")
+            || (material.HasProperty("_AlphaClip") && material.GetFloat("_AlphaClip") > 0f)
+            || (material.HasProperty("_Surface") && material.GetFloat("_Surface") > 0f)
+            || (material.HasProperty("_Mode") && material.GetFloat("_Mode") > 0f);
     }
 
     private void BeginFade(Renderer renderer)
     {
         Material[] originals = renderer.sharedMaterials;
+        bool hasFadeMaterial = false;
+        foreach (Material original in originals)
+            if (CanFadeMaterial(original)) { hasFadeMaterial = true; break; }
+        if (!hasFadeMaterial) return;
         var state = new FadeState
         {
             OriginalMaterials = originals,
@@ -129,7 +184,7 @@ public sealed class CameraWallFade : MonoBehaviour
         for (int i = 0; i < originals.Length; i++)
         {
             Material original = originals[i];
-            if (original == null) continue;
+            if (!CanFadeMaterial(original)) continue;
             string colorProperty = original.HasProperty("_BaseColor") ? "_BaseColor" :
                 original.HasProperty("_Color") ? "_Color" : null;
             if (colorProperty == null) continue;
@@ -149,6 +204,9 @@ public sealed class CameraWallFade : MonoBehaviour
         renderer.sharedMaterials = state.FadeMaterials;
         _fading.Add(renderer, state);
     }
+
+    private bool CanFadeMaterial(Material material) => !IsExcludedMaterial(material)
+        && (material.HasProperty("_BaseColor") || material.HasProperty("_Color"));
 
     private Material CreateFadeMaterial(Material original)
     {

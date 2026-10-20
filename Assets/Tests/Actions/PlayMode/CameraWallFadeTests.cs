@@ -184,4 +184,134 @@ public sealed class CameraWallFadeTests
         Assert.AreEqual("OurFunction/NPR/Deferred Toon", material.shader.name);
         Assert.AreEqual(.2f, FadeColor(renderer).a, .001f);
     }
+
+    [TestCase("GameJam/EnemyWaistCutout")]
+    [TestCase("GameJam/Dissolve")]
+    [TestCase("GameJam/Text3D")]
+    [TestCase("GameJam/PlayerAfterimage")]
+    [TestCase("GameJam/UI/EnemyMarkOverlay")]
+    [TestCase("GameJam/ProceduralLaser")]
+    [TestCase("GameJam/SparkAdditive")]
+    [TestCase("GameJam/DustSoft")]
+    [TestCase("OurFunction/VFX/RuinsFireFlipbook")]
+    [TestCase("Hovl/Particles/Scroll")]
+    public void SpecialEffectMaterialsKeepTheirShaderKeywordsAndPropertyBlocks(string shader)
+    {
+        Material material = Material(shader);
+        MeshRenderer renderer = Wall(4f, material);
+        var properties = new MaterialPropertyBlock();
+        properties.SetColor("_BaseColor", Color.cyan);
+        properties.SetFloat("_CutSide", -1f);
+        renderer.SetPropertyBlock(properties, 0);
+        string[] keywords = material.shaderKeywords;
+        int queue = material.renderQueue;
+        Tick();
+        Assert.AreSame(material, renderer.sharedMaterial);
+        Assert.AreEqual(keywords, material.shaderKeywords);
+        Assert.AreEqual(queue, material.renderQueue);
+        var actual = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(actual, 0);
+        Assert.AreEqual(Color.cyan, actual.GetColor("_BaseColor"));
+        Assert.AreEqual(-1f, actual.GetFloat("_CutSide"));
+    }
+
+    [TestCase("_Surface")]
+    [TestCase("_AlphaClip")]
+    [TestCase("queue")]
+    [TestCase("tag")]
+    [TestCase("keyword")]
+    public void AlreadyTransparentOrClippedWallsKeepTheirOwnRenderingRules(string setting)
+    {
+        Material material = Material();
+        if (setting == "queue") material.renderQueue = 3000;
+        else if (setting == "tag") material.SetOverrideTag("RenderType", "TransparentCutout");
+        else if (setting == "keyword") material.EnableKeyword("_ALPHATEST_ON");
+        else material.SetFloat(setting, 1f);
+        MeshRenderer renderer = Wall(4f, material);
+        Tick();
+        Assert.AreSame(material, renderer.sharedMaterial);
+    }
+
+    [Test]
+    public void EnemyProjectileDetachedGibAndParticleChildrenAreExcludedEvenWithOpaqueMaterials()
+    {
+        Material material = Material();
+        var enemy = Wall(2f, material);
+        enemy.gameObject.AddComponent<EnemyBase>();
+        var projectile = Wall(3f, material);
+        projectile.gameObject.AddComponent<Projectile>();
+        var gib = Wall(4f, material);
+        GameObject gibRoot = Create("DetachedGib");
+        gibRoot.AddComponent<GibPieceLifetime>();
+        gib.transform.SetParent(gibRoot.transform, true);
+        var effect = Wall(5f, material);
+        GameObject particleRoot = Create("AttackEffect");
+        particleRoot.AddComponent<ParticleSystem>();
+        effect.transform.SetParent(particleRoot.transform, true);
+        var wall = Wall(7f, material);
+        Tick();
+        foreach (var renderer in new[] { enemy, projectile, gib, effect }) Assert.AreSame(material, renderer.sharedMaterial);
+        Assert.AreNotSame(material, wall.sharedMaterial);
+    }
+
+    [Test]
+    public void MixedWallOnlyFadesEligibleSlotsAndKeepsSpecialSlotProperties()
+    {
+        Material wall = Material();
+        Material effect = Material("GameJam/EnemyWaistCutout");
+        Material manual = Material();
+        typeof(CameraWallFade).GetField("_excludedMaterials", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(_fade, new[] { manual });
+        var renderer = Wall(4f, wall);
+        renderer.sharedMaterials = new[] { wall, effect, manual };
+        var properties = new MaterialPropertyBlock();
+        properties.SetColor("_BaseColor", Color.red);
+        properties.SetFloat("_CutSide", -1f);
+        renderer.SetPropertyBlock(properties, 1);
+        Tick();
+        Assert.AreNotSame(wall, renderer.sharedMaterials[0]);
+        Assert.AreEqual(.2f, FadeColor(renderer).a, .001f);
+        Assert.AreSame(effect, renderer.sharedMaterials[1]);
+        Assert.AreSame(manual, renderer.sharedMaterials[2]);
+        Assert.AreEqual(Color.red, FadeColor(renderer, 1));
+        _fade.enabled = false;
+        var restored = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(restored, 1);
+        Assert.AreEqual(-1f, restored.GetFloat("_CutSide"));
+        Assert.AreEqual(Color.red, restored.GetColor("_BaseColor"));
+        Assert.AreEqual(new[] { wall, effect, manual }, renderer.sharedMaterials);
+    }
+
+    [Test]
+    public void ExclusionMarkerAndRendererListProtectOpaqueChildren()
+    {
+        Material material = Material();
+        var child = Wall(3f, material);
+        GameObject group = Create("ExcludedGroup");
+        group.AddComponent<CameraWallFadeIgnore>();
+        child.transform.SetParent(group.transform, true);
+        var manual = Wall(6f, material);
+        typeof(CameraWallFade).GetField("_excludedRenderers", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(_fade, new Renderer[] { manual });
+        Tick();
+        Assert.AreSame(material, child.sharedMaterial);
+        Assert.AreSame(material, manual.sharedMaterial);
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void AddingAnExclusionRestoresAnAlreadyFadingObject(bool useMarker)
+    {
+        Material material = Material();
+        var renderer = Wall(4f, material);
+        Tick();
+        Assert.AreNotSame(material, renderer.sharedMaterial);
+        if (useMarker) renderer.gameObject.AddComponent<CameraWallFadeIgnore>();
+        else typeof(CameraWallFade).GetField("_excludedMaterials", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetValue(_fade, new[] { material });
+        Tick();
+        Assert.AreSame(material, renderer.sharedMaterial);
+        Tick();
+        Assert.AreSame(material, renderer.sharedMaterial);
+    }
 }
