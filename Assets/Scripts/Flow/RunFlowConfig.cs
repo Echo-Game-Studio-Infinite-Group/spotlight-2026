@@ -5,6 +5,9 @@ namespace GameJam.Flow
     [CreateAssetMenu(menuName = "超高速行者/流程/全局流程", fileName = "RunFlow")]
     public sealed class RunFlowConfig : ScriptableObject
     {
+        [Header("流程环境")]
+        [Tooltip("整局流程共用的天空盒；切换箱庭与恢复记录点后仍使用此材质，留空则使用场景设置。")]
+        [InspectorName("天空盒材质")] public Material SkyboxMaterial;
         [Header("整局与混乱度")]
         [Tooltip("每次新游戏或重开整局生成新种子；关闭后使用下方固定种子复现流程。继续游戏沿用存档种子。")]
         [InspectorName("每局随机种子")] public bool RandomizeSeed = true;

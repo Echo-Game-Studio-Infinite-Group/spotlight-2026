@@ -45,6 +45,22 @@ namespace GameJam.Flow
         public event Action CheckpointCommitted;
 
         private void Awake() => Current = this;
+        private void OnEnable() => SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        private void OnDisable() => SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+
+        private void OnActiveSceneChanged(Scene previous, Scene current)
+        {
+            if (current == gameObject.scene || _owned.Exists(room => room.Scene == current)) ApplyEnvironment();
+        }
+
+        private void ApplyEnvironment()
+        {
+            if (_config == null || _config.SkyboxMaterial == null) return;
+            // RenderSettings 随活动场景切换，运行时新建的箱庭没有正式场景的天空盒设置。
+            RenderSettings.skybox = _config.SkyboxMaterial;
+            Camera camera = Camera.main;
+            if (camera != null) camera.clearFlags = CameraClearFlags.Skybox;
+        }
         public void Configure(RunFlowConfig config, PlayerMotor motor) { _config = config; _motor = motor; }
         private void Start()
         {
@@ -79,6 +95,7 @@ namespace GameJam.Flow
             if (_motor == null) errors.Add("缺少玩家 PlayerMotor");
             if (errors.Count > 0) { LastError = string.Join("\n", errors); Debug.LogError("[流程] " + LastError, this); return false; }
             _started = true; _maps = MapManager.Instance;
+            ApplyEnvironment();
             _health = _motor.GetComponent<HealthComponent>();
             _input = _motor.GetComponent<PlayerInputReader>();
             _respawn = _motor.GetComponent<PlayerRespawn>();

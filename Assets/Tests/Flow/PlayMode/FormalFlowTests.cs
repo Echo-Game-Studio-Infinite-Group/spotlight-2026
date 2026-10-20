@@ -63,6 +63,29 @@ namespace GameJam.FlowTests
         }
 
         [UnityTest]
+        public IEnumerator AllskyPersistsAcrossRoomChangesRecoveryAndRestart()
+        {
+            yield return Load();
+            var expected = AssetDatabase.LoadAssetAtPath<Material>("Assets/Allsky/Space/Space_Nebula_DeepBlack/Space_Nebula_DeepBlack.mat");
+            Assert.That(_flow.Config.SkyboxMaterial, Is.SameAs(expected));
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(Camera.main.clearFlags, Is.EqualTo(CameraClearFlags.Skybox));
+            foreach (string face in new[] { "_FrontTex", "_BackTex", "_LeftTex", "_RightTex", "_UpTex", "_DownTex" })
+                Assert.That(expected.GetTexture(face), Is.Not.Null, face);
+            FlowRoomInstance checkpointRoom = _flow.CurrentRoom;
+            Assert.That(_flow.TryEnterNextRoom(), Is.True);
+            yield return Ready();
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(_flow.Recover(false), Is.True);
+            yield return Ready();
+            Assert.That(_flow.CurrentRoom, Is.SameAs(checkpointRoom));
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(_flow.RestartRun(), Is.True);
+            yield return Ready();
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+        }
+
+        [UnityTest]
         public IEnumerator NewGamesAndFullRestartsChooseNewSeeds()
         {
             yield return Load();
