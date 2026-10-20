@@ -9,10 +9,9 @@ public sealed class PlayerHudView : MonoBehaviour
     [Header("预制体引用")]
     [SerializeField] private Transform _hudRoot;
     [SerializeField] private ArcGraphic _energyFill;
-    [SerializeField] private SegmentBarGraphic _speedSegments;
+    [SerializeField] private ArcGraphic _speedFill;
     [SerializeField] private EcgGraphic _healthEcg;
     [SerializeField] private TMP_Text _healthText;
-    [SerializeField] private TMP_Text _speedText;
     [SerializeField] private Image _heart;
 
     [Header("CRT 材质")]
@@ -30,7 +29,6 @@ public sealed class PlayerHudView : MonoBehaviour
 
     private float _lastHealth = -1f;
     private float _lastMaxHealth = -1f;
-    private float _lastSpeed = -1f;
 
     private void Awake()
     {
@@ -83,12 +81,7 @@ public sealed class PlayerHudView : MonoBehaviour
         {
             float maxSpeed = _motor.Params != null ? _motor.Params.MaxSpeed : 0f;
             float speed = _motor.HorizontalSpeed;
-            _speedSegments.SetRatio(maxSpeed > 0f ? Mathf.Clamp01(speed / maxSpeed) : 0f);
-            if (Mathf.Abs(speed - _lastSpeed) >= 0.05f)
-            {
-                _lastSpeed = speed;
-                _speedText.text = $"{speed:0.0} <size=44%>m/s</size>";
-            }
+            _speedFill.SetFill(maxSpeed > 0f ? Mathf.Clamp01(speed / maxSpeed) : 0f);
         }
     }
 
