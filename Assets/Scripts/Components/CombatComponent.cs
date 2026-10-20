@@ -86,11 +86,14 @@ public sealed class CombatComponent : MonoBehaviour
     public bool IsAttacking(float now)
         => _sequenceInstance != 0 || (WindowSeconds > 0f ? now < _windowEnd : _windowOpen);
 
-    /// <summary>尝试起手：查冷却与窗口，成功则开窗。now 由持有者按自己的时钟传。</summary>
-    public bool TryBeginAttack(float now)
+    /// <summary>
+    /// 尝试起手：查冷却与窗口，成功则开窗。now 由持有者按自己的时钟传。
+    /// cooldownScale 只缩放「本次起手之后」的冷却，默认 1 与原行为完全一致（残血保护用它）。
+    /// </summary>
+    public bool TryBeginAttack(float now, float cooldownScale = 1f)
     {
         if (now < _readyAt) return false;
-        _readyAt = now + Cooldown;
+        _readyAt = now + Cooldown * Mathf.Max(0f, cooldownScale);
         _windowEnd = now + WindowSeconds;
         _windowOpen = true;
         BeginAttackIdentity();
