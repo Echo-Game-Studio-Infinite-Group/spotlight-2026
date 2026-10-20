@@ -3,20 +3,23 @@ using Spotlight.VFX;
 using UnityEngine;
 
 // 玩家身上的特效总控：挂在玩家根节点，所有"给玩家看的粒子"都从这里出声。
-//   · 攻击粒子：attack1 / attack2（第三段已删——动作资产里没有任何触达 3 的帧事件）
+//   · 攻击刀光：跟随剑骨的 AttackTrailVfx（挥动轨迹自己画弧），不再用"以玩家为原点播网格刀光"那套
 //   · 摩擦火花（地面 / 滑铲 / 贴墙）：由 FrictionSparks 组件驱动；这里只负责缺了就地补
 //   · 受击 / 撞墙：直接播挂在 Player/Vfx 下的粒子，拖进列表即生效，不需要再写代码
-// 与 Animator 同一节点也能工作，但不要依赖它：攻击粒子既可能由动画事件（非序列）触发，
+// 与 Animator 同一节点也能工作，但不要依赖它：攻击刀光既可能由动画事件（非序列）触发，
 // 也可能由动作序列的 vfx.attack 帧事件触发，两条都汇到 PlayAttack。
 [DisallowMultipleComponent]
 public sealed class PlayerVFXManager : MonoBehaviour
 {
-    [Tooltip("攻击粒子的发射原点，留空则用自身")]
-    [SerializeField] private Transform _origin;
+    [Header("攻击刀光")]
+    [Tooltip("跟随剑/右手的刀光拖尾；留空则运行时在子层级里找 AttackTrailVfx")]
+    [SerializeField] private AttackTrailVfx _attackTrail;
 
-    [Header("攻击粒子")]
-    public ParticleSystem attack1;
-    public ParticleSystem attack2;
+    [Tooltip("第一段的发射窗口（秒）。攻击没有结束事件，窗口到期自己收尾")]
+    [SerializeField, Min(0.02f)] private float _attack1EmitSeconds = 0.26f;
+
+    [Tooltip("第二段的发射窗口（秒）。稍长一点，读感上像收招多带一段")]
+    [SerializeField, Min(0.02f)] private float _attack2EmitSeconds = 0.34f;
 
     [Header("挂载在 Player/Vfx 下的其它特效（拖进来即生效）")]
     [Tooltip("玩家受击时播放的粒子（小兵砍中 / 中弹）")]
@@ -36,8 +39,6 @@ public sealed class PlayerVFXManager : MonoBehaviour
     private PlayerMotor _motor;
     private PlayerCombat _player => GetComponentInParent<PlayerCombat>();
 
-    public void Configure(Transform origin) => _origin = origin;
-
     private void Awake()
     {
         _impulseSource = GetComponent<CinemachineImpulseSource>();
@@ -50,9 +51,7 @@ public sealed class PlayerVFXManager : MonoBehaviour
     private void OnDestroy()
     {
         if (_motor != null) _motor.WallImpact -= OnWallImpact;
-        // 播放后粒子已脱离玩家层级，销毁玩家时也要回收。
-        if (attack1 != null && attack1.transform.parent == null) Destroy(attack1.gameObject);
-        if (attack2 != null && attack2.transform.parent == null) Destroy(attack2.gameObject);
+        // 刀光挂在模型骨骼下，跟玩家一起销毁；粒子是世界坐标但归该系统所有，不用另外回收。
     }
 
     // ===== 攻击 =====
@@ -61,14 +60,20 @@ public sealed class PlayerVFXManager : MonoBehaviour
         if (!IsSequenceDriven) PlayAttack(cnt);
     }
 
+    /// <summary>开一段刀光。cnt 只决定发射窗口长短（动作序列的 vfx.attack 帧事件带的值）。</summary>
     public void PlayAttack(int cnt = 1)
     {
-        ParticleSystem effect = cnt == 1 ? attack1 : cnt == 2 ? attack2 : null;
-        if (effect == null) return;
+        AttackTrailVfx trail = ResolveTrail();
+        if (trail == null) return;
         PlayShake();
-        Transform origin = _origin != null ? _origin : transform;
-        effect.transform.SetPositionAndRotation(origin.position, origin.rotation * Quaternion.Euler(0f, 180f, 0f));
-        effect.Play();
+        trail.Play(cnt >= 2 ? _attack2EmitSeconds : _attack1EmitSeconds);
+    }
+
+    // 装配工具会把引用接上；没接上（例如直接拖预制体进场景做试验）就在子层级里找一次。
+    private AttackTrailVfx ResolveTrail()
+    {
+        if (_attackTrail == null) _attackTrail = GetComponentInChildren<AttackTrailVfx>(true);
+        return _attackTrail;
     }
 
     // ===== 受击 / 撞墙 =====
@@ -128,8 +133,9 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     public void StopAttacks()
     {
-        StopOne(attack1);
-        StopOne(attack2);
+        // 死亡 / 传送时立刻收干净，别让处决动画结束后还挂着上一刀的弧。
+        AttackTrailVfx trail = ResolveTrail();
+        if (trail != null) trail.ClearNow();
     }
 
     private static void StopGroup(ParticleSystem[] group)

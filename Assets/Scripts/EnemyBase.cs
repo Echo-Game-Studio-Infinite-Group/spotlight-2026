@@ -67,6 +67,8 @@ public class EnemyBase : MonoBehaviour
     private Hitbox _attackHitbox;
     private CombatComponent _combat;
     private RangeComponent _ranged;
+    // 表现层归 EnemyVFXManager（与玩家侧同构）：判定窗口开时它会开刀光，这里只负责转发。
+    private EnemyVFXManager _vfx;
     private bool _runningChase;
     // 攻击命中时向玩家相机广播震动。方向取「敌人 → 玩家」，力度按攻击伤害换算，见 OnLandedHit。
     // 同样不进序列化：ImpulseSource 挂在自己身上，Awake 里 GetComponent 取。
@@ -106,6 +108,9 @@ public class EnemyBase : MonoBehaviour
         _animation = GetComponentInChildren<EnemyAnimation>();
         _telegraph = GetComponent<AttackTelegraph>();
         _attackHitbox = GetComponentInChildren<Hitbox>(true);
+        // 与 PlayerVFXManager.EnsureFrictionSparks 同一个约定：缺就补，表现层不能因为漏接线而消失。
+        _vfx = GetComponent<EnemyVFXManager>();
+        if (_vfx == null) _vfx = gameObject.AddComponent<EnemyVFXManager>();
         // 判定盒先解析再装配结算层，否则 Configure 拿到的是 null。
         EnsureCombat();
         _ranged = GetComponent<RangeComponent>();
@@ -226,11 +231,14 @@ public class EnemyBase : MonoBehaviour
         // 判定生效这一刻 = 前摇结束：提示在这一帧灭掉（FinishAttack 里那句 Stop 只是兜底）。
         _telegraph?.Stop();
         if (IsAlive && IsAttacking) _combat?.EnableHitbox();
+        // 刀光与判定同开同关：表现层由 EnemyVFXManager 统一管（与玩家侧同构）。
+        _vfx?.PlayAttack();
     }
 
     public void DisableHitbox()
     {
         _combat?.DisableHitbox();
+        _vfx?.StopAttacks();
     }
 
     // 供装配工具写入敌人自己的攻击判定盒
