@@ -199,7 +199,13 @@ public sealed class PlayerVFXManager : MonoBehaviour
         if (system != null) system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    private void OnWallImpact(WallContact contact) => PlayWallImpact(contact);
+    // WallImpact 是移动层的通用正撞上报：轻碰墙面、撞敌人（挡住位移的 Collider）都会触发，
+    // 且不区分速度；直接接成特效会在非 WallSlide 状态冒火花。滑墙的持续火花归 FrictionSparks。
+    private void OnWallImpact(WallContact contact)
+    {
+        if (_motor == null || !_motor.IsWallSliding) return;
+        PlayWallImpact(contact);
+    }
 
     // 摩擦火花（地面 / 滑铲 / 贴墙）是独立组件（要读 PlayerMotor 的移动与墙面状态）。
     // 正常情况它已经落盘在 Player.prefab 上（编辑器装配工具接好发射器）；这里是兜底：
