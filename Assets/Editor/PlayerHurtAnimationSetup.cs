@@ -149,7 +149,10 @@ public static class PlayerHurtAnimationSetup
         walk.speedParameterActive = walkSource.speedParameterActive;
         EnsureLegTransition(state, walk, AnimatorConditionMode.If);
         EnsureLegTransition(walk, state, AnimatorConditionMode.IfNot);
-        layer.stateMachine.defaultState = state;
+        var inactive = layer.stateMachine.states.FirstOrDefault(item => item.state.name == "Inactive").state
+            ?? layer.stateMachine.AddState("Inactive");
+        inactive.motion = null;
+        layer.stateMachine.defaultState = inactive;
         controller.layers = layers;
 
         foreach (var child in layers[0].stateMachine.states)
@@ -162,6 +165,7 @@ public static class PlayerHurtAnimationSetup
                     }
         EditorUtility.SetDirty(state);
         EditorUtility.SetDirty(walk);
+        EditorUtility.SetDirty(inactive);
         EditorUtility.SetDirty(layer.stateMachine);
         EditorUtility.SetDirty(mask);
         EditorUtility.SetDirty(controller);
