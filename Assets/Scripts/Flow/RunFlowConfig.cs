@@ -5,8 +5,13 @@ namespace GameJam.Flow
     [CreateAssetMenu(menuName = "超高速行者/流程/全局流程", fileName = "RunFlow")]
     public sealed class RunFlowConfig : ScriptableObject
     {
+        [Header("流程环境")]
+        [Tooltip("整局流程共用的天空盒；切换箱庭与恢复记录点后仍使用此材质，留空则使用场景设置。")]
+        [InspectorName("天空盒材质")] public Material SkyboxMaterial;
         [Header("整局与混乱度")]
-        [Tooltip("同一套配表和同一个随机种子可重现相同抽房结果；重开整局会重置随机状态。")]
+        [Tooltip("每次新游戏或重开整局生成新种子；关闭后使用下方固定种子复现流程。继续游戏沿用存档种子。")]
+        [InspectorName("每局随机种子")] public bool RandomizeSeed = true;
+        [Tooltip("仅在关闭每局随机种子时使用；同一套配表、种子和事件顺序可重现相同抽房结果。")]
         [InspectorName("固定随机种子")] public int Seed = 2026;
         [Tooltip("整局开始时的混乱度，必须处于普通混乱度上下限之间。")]
         [InspectorName("起始混乱度")] public int InitialChaos;

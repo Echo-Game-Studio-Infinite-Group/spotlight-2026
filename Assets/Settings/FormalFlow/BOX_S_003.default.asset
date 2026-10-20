@@ -27,8 +27,21 @@ MonoBehaviour:
   EnemySpawns: []
   Texts:
   - PointId: TXT_77f1021f
-    Enabled: 1
+    Enabled: 0
     Content: "\u8D70\u5411\u6DF7\u4E71\uFF0C\u6253\u7834\u5FAA\u73AF\n\u8BA9\u6211\u4EEC\u72E0\u72E0\u6253\u7206\u8FD9\u4E2A\u7403\uFF01\n\u8D8A\u6DF7\u4E71\uFF0C\u8D8A\u63A5\u8FD1\u7EC8\u70B9"
+    FontSize: 8
+    Color: {r: 1, g: 1, b: 1, a: 1}
+    Trigger: 0
+    MaximumDistance: 0
+    Display: 1
+    HoldSeconds: 2
+    Appearance: {fileID: 0}
+    Disappearance: {fileID: 0}
+    AppearanceSpeed: 1
+    DisappearanceSpeed: 1
+  - PointId: TXT_5c1e9a4d
+    Enabled: 1
+    Content: "\u7834\u574F\u63D0\u706F\uFF0C\u63D0\u5347\u6DF7\u4E71\u5EA6\uFF0C\u6253\u7834\u5FAA\u73AF\u5427"
     FontSize: 8
     Color: {r: 1, g: 1, b: 1, a: 1}
     Trigger: 0

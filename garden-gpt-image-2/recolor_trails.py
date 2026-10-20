@@ -89,61 +89,6 @@ def lerp(c0, c1, t):
     return c0 + (c1 - c0) * t
 
 
-def skeleton(mask):
-    """Zhang-Suen 细化，得到飘带中心线。"""
-    img = np.pad(mask.astype(np.uint8), 1)
-    changed = True
-    while changed:
-        changed = False
-        for step in (0, 1):
-            p2 = img[:-2, 1:-1]
-            p3 = img[:-2, 2:]
-            p4 = img[1:-1, 2:]
-            p5 = img[2:, 2:]
-            p6 = img[2:, 1:-1]
-            p7 = img[2:, :-2]
-            p8 = img[1:-1, :-2]
-            p9 = img[:-2, :-2]
-            nb = [p2, p3, p4, p5, p6, p7, p8, p9]
-            b = sum(nb)
-            a = sum(((nb[i] == 0) & (nb[(i + 1) % 8] == 1)).astype(np.uint8) for i in range(8))
-            c = img[1:-1, 1:-1]
-            if step == 0:
-                cond = (p2 * p4 * p6 == 0) & (p4 * p6 * p8 == 0)
-            else:
-                cond = (p2 * p4 * p8 == 0) & (p2 * p6 * p8 == 0)
-            m = (c == 1) & (b >= 2) & (b <= 6) & (a == 1) & cond
-            if m.any():
-                c[m] = 0
-                changed = True
-    return img[1:-1, 1:-1].astype(bool)
-
-
-def dist_from_seeds(mask, seeds, halfw_src):
-    """返回 (到中心线距离, 最近中心线处的半带宽)。"""
-    H, W = mask.shape
-    INF = 10 ** 9
-    rd = np.full((H, W), INF, np.int32)
-    hw = np.zeros((H, W), np.float32)
-    q = deque()
-    sy, sx = np.nonzero(seeds)
-    for y, x in zip(sy, sx):
-        if mask[y, x]:
-            rd[y, x] = 0
-            hw[y, x] = max(halfw_src[y, x], 1.0)
-            q.append((y, x))
-    while q:
-        y, x = q.popleft()
-        nd = rd[y, x] + 1
-        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            ny, nx = y + dy, x + dx
-            if 0 <= ny < H and 0 <= nx < W and mask[ny, nx] and rd[ny, nx] > nd:
-                rd[ny, nx] = nd
-                hw[ny, nx] = hw[y, x]
-                q.append((ny, nx))
-    return rd, hw
-
-
 def energy_color(u):
     """u = 到边缘距离 / 附近的局部半带宽，0 在边缘，1 在带中心。"""
     cols = np.array([
@@ -216,12 +161,18 @@ def main():
     d_edge = dist_to_edge(core).astype(np.float32)
     d8s = np.clip(d_edge * 2, 0, 255).astype(np.uint8)
     d_smooth = np.array(Image.fromarray(d8s).filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 2.0
+    # 模糊会跨过窄缝把对侧大距离渗到边缘，造成白描边，这里压回真实距离附近
+    d_smooth = np.minimum(d_smooth, d_edge + 1.0)
     d_core = d_edge.copy()
     d_core[~core] = 0
     d8 = np.clip(d_core * 2, 0, 255).astype(np.uint8)
     hw = np.array(Image.fromarray(d8).filter(ImageFilter.MaxFilter(41)), np.float32) / 2.0
     u = d_smooth / np.maximum(hw, 1.0)
     color = energy_color(u) / 255.0
+    # 细飘带只有青色高光，避免整条刷白像白描边
+    thin = np.clip((hw - 3.0) / 9.0, 0, 1)
+    thin = thin * thin * (3 - 2 * thin)
+    color = np.array([0.0, 0.88, 1.0], np.float32) * (1 - thin[..., None]) + color * thin[..., None]
     color[~core] = np.array([0.04, 0.11, 0.47], np.float32)
 
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -241,16 +192,17 @@ def main():
     color = np.where(under[..., None], under_color, color)
 
     # ---- 合成（1.5px 羽化边缘）----
-    a = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float32) / 255.0
-    a = np.clip(a * 1.25, 0, 1)[..., None]
+    a = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255.0
+    a = np.clip(a * 1.15, 0, 1)[..., None]
     out = base * (1 - a) + color * a
 
     # ---- 外发光 ----
-    glow_small = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(5)), np.float32) / 255.0
-    glow_big = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(22)), np.float32) / 255.0
-    glow = np.clip(glow_small * 0.55 + glow_big * 0.45, 0, 1)[..., None]
-    glow_rgb = np.array([0.0, 0.62, 1.0], np.float32)
-    out = 1 - (1 - out) * (1 - glow * glow_rgb * 0.55)
+    glow_small = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6)), np.float32) / 255.0
+    glow_big = np.array(Image.fromarray((mask * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(26)), np.float32) / 255.0
+    glow = np.clip(glow_small * 0.6 + glow_big * 0.55, 0, 1)[..., None]
+    glow_rgb = np.array([0.0, 0.66, 1.0], np.float32)
+    out = 1 - (1 - out) * (1 - glow * glow_rgb * 0.65)
+
     out = np.clip(out, 0, 1)
 
     rgb8 = (out * 255).astype(np.uint8)
