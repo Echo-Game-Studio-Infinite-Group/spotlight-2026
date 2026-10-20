@@ -1,17 +1,20 @@
+using System.Collections.Generic;
 using Spotlight.VFX;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 // 把玩家身上的全部特效装配进 Player.prefab 并接好线（不需要手拖任何引用）：
-//   · Vfx/FootSparks   —— 地面高速摩擦 / 滑铲火花（持续发射器，FrictionSparks 驱动）
-//   · Vfx/WallSparks   —— 贴墙滑行火花（同上，另一个发射器）
-//   · Vfx/Hurt         —— 受击爆火花（一次性 burst，PlayerVFXManager 播）
-//   · Vfx/WallImpact   —— 撞墙爆火花（一次性 burst，同上，锥体朝墙外）
+//   · Vfx/FootSparks    —— 地面高速摩擦 / 滑铲火花（持续发射器，FrictionSparks 驱动）
+//   · Vfx/WallSparks    —— 贴墙滑行火花（同上，另一个发射器）
+//   · Vfx/Hurt          —— 受击爆火花（一次性 burst，PlayerVFXManager 播）
+//   · Vfx/WallImpact    —— 撞墙爆火花（一次性 burst，同上，锥体朝墙外）
+//   · Vfx/AttackSlashes —— Hovl「Sword Slash Combo 1」解开后的四组刀光 AttackTrail1~4，
+//     每组时间轴已平移到 0 秒、激活即播；PlayerVFXManager 每次只激活并播放其中一组
 //   · 根节点上的 FrictionSparks 组件（缺就补）并把上面两个发射器 + 配方资产接进去
 //
 // 为什么是编辑器脚本而不是手改 YAML：Unity 会把内存里的旧副本反写回文件，手改必被覆盖（已经踩过）。
-// 幂等：节点已存在就只重新配参数与接线；会话内自动跑一次（SessionState 标记），
+// 幂等：节点已存在就只重新配参数与接线；域重载后做一次便宜的完整性检查，缺才动资产，
 // 失败（例如预制体开在 Prefab 模式里）只警告，菜单可手动重跑。
 //
 // 发射器配置都走运行时代码里的同一个工厂（FrictionSparks.CreateEmitter / 本文件的 ConfigureBurst），
@@ -20,15 +23,22 @@ using UnityEngine.Rendering;
 public static class PlayerVfxSetup
 {
     private const string PrefabPath = "Assets/Prefabs/Player.prefab";
+    private const string EnemyTestPrefabPath = "Assets/Prefabs/EnemyTest.prefab";
+    private const string EnemyHeavyPrefabPath = "Assets/Prefabs/EnemyHeavy.prefab";
     private const string SparkMaterialPath = "Assets/Resources/CombatVfx/SparkAdditive.mat";
     private const string DustMaterialPath = "Assets/Resources/CombatVfx/FootDust.mat";
     private const string FireConfigPath = "Assets/Art/VFX/Fire/RuinsFireConfig.asset";
+    private const string ComboPrefabPath = "Assets/Art/Hovl Studio/Sword slash VFX/Prefabs/Sword Slash Combo 1.prefab";
     private const string VfxNodeName = "Vfx";
     private const string FootName = "FootSparks";
     private const string WallSparksName = "WallSparks";
     private const string StaleDustName = "FootDust";   // 旧版单发射器的名字，装配时清掉
     private const string HurtName = "Hurt";
     private const string WallImpactName = "WallImpact";
+    private const string AttackVfxName = "AttackSlashes";
+
+    // 已删除的旧刀光（AttackTrail 动态 Mesh 版 / 更早的网格刀光）：三个预制体上都不该再留着。
+    private static readonly string[] StaleAttackNodeNames = { "AttackTrail", "Attack1", "Attack2" };
 
     static PlayerVfxSetup()
     {
@@ -60,10 +70,23 @@ public static class PlayerVfxSetup
         string[] expected =
         {
             FootName, WallSparksName, FrictionSparks.GroundedDustName, FrictionSparks.WallDustName,
-            HurtName, WallImpactName,
+            HurtName, WallImpactName, AttackVfxName,
         };
         foreach (string name in expected)
             if (vfxRoot.Find(name) == null) return false;
+
+        // 刀光必须是解开的普通节点：四组 AttackTrail1~4，各自 playOnAwake 且从 0 秒开始。
+        // 仍嵌套预制体或还带着原来的时间轴偏移，都算没装配好。
+        Transform attackVfx = vfxRoot.Find(AttackVfxName);
+        if (attackVfx.gameObject.activeSelf) return false;
+        if (PrefabUtility.GetPrefabInstanceStatus(attackVfx.gameObject) != PrefabInstanceStatus.NotAPrefab) return false;
+        if (!HasAttackTrailGroups(attackVfx)) return false;
+        if (!AttackGroupsStartImmediately(attackVfx)) return false;
+
+        // 旧的 AttackTrail / 网格刀光节点（玩家和敌人都算）
+        if (HasStaleAttackNodes(PrefabPath)) return false;
+        if (HasStaleAttackNodes(EnemyTestPrefabPath)) return false;
+        if (HasStaleAttackNodes(EnemyHeavyPrefabPath)) return false;
 
         FrictionSparks friction = prefab.GetComponent<FrictionSparks>();
         PlayerVFXManager manager = prefab.GetComponent<PlayerVFXManager>();
@@ -79,6 +102,70 @@ public static class PlayerVfxSetup
         var managerSerialized = new SerializedObject(manager);
         if (!HasArrayItem(managerSerialized, "_hurtEffects")) return false;
         if (!HasArrayItem(managerSerialized, "_wallImpactEffects")) return false;
+        if (!HasReference(managerSerialized, "_attackVfx")) return false;
+        if (!HasArrayItems(managerSerialized, "_attackSlashes", 4)) return false;
+        return true;
+    }
+
+    private static bool HasStaleAttackNodes(string prefabPath)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null) return false;
+        foreach (Transform candidate in prefab.GetComponentsInChildren<Transform>(true))
+            if (IsStaleAttackNode(candidate.name)) return true;
+        return false;
+    }
+
+    private static bool IsStaleAttackNode(string name)
+    {
+        for (int i = 0; i < StaleAttackNodeNames.Length; i++)
+            if (name == StaleAttackNodeNames[i]) return true;
+        return false;
+    }
+
+    private static int CountDirectSlashes(Transform attackVfx)
+    {
+        int count = 0;
+        foreach (Transform child in attackVfx)
+            if (child.GetComponent<ParticleSystem>() != null) count++;
+        return count;
+    }
+
+    private static bool HasAttackTrailGroups(Transform attackVfx)
+    {
+        int index = 0;
+        foreach (Transform child in attackVfx)
+        {
+            if (child.GetComponent<ParticleSystem>() == null) continue;
+            index++;
+            if (child.name != "AttackTrail" + index) return false;
+        }
+        return index >= 4;
+    }
+
+    // 四组必须是一次性播放：组内所有发射器关掉 loop，主粒子首个 burst 在 0 秒。
+    // 否则单段播放要等 Hovl 原始时间轴，播完还会按自身长度（2 秒）反复循环。
+    private static bool AttackGroupsStartImmediately(Transform attackVfx)
+    {
+        foreach (Transform child in attackVfx)
+        {
+            ParticleSystem root = child.GetComponent<ParticleSystem>();
+            if (root == null) continue;
+
+            ParticleSystem[] systems = child.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem.MainModule main = systems[i].main;
+                if (!main.playOnAwake || main.loop) return false;
+            }
+
+            if (root.emission.burstCount == 0) continue;
+            var bursts = new ParticleSystem.Burst[root.emission.burstCount];
+            root.emission.GetBursts(bursts);
+            float first = float.MaxValue;
+            for (int i = 0; i < bursts.Length; i++) first = Mathf.Min(first, bursts[i].time);
+            if (first > 0.001f) return false;
+        }
         return true;
     }
 
@@ -95,7 +182,16 @@ public static class PlayerVfxSetup
         return property.GetArrayElementAtIndex(0).objectReferenceValue != null;
     }
 
-    [MenuItem("超高速行者/战斗特效/装配玩家特效（摩擦 / 受击 / 撞墙）")]
+    private static bool HasArrayItems(SerializedObject serialized, string propertyName, int minCount)
+    {
+        SerializedProperty property = serialized.FindProperty(propertyName);
+        if (property == null || !property.isArray || property.arraySize < minCount) return false;
+        for (int i = 0; i < minCount; i++)
+            if (property.GetArrayElementAtIndex(i).objectReferenceValue == null) return false;
+        return true;
+    }
+
+    [MenuItem("超高速行者/战斗特效/装配玩家特效（摩擦 / 受击 / 撞墙 / 刀光）")]
     public static void SetupFromMenu() => Setup();
 
     private static void Setup()
@@ -113,6 +209,9 @@ public static class PlayerVfxSetup
         }
         var fireConfig = AssetDatabase.LoadAssetAtPath<RuinsFireConfig>(FireConfigPath);
         Material dustMaterial = EnsureDustMaterial();
+        var comboPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ComboPrefabPath);
+        if (comboPrefab == null)
+            Debug.LogWarning("[PlayerVfxSetup] 找不到 " + ComboPrefabPath + "，刀光先不装配");
 
         GameObject root = null;
         try
@@ -124,6 +223,7 @@ public static class PlayerVfxSetup
                 return;
             }
             Transform vfxRoot = EnsureChild(root.transform, VfxNodeName);
+            RemoveStaleAttackNodes(root.transform);
 
             // ---- 摩擦火花（持续发射器，配置来自 FrictionSparks 自己的工厂）----
             ParticleSystem foot = EnsureFrictionEmitter(vfxRoot, FootName, false, fireConfig);
@@ -139,6 +239,12 @@ public static class PlayerVfxSetup
             // ---- 一次性爆火花 ----
             ParticleSystem hurt = EnsureBurstEmitter(vfxRoot, HurtName, coneAlongForward: false, spark);
             ParticleSystem wallImpact = EnsureBurstEmitter(vfxRoot, WallImpactName, coneAlongForward: true, spark);
+
+            // ---- 攻击刀光（Hovl 四段整套播放）----
+            GameObject attackVfx = comboPrefab != null ? EnsureAttackVfx(vfxRoot, comboPrefab) : null;
+            ParticleSystem[] attackSlashes = attackVfx != null
+                ? CollectDirectSlashes(attackVfx)
+                : new ParticleSystem[0];
 
             // ---- 接线 ----
             FrictionSparks friction = root.GetComponent<FrictionSparks>();
@@ -162,12 +268,22 @@ public static class PlayerVfxSetup
                 WireArray(managerSerialized, "_hurtEffects", hurt);
                 WireArray(managerSerialized, "_wallImpactEffects", wallImpact);
                 if (fireConfig != null) SetReference(managerSerialized, "_sparkTune", fireConfig);
+                if (attackVfx != null)
+                {
+                    SetReference(managerSerialized, "_attackVfx", attackVfx);
+                    WireArray(managerSerialized, "_attackSlashes", attackSlashes);
+                }
                 managerSerialized.ApplyModifiedPropertiesWithoutUndo();
             }
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             Debug.Log("[PlayerVfxSetup] Player.prefab 已装配 " + VfxNodeName + "/" + FootName + "、" + WallSparksName
-                + "、" + HurtName + "、" + WallImpactName + "，并接线到 FrictionSparks 与 PlayerVFXManager");
+                + "、" + HurtName + "、" + WallImpactName + "、" + AttackVfxName
+                + "（" + attackSlashes.Length + " 段刀光），并接线到 FrictionSparks 与 PlayerVFXManager");
+
+            // 敌人不再有刀光：清掉旧节点与已删除组件的空壳。
+            CleanupPrefab(EnemyTestPrefabPath);
+            CleanupPrefab(EnemyHeavyPrefabPath);
         }
         catch (System.Exception error)
         {
@@ -244,6 +360,130 @@ public static class PlayerVfxSetup
         if (stale == null) return;
         Debug.Log("[PlayerVfxSetup] 清掉旧的扬尘节点 " + name);
         Object.DestroyImmediate(stale.gameObject);
+    }
+
+    // AttackTrail 已整体删除：旧节点只剩 MeshFilter/Renderer 和一个丢失脚本的组件。
+    private static bool RemoveStaleAttackNodes(Transform root)
+    {
+        var stale = new List<GameObject>();
+        foreach (Transform candidate in root.GetComponentsInChildren<Transform>(true))
+            if (IsStaleAttackNode(candidate.name)) stale.Add(candidate.gameObject);
+        foreach (GameObject node in stale)
+        {
+            if (node == null) continue;
+            Debug.Log("[PlayerVfxSetup] 清掉旧刀光节点 " + node.name);
+            Object.DestroyImmediate(node);
+        }
+        return stale.Count > 0;
+    }
+
+    private static void CleanupPrefab(string prefabPath)
+    {
+        GameObject root = null;
+        try
+        {
+            root = PrefabUtility.LoadPrefabContents(prefabPath);
+            if (root == null) return;
+            bool changed = RemoveStaleAttackNodes(root.transform);
+            // EnemyVFXManager 已删除，敌人预制体上留下的是丢失脚本的空组件。
+            int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(root);
+            if (removed > 0)
+            {
+                changed = true;
+                Debug.Log("[PlayerVfxSetup] " + prefabPath + " 清掉 " + removed + " 个丢失脚本的组件");
+            }
+            if (changed) PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+        }
+        catch (System.Exception error)
+        {
+            Debug.LogWarning("[PlayerVfxSetup] 清理 " + prefabPath + " 失败（预制体可能在 Prefab 模式中打开着）：" + error.Message);
+        }
+        finally
+        {
+            if (root != null) PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    // 用户要求解开 Hovl 预制体：四组刀光做成 Player.prefab 里的普通节点，直接可选中/调参。
+    private static GameObject EnsureAttackVfx(Transform vfxRoot, GameObject comboPrefab)
+    {
+        Transform existing = vfxRoot.Find(AttackVfxName);
+        GameObject attackVfx;
+        if (existing != null && CountDirectSlashes(existing) >= 4)
+        {
+            attackVfx = existing.gameObject;
+            if (PrefabUtility.GetPrefabInstanceStatus(attackVfx) != PrefabInstanceStatus.NotAPrefab)
+                PrefabUtility.UnpackPrefabInstance(attackVfx, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        }
+        else
+        {
+            if (existing != null) Object.DestroyImmediate(existing.gameObject);
+            attackVfx = (GameObject)PrefabUtility.InstantiatePrefab(comboPrefab, vfxRoot);
+            attackVfx.name = AttackVfxName;
+            Transform t = attackVfx.transform;
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+            t.localScale = Vector3.one;
+            PrefabUtility.UnpackPrefabInstance(attackVfx, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        }
+        // 根节点常驻激活会让四组 playOnAwake 在玩家出生瞬间一起播；攻击时由管理器点亮。
+        attackVfx.SetActive(false);
+        ConfigureAttackGroups(attackVfx.transform);
+        return attackVfx;
+    }
+
+    // 原预制体四段排在同一条 5 秒时间轴上（主粒子 burst 在 0.1 / 0.45 / 0.6 / 1.15 秒），
+    // 而且所有发射器都开着 loop。这里每组整体减去主粒子的首个 burst，组内烟/火/扭曲的
+    // 相对节奏不变，同时关掉 loop、恢复 playOnAwake：激活当帧出刀，且只出一次。
+    private static void ConfigureAttackGroups(Transform attackVfx)
+    {
+        int index = 0;
+        foreach (Transform child in attackVfx)
+        {
+            ParticleSystem root = child.GetComponent<ParticleSystem>();
+            if (root == null) continue;
+            index++;
+            child.name = "AttackTrail" + index;
+
+            float offset = FirstBurstTime(root.emission);
+            ParticleSystem[] systems = child.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem.MainModule main = systems[i].main;
+                main.playOnAwake = true;
+                main.loop = false;
+
+                ParticleSystem.EmissionModule emission = systems[i].emission;
+                if (emission.burstCount == 0) continue;
+                var bursts = new ParticleSystem.Burst[emission.burstCount];
+                emission.GetBursts(bursts);
+                for (int b = 0; b < bursts.Length; b++)
+                    bursts[b].time = Mathf.Max(0f, bursts[b].time - offset);
+                emission.SetBursts(bursts);
+            }
+        }
+    }
+
+    private static float FirstBurstTime(ParticleSystem.EmissionModule emission)
+    {
+        int count = emission.burstCount;
+        if (count == 0) return 0f;
+        var bursts = new ParticleSystem.Burst[count];
+        emission.GetBursts(bursts);
+        float first = float.MaxValue;
+        for (int i = 0; i < bursts.Length; i++) first = Mathf.Min(first, bursts[i].time);
+        return first;
+    }
+
+    private static ParticleSystem[] CollectDirectSlashes(GameObject attackVfx)
+    {
+        var slashes = new List<ParticleSystem>(4);
+        foreach (Transform child in attackVfx.transform)
+        {
+            ParticleSystem system = child.GetComponent<ParticleSystem>();
+            if (system != null) slashes.Add(system);
+        }
+        return slashes.ToArray();
     }
 
     private static Transform EnsureChild(Transform parent, string name)
@@ -370,8 +610,10 @@ public static class PlayerVfxSetup
         property.objectReferenceValue = value;
     }
 
-    // 把粒子写进数组（长度至少 1，第 0 项就是它）
     private static void WireArray(SerializedObject serialized, string propertyName, ParticleSystem system)
+        => WireArray(serialized, propertyName, new[] { system });
+
+    private static void WireArray(SerializedObject serialized, string propertyName, ParticleSystem[] systems)
     {
         SerializedProperty array = serialized.FindProperty(propertyName);
         if (array == null)
@@ -379,7 +621,8 @@ public static class PlayerVfxSetup
             Debug.LogWarning("[PlayerVfxSetup] 找不到数组字段 " + propertyName);
             return;
         }
-        if (array.arraySize < 1) array.arraySize = 1;
-        array.GetArrayElementAtIndex(0).objectReferenceValue = system;
+        array.arraySize = systems.Length;
+        for (int i = 0; i < systems.Length; i++)
+            array.GetArrayElementAtIndex(i).objectReferenceValue = systems[i];
     }
 }

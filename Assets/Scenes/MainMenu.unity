@@ -465,7 +465,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -120}
+  m_AnchoredPosition: {x: 0, y: -60}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &100697034
@@ -1422,7 +1422,7 @@ MonoBehaviour:
   _settingsPanel: {fileID: 394841182}
   _closeSettingsButton: {fileID: 394841180}
   _fullscreenButton: {fileID: 394841181}
-  _buttonTop: -35
+  _buttonTop: 25
   _buttonSpacing: 85
   _gameScenePath: Assets/Scenes/FormalFlowGame.unity
 --- !u!4 &573269148
@@ -1662,7 +1662,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -375}
+  m_AnchoredPosition: {x: 0, y: -315}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &797017273
@@ -2906,7 +2906,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -35}
+  m_AnchoredPosition: {x: 0, y: 25}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1304611226
@@ -3299,7 +3299,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -140}
+  m_AnchoredPosition: {x: 0, y: -80}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1700124510
@@ -3573,7 +3573,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -290}
+  m_AnchoredPosition: {x: 0, y: -230}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1973039912
@@ -4158,7 +4158,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -205}
+  m_AnchoredPosition: {x: 0, y: -145}
   m_SizeDelta: {x: 460, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2200000001
@@ -4207,18 +4207,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _eventId: music_snowpeak
   _fadeOutMs: 250
---- !u!1660057539 &9223372036854775807
-SceneRoots:
-  m_ObjectHideFlags: 0
-  m_Roots:
-  - {fileID: 1973039915}
-  - {fileID: 1979977267}
-  - {fileID: 1574631437}
-  - {fileID: 1452315711}
-  - {fileID: 2200000002}
-  - {fileID: 591953192}
-  - {fileID: 573269148}
-  - {fileID: 998869258}
+  _followChaos: 0
+  _lowEventId: music_stand
+  _middleEventId: music_walk
+  _highEventId: music_run
+  _middleChaos: 31
+  _highChaos: 80
 --- !u!1 &2250100000
 GameObject:
   m_ObjectHideFlags: 0
@@ -4565,3 +4559,15 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2250100010}
   m_CullTransparentMesh: 1
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 1973039915}
+  - {fileID: 1979977267}
+  - {fileID: 1574631437}
+  - {fileID: 1452315711}
+  - {fileID: 2200000002}
+  - {fileID: 591953192}
+  - {fileID: 573269148}
+  - {fileID: 998869258}

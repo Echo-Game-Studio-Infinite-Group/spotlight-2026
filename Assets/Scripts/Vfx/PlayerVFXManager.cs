@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using Cinemachine;
 using Spotlight.VFX;
 using UnityEngine;
 
 // 玩家身上的特效总控：挂在玩家根节点，所有"给玩家看的粒子"都从这里出声。
-//   · 攻击刀光：跟随剑骨的 AttackTrailVfx（挥动轨迹自己画弧），不再用"以玩家为原点播网格刀光"那套
+//   · 攻击刀光：Player/Vfx/AttackSlashes/AttackTrail1~4，每刀随机四选一，激活即播
 //   · 摩擦火花（地面 / 滑铲 / 贴墙）：由 FrictionSparks 组件驱动；这里只负责缺了就地补
 //   · 受击 / 撞墙：直接播挂在 Player/Vfx 下的粒子，拖进列表即生效，不需要再写代码
 // 与 Animator 同一节点也能工作，但不要依赖它：攻击刀光既可能由动画事件（非序列）触发，
@@ -12,14 +13,14 @@ using UnityEngine;
 public sealed class PlayerVFXManager : MonoBehaviour
 {
     [Header("攻击刀光")]
-    [Tooltip("跟随剑/右手的刀光拖尾；留空则运行时在子层级里找 AttackTrailVfx")]
-    [SerializeField] private AttackTrailVfx _attackTrail;
+    [Tooltip("刀光根节点（Vfx/AttackSlashes）；留空则运行时在 Vfx 下找")]
+    [SerializeField] private GameObject _attackVfx;
 
-    [Tooltip("第一段的发射窗口（秒）。攻击没有结束事件，窗口到期自己收尾")]
-    [SerializeField, Min(0.02f)] private float _attack1EmitSeconds = 0.26f;
+    [Tooltip("刀光根节点下的四组刀光 AttackTrail1~4；随机关关闭后 index 才决定播哪一组；留空则运行时自动收集")]
+    [SerializeField] private ParticleSystem[] _attackSlashes = new ParticleSystem[0];
 
-    [Tooltip("第二段的发射窗口（秒）。稍长一点，读感上像收招多带一段")]
-    [SerializeField, Min(0.02f)] private float _attack2EmitSeconds = 0.34f;
+    [Tooltip("每刀从四段里随机抽一段（且不连续重复）；关闭则严格按 PlayAttack 的 index 指定")]
+    [SerializeField] private bool _randomAttackVariant = true;
 
     [Header("挂载在 Player/Vfx 下的其它特效（拖进来即生效）")]
     [Tooltip("玩家受击时播放的粒子（小兵砍中 / 中弹）")]
@@ -37,6 +38,7 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     private CinemachineImpulseSource _impulseSource;
     private PlayerMotor _motor;
+    private int _lastSlash = -1;
     private PlayerCombat _player => GetComponentInParent<PlayerCombat>();
 
     private void Awake()
@@ -46,34 +48,80 @@ public sealed class PlayerVFXManager : MonoBehaviour
         _motor = GetComponentInParent<PlayerMotor>();
         if (_motor != null) _motor.WallImpact += OnWallImpact;
         EnsureFrictionSparks();
+        ResolveAttackVfx();
     }
 
     private void OnDestroy()
     {
         if (_motor != null) _motor.WallImpact -= OnWallImpact;
-        // 刀光挂在模型骨骼下，跟玩家一起销毁；粒子是世界坐标但归该系统所有，不用另外回收。
+        // 刀光挂在 Player/Vfx 下，跟玩家一起销毁；粒子归各自的发射器所有，不用另外回收。
     }
 
     // ===== 攻击 =====
-    public void UpdateAttack(int cnt = 1)
+    public void UpdateAttack(int index = 1)
     {
-        if (!IsSequenceDriven) PlayAttack(cnt);
+        if (!IsSequenceDriven) PlayAttack(index);
     }
 
-    /// <summary>开一段刀光。cnt 只决定发射窗口长短（动作序列的 vfx.attack 帧事件带的值）。</summary>
-    public void PlayAttack(int cnt = 1)
+    /// <summary>播一刀：默认随机抽一段；关闭随机后 index 是 1~4 的刀光编号（超出范围按端点夹取）。一次只放一段。</summary>
+    public void PlayAttack(int index = 1)
     {
-        AttackTrailVfx trail = ResolveTrail();
-        if (trail == null) return;
+        ResolveAttackVfx();
         PlayShake();
-        trail.Play(cnt >= 2 ? _attack2EmitSeconds : _attack1EmitSeconds);
+        if (_attackSlashes == null || _attackSlashes.Length == 0) return;
+
+        int selected = _randomAttackVariant
+            ? PickRandomSlash()
+            : Mathf.Clamp(index, 1, _attackSlashes.Length) - 1;
+
+        // 四组都是 playOnAwake：先把没选中的组关掉，再点亮根节点，
+        // 否则根节点激活的瞬间会把四段一起放出来。
+        for (int i = 0; i < _attackSlashes.Length; i++)
+        {
+            ParticleSystem slash = _attackSlashes[i];
+            if (slash == null) continue;
+            bool active = i == selected;
+            if (slash.gameObject.activeSelf != active) slash.gameObject.SetActive(active);
+        }
+        if (_attackVfx != null && !_attackVfx.activeSelf) _attackVfx.SetActive(true);
+
+        ParticleSystem chosen = _attackSlashes[selected];
+        if (chosen == null) return;
+        // 同一组连续出刀时 SetActive 不会再次触发 playOnAwake，显式清掉重播；
+        // 组内粒子已整体平移到 0 秒，Play 当帧就出刀，不再等 Hovl 原始时间轴。
+        chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        chosen.Play(true);
     }
 
-    // 装配工具会把引用接上；没接上（例如直接拖预制体进场景做试验）就在子层级里找一次。
-    private AttackTrailVfx ResolveTrail()
+    // 连砍时排除上一段：随机也可能连续抽到同一段，看起来就像没变化。
+    private int PickRandomSlash()
     {
-        if (_attackTrail == null) _attackTrail = GetComponentInChildren<AttackTrailVfx>(true);
-        return _attackTrail;
+        int count = _attackSlashes.Length;
+        if (count <= 1) return 0;
+        int picked = Random.Range(0, count - 1);
+        if (_lastSlash >= 0 && _lastSlash < count && picked >= _lastSlash) picked++;
+        _lastSlash = picked;
+        return picked;
+    }
+
+    // 装配工具会把引用接上；没接上（例如直接拖预制体进场景做试验）就在 Vfx 下找一次。
+    private void ResolveAttackVfx()
+    {
+        if (_attackVfx == null)
+        {
+            Transform host = transform.Find("Vfx/AttackSlashes");
+            if (host != null) _attackVfx = host.gameObject;
+        }
+        if (_attackSlashes != null && _attackSlashes.Length > 0) return;
+        if (_attackVfx == null) return;
+        var slashes = new List<ParticleSystem>(4);
+        foreach (Transform child in _attackVfx.transform)
+        {
+            // 只要每组刀光根上的主粒子；冒烟 / 火花 / 扭曲这些子发射器由主粒子自己带。
+            ParticleSystem slash = child.GetComponent<ParticleSystem>();
+            if (slash != null) slashes.Add(slash);
+        }
+        _attackSlashes = slashes.ToArray();
     }
 
     // ===== 受击 / 撞墙 =====
@@ -133,9 +181,11 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     public void StopAttacks()
     {
-        // 死亡 / 传送时立刻收干净，别让处决动画结束后还挂着上一刀的弧。
-        AttackTrailVfx trail = ResolveTrail();
-        if (trail != null) trail.ClearNow();
+        // 死亡 / 传送 / 被打断时立刻收干净，别让处决动画结束后还挂着上一刀的弧。
+        ResolveAttackVfx();
+        if (_attackSlashes != null)
+            for (int i = 0; i < _attackSlashes.Length; i++) StopOne(_attackSlashes[i]);
+        if (_attackVfx != null) _attackVfx.SetActive(false);
     }
 
     private static void StopGroup(ParticleSystem[] group)
@@ -149,7 +199,13 @@ public sealed class PlayerVFXManager : MonoBehaviour
         if (system != null) system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 
-    private void OnWallImpact(WallContact contact) => PlayWallImpact(contact);
+    // WallImpact 是移动层的通用正撞上报：轻碰墙面、撞敌人（挡住位移的 Collider）都会触发，
+    // 且不区分速度；直接接成特效会在非 WallSlide 状态冒火花。滑墙的持续火花归 FrictionSparks。
+    private void OnWallImpact(WallContact contact)
+    {
+        if (_motor == null || !_motor.IsWallSliding) return;
+        PlayWallImpact(contact);
+    }
 
     // 摩擦火花（地面 / 滑铲 / 贴墙）是独立组件（要读 PlayerMotor 的移动与墙面状态）。
     // 正常情况它已经落盘在 Player.prefab 上（编辑器装配工具接好发射器）；这里是兜底：
