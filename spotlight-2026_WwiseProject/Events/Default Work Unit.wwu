@@ -162,6 +162,50 @@
 								</Action>
 							</ChildrenList>
 						</Event>
+						<Event Name="Enemy_Footstep_Tech_Left" ID="{B164FCB2-D8AE-4F17-8AA2-BE9AFA3D73AD}">
+							<ChildrenList>
+								<Action Name="" ID="{4DC89ACD-E7FB-470E-829B-DB0DDF1A6868}" ShortID="114603274">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="EnemyFootstepTechLeft" ID="{137E76F6-D690-4637-B13A-5AF2F2AAC60A}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Enemy_Footstep_Tech_Right" ID="{F1324A3C-7B40-4AC2-BEC4-2491B9803D23}">
+							<ChildrenList>
+								<Action Name="" ID="{311EB45D-6A23-4EFF-AAD3-775079F1967F}" ShortID="813542742">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="EnemyFootstepTechRight" ID="{4C8328CD-3401-4E2D-841D-D9C7E9F0E465}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Enemy_Footstep_Normal_Left" ID="{12AAA4A6-15D4-4469-A476-52F5EF0CD8ED}">
+							<ChildrenList>
+								<Action Name="" ID="{60777046-A587-4F35-B0B3-5306258F55CA}" ShortID="847155714">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="EnemyFootstepNormalLeft" ID="{F0B97327-3FDD-41CE-96EB-C3FC5F3EC54C}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Enemy_Footstep_Normal_Right" ID="{A4EE2DB1-E7AE-46D9-BB5C-60A728B4735C}">
+							<ChildrenList>
+								<Action Name="" ID="{BAE5CDEB-D598-4228-93CD-8F6D274A7F2B}" ShortID="829668029">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="EnemyFootstepNormalRight" ID="{F73208C6-847F-4B4C-A2F0-806E87AFE1A5}" WorkUnitID="{9CB7C499-CFAF-44CA-B235-3A9BCD545213}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="Music" ID="{EED36A41-6309-43E2-96A2-0E78FB231BEE}" ShortID="545767990">

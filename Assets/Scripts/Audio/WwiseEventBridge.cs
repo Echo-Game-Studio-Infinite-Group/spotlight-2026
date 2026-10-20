@@ -96,6 +96,14 @@ public static class WwiseEventBridge
             emitter);
     }
 
+    public static void SetGlobalRTPC(
+        string rtpcName,
+        float value)
+    {
+        if (string.IsNullOrEmpty(rtpcName)) return;
+        AkUnitySoundEngine.SetRTPCValue(rtpcName, value);
+    }
+
     private static WwiseEventBindings.Entry Find(string eventId)
     {
         if (_bindings == null)
