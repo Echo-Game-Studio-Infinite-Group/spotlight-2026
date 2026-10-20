@@ -96,6 +96,60 @@ public sealed class PlayerHurtLegTests
     }
 
     [Test]
+    public void HurtTimeoutStopsTheLegStateOnTheExpiryTick()
+    {
+        var settings = new SerializedObject(_animation);
+        settings.FindProperty("_hurtMaxSeconds").floatValue = .5f;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        for (int i = 0; i < 60; i++) Tick(direction: Vector2.right);
+        Assert.IsTrue(_motor.IsWalking);
+        var animator = _bridge.Animator;
+        int layer = animator.GetLayerIndex(PlayerAnimation.HurtLegLayerName);
+        _animation.PlayHurt(false);
+        int ticks = 0;
+        while (_animation.IsHurting && ticks++ < 31) Tick(direction: Vector2.right);
+        Assert.IsFalse(_animation.IsHurting, "受伤时间到期必须在本次逻辑步退出");
+        Assert.IsFalse(animator.GetBool("IsHurt"));
+        Assert.IsFalse(_motor.InputSuppressed);
+        Assert.AreEqual(0f, animator.GetLayerWeight(layer));
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(layer).IsName(PlayerAnimation.InactiveLegsStateName));
+        for (int i = 0; i < 20; i++) Tick(direction: Vector2.right);
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Walk"));
+        Assert.AreEqual(0f, animator.GetLayerWeight(layer));
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(layer).IsName(PlayerAnimation.InactiveLegsStateName));
+    }
+
+    [Test]
+    public void MovingAttackReusesLegsAndStopsThemAtTheEnd()
+    {
+        for (int i = 0; i < 60; i++) Tick(true);
+        var animator = _bridge.Animator;
+        int layer = animator.GetLayerIndex(PlayerAnimation.HurtLegLayerName);
+        Tick(true, button: ActionInputButtons.Attack);
+        Assert.IsTrue(_root.GetComponent<PlayerCombat>().IsAttackSequenceActive);
+        Assert.AreEqual(1f, animator.GetLayerWeight(layer));
+        Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(layer).IsName(PlayerAnimation.InactiveLegsStateName));
+        for (int i = 0; i < 120; i++) Tick(true);
+        Assert.IsFalse(_root.GetComponent<PlayerCombat>().IsAttackSequenceActive);
+        Assert.AreEqual(0f, animator.GetLayerWeight(layer));
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(layer).IsName(PlayerAnimation.InactiveLegsStateName));
+    }
+
+    [Test]
+    public void DisablingAnimationDuringAnAttackReleasesLegOverrideImmediately()
+    {
+        for (int i = 0; i < 60; i++) Tick(true);
+        Tick(true, button: ActionInputButtons.Attack);
+        var animator = _bridge.Animator;
+        int layer = animator.GetLayerIndex(PlayerAnimation.HurtLegLayerName);
+        Assert.AreEqual(1f, animator.GetLayerWeight(layer));
+        _animation.enabled = false;
+        animator.Update(0f);
+        Assert.AreEqual(0f, animator.GetLayerWeight(layer));
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(layer).IsName(PlayerAnimation.InactiveLegsStateName));
+    }
+
+    [Test]
     public void StationaryHurtEndsAndRepeatedHitRestarts()
     {
         _animation.PlayHurt(false);

@@ -34,6 +34,8 @@ public sealed class PlayerAnimation : MonoBehaviour
     private static readonly int HurtId = Animator.StringToHash("Hurt");
     /// <summary>Animator 里那条只驱动腿部的 Override 层（avatarMask = LegsOnly）。受击与攻击招式共用。</summary>
     public const string HurtLegLayerName = "HurtLegs";
+    public const string InactiveLegsStateName = HurtLegLayerName + ".Inactive";
+    private static readonly int InactiveLegsStateId = Animator.StringToHash(InactiveLegsStateName);
 
     // 受伤专用参数，不复用动作序列的 ActionPlaying / ActionTime：
     // 那两个由 PlayerActionRunner 的装配层独占写入，两条线抢同一个参数会互相把状态顶掉。
@@ -67,6 +69,7 @@ public sealed class PlayerAnimation : MonoBehaviour
     private PlayerInputReader _input;
     private GameJam.Actions.PlayerActionRunner _actionRunner;
     private int _legsOnlyLayer = -1;
+    private bool _legsOverrideActive;
     private float _hurtElapsed;
     private float _airborneTime;
     private int _wallMotionState = MotionStateWallDashLeft;
@@ -354,7 +357,17 @@ public sealed class PlayerAnimation : MonoBehaviour
             && _motor.HorizontalSpeed > _idleSpeed;
         bool hurtLegs = IsHurting && !IsHurtLocked && groundedMoving;
         bool attackLegs = !IsHurting && _combat != null && _combat.IsAttackSequenceActive && groundedMoving;
-        _animator.SetLayerWeight(_legsOnlyLayer, hurtLegs || attackLegs ? 1f : 0f);
+        bool active = isActiveAndEnabled && (hurtLegs || attackLegs);
+        if (_animator.HasState(_legsOnlyLayer, InactiveLegsStateId))
+        {
+            bool inactive = _animator.GetCurrentAnimatorStateInfo(_legsOnlyLayer).fullPathHash == InactiveLegsStateId;
+            // 权重归零后也明确停止腿部片段，避免停用层继续留在走跑状态。
+            if (!active && (_legsOverrideActive || !inactive)) _animator.Play(InactiveLegsStateId, _legsOnlyLayer, 0f);
+            else if (active && (!_legsOverrideActive || inactive))
+                _animator.Play(HurtLegLayerName + (_motor.IsWalking ? ".Walk" : ".Move"), _legsOnlyLayer, 0f);
+        }
+        _legsOverrideActive = active;
+        _animator.SetLayerWeight(_legsOnlyLayer, active ? 1f : 0f);
     }
 
     private void OnDisable()
