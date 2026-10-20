@@ -143,17 +143,25 @@ public static class PlayerVfxSetup
         return index >= 4;
     }
 
-    // 每组主粒子的首个 burst 必须是 0 秒，否则单段播放仍要等 Hovl 原始时间轴。
+    // 四组必须是一次性播放：组内所有发射器关掉 loop，主粒子首个 burst 在 0 秒。
+    // 否则单段播放要等 Hovl 原始时间轴，播完还会按自身长度（2 秒）反复循环。
     private static bool AttackGroupsStartImmediately(Transform attackVfx)
     {
         foreach (Transform child in attackVfx)
         {
-            ParticleSystem system = child.GetComponent<ParticleSystem>();
-            if (system == null) continue;
-            if (!system.main.playOnAwake) return false;
-            if (system.emission.burstCount == 0) continue;
-            var bursts = new ParticleSystem.Burst[system.emission.burstCount];
-            system.emission.GetBursts(bursts);
+            ParticleSystem root = child.GetComponent<ParticleSystem>();
+            if (root == null) continue;
+
+            ParticleSystem[] systems = child.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                ParticleSystem.MainModule main = systems[i].main;
+                if (!main.playOnAwake || main.loop) return false;
+            }
+
+            if (root.emission.burstCount == 0) continue;
+            var bursts = new ParticleSystem.Burst[root.emission.burstCount];
+            root.emission.GetBursts(bursts);
             float first = float.MaxValue;
             for (int i = 0; i < bursts.Length; i++) first = Mathf.Min(first, bursts[i].time);
             if (first > 0.001f) return false;
@@ -424,9 +432,9 @@ public static class PlayerVfxSetup
         return attackVfx;
     }
 
-    // 原预制体四段排在同一条 5 秒时间轴上（主粒子 burst 在 0.1 / 0.45 / 0.6 / 1.15 秒）。
-    // 每组整体减去主粒子的首个 burst，组内烟/火/扭曲的相对节奏不变，但激活当帧就出刀。
-    // 同时恢复整组的 playOnAwake：管理器只激活选中组，激活即播。
+    // 原预制体四段排在同一条 5 秒时间轴上（主粒子 burst 在 0.1 / 0.45 / 0.6 / 1.15 秒），
+    // 而且所有发射器都开着 loop。这里每组整体减去主粒子的首个 burst，组内烟/火/扭曲的
+    // 相对节奏不变，同时关掉 loop、恢复 playOnAwake：激活当帧出刀，且只出一次。
     private static void ConfigureAttackGroups(Transform attackVfx)
     {
         int index = 0;
@@ -443,6 +451,7 @@ public static class PlayerVfxSetup
             {
                 ParticleSystem.MainModule main = systems[i].main;
                 main.playOnAwake = true;
+                main.loop = false;
 
                 ParticleSystem.EmissionModule emission = systems[i].emission;
                 if (emission.burstCount == 0) continue;
