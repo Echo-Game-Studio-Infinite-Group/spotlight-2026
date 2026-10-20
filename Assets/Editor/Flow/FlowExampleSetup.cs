@@ -157,7 +157,7 @@ namespace GameJam.FlowEditor
                 checkpoint.Id = "entry";
                 GameObject statue = Primitive(checkpoint.transform, "记录点雕像", PrimitiveType.Cylinder, new Vector3(-entrySize.x * .35f, .6f, 0), new Vector3(.3f, 1.2f, .3f), material);
                 Object.DestroyImmediate(statue.GetComponent<Collider>());
-                AddDevice(wrapper.transform, material);
+                AddDevice(wrapper.transform);
                 TextMesh text = Anchor(wrapper.transform, "叙事提示", new Vector3(0, 3, 6), Quaternion.identity).gameObject.AddComponent<TextMesh>();
                 text.anchor = TextAnchor.MiddleCenter; text.characterSize = .06f; text.fontSize = 60;
                 template.Narratives = new[] { text };
@@ -196,14 +196,11 @@ namespace GameJam.FlowEditor
             }
             return new Vector2(6f, 5f);
         }
-        private static void AddDevice(Transform parent, Material material)
+        private static void AddDevice(Transform parent)
         {
             var group = new GameObject("稳定装置内容组"); group.transform.SetParent(parent, false);
             var content = group.AddComponent<FlowContentGroup>(); content.Id = "stability"; content.GameplayOnly = true;
-            var device = new GameObject("稳定装置"); device.transform.SetParent(group.transform, false); device.transform.localPosition = new Vector3(1.5f, 1.3f, 6);
-            var stability = device.AddComponent<StabilityDevice>();
-            stability.Visual = Primitive(device.transform, "可击碎灯", PrimitiveType.Sphere, Vector3.zero, Vector3.one * .6f, material);
-            var light = device.AddComponent<Light>(); light.type = LightType.Point; light.range = 8; light.intensity = 2;
+            StabilityLampSetup.Create(group.transform, new Vector3(1.5f, 1.3f, 6));
         }
         private static GameObject Door(Transform parent, string name, Transform socket, Vector2 size, Material material)
         {

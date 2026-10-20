@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c04c9a653cf9384392b158555a74116, type: 3}
   m_Name: RunFlow
   m_EditorClassIdentifier: 
+  SkyboxMaterial: {fileID: 2100000, guid: d9c47489d80b947e3bceb3e874515ff3, type: 2}
+  RandomizeSeed: 1
   Seed: 2026
   InitialChaos: 0
   MinimumChaos: 0
@@ -20,7 +22,7 @@ MonoBehaviour:
   VisitWeightMultiplier: 0.25
   DecayOnlyOnce: 0
   InitialRoom: {fileID: 11400000, guid: ca646e140a742a44991838abe2d244bc, type: 2}
-  AlwaysStartAtInitialRoom: 1
+  AlwaysStartAtInitialRoom: 0
   FinalRoom: {fileID: 11400000, guid: 15d1665937f22b644a6340468a540f75, type: 2}
   NormalPools:
   - {fileID: 11400000, guid: 08a8f3fdd2f2bda44947cd24faf9749f, type: 2}

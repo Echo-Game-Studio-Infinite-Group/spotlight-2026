@@ -4,7 +4,7 @@ using Spotlight.VFX;
 using UnityEngine;
 
 // 玩家身上的特效总控：挂在玩家根节点，所有"给玩家看的粒子"都从这里出声。
-//   · 攻击刀光：Player/Vfx/AttackSlashes/AttackTrail1~4，每刀随机四选一，激活即播
+//   · 攻击刀光：由动作表固定选取 AttackTrail1~4，激活即播
 //   · 摩擦火花（地面 / 滑铲 / 贴墙）：由 FrictionSparks 组件驱动；这里只负责缺了就地补
 //   · 受击 / 撞墙：直接播挂在 Player/Vfx 下的粒子，拖进列表即生效，不需要再写代码
 // 与 Animator 同一节点也能工作，但不要依赖它：攻击刀光既可能由动画事件（非序列）触发，
@@ -12,15 +12,19 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerVFXManager : MonoBehaviour
 {
+    public const int BasicSlashIndex = 1;
+    public const int HighspeedASlashIndex = 2;
+    public const int HighspeedBSlashIndex = 3;
     [Header("攻击刀光")]
     [Tooltip("刀光根节点（Vfx/AttackSlashes）；留空则运行时在 Vfx 下找")]
     [SerializeField] private GameObject _attackVfx;
 
-    [Tooltip("刀光根节点下的四组刀光 AttackTrail1~4；随机关关闭后 index 才决定播哪一组；留空则运行时自动收集")]
+    [Tooltip("刀光根节点下的四组刀光 AttackTrail1~4，动作表的 vfx.attack 数值决定编号；留空则自动收集")]
     [SerializeField] private ParticleSystem[] _attackSlashes = new ParticleSystem[0];
 
-    [Tooltip("每刀从四段里随机抽一段（且不连续重复）；关闭则严格按 PlayAttack 的 index 指定")]
-    [SerializeField] private bool _randomAttackVariant = true;
+    [Tooltip("刀光整体尺寸，包含组内烟、火花和扭曲；不改变攻击判定范围。")]
+    [SerializeField, Min(.01f)] private float _attackVfxScale = 1.2f;
+    public float AttackVfxScale => _attackVfxScale;
 
     [Header("挂载在 Player/Vfx 下的其它特效（拖进来即生效）")]
     [Tooltip("玩家受击时播放的粒子（小兵砍中 / 中弹）")]
@@ -38,7 +42,6 @@ public sealed class PlayerVFXManager : MonoBehaviour
 
     private CinemachineImpulseSource _impulseSource;
     private PlayerMotor _motor;
-    private int _lastSlash = -1;
     private PlayerCombat _player => GetComponentInParent<PlayerCombat>();
 
     private void Awake()
@@ -58,21 +61,20 @@ public sealed class PlayerVFXManager : MonoBehaviour
     }
 
     // ===== 攻击 =====
-    public void UpdateAttack(int index = 1)
+    public void UpdateAttack(int index = BasicSlashIndex)
     {
         if (!IsSequenceDriven) PlayAttack(index);
     }
 
-    /// <summary>播一刀：默认随机抽一段；关闭随机后 index 是 1~4 的刀光编号（超出范围按端点夹取）。一次只放一段。</summary>
-    public void PlayAttack(int index = 1)
+    /// <summary>按动作表指定的 1～4 编号播放，一次只放一组。</summary>
+    public void PlayAttack(int index = BasicSlashIndex)
     {
         ResolveAttackVfx();
         PlayShake();
         if (_attackSlashes == null || _attackSlashes.Length == 0) return;
 
-        int selected = _randomAttackVariant
-            ? PickRandomSlash()
-            : Mathf.Clamp(index, 1, _attackSlashes.Length) - 1;
+        int selected = Mathf.Clamp(index, 1, _attackSlashes.Length) - 1;
+        if (_attackVfx != null) _attackVfx.transform.localScale = Vector3.one * _attackVfxScale;
 
         // 四组都是 playOnAwake：先把没选中的组关掉，再点亮根节点，
         // 否则根节点激活的瞬间会把四段一起放出来。
@@ -91,17 +93,6 @@ public sealed class PlayerVFXManager : MonoBehaviour
         // 组内粒子已整体平移到 0 秒，Play 当帧就出刀，不再等 Hovl 原始时间轴。
         chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         chosen.Play(true);
-    }
-
-    // 连砍时排除上一段：随机也可能连续抽到同一段，看起来就像没变化。
-    private int PickRandomSlash()
-    {
-        int count = _attackSlashes.Length;
-        if (count <= 1) return 0;
-        int picked = Random.Range(0, count - 1);
-        if (_lastSlash >= 0 && _lastSlash < count && picked >= _lastSlash) picked++;
-        _lastSlash = picked;
-        return picked;
     }
 
     // 装配工具会把引用接上；没接上（例如直接拖预制体进场景做试验）就在 Vfx 下找一次。

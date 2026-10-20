@@ -63,6 +63,44 @@ namespace GameJam.FlowTests
         }
 
         [UnityTest]
+        public IEnumerator AllskyPersistsAcrossRoomChangesRecoveryAndRestart()
+        {
+            yield return Load();
+            var expected = AssetDatabase.LoadAssetAtPath<Material>("Assets/Allsky/Space/Space_Nebula_DeepBlack/Space_Nebula_DeepBlack.mat");
+            Assert.That(_flow.Config.SkyboxMaterial, Is.SameAs(expected));
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(Camera.main.clearFlags, Is.EqualTo(CameraClearFlags.Skybox));
+            foreach (string face in new[] { "_FrontTex", "_BackTex", "_LeftTex", "_RightTex", "_UpTex", "_DownTex" })
+                Assert.That(expected.GetTexture(face), Is.Not.Null, face);
+            FlowRoomInstance checkpointRoom = _flow.CurrentRoom;
+            Assert.That(_flow.TryEnterNextRoom(), Is.True);
+            yield return Ready();
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(_flow.Recover(false), Is.True);
+            yield return Ready();
+            Assert.That(_flow.CurrentRoom, Is.SameAs(checkpointRoom));
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+            Assert.That(_flow.RestartRun(), Is.True);
+            yield return Ready();
+            Assert.That(RenderSettings.skybox, Is.SameAs(expected));
+        }
+
+        [UnityTest]
+        public IEnumerator NewGamesAndFullRestartsChooseNewSeeds()
+        {
+            yield return Load();
+            Assert.That(_flow.Config.RandomizeSeed, Is.True);
+            int first = _flow.RunSeed;
+            yield return _flow.ReleaseRooms();
+            yield return Load();
+            Assert.That(_flow.RunSeed, Is.Not.EqualTo(first));
+            int second = _flow.RunSeed;
+            Assert.That(_flow.RestartRun(), Is.True);
+            yield return Ready();
+            Assert.That(_flow.RunSeed, Is.Not.EqualTo(second));
+        }
+
+        [UnityTest]
         public IEnumerator MainMenuNewGameLoadsFormalSceneAndCancelsContinue()
         {
             var data = new SaveManager.SaveData { scenePath = "Assets/Scenes/FormalFlowGame.unity", roomVariantId = "room01.low" };
@@ -102,20 +140,22 @@ namespace GameJam.FlowTests
             Assert.That(_flow.CommitCheckpoint(checkpoint), Is.True);
             yield return Ready();
             string id = target.Variant.Id;
+            int seed = _flow.RunSeed;
             SaveManager.Init(_ownedMotor.gameObject); SaveManager.SavePlayer();
             Assert.That(SaveManager.PrepareContinue("Assets/Scenes/FormalFlowGame.unity", out _), Is.True);
+            Assert.That(SaveManager.ContinueRunSeed, Is.EqualTo(seed));
             yield return Load();
+            Assert.That(_flow.RunSeed, Is.EqualTo(seed));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.EqualTo(id));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.Not.EqualTo("boxtr.default"));
             Assert.That(_flow.Checkpoints.Id, Is.EqualTo(checkpoint.Id));
         }
 
         [UnityTest]
-        public IEnumerator NewRunIgnoresLevelSelectionAndBoxTrHasSafeCheckpoints()
+        public IEnumerator NewRunStartsAtBoxTrWithSafeCheckpoints()
         {
             var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
             Assert.That(FlowConfigValidator.Validate(config), Is.Empty);
-            Assert.That(LevelSelection.Select(config, config.FinalRoom), Is.True);
             yield return Load();
             Assert.That(_flow.Config, Is.SameAs(config));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.EqualTo("boxtr.default"));
@@ -131,6 +171,18 @@ namespace GameJam.FlowTests
             }
             Assert.That(NavMesh.SamplePosition(root.Checkpoints[0].transform.position, out _, 1, NavMesh.AllAreas), Is.True);
             Assert.That(Object.FindObjectsOfType<PlayerMotor>().Length, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator LevelSelectionStartsChosenFormalVariant()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
+            var selected = LevelSelection.GetLevels(config).First(v => v.Id == "box_s_002.middle");
+            Assert.That(LevelSelection.Select(config, selected), Is.True);
+            yield return Load();
+            Assert.That(_flow.Config, Is.SameAs(config));
+            Assert.That(_flow.CurrentRoom.Variant, Is.SameAs(selected));
+            Assert.That(_flow.Chaos.Value, Is.EqualTo(selected.MinimumChaos));
         }
 
         [UnityTest]

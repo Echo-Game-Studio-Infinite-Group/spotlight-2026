@@ -34,7 +34,7 @@ namespace GameJam.FlowEditor
             config.Loops = new[] { Loop("low", 0, 30, neutral, chaos), Loop("high", 80, 99, neutral, chaos) };
             config.FinalRoom = FinalRoom(rooms[6].Template);
             config.ContinueOnlyRooms = new RoomVariantDefinition[0];
-            config.AlwaysStartAtInitialRoom = true;
+            config.AlwaysStartAtInitialRoom = false;
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             var errors = FlowConfigValidator.Validate(config);
@@ -210,7 +210,7 @@ namespace GameJam.FlowEditor
                 template.ExitDoor = Door(wrapper.transform, "出口保护门", template.Exit, exitSize, material);
                 var checkpoint = Anchor(wrapper.transform, "入口出生记录点", normalize * (entryCenter - origin) + Vector3.up * .15f).gameObject.AddComponent<FlowCheckpoint>();
                 checkpoint.Id = "entry";
-                if (changesChaos) AddDevice(wrapper.transform, normalize * (exitCenter - origin), material);
+                if (changesChaos) AddDevice(wrapper.transform, normalize * (exitCenter - origin));
                 Renderer[] renderers = geometry.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled && r.bounds.size.sqrMagnitude > 0).ToArray();
                 Bounds bounds = renderers[0].bounds;
                 foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
@@ -264,16 +264,11 @@ namespace GameJam.FlowEditor
             return hit.point;
         }
 
-        private static void AddDevice(Transform parent, Vector3 exitCenter, Material material)
+        private static void AddDevice(Transform parent, Vector3 exitCenter)
         {
             var group = Anchor(parent, "稳定装置内容组", Vector3.zero).gameObject.AddComponent<FlowContentGroup>();
             group.Id = "stability"; group.GameplayOnly = true;
-            var device = Anchor(group.transform, "稳定装置", exitCenter + new Vector3(3, 1.2f, 0)).gameObject.AddComponent<StabilityDevice>();
-            device.Visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            device.Visual.name = "可击碎灯"; device.Visual.transform.SetParent(device.transform, false);
-            device.Visual.transform.localScale = Vector3.one * .8f;
-            device.Visual.GetComponent<Renderer>().sharedMaterial = material;
-            var light = device.gameObject.AddComponent<Light>(); light.type = LightType.Point; light.range = 8; light.intensity = 2;
+            StabilityLampSetup.Create(group.transform, exitCenter + new Vector3(3, 1.2f, 0));
         }
 
         private static Transform Anchor(Transform parent, string name, Vector3 position)

@@ -3,7 +3,8 @@ using UnityEngine;
 
 public sealed class AudioDebugOverlay : MonoBehaviour
 {
-    public bool Visible { get; set; } = true;
+    // F3 一次切换所有调试面板，多个 Overlay 实例共享同一可见状态。
+    public static bool Visible { get; set; } = true;
 
     private GUIStyle _title;
     private GUIStyle _label;

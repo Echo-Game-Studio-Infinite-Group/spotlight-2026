@@ -16,8 +16,6 @@ public sealed class AudioSystem : MonoBehaviour
     private readonly List<ActionAudioVoice> _actionPool = new List<ActionAudioVoice>();
     private readonly List<AudioActionHandle> _activeActions = new List<AudioActionHandle>();
     private readonly List<AudioActionHandle> _actionRemoveBuffer = new List<AudioActionHandle>();
-    private AudioDebugOverlay _debugOverlay;
-    private PlayerInputReader _boundInput;
     private float _playerScanTimer;
     private bool _playerBound;
     private System.Random _random;
@@ -37,13 +35,11 @@ public sealed class AudioSystem : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         _random = new System.Random(System.Environment.TickCount);
         BuildActionPool();
-        _debugOverlay = gameObject.AddComponent<AudioDebugOverlay>();
     }
 
     private void OnDestroy()
     {
         if (_instance == this) _instance = null;
-        if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
     }
 
     private void Update()
@@ -67,11 +63,6 @@ public sealed class AudioSystem : MonoBehaviour
         return handle;
     }
 
-    public void ToggleDebug()
-    {
-        if (_debugOverlay != null) _debugOverlay.Visible = !_debugOverlay.Visible;
-    }
-
     private void TickActions(float deltaTime)
     {
         _actionRemoveBuffer.Clear();
@@ -92,13 +83,6 @@ public sealed class AudioSystem : MonoBehaviour
         if (motor.gameObject.GetComponent<WwiseActionDriver>() == null)
             motor.gameObject.AddComponent<WwiseActionDriver>();
         _playerBound = true;
-        PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
-        if (input != null && input != _boundInput)
-        {
-            if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
-            _boundInput = input;
-            _boundInput.ToggleHUD += ToggleDebug;
-        }
     }
 
     private void BuildActionPool()

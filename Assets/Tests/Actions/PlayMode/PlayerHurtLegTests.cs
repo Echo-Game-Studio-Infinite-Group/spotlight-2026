@@ -49,9 +49,9 @@ public sealed class PlayerHurtLegTests
         _created.Clear();
     }
 
-    private void Tick(bool moving = false, bool sprint = false, ActionInputButtons button = ActionInputButtons.None)
+    private void Tick(bool moving = false, bool sprint = false, ActionInputButtons button = ActionInputButtons.None, Vector2? direction = null)
     {
-        Vector2 move = moving ? Vector2.up : Vector2.zero;
+        Vector2 move = direction ?? (moving ? Vector2.up : Vector2.zero);
         // 注入回调缓存而不消费 ReadFrame，覆盖执行器接管 Motor 时的原始输入读取。
         typeof(PlayerInputReader).GetField("_moveValue", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_input, move);
         typeof(PlayerInputReader).GetField("_focused", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(_input, true);
@@ -124,6 +124,37 @@ public sealed class PlayerHurtLegTests
         for (int i = 0; i < 120; i++) Tick();
         Tick(button: ActionInputButtons.Attack);
         Assert.IsTrue(_root.GetComponent<PlayerCombat>().IsAttacking);
+    }
+
+    [TestCase(-1f, 0f)]
+    [TestCase(1f, 0f)]
+    [TestCase(-1f, 1f)]
+    [TestCase(1f, 1f)]
+    [TestCase(0f, -1f)]
+    [TestCase(-1f, -1f)]
+    [TestCase(1f, -1f)]
+    public void HurtKeepsDirectionalWalkingAndReturnsToBaseWalkBlendTree(float x, float z)
+    {
+        var direction = new Vector2(x, z).normalized;
+        for (int i = 0; i < 60; i++) Tick(direction: direction);
+        Assert.IsTrue(_motor.IsWalking);
+        _animation.PlayHurt(false);
+        for (int i = 0; i < 25; i++) Tick(direction: direction);
+        var animator = _bridge.Animator;
+        int layer = animator.GetLayerIndex(PlayerAnimation.HurtLegLayerName);
+        Assert.IsTrue(_animation.IsHurting);
+        Assert.AreEqual(1f, animator.GetLayerWeight(layer));
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(layer).IsName("Walk"), "受伤时腿部也要使用七向行走");
+        for (int i = 0; i < 120; i++) Tick(direction: direction);
+        Assert.IsFalse(_animation.IsHurting);
+        Assert.IsFalse(_motor.InputSuppressed);
+        Assert.IsTrue(_motor.IsWalking);
+        Assert.That(_motor.HorizontalSpeed, Is.EqualTo(_motor.Params.WalkSpeed).Within(.01f));
+        Assert.AreEqual(0f, animator.GetLayerWeight(layer));
+        Assert.AreEqual(PlayerAnimation.MotionStateWalk, _animation.CurrentMotionState);
+        Assert.IsTrue(animator.GetCurrentAnimatorStateInfo(0).IsName("Walk"), "受伤结束必须回基础层七向混合树");
+        Assert.That(animator.GetFloat(PlayerAnimation.WalkXParameter), Is.EqualTo(direction.x).Within(.02f));
+        Assert.That(animator.GetFloat(PlayerAnimation.WalkZParameter), Is.EqualTo(direction.y).Within(.02f));
     }
 }
 #endif
