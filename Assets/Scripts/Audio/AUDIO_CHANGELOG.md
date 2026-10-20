@@ -1526,8 +1526,8 @@ Logs/audio-parry-chaos-music-compile.log
 - 敌人脚步接入：
   - 重型敌人使用 `footstep_tech_left/right.wav`。
   - 普通敌人复用主角左右脚步 WAV，但在 Wwise 中建立独立 Sound/Event。
-  - 重型：`Pitch -200 cents`、基础 `Volume +1 dB`、8 实例 / Priority 45。
-  - 普通：`Pitch 0`、基础 `Volume -10 dB`、12 实例 / Priority 45。
+  - 重型：`Pitch -200 cents`、基础 `Volume +12 dB`、8 实例 / Priority 45。
+  - 普通：`Pitch 0`、基础 `Volume -10 dB`、6 实例 / Priority 45。
   - 两者均有 Volume 随机 `-0.2..+0.2 dB` 和 `Combat_3D_40m` Attenuation。
   - `EnemyFootstepAudioSource` 读取现有移动速度与动画步态相位，
     不参与敌人 AI，也不修改动画资源。
