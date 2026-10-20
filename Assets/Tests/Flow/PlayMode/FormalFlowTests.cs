@@ -111,11 +111,10 @@ namespace GameJam.FlowTests
         }
 
         [UnityTest]
-        public IEnumerator NewRunIgnoresLevelSelectionAndBoxTrHasSafeCheckpoints()
+        public IEnumerator NewRunStartsAtBoxTrWithSafeCheckpoints()
         {
             var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
             Assert.That(FlowConfigValidator.Validate(config), Is.Empty);
-            Assert.That(LevelSelection.Select(config, config.FinalRoom), Is.True);
             yield return Load();
             Assert.That(_flow.Config, Is.SameAs(config));
             Assert.That(_flow.CurrentRoom.Variant.Id, Is.EqualTo("boxtr.default"));
@@ -131,6 +130,18 @@ namespace GameJam.FlowTests
             }
             Assert.That(NavMesh.SamplePosition(root.Checkpoints[0].transform.position, out _, 1, NavMesh.AllAreas), Is.True);
             Assert.That(Object.FindObjectsOfType<PlayerMotor>().Length, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator LevelSelectionStartsChosenFormalVariant()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
+            var selected = LevelSelection.GetLevels(config).First(v => v.Id == "box_s_002.middle");
+            Assert.That(LevelSelection.Select(config, selected), Is.True);
+            yield return Load();
+            Assert.That(_flow.Config, Is.SameAs(config));
+            Assert.That(_flow.CurrentRoom.Variant, Is.SameAs(selected));
+            Assert.That(_flow.Chaos.Value, Is.EqualTo(selected.MinimumChaos));
         }
 
         [UnityTest]
