@@ -7,4 +7,6 @@ public sealed class SceneUISettings : ScriptableObject
     public GameObject HUD;
     public GameObject PauseMenu;
     public GameObject DeathScreen;
+    // 场景自带 HUD 未必包含混乱度显示，装配时用它兜底补齐。
+    public GameObject ChaosDisplay;
 }
