@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 手工补齐：Wwise 插件激活器（AkPlatformPluginList）依赖本文件存在才会解析插件列表。
+     内容与同目录 PluginInfo.json 保持一致；下次 Wwise 生成 Bank 时（wproj 已开启
+     GenerateSoundBankXML）会被官方生成的同名文件覆盖。 -->
+<PluginInfo Platform="Windows" BasePlatform="Windows" SchemaVersion="1">
+	<PluginLibs>
+		<Lib LibId="11403271" Name="System" Type="AudioDevice"/>
+		<Lib LibId="11862023" Name="No Output" Type="AudioDevice"/>
+		<Lib LibId="278003714" Name="Wwise Spotlight Action Source" Type="Source" DLL="SpotlightActionSource" StaticLib="SpotlightActionSource"/>
+	</PluginLibs>
+	<FileHash>{76208960-47CD-B0B4-965C-51F9E0D757C1}</FileHash>
+</PluginInfo>

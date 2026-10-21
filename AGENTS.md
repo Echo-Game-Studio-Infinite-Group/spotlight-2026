@@ -104,6 +104,7 @@ README.md                  # 仓库总览（面向接收开发者，说人话）
 - **改 Ground 尺寸后必须重排地图**：围墙与环道是按地面尺寸算出来的，不重排会与地面脱节。用「地图布局工具」。
 - **改序列化字段后必须 `EditorUtility.SetDirty`**：漏掉时内存值正确但不会落盘，且紧随的 `ImportAsset(ForceUpdate)` 会把空值读回来——自检务必校验磁盘文件而非内存对象。
 - **`EditorWindow.OnGUI` 里别做重 IO**：`PrefabUtility.LoadPrefabContents` 会整个加载预制体，放在 OnGUI 里每帧执行会把编辑器拖卡，要缓存。
+- **导出包缺自研 Wwise 插件音效（滑铲/滑墙/转换器）**：这三类走 `SpotlightActionSource` 自研 Source 插件路径（`Play_SlideSinePlugin` + `DynamicAction` Bank）。Wwise 集成的插件激活器（`AkPlatformPluginList`）只有看到 `GeneratedSoundBanks/Windows/PluginInfo.xml` 存在才会解析插件列表并激活对应 DLL；wproj 曾把 `GenerateSoundBankXML` 关了，导致 Bank 生成只有 JSON 没有 XML，`SpotlightActionSource.dll` 被判"未使用"（meta 全平台 `enabled: 0`）而进不了导出包——症状是包里唯独这三类音效无声。修复（2026-10）：wproj 打开 `GenerateSoundBankXML`，并在 `Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows/` 手工补一份 `PluginInfo.xml`（内容不参与解析，存在即可；重新生成 Bank 会被官方文件覆盖）。**删这个 XML 或关这个开关都会复现此坑**。
 
 ## 禁止事项
 

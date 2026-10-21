@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 281258132986666851}
   - component: {fileID: 5746874866365983894}
-  - component: {fileID: 1789656863087988753}
   - component: {fileID: 2104354863441042805}
   - component: {fileID: 9016278857469224436}
+  - component: {fileID: 5787072967960900128}
   m_Layer: 0
   m_Name: StabilityLamp
   m_TagString: Untagged
@@ -58,7 +58,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1292396673893639252}
+  m_GameObject: {fileID: 8359866068101095964}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 608b440f907f4baf9d220036e7a5a9d1, type: 3}
@@ -155,6 +155,29 @@ Light:
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
   m_ShadowAngle: 0
+--- !u!114 &5787072967960900128
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1292396673893639252}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_RenderingLayers: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_ShadowRenderingLayers: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
 --- !u!1001 &4907630271085649138
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -163,10 +186,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 281258132986666851}
     m_Modifications:
-    - target: {fileID: 3467580808926232302, guid: 8525c7596188ee640bc410abec15603c, type: 3}
-      propertyPath: m_Name
-      value: TitanicLamp
-      objectReference: {fileID: 0}
     - target: {fileID: 4172026890133670621, guid: 8525c7596188ee640bc410abec15603c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -210,7 +229,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3467580808926232302, guid: 8525c7596188ee640bc410abec15603c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1789656863087988753}
   m_SourcePrefab: {fileID: 100100000, guid: 8525c7596188ee640bc410abec15603c, type: 3}
 --- !u!1 &8359866068101095964 stripped
 GameObject:

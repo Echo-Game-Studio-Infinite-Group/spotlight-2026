@@ -53,7 +53,7 @@ namespace GameJam.FlowTests
             var root = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath));
             SceneManager.MoveGameObjectToScene(root, scene);
             root.transform.SetPositionAndRotation(new Vector3(3000, 15, 3000), Quaternion.Euler(0, 37, 0));
-            var gib = root.GetComponent<GibComponent>();
+            var gib = root.GetComponentInChildren<GibComponent>(true);
             try
             {
                 TimeManager.SetPaused(false);

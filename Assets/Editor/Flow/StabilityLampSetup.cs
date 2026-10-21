@@ -15,7 +15,7 @@ namespace GameJam.FlowEditor
         private const string ArtFolder = "Assets/Art/Models/titanic-lamp";
         private const string MaterialFolder = ArtFolder + "/Materials";
 
-        [MenuItem("超高速行者/流程与地图/替换混乱度球为 Titanic 灯")]
+        [MenuItem("超高速行者/流程与地图/替换混乱度球为提灯")]
         [MenuItem("超高速行者/流程与地图/修正混乱度灯底座贴地")]
         public static void Install()
         {
@@ -83,10 +83,11 @@ namespace GameJam.FlowEditor
             {
                 if (device.Visual != null) Object.DestroyImmediate(device.Visual);
                 device.Visual = (GameObject)PrefabUtility.InstantiatePrefab(visualAsset, device.transform);
-                device.Visual.name = "TitanicLamp";
             }
-            var gib = device.GetComponent<GibComponent>();
-            if (gib == null) gib = device.gameObject.AddComponent<GibComponent>();
+            var gib = device.Visual.GetComponent<GibComponent>();
+            if (gib == null) gib = device.Visual.AddComponent<GibComponent>();
+            var stale = device.GetComponent<GibComponent>();
+            if (stale != null && stale != gib) Object.DestroyImmediate(stale);
             var settings = new SerializedObject(gib);
             settings.FindProperty("_cutoutShader").objectReferenceValue = Shader.Find("GameJam/EnemyWaistCutout");
             settings.FindProperty("_cutColor").colorValue = new Color(.18f, .13f, .065f);
@@ -107,7 +108,7 @@ namespace GameJam.FlowEditor
         {
             EnsureFolder("Assets/Prefabs/Props"); EnsureFolder(MaterialFolder);
             var importer = (ModelImporter)AssetImporter.GetAtPath(ModelPath);
-            if (importer == null) throw new InvalidOperationException("找不到 Titanic Lamp 模型。");
+            if (importer == null) throw new InvalidOperationException("找不到提灯模型。");
             // 静态网格切割和封口需要读取顶点；保留 FBX 原有的轴向和单位换算。
             if (!importer.isReadable) { importer.isReadable = true; importer.SaveAndReimport(); }
             string textureFolder = ArtFolder + "/textures/";
