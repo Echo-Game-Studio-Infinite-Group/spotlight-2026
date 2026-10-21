@@ -22,8 +22,14 @@ public sealed class ObjectiveMarker : MonoBehaviour
         _viewCamera = Camera.main;
         PlayerMotor motor = FindObjectOfType<PlayerMotor>();
         if (motor != null) _player = motor.transform;
-        HealthBar healthBar = FindObjectOfType<HealthBar>();
-        if (healthBar != null) _hud = healthBar.GetComponentInParent<Canvas>();
+        // 新 HUD 的数值绑定已改为 PlayerHudView，旧场景仍可沿用 HealthBar。
+        PlayerHudView playerHud = FindObjectOfType<PlayerHudView>();
+        if (playerHud != null) _hud = playerHud.GetComponentInParent<Canvas>();
+        else
+        {
+            HealthBar healthBar = FindObjectOfType<HealthBar>();
+            if (healthBar != null) _hud = healthBar.GetComponentInParent<Canvas>();
+        }
         if (_visual == null || _distanceText == null || _viewCamera == null || _hud == null || _player == null)
         {
             Debug.LogError("[ObjectiveMarker] 请使用配好的预制体，场景需要玩家、MainCamera 和 HUD。", this);
