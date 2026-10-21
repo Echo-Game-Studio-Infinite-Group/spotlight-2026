@@ -211,7 +211,9 @@ namespace GameJam.Flow
             if (best != null) CommitCheckpoint(best);
             if (NextRoom != null && NextRoom.IsReady && !_preparing &&
                 FlowPlacement.CrossedEntry(NextRoom.Root, _previous, position, _config.EntryCommitDistance)) TryEnterNextRoom();
-            if (CurrentRoom.Root.FinishArea != null && CurrentRoom.Root.FinishArea.ContainsPlayer(_motor.transform)) CompleteRun();
+            // 终点与普通 BOX_S_007 共用模板，必须按差分区分，否则普通房间走到出口就会结束整局。
+            if (CurrentRoom.Variant == _config.FinalRoom && CurrentRoom.Root.FinishArea != null &&
+                CurrentRoom.Root.FinishArea.ContainsPlayer(_motor.transform)) CompleteRun();
             _previous = position;
         }
 
@@ -345,7 +347,7 @@ namespace GameJam.Flow
         }
         public void CompleteRun()
         {
-            if (IsBusy || IsComplete || CurrentRoom == null) return;
+            if (IsBusy || IsComplete || CurrentRoom == null || CurrentRoom.Variant != _config.FinalRoom) return;
             IsComplete = true;
             Debug.Log("[流程] 到达终点：" + CurrentRoom.Variant.Room.Id, this);
             GameManager.Instance.EndGame();

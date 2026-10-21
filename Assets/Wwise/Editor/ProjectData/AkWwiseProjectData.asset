@@ -158,9 +158,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: a6a4aa12d4156944a47652f5ef0cd8ed
       Path: Events\Default Work Unit\OneTimeEvent\Enemy_Footstep_Normal_Left
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
     - name: Enemy_Footstep_Normal_Right
       guid: b12deea4aee7d946bb5c60a728b4735c
       id: 3992451469
@@ -178,9 +178,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: b12deea4aee7d946bb5c60a728b4735c
       Path: Events\Default Work Unit\OneTimeEvent\Enemy_Footstep_Normal_Right
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
     - name: Enemy_Footstep_Tech_Left
       guid: b2fc64b1aed8174f8aa2be9afa3d73ad
       id: 1296175617
@@ -198,9 +198,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: b2fc64b1aed8174f8aa2be9afa3d73ad
       Path: Events\Default Work Unit\OneTimeEvent\Enemy_Footstep_Tech_Left
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 0.7878748
+      minDuration: 0.7878748
     - name: Enemy_Footstep_Tech_Right
       guid: 3c4a32f1407bc24abec42491b9803d23
       id: 415590388
@@ -218,9 +218,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: 3c4a32f1407bc24abec42491b9803d23
       Path: Events\Default Work Unit\OneTimeEvent\Enemy_Footstep_Tech_Right
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 0.7824964
+      minDuration: 0.7824964
     - name: Enemy_Hit
       guid: a9015550cb86a4418c8506b8d8552a66
       id: 1010055213
@@ -238,9 +238,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: a9015550cb86a4418c8506b8d8552a66
       Path: Events\Default Work Unit\OneTimeEvent\Enemy_Hit
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 0.8076875
+      minDuration: 0.8076875
     - name: Footstep_Normal_Left
       guid: ee552679657d8d4893ef275d025f8320
       id: 1924171521
@@ -279,8 +279,8 @@ MonoBehaviour:
         guid: e45c21406ac303429b6523c18af9d683
       Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Left_2
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
     - name: Footstep_Normal_Right
       guid: 7b22236ff1aad745a747efe939f892f3
       id: 94869236
@@ -319,8 +319,8 @@ MonoBehaviour:
         guid: adf942435ee3f8459e666cac247607bf
       Path: Events\Default Work Unit\OneTimeEvent\Footstep_Normal_Right_2
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.39904165
+      minDuration: 0.39904165
     - name: Jump_Normal
       guid: 52c14c3075dbe24f83853c1513ac44d9
       id: 3892339301
@@ -339,8 +339,8 @@ MonoBehaviour:
         guid: 52c14c3075dbe24f83853c1513ac44d9
       Path: Events\Default Work Unit\OneTimeEvent\Jump_Normal
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.8557708
+      minDuration: 0.8557708
     - name: Land_Normal
       guid: 3f0b4f6241d22c40b30e898433ea07c9
       id: 2412175904
@@ -359,8 +359,8 @@ MonoBehaviour:
         guid: 3f0b4f6241d22c40b30e898433ea07c9
       Path: Events\Default Work Unit\OneTimeEvent\Land_Normal
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 1.0961459
+      minDuration: 1.0961459
     - name: Laser
       guid: 8538847648579840b706b02c5dd42fd6
       id: 3982605422
@@ -378,9 +378,9 @@ MonoBehaviour:
         ObjectType: 3
         guid: 8538847648579840b706b02c5dd42fd6
       Path: Events\Default Work Unit\OneTimeEvent\Laser
-      maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxAttenuation: 40
+      maxDuration: 1.5913541
+      minDuration: 1.5913541
     - name: Metal_Hit
       guid: 65a95a2c82bc014b8aeaf20922861471
       id: 2473374816
@@ -399,8 +399,8 @@ MonoBehaviour:
         guid: 65a95a2c82bc014b8aeaf20922861471
       Path: Events\Default Work Unit\OneTimeEvent\Metal_Hit
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.68287355
+      minDuration: 0.6634335
     - name: Music
       guid: 416ad3ee0963e24396a20e78fb231bee
       id: 3991942870
@@ -453,8 +453,8 @@ MonoBehaviour:
         guid: cda895073bff5b4abab449930c2ca495
       Path: Events\Default Work Unit\OneTimeEvent\Parry_Melee
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.7732988
+      minDuration: 0.75563663
     - name: Parry_Ranged
       guid: 20a55c0a08693f4bbb76ec48e4644f38
       id: 2964842581
@@ -473,8 +473,8 @@ MonoBehaviour:
         guid: 20a55c0a08693f4bbb76ec48e4644f38
       Path: Events\Default Work Unit\OneTimeEvent\Parry_Ranged
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0.7732988
+      minDuration: 0.75563663
     - name: Play_Music_Run
       guid: 5964a773bb77ac4392c7aef52bf4ce56
       id: 3234897717
@@ -493,8 +493,8 @@ MonoBehaviour:
         guid: 5964a773bb77ac4392c7aef52bf4ce56
       Path: Events\Default Work Unit\Music\Play_Music_Run
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Play_Music_SnowPeak
       guid: 0d8fd63b360798448d9a129dcac1c307
       id: 1638933738
@@ -513,8 +513,8 @@ MonoBehaviour:
         guid: 0d8fd63b360798448d9a129dcac1c307
       Path: Events\Default Work Unit\Music\Play_Music_SnowPeak
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Play_Music_Stand
       guid: 3d1e1e4e506edf4daffb79d7027eac49
       id: 4267098686
@@ -533,8 +533,8 @@ MonoBehaviour:
         guid: 3d1e1e4e506edf4daffb79d7027eac49
       Path: Events\Default Work Unit\Music\Play_Music_Stand
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Play_Music_Walk
       guid: da4f4ba945f4c84d868afb1e65f81bff
       id: 2010243813
@@ -553,8 +553,8 @@ MonoBehaviour:
         guid: da4f4ba945f4c84d868afb1e65f81bff
       Path: Events\Default Work Unit\Music\Play_Music_Walk
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Play_SlideSinePlugin
       guid: b52b1bc63f4d924b964ea24b1bf770a4
       id: 3933638459
@@ -570,8 +570,8 @@ MonoBehaviour:
         guid: b52b1bc63f4d924b964ea24b1bf770a4
       Path: Events\Default Work Unit\Play_SlideSinePlugin
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Stop_SlideSinePlugin
       guid: 2280955aa334694789cb53f5f4dd35c0
       id: 4114826401
@@ -587,8 +587,8 @@ MonoBehaviour:
         guid: 2280955aa334694789cb53f5f4dd35c0
       Path: Events\Default Work Unit\Stop_SlideSinePlugin
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 0
+      minDuration: 0
     - name: Sword_Swing
       guid: 8c77b4ebaf7a10468d2ca97d9b34e434
       id: 476098351
@@ -607,8 +607,8 @@ MonoBehaviour:
         guid: 8c77b4ebaf7a10468d2ca97d9b34e434
       Path: Events\Default Work Unit\OneTimeEvent\Sword_Swing
       maxAttenuation: 0
-      maxDuration: -1
-      minDuration: -1
+      maxDuration: 2.7448254
+      minDuration: 2.6976707
   RtpcWwu:
   - PhysicalPath: Game Parameters\Default Work Unit.wwu
     PathAndIcons:

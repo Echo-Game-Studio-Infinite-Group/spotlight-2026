@@ -426,6 +426,31 @@ namespace GameJam.FlowTests
         }
 
         [UnityTest]
+        public IEnumerator NormalBoxSevenIgnoresFinalFinishArea()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<RunFlowConfig>("Assets/Settings/FormalFlow/RunFlow.asset");
+            var room = AssetDatabase.LoadAssetAtPath<RoomDefinition>("Assets/Settings/FormalFlow/BOX_S_007.asset");
+            var checkpoint = config.FinalRoom.Room.Template.GetComponentInChildren<FlowCheckpoint>();
+            var data = new SaveManager.SaveData
+            {
+                scenePath = "Assets/Scenes/FormalFlowGame.unity", roomVariantId = room.ResolveVariant(0, null).Id,
+                roomLocalPosition = checkpoint.transform.localPosition, hasFlowState = true, checkpointId = checkpoint.Id, chaos = 0
+            };
+            PlayerPrefs.SetString("playerSave", JsonUtility.ToJson(data));
+            Assert.That(SaveManager.PrepareContinue(data.scenePath, out _), Is.True);
+            yield return Load();
+            Assert.That(_flow.CurrentRoom.Variant.Room, Is.SameAs(room));
+            var finishArea = _flow.CurrentRoom.Root.FinishArea;
+            Assert.That(finishArea, Is.Not.Null);
+            Transform exit = _flow.CurrentRoom.Root.Exit;
+            Player.Current.Motor.Teleport(exit.position - exit.forward + exit.right * (_flow.CurrentRoom.Root.ExitSize.x * .5f - 1f) + Vector3.up * .15f);
+            Physics.SyncTransforms();
+            Assert.That(finishArea.ContainsPlayer(Player.Current.Motor.transform), Is.True);
+            yield return new WaitForFixedUpdate();
+            Assert.That(_flow.IsComplete, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator ContinueRestoresLaterBoxTrCheckpointInsteadOfStartingOver()
         {
             yield return Load();
