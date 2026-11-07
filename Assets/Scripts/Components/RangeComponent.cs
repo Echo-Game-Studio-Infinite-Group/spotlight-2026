@@ -90,8 +90,10 @@ public sealed class RangeComponent : MonoBehaviour
     /// 尝试开火：查冷却、射程、目标存活，全过才生成子弹。
     /// now 由持有者按自己的时钟传（敌人传 TimeManager.WorldTime）。
     /// 所有前置检查都放在扣冷却之前，免得「够不着」也把冷却吃掉。
+    /// cooldownScale 只缩放「本次开火之后」的冷却，默认 1 与原行为完全一致（残血保护用它）。
+    /// 刻意不缩放 _telegraphSeconds：前摇期间每帧都要复验视线，拉长前摇会增加射线次数。
     /// </summary>
-    public bool TryFire(float now, Transform target, HealthComponent targetHealth)
+    public bool TryFire(float now, Transform target, HealthComponent targetHealth, float cooldownScale = 1f)
     {
         // 蓄力中也要先验证目标，不能等前摇结束才取消过期的瞄准。
         if (_charging)
@@ -117,7 +119,7 @@ public sealed class RangeComponent : MonoBehaviour
         // 放在扣冷却之前——「看不到」不该算一次开火机会。
         if (!HasLineOfSight(target)) return false;
 
-        _readyAt = now + Mathf.Max(0.01f, _cooldown);
+        _readyAt = now + Mathf.Max(0.01f, _cooldown * Mathf.Max(0f, cooldownScale));
 
         // 第一段：先开预警窗口（亮提示、扣冷却），窗口到点才出膛。
         // 没配预警时长（0）就按老规矩秒发。
