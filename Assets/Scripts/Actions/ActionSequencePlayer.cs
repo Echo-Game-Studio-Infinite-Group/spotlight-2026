@@ -254,6 +254,18 @@ namespace GameJam.Actions
             _recognizer.Clear();
         }
 
+        public void CancelForParry()
+        {
+            if (IsRunning)
+            {
+                object attackCooldown = CooldownKey(_action);
+                End(ActionExitReason.Parried);
+                // 成功奖励只解锁当前攻击组，不重置技能耗能、其他冷却或 AB 交替记录。
+                _readyAt.Remove(attackCooldown);
+            }
+            ClearPendingInput();
+        }
+
         public void Interrupt()
         {
             if (IsRunning) End(ActionExitReason.Interrupted);

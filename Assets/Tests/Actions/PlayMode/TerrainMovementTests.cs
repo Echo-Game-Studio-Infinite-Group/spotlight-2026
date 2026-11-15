@@ -63,6 +63,43 @@ public sealed class TerrainMovementTests
         _motor.Simulate(new PlayerInputFrame { SlideHeld = _motor.IsSliding, JumpPressed = jump, JumpTime = _time }, dt, _time);
     }
 
+    [TestCase(.01f, 6f)]
+    [TestCase(.05f, 15f)]
+    [TestCase(.1f, 30f)]
+    [TestCase(.1f, 15f)]
+    [TestCase(.1f, 6f)]
+    public void FallingNearTheFloorAtStairEntryDoesNotTriggerWallImpact(float height, float speed)
+    {
+        _motor.GetComponent<CharacterController>().skinWidth = .08f;
+        Stairs(false);
+        _motor.Teleport(_origin + Vector3.forward * .65f + Vector3.up * height);
+        _motor.SetHorizontalSpeed(speed);
+        for (int i = 0; i < Mathf.CeilToInt(6f / speed * 60f); i++)
+        {
+            Step();
+            Assert.AreEqual(0, _impacts, "近地落到楼梯入口不能算撞墙，tick=" + i);
+            Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.03f));
+        }
+        Assert.Greater(_motor.transform.position.y, _origin.y + 1.5f);
+    }
+
+    [TestCase(.01f, .29f, .72f, 30f)]
+    [TestCase(.05f, .29f, .72f, 30f)]
+    [TestCase(.05f, .29f, .72f, 15f)]
+    public void LowStairRiserDuringLandingDoesNotEmitRagdollImpact(float height, float rise, float approach, float speed)
+    {
+        _motor.GetComponent<CharacterController>().skinWidth = .08f;
+        Stairs(false, rise);
+        _motor.Teleport(_origin + Vector3.forward * approach + Vector3.up * height);
+        _motor.SetHorizontalSpeed(speed);
+        for (int i = 0; i < 6; i++)
+        {
+            Step();
+            Assert.AreEqual(0, _impacts, "可跨越台阶不应触发布娃娃撞击，tick=" + i);
+            Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.03f));
+        }
+    }
+
     [TestCase(6f, false)]
     [TestCase(15f, false)]
     [TestCase(30f, false)]
@@ -100,6 +137,62 @@ public sealed class TerrainMovementTests
         Assert.AreEqual(0, _impacts);
         Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.03f));
     }
+
+#if UNITY_EDITOR
+    [TestCase(3f, false)]
+    [TestCase(6f, false)]
+    [TestCase(15f, false)]
+    [TestCase(30f, false)]
+    [TestCase(6f, true)]
+    [TestCase(15f, true)]
+    [TestCase(30f, true)]
+    public void FullPlayerPrefabClimbsStairsWithoutWallImpact(float speed, bool slide)
+    {
+        GameObject prior = _motor.gameObject; _created.Remove(prior); Object.DestroyImmediate(prior);
+        GameObject player = Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab"));
+        _created.Add(player);
+        foreach (Camera camera in player.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
+        player.GetComponent<GameJam.Actions.PlayerActionRunner>().enabled = false;
+        player.GetComponent<PlayerRagdollHitStun>().enabled = false;
+        _motor = player.GetComponent<PlayerMotor>(); _motor.SetParams(_parameters); _motor.Teleport(_origin);
+        _motor.transform.rotation = Quaternion.identity;
+        _motor.WallImpact += _ => _impacts++;
+        Stairs(false); _motor.SetHorizontalSpeed(speed);
+        if (slide) Assert.IsTrue(_motor.TryExecute(MotorCommandKind.EnterSlide, 0f));
+        for (int i = 0; i < Mathf.CeilToInt(6f / speed * 60f); i++)
+        {
+            Step();
+            string trace = "完整玩家上楼，tick=" + i + ", position=" + (player.transform.position - _origin);
+            Assert.AreEqual(0, _impacts, trace);
+            Assert.IsTrue(_motor.IsGrounded, trace);
+            Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.03f), trace);
+        }
+        Assert.Greater(player.transform.position.y, _origin.y + 1.5f);
+    }
+
+    [TestCase(6f, false)]
+    [TestCase(15f, false)]
+    [TestCase(25f, false)]
+    [TestCase(30f, false)]
+    [TestCase(6f, true)]
+    [TestCase(15f, true)]
+    [TestCase(30f, true)]
+    public void ProductionSkinWidthClimbsStairsWithoutWallImpact(float speed, bool slide)
+    {
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
+        _motor.GetComponent<CharacterController>().skinWidth = prefab.GetComponent<CharacterController>().skinWidth;
+        Stairs(false); _motor.SetHorizontalSpeed(speed);
+        if (slide) Assert.IsTrue(_motor.TryExecute(MotorCommandKind.EnterSlide, 0f));
+        for (int i = 0; i < Mathf.CeilToInt(6f / speed * 60f); i++)
+        {
+            Step();
+            Assert.AreEqual(0, _impacts, "生产胶囊不能把台阶判作撞墙，tick=" + i);
+            Assert.IsTrue(_motor.IsGrounded, "生产胶囊上阶不能脱地，tick=" + i);
+            Assert.That(_motor.HorizontalSpeed, Is.EqualTo(speed).Within(.03f), "生产胶囊上阶不能裁速，tick=" + i);
+        }
+        Assert.Greater(_motor.transform.position.y, _origin.y + 1.5f);
+    }
+#endif
 
     [TestCase(20f, false)]
     [TestCase(40f, false)]
@@ -225,6 +318,8 @@ public sealed class TerrainMovementTests
     [TestCase(true, true, 30f, -15f)]
     public void ActualWhiteboxStairsRemainTraversable(bool descending, bool slide, float speed, float yaw)
     {
+        var player = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player.prefab");
+        _motor.GetComponent<CharacterController>().skinWidth = player.GetComponent<CharacterController>().skinWidth;
         GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Maps/TeamWhitebox/Prefabs/Stairs (5).prefab");
         GameObject stairs = Object.Instantiate(prefab); _created.Add(stairs);
         stairs.transform.SetPositionAndRotation(_origin + new Vector3(-6f, 0f, 1f), Quaternion.Euler(0f, 180f, 0f));

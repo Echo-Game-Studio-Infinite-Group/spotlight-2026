@@ -10,8 +10,6 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
 {
     private static WwiseAudioBootstrap _instance;
 
-    private AudioDebugOverlay _overlay;
-    private PlayerInputReader _boundInput;
     private float _playerScanTimer;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -32,7 +30,7 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
 
         _instance = this;
         DontDestroyOnLoad(gameObject);
-        _overlay = gameObject.AddComponent<AudioDebugOverlay>();
+        gameObject.AddComponent<AudioDebugOverlay>();
     }
 
     private void Update()
@@ -48,24 +46,22 @@ public sealed class WwiseAudioBootstrap : MonoBehaviour
         {
             motor.gameObject.AddComponent<WwiseActionDriver>();
         }
-
-        PlayerInputReader input = motor.GetComponent<PlayerInputReader>();
-        if (input != null && input != _boundInput)
+        if (motor.gameObject.GetComponent<PlayerGameplayAudioSource>() == null)
         {
-            if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
-            _boundInput = input;
-            _boundInput.ToggleHUD += ToggleDebug;
+            motor.gameObject.AddComponent<PlayerGameplayAudioSource>();
+        }
+
+        foreach (EnemyBase enemy in FindObjectsOfType<EnemyBase>())
+        {
+            if (enemy.GetComponent<EnemyAudioSource>() == null)
+                enemy.gameObject.AddComponent<EnemyAudioSource>();
+            if (enemy.GetComponent<EnemyFootstepAudioSource>() == null)
+                enemy.gameObject.AddComponent<EnemyFootstepAudioSource>();
         }
     }
 
     private void OnDestroy()
     {
         if (_instance == this) _instance = null;
-        if (_boundInput != null) _boundInput.ToggleHUD -= ToggleDebug;
-    }
-
-    private void ToggleDebug()
-    {
-        if (_overlay != null) _overlay.Visible = !_overlay.Visible;
     }
 }

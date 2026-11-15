@@ -10,8 +10,8 @@ namespace GameJam.Flow
     [DisallowMultipleComponent]
     public sealed class RunFlowController : MonoBehaviour
     {
-        [SerializeField] private RunFlowConfig _config;
-        [SerializeField] private PlayerMotor _motor;
+        [SerializeField, InspectorName("全局流程配置"), Tooltip("本场景使用的整局流程配表。")] private RunFlowConfig _config;
+        [SerializeField, InspectorName("玩家运动控制器"), Tooltip("流程切房、记录点恢复及掉落检测所使用的玩家。")] private PlayerMotor _motor;
         private MapManager _maps;
         private HealthComponent _health;
         private PlayerInputReader _input;
@@ -31,6 +31,7 @@ namespace GameJam.Flow
         public RunFlowConfig Config => _config;
         public ChaosService Chaos { get; private set; }
         public RoomSelectionPlanner Planner { get; private set; }
+        public int RunSeed { get; private set; }
         public CheckpointManager Checkpoints { get; } = new CheckpointManager();
         public FlowRoomInstance CurrentRoom { get; private set; }
         public FlowRoomInstance NextRoom { get; private set; }
@@ -44,16 +45,57 @@ namespace GameJam.Flow
         public event Action CheckpointCommitted;
 
         private void Awake() => Current = this;
+        private void OnEnable() => SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        private void OnDisable() => SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+
+        private void OnActiveSceneChanged(Scene previous, Scene current)
+        {
+            if (current == gameObject.scene || _owned.Exists(room => room.Scene == current)) ApplyEnvironment();
+        }
+
+        private void ApplyEnvironment()
+        {
+            if (_config == null || _config.SkyboxMaterial == null) return;
+            // RenderSettings 随活动场景切换，运行时新建的箱庭没有正式场景的天空盒设置。
+            RenderSettings.skybox = _config.SkyboxMaterial;
+            Camera camera = Camera.main;
+            if (camera != null) camera.clearFlags = CameraClearFlags.Skybox;
+        }
         public void Configure(RunFlowConfig config, PlayerMotor motor) { _config = config; _motor = motor; }
-        private void Start() { if (_config != null && !_started) StartRun(); }
+        private void Start()
+        {
+            if (_config == null || _started) return;
+            if (SaveManager.HasPendingContinue) ContinueRun();
+            else StartRun();
+        }
 
         public bool StartRun()
+        {
+            if (_started) return false;
+            SaveManager.CancelContinue();
+            RoomVariantDefinition variant = LevelSelection.Consume(_config) ?? _config?.InitialRoom;
+            return InitializeRun(variant, null, null);
+        }
+
+        // 菜单先准备跨场景请求；房间激活且玩家重置后才允许恢复存档。
+        public bool ContinueRun()
+        {
+            if (_started || !SaveManager.HasPendingContinue) return false;
+            RoomVariantDefinition variant = SaveManager.GetContinueVariant(_config);
+            if (!SaveManager.HasPendingContinue) return StartRun();
+            LevelSelection.Clear();
+            return InitializeRun(variant ?? _config?.InitialRoom,
+                SaveManager.ContinueCheckpointId, SaveManager.RestorePending);
+        }
+
+        private bool InitializeRun(RoomVariantDefinition variant, string checkpointId, Action restore)
         {
             if (_started) return false;
             List<string> errors = FlowConfigValidator.Validate(_config);
             if (_motor == null) errors.Add("缺少玩家 PlayerMotor");
             if (errors.Count > 0) { LastError = string.Join("\n", errors); Debug.LogError("[流程] " + LastError, this); return false; }
             _started = true; _maps = MapManager.Instance;
+            ApplyEnvironment();
             _health = _motor.GetComponent<HealthComponent>();
             _input = _motor.GetComponent<PlayerInputReader>();
             _respawn = _motor.GetComponent<PlayerRespawn>();
@@ -68,23 +110,32 @@ namespace GameJam.Flow
             _health.Died += OnDied; _motor.Teleported += OnTeleported;
             if (_respawn != null) _respawn.SetFallHandler(HandleFall);
             _maps.RegisterPersistentScene(gameObject.scene);
-            IsBusy = true; LockPlayer(); StartCoroutine(BeginRun()); return true;
+            IsBusy = true; LockPlayer(); StartCoroutine(BeginRun(variant, checkpointId, restore)); return true;
         }
 
-        private IEnumerator BeginRun()
+        private IEnumerator BeginRun(RoomVariantDefinition variant = null, string checkpointId = null, Action restore = null)
         {
+            variant = variant ?? _config.InitialRoom;
             Chaos = new ChaosService(_config);
-            Planner = new RoomSelectionPlanner(_config, _config.Seed);
+            // 独立于 Unity 全局随机状态，特效或敌人抽样不会影响新局种子；旧存档沿用原固定种子。
+            RunSeed = restore != null ? SaveManager.ContinueRunSeed ?? _config.Seed :
+                _config.RandomizeSeed ? Guid.NewGuid().GetHashCode() : _config.Seed;
+            Planner = new RoomSelectionPlanner(_config, RunSeed);
+            int startingChaos = Mathf.Clamp(_config.InitialChaos, variant.MinimumChaos, variant.MaximumChaos);
+            if (startingChaos < _config.MinimumChaos || startingChaos > _config.MaximumChaos)
+                Chaos.TrySetSpecial(startingChaos, "关卡选择");
+            else Chaos.Add(startingChaos - Chaos.Value, "关卡选择");
             Chaos.Changed += OnChaosChanged;
-            FlowPlacement.TryFind(null, _config.InitialRoom.Room.Template, _maps.FlowRooms, _config, out Pose pose);
-            FlowRoomInstance first = Load(_config.InitialRoom, pose);
+            FlowPlacement.TryFind(null, variant.Room.Template, _maps.FlowRooms, _config, out Pose pose);
+            FlowRoomInstance first = Load(variant, pose);
             while (first.IsLoading) yield return null;
             if (!first.IsReady) { Fail(first.Error); yield break; }
             Activate(first, false);
-            FlowCheckpoint entry = FirstCheckpoint(first);
-            if (entry == null) { Fail("教程房没有可用的记录点"); yield break; }
+            FlowCheckpoint entry = first.Root.FindCheckpoint(checkpointId) ?? FirstCheckpoint(first);
+            if (entry == null) { Fail("起始房间没有可用的记录点"); yield break; }
             PlaceAtCheckpoint(entry);
             GameManager.Instance.StartGame();
+            restore?.Invoke();
             CommitCheckpoint(entry);
             IsReady = true; IsBusy = false; UnlockPlayer(); RequestSuccessor();
         }
@@ -152,15 +203,17 @@ namespace GameJam.Flow
         {
             if (!IsReady || IsBusy || IsComplete || TimeManager.IsPaused || TimeManager.PlayerFixedDeltaTime <= 0f) return;
             Vector3 position = _motor.transform.position;
-            if (position.y < CurrentRoom.Position.y + CurrentRoom.Root.FallHeight) { HandleFall(); return; }
+            Vector3 fallPosition = _respawn != null ? _respawn.FallCheckPosition : position;
+            if (fallPosition.y < CurrentRoom.Position.y + CurrentRoom.Root.FallHeight) { HandleFall(); return; }
             FlowCheckpoint best = null;
             foreach (FlowCheckpoint checkpoint in CurrentRoom.Root.Checkpoints)
                 if (checkpoint.gameObject.activeInHierarchy && checkpoint.Poll(_previous, position) && (best == null || checkpoint.Priority > best.Priority)) best = checkpoint;
             if (best != null) CommitCheckpoint(best);
             if (NextRoom != null && NextRoom.IsReady && !_preparing &&
                 FlowPlacement.CrossedEntry(NextRoom.Root, _previous, position, _config.EntryCommitDistance)) TryEnterNextRoom();
-            if (CurrentRoom.Variant == _config.FinalRoom &&
-                (position - CurrentRoom.Root.Exit.position).sqrMagnitude <= CurrentRoom.Root.FinishRadius * CurrentRoom.Root.FinishRadius) CompleteRun();
+            // 终点与普通 BOX_S_007 共用模板，必须按差分区分，否则普通房间走到出口就会结束整局。
+            if (CurrentRoom.Variant == _config.FinalRoom && CurrentRoom.Root.FinishArea != null &&
+                CurrentRoom.Root.FinishArea.ContainsPlayer(_motor.transform)) CompleteRun();
             _previous = position;
         }
 
@@ -173,6 +226,8 @@ namespace GameJam.Flow
         private void Activate(FlowRoomInstance room, bool advance)
         {
             if (!_maps.TryActivateFlowRoom(room)) throw new InvalidOperationException("无法激活房间实例 " + room.Id);
+            if (room.Variant == _config.FinalRoom && room.Root.FinishArea == null)
+                Debug.LogError("[流程] 最终房缺少终点判定区域", room.Root);
             CurrentRoom = room;
             if (!_history.Contains(room)) _history.Add(room);
             if (advance) Planner.CommitSuccessor();
@@ -203,7 +258,11 @@ namespace GameJam.Flow
             if (IsBusy || IsComplete || room != CurrentRoom || room.Variant.StabilizerGain <= 0 || !room.BrokenDevices.Add(id)) return false;
             Chaos.Add(room.Variant.StabilizerGain, "击碎稳定装置"); return true;
         }
-        private void OnDied(HealthComponent health) => Recover(true);
+        private void OnDied(HealthComponent health)
+        {
+            if (DeathRespawnUI.Instance != null) DeathRespawnUI.Instance.OpenPanel();
+            else Recover(true);
+        }
         private void OnTeleported(Vector3 delta) => _previous = _motor.transform.position;
         public bool HandleFall()
         {
@@ -215,6 +274,7 @@ namespace GameJam.Flow
         public bool Recover(bool death)
         {
             if (IsBusy || IsComplete || Checkpoints.Room == null) return false;
+            _respawn?.PrepareForRecovery();
             IsBusy = true; _revision++; LockPlayer();
             if (death) Chaos.ApplyDeath(Checkpoints.AllowNegativeChaos);
             StartCoroutine(RecoverAtCheckpoint(death)); return true;
@@ -258,6 +318,8 @@ namespace GameJam.Flow
         public bool RestartRun()
         {
             if (!_started || (IsBusy && string.IsNullOrEmpty(LastError))) return false;
+            SaveManager.CancelContinue();
+            LevelSelection.Clear();
             IsBusy = true; IsReady = false; IsComplete = false; _revision++;
             LockPlayer(); StartCoroutine(Restart()); return true;
         }
@@ -286,7 +348,9 @@ namespace GameJam.Flow
         public void CompleteRun()
         {
             if (IsBusy || IsComplete || CurrentRoom == null || CurrentRoom.Variant != _config.FinalRoom) return;
-            IsComplete = true; GameManager.Instance.EndGame();
+            IsComplete = true;
+            Debug.Log("[流程] 到达终点：" + CurrentRoom.Variant.Room.Id, this);
+            GameManager.Instance.EndGame();
             if (_input != null) _input.SetGameplayEnabled(false);
         }
         private static FlowCheckpoint FirstCheckpoint(FlowRoomInstance room)

@@ -35,17 +35,26 @@ public sealed class PlayerDynamicAudioActionSource :
             ActionId = "wall_slide",
             ConditionKey = "wall_sliding",
             ContactIntensity = 1f
+        },
+        new Rule
+        {
+            ActionId = "transducer_loop",
+            ConditionKey = "skill_held",
+            ContactIntensity = 1f
         }
     };
 
     private PlayerMotor _motor;
     private PlayerActionRunner _actionRunner;
+    private PlayerInputReader _input;
     private bool[] _lastActive;
+    private bool _forceImmediateStop;
 
     private void Awake()
     {
         _motor = GetComponent<PlayerMotor>();
         _actionRunner = GetComponent<PlayerActionRunner>();
+        _input = GetComponent<PlayerInputReader>();
         _lastActive = new bool[_rules != null ? _rules.Length : 0];
     }
 
@@ -70,6 +79,8 @@ public sealed class PlayerDynamicAudioActionSource :
 
         float speed = NormalizedSpeed();
         float direction = Direction();
+        bool forceImmediateStop = _forceImmediateStop;
+        _forceImmediateStop = false;
         for (int i = 0; i < _rules.Length; i++)
         {
             Rule rule = _rules[i];
@@ -79,6 +90,16 @@ public sealed class PlayerDynamicAudioActionSource :
             }
 
             bool active = Evaluate(rule.ConditionKey);
+            if (_lastActive[i] && (forceImmediateStop || !active))
+            {
+                output.Add(DynamicAudioActionRequest.Stop(
+                    rule.ActionId,
+                    forceImmediateStop
+                        ? DynamicAudioActionStopMode.Immediate
+                        : DynamicAudioActionStopMode.Release));
+                _lastActive[i] = false;
+            }
+
             if (active && !_lastActive[i])
             {
                 output.Add(DynamicAudioActionRequest.Start(
@@ -87,7 +108,6 @@ public sealed class PlayerDynamicAudioActionSource :
                     rule.ContactIntensity,
                     direction));
             }
-
             if (active)
             {
                 output.Add(DynamicAudioActionRequest.Update(
@@ -96,19 +116,21 @@ public sealed class PlayerDynamicAudioActionSource :
                     rule.ContactIntensity,
                     direction));
             }
-            else if (_lastActive[i])
-            {
-                output.Add(DynamicAudioActionRequest.Stop(
-                    rule.ActionId,
-                    DynamicAudioActionStopMode.Release));
-            }
 
             _lastActive[i] = active;
         }
     }
 
+    public void RequestImmediateStops()
+    {
+        _forceImmediateStop = true;
+    }
+
     private bool Evaluate(string conditionKey)
     {
+        if (conditionKey == "skill_held")
+            return _input != null && _input.SkillHeld;
+
         if (_actionRunner != null)
         {
             return _actionRunner.CheckCondition(

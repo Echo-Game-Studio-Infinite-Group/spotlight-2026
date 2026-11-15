@@ -1,13 +1,39 @@
 # 音频系统改动记录
 
-## 基线和约束
+> 状态说明：本文件按时间追加，保留每次改动当时的状态。正文中的“未 commit”
+> 或“本次仍未 commit”只表示该条记录写入时的情况，不代表当前分支状态。
+
+## 当前状态
+
+- 当前分支：`feat/audio_wwise`
+- 已合并：`616b1d6 Merge branch 'dev' ... into dev`
+- 最近提交：`f10af0d Merge origin/dev into feat/audio_wwise`
+- 当前动态链路：
+  ```text
+  IDynamicAudioActionSource
+  -> WwiseAudioRegistry
+  -> WwiseActionDriver
+  -> WwiseActionPcmRenderer
+  -> Wwise Source Plugin
+  -> DynamicAction Bus
+  ```
+- 一次性动作链路：
+  ```text
+  audio.<EventId> 帧事件
+  -> PlayerActionRunner
+  -> WwiseEventBridge
+  -> WwiseEventBindings
+  -> Wwise Event
+  ```
+
+## 历史基线和约束（初始阶段）
 
 - 仓库：`spotlight-2026`
-- 分支：`feat/audio`
+- 初始分支：`feat/audio`
 - 基线提交：`11a460d246766561890e82e12ffb4a38e55d5f27`
-- 未 commit。
-- 未修改 `README.md`、`Scripts/Combat`、`Character`、动画、模型和美术资源。
-- 未为动作系统新增时间字段；音频驱动自行记录动作时间。
+- 初始阶段尚未 commit。
+- 初始约束是不修改 `README.md`、`Scripts/Combat`、`Character`、动画、模型和美术资源。
+- 初始版本未为动作系统新增时间字段；音频驱动自行记录动作时间。
 
 ## 架构修正
 
@@ -1414,6 +1440,97 @@ Unity.exe -batchmode -nographics `
   -quit `
   -logFile "...\Logs\pcm-bridge-slide-smoke-3.log"
 ```
+
+本次仍未 commit。
+
+## 2026-10-19：金属命中、Parry 与混乱度战斗音乐
+
+- 玩家普攻命中替换为 `metal_hit_4.wav`，保留原 `Metal_Hit` Event ID，
+  Wwise 内部只替换 Audio File Source。
+- 新增 `Parry_Melee` / `Parry_Ranged`：
+  - 近战 parry 使用 `parry_1.wav`。
+  - 子弹与激光 parry 使用 `parry_2.wav`。
+  - `PlayerGameplayAudioSource` 订阅 `PlayerCombat.ParrySucceeded` 分流。
+  - parry 成功的同一帧抑制普通命中声；攻击动画帧里的挥刀声保持不变。
+- `FlowGame` 的战斗音乐改为随混乱度切换：
+  ```text
+  低：0..30   -> Play_Music_Stand -> Stand.wav
+  中：31..79  -> Play_Music_Walk  -> Walk.wav
+  高：80..100 -> Play_Music_Run   -> Run.wav
+  ```
+- 三首战斗音乐均为循环、3D、`-10 dB`；MainMenu 的 SnowPeak 保持固定播放。
+- 最新 dev 将主菜单入口切到 `FormalFlowGame` 后，新场景的 MusicController
+  未继承混乱度跟随字段；现已同步为 `0..30 / 31..79 / 80..100` 三档，
+  避免正式流程只播放固定 `Run`。
+- Wwise 工程重新校验并生成 `OneTimeAction` / `Music` Bank，已同步到
+  `Assets/StreamingAssets/Audio/GeneratedSoundBanks/Windows`。
+
+验证：
+
+```text
+Wwise verify: Process completed successfully.
+Unity batchmode compile: exit 0, no error CS
+Logs/audio-parry-chaos-music-compile.log
+```
+
+本次仍未 commit。
+
+## 2026-10-20：混乱度 HUD 空引用中断换曲与装置破坏
+
+- `ChaosDisplay.prefab` 中 `_maximumText`、`_stateText` 未绑定，导致
+  `ChaosHUD.Refresh()` 在 `ChaosService.Changed` 回调中抛空引用。
+- 多播事件被该异常中断，后续 `WwiseMusicSource.OnChaosChanged` 收不到通知，
+  所以混乱度已经变成 40，音乐仍停在 `Stand`。
+- 同一异常使 `RunFlowController.TryBreakDevice()` 未返回成功，
+  `StabilityDevice` 没执行隐藏/关碰撞，表现为“装置没碎但混乱度加了”。
+- `ChaosHUD` 现已把最大值、状态文字和数字槽位按可选 UI 处理，避免再次中断
+  混乱度事件链。
+
+本次仍未 commit。
+
+## 2026-10-20：Wwise 单源随机化、衰减、Voice Limit 与 Health RTPC
+
+- 所有战斗一次性音效保留现有单 WAV，不增加素材变体；使用 Wwise Property
+  Randomizer：
+  ```text
+  Footstep:   Volume -0.2..+0.2 dB
+  SwordSwing: Volume -0.3..+0.3 dB, Pitch -15..+15 cents
+  MetalHit:   Volume -0.5..+0.5 dB, Pitch -25..+25 cents
+  Parry:      Volume -0.3..+0.3 dB, Pitch -20..+20 cents
+  ```
+- 新增共享 3D Attenuation `Combat_3D_40m`，只挂到 `EnemyHit` 与 `Laser`：
+  ```text
+  0..2 m   0 dB
+  5 m     -2.5 dB
+  10 m    -6 dB
+  20 m    -14 dB
+  40 m    -60 dB
+  ```
+- 一击音效设置宽松 Playback Limit / Priority：
+  ```text
+  Footstep: 8 instances / priority 45
+  Sword:    4 / 60
+  MetalHit: 6 / 65
+  Parry:    3 / 90
+  EnemyHit: 5 / 60
+  Laser:    3 / 80
+  Jump/Land: 4 / 60
+  ```
+- 新增 Game Parameter `PlayerHealth01`（0..1，默认 1），绑定到
+  `Stand/Walk/Run` 的 Lowpass RTPC。Unity 在 Wwise 初始化完成后同步一次首值，
+  之后只订阅 `HealthComponent.HealthChanged`，受伤、治疗、恢复都会更新，
+  不做逐帧轮询。
+- `CombatTest` 场景新增独立 `MusicController`，固定播放 `music_run`，
+  用于直接验证 Health RTPC 对战斗音乐低通的影响；该场景没有 Chaos 流程，
+  因此不启用三档切换。
+- 敌人脚步接入：
+  - 重型敌人使用 `footstep_tech_left/right.wav`。
+  - 普通敌人复用主角左右脚步 WAV，但在 Wwise 中建立独立 Sound/Event。
+  - 重型：`Pitch -200 cents`、基础 `Volume +12 dB`、8 实例 / Priority 45。
+  - 普通：`Pitch 0`、基础 `Volume -10 dB`、6 实例 / Priority 45。
+  - 两者均有 Volume 随机 `-0.2..+0.2 dB` 和 `Combat_3D_40m` Attenuation。
+  - `EnemyFootstepAudioSource` 读取现有移动速度与动画步态相位，
+    不参与敌人 AI，也不修改动画资源。
 
 本次仍未 commit。
 

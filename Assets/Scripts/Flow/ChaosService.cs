@@ -23,6 +23,12 @@ namespace GameJam.Flow
             if (!_config.EnableSpecialRoutes) return false;
             Set(value, reason); return true;
         }
+        public void Restore(int value)
+        {
+            // 已破坏装置可能让混乱度超出当前差分的入口区间，只按全局规则校验。
+            if (!_config.EnableSpecialRoutes) value = Math.Max(_config.MinimumChaos, Math.Min(_config.MaximumChaos, value));
+            Set(value, "读档");
+        }
         private void Set(int value, string reason)
         {
             if (Value == value) return;

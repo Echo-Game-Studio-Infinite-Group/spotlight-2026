@@ -62,11 +62,11 @@ public sealed partial class MapManager
         foreach (FlowRoomInstance prior in _flowRooms)
         {
             prior.IsCurrent = false;
-            if (prior.Root != null) prior.Root.Variants.SetCurrent(false);
+            if (prior.Root != null) prior.Root.SetCurrent(false);
         }
         SceneManager.SetActiveScene(room.Scene);
         room.IsCurrent = true;
-        room.Root.Variants.SetCurrent(true);
+        room.Root.SetCurrent(true);
         CurrentRoomSceneName = room.Scene.name;
         return true;
     }
@@ -82,6 +82,7 @@ public sealed partial class MapManager
     private IEnumerator UnloadFlowRoom(FlowRoomInstance room)
     {
         room.IsReady = false;
+        room.Root?.Enemies?.Clear();
         if (room.Navigation.valid) room.Navigation.Remove();
         if (room.Root != null) room.Root.gameObject.SetActive(false);
         if (room.Scene.IsValid() && room.Scene.isLoaded)
@@ -113,7 +114,8 @@ public sealed partial class MapManager
         {
             room.Variant = variant;
             BuildFlowRoot(room, owner);
-            room.Root.Variants.SetCurrent(room.IsCurrent);
+            room.Root.SetCurrent(room.IsCurrent);
+            prior.Enemies.Clear();
             foreach (GameObject item in priorObjects) if (item != room.IncomingConnection) Destroy(item);
         }
         catch (Exception exception)
@@ -122,6 +124,7 @@ public sealed partial class MapManager
             room.Root = prior; room.Variant = priorVariant;
             for (int i = 0; i < priorObjects.Length; i++) if (priorObjects[i] != null) priorObjects[i].SetActive(priorActive[i]);
             room.Navigation = prior.RegisterNavigation();
+            prior.SetCurrent(room.IsCurrent);
             room.IsReady = true;
             room.Error = exception.Message;
         }

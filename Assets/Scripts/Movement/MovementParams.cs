@@ -6,13 +6,27 @@ public sealed class MovementParams : ScriptableObject
     [Header("地面")]
     [Min(0.01f)] public float GroundSpeedThreshold = 6f;
     [Tooltip("普通冲刺与低速/高速动作判定共用的地速阈值比例")]
-    [Range(0f, 1f)] public float LowSpeedRatio = 0.8f;
+    [Range(0f, 1f)] public float LowSpeedRatio = 1f;
     [Min(0f)] public float RunAccel = 4f;
     [Min(0f)] public float GroundFriction = 2f;
     [Min(0f)] public float GroundStopSpeed = 0.05f;
     [Min(0f)] public float FrictionExemptWindow = 0.2f;
     public PumpMode Pump = PumpMode.WindowPump;
     [Min(0.01f)] public float MaxSpeed = 30f;
+
+    [Header("低速七方向行走")]
+    [Tooltip("A/D、W+A/W+D、S/A+S/S+D 共用的行走速度；W 单独奔跑，高速 S 保持刹车")]
+    [Min(0.01f)] public float WalkSpeed = 3f;
+    [Tooltip("行走接近目标速度的加减速度，单位 m/s²")]
+    [Min(0f)] public float WalkAcceleration = 12f;
+    [Min(1f)] public float WalkMaxAnimationRate = 2f;
+
+    [Header("地面刹车与速度回收")]
+    [Tooltip("高速按住 S 时额外扣除的水平速度，单位 m/s²；保持刹车直到松开，不包含地面、滑铲或划墙摩擦")]
+    [Min(0f)] public float BrakeDeceleration = 24f;
+    [Tooltip("回收摩擦停止后，跳跃仍可返还暂存速度的玩家时间")]
+    [Min(0f)] public float BrakeRecoveryWindow = 0.7f;
+    [Min(0f)] public float BrakeStopSpeed = 0.05f;
 
     [Header("台阶与坡面")]
     [Min(0f)] public float MaxStepUp = 0.3f;
@@ -79,6 +93,7 @@ public sealed class MovementParams : ScriptableObject
     private void OnValidate()
     {
         MaxSpeed = Mathf.Max(GroundSpeedThreshold, MaxSpeed);
+        WalkSpeed = Mathf.Clamp(WalkSpeed, .01f, Mathf.Max(.01f, LowSpeedThreshold));
         CapsuleBaseHeight = Mathf.Max(CapsuleBaseHeight, CapsuleBaseRadius * 2f);
         CapsuleFastHeight = Mathf.Max(CapsuleFastHeight, CapsuleMinRadius * 2f);
         WallRearmDistance = Mathf.Max(WallRearmDistance, WallProbeDistance + 0.01f);

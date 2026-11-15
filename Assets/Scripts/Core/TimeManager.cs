@@ -45,6 +45,7 @@ public sealed class TimeManager : MonoBehaviour
     private static readonly object SlowOwner = new object();
     private static readonly object HitStopOwner = new object();
     private static readonly object TimeStopOwner = new object();
+    private static readonly object ParryOwner = new object();
 
     // 除玩家顿帧外，还可能有实体为自己登记的顿帧来源（例如敌人冻自己的受击动画）。
     // InHitStop 只认这张表，所以调用方必须真的登记过，不能用一次性对象冒充。
@@ -119,6 +120,7 @@ public sealed class TimeManager : MonoBehaviour
 
     public static float UnscaledDeltaTime => Time.unscaledDeltaTime;
     public static float UnscaledTime => Time.unscaledTime;
+    public static float FixedTickTime => Time.fixedUnscaledTime;
 
     public static float GameTime => Resolve() != null ? Resolve()._gameTime : Time.time;
     public static float WorldTime => Resolve() != null ? Resolve()._worldTime : Time.time;
@@ -128,6 +130,18 @@ public sealed class TimeManager : MonoBehaviour
 
     // 表现层用：任一层被压慢就是"减速中"，倍率取最慢的那层
     public static bool InSlowMotion => Mathf.Min(WorldRate, PlayerRate) < 1f;
+    public static bool IsParryStopped
+    {
+        get
+        {
+            TimeManager instance = Resolve();
+            if (instance == null) return false;
+            foreach (Source source in instance._globalSources)
+                if (ReferenceEquals(source.Owner, ParryOwner) && source.Rate == 0f
+                    && source.Until > Time.unscaledTime) return true;
+            return false;
+        }
+    }
     public static bool InHitStop
     {
         get
@@ -159,12 +173,28 @@ public sealed class TimeManager : MonoBehaviour
     // 往某层加一个倍率；seconds > 0 就到点自动恢复，不传就一直留着（等 Release）
     public static void Apply(TimeLayer layer, float rate, float seconds = 0f, object owner = null)
     {
-        SourcesOf(layer)?.Add(new Source
+        List<Source> sources = SourcesOf(layer);
+        // game 层不是来源表（走 SetPaused）；其余层拿不到实例，说明场景里没有 TimeManager，
+        // 此时所有时间效果都会静默失效（时间不变、画面也不变），这种失败最难查，第一次遇到就喊出来。
+        if (sources == null)
+        {
+            WarnMissingInstance();
+            return;
+        }
+        sources.Add(new Source
         {
             Rate = Mathf.Clamp01(rate),
             Until = seconds > 0f ? Time.unscaledTime + seconds : 0f,
             Owner = owner,
         });
+    }
+
+    private static bool _missingInstanceWarned;
+    private static void WarnMissingInstance()
+    {
+        if (_missingInstanceWarned) return;
+        _missingInstanceWarned = true;
+        Debug.LogWarning("[TimeManager] 场景里没有 TimeManager 实例：时缓 / 时停 / 顿帧都不会生效");
     }
 
     // 把某层里这个来源登记的倍率全拿掉（按来源删，不会误伤别的效果）
@@ -202,6 +232,7 @@ public sealed class TimeManager : MonoBehaviour
     {
         Release(TimeLayer.World, SlowOwner);
         Release(TimeLayer.Player, SlowOwner);
+        Release(TimeLayer.Global, ParryOwner);
         TimeManager instance = Resolve();
         if (instance == null) return;
         foreach (object owner in instance._hitStopOwners)
@@ -209,6 +240,18 @@ public sealed class TimeManager : MonoBehaviour
             Release(TimeLayer.World, owner);
             Release(TimeLayer.Player, owner);
         }
+    }
+
+    public static void ParryStop(float seconds, float rate = 0f)
+    {
+        Release(TimeLayer.Global, ParryOwner);
+        Release(TimeLayer.World, ParryOwner);
+        Release(TimeLayer.Player, ParryOwner);
+        if (seconds <= 0f) return;
+        Resolve()?.RegisterHitStopOwner(ParryOwner);
+        Apply(TimeLayer.Global, rate, seconds, ParryOwner);
+        Apply(TimeLayer.World, rate, seconds, ParryOwner);
+        Apply(TimeLayer.Player, rate, seconds, ParryOwner);
     }
 
     // 保持真实时间的 60Hz 固定采样，只缩放逻辑推进量，避免减速后漏采输入。

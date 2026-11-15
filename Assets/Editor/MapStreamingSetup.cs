@@ -108,11 +108,11 @@ public static class MapStreamingSetup
         PlayerMotor motor = bootstrap.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<PlayerMotor>(true)).Single();
         motor.transform.position = new Vector3(0f, .1f, 3f);
         motor.transform.rotation = Quaternion.identity;
-        var virtualCamera = bootstrap.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CinemachineVirtualCamera>(true)).Single();
         var volume = bootstrap.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Volume>(true)).Single();
         foreach (CameraPostProcessing effect in bootstrap.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CameraPostProcessing>(true)))
         {
-            effect.Configure(motor, virtualCamera, volume);
+            // 镜头本体（FOV / 跟随臂）已归 vcam 上的 VCameraEffects，这一层只接后处理用的 Volume。
+            effect.Configure(motor, volume);
             EditorUtility.SetDirty(effect);
             PrefabUtility.RecordPrefabInstancePropertyModifications(effect);
         }

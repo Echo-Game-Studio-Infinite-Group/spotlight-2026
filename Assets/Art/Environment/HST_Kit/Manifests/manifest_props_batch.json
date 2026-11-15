@@ -1,0 +1,875 @@
+{
+ "asset": "props_batch_final",
+ "content": "可破坏件 ×3（比赛产物 A/C + 罐子）+ 楼梯 ×3（比赛产物 A/B/C）",
+ "style": "chamfer hard surface sci-fi（比赛独立基线，用户已验收 A/C 与楼梯）",
+ "unit": "1 Blender unit = 1 m；Blender Z-up → Unity Y-up 由 FBX 导入转换承载",
+ "axis": "axis_forward=-Z / axis_up=Y / apply_unit_scale=True（与铁门/城市批一致）",
+ "stairs_spec": "count=12 rise=0.1667 run=0.28 width=3.0 pivot=首踏前缘中点 z=0 上升方向 +X（Unity -X）",
+ "materials_note": "程序细节留在 Blender 端；Unity 端按 PropMatTable.Generated.cs 纯色基线建 URP 材质",
+ "generated_csharp": "Editor/HST/PropMatTable.Generated.cs",
+ "date": "2026-10-15",
+ "assets": [
+  {
+   "key": "Prop_CubeA",
+   "group": "Destructibles",
+   "fbx": "Models/Destructibles/SM_Prop_CubeA.fbx",
+   "objects": [
+    {
+     "name": "SM_SciFiCube",
+     "tri": 20120,
+     "size": [
+      0.4285,
+      0.3895,
+      0.414
+     ],
+     "materials": [
+      "ShellPolymer",
+      "RubberDark",
+      "SteelPin",
+      "DarkAnodized",
+      "AccentOrange",
+      "AccentOrangeGlow",
+      "GlowCyan",
+      "GlowRed",
+      "DarkGlass"
+     ]
+    }
+   ],
+   "total_tri": 20120,
+   "source_script": "scripts\\props_race\\a\\cube.py",
+   "gate": [
+    "[GATE] tris=20120 开边=0 非流形=0 零面积=0 clean=True"
+   ]
+  },
+  {
+   "key": "Prop_CubeC",
+   "group": "Destructibles",
+   "fbx": "Models/Destructibles/SM_Prop_CubeC.fbx",
+   "objects": [
+    {
+     "name": "SM_EnergyCube",
+     "tri": 7648,
+     "size": [
+      0.521,
+      0.5305,
+      0.5235
+     ],
+     "materials": [
+      "M_Armor",
+      "M_Paint",
+      "M_Orange",
+      "M_Glass",
+      "M_EmiCyan",
+      "M_DarkRubber",
+      "M_EmiHot",
+      "M_EmiSoft",
+      "M_Hazard",
+      "M_BoltSteel"
+     ]
+    }
+   ],
+   "total_tri": 7648,
+   "source_script": "scripts\\props_race\\c\\cube.py",
+   "gate": [
+    "[GATE] tris=7648 开边=0 非流形=0 零面积=0 clean=True"
+   ]
+  },
+  {
+   "key": "Prop_Canister",
+   "group": "Destructibles",
+   "fbx": "Models/Destructibles/SM_Prop_Canister.fbx",
+   "objects": [
+    {
+     "name": "GEO-PR_canister",
+     "tri": 9760,
+     "size": [
+      0.4745,
+      0.474,
+      0.766
+     ],
+     "materials": [
+      "M_Prop_PolymerWhite",
+      "M_Prop_PolymerGrey",
+      "M_Prop_PolymerDark",
+      "M_Prop_MetalMid",
+      "M_Prop_MetalDark",
+      "M_Prop_Steel",
+      "M_Prop_Glass",
+      "M_Prop_Hazard",
+      "M_Prop_Accent",
+      "M_Prop_EmitCyan",
+      "M_Prop_Cavity"
+     ]
+    }
+   ],
+   "total_tri": 9760,
+   "source_script": "scripts\\props\\build_props.py",
+   "gate": []
+  },
+  {
+   "key": "Stair_Flight_A",
+   "group": "Stairs",
+   "fbx": "Models/Stairs/SM_Stair_Flight_A.fbx",
+   "objects": [
+    {
+     "name": "SM_Stair_Flight_A",
+     "tri": 14008,
+     "size": [
+      3.3685,
+      3.0206,
+      2.0339
+     ],
+     "materials": [
+      "STAIR_hull",
+      "STAIR_panel",
+      "STAIR_bolt",
+      "STAIR_glow",
+      "STAIR_inset",
+      "STAIR_accent",
+      "STAIR_grating"
+     ]
+    }
+   ],
+   "total_tri": 14008,
+   "source_script": "scripts\\props_race\\stair_a\\stair.py",
+   "gate": [
+    "[GATE] tris=14008 开边=0 非流形=0 零面积=0 clean=True",
+    "[SPEC] count=12 rise=0.1667 run=0.2800 width=3.0000 bbox=3.3685 x 3.0206 x 2.0339 m pivot=foot_front_center"
+   ]
+  },
+  {
+   "key": "Stair_Flight_B",
+   "group": "Stairs",
+   "fbx": "Models/Stairs/SM_Stair_Flight_B.fbx",
+   "objects": [
+    {
+     "name": "SM_Stair_Flight_B",
+     "tri": 7084,
+     "size": [
+      3.6,
+      3.06,
+      2.0744
+     ],
+     "materials": [
+      "B_Hull",
+      "B_Cheek",
+      "B_Dark",
+      "B_Glow",
+      "B_Accent",
+      "B_Red",
+      "B_Tread",
+      "B_Bolt",
+      "B_Floor"
+     ]
+    }
+   ],
+   "total_tri": 7084,
+   "source_script": "scripts\\props_race\\stair_b\\stair.py",
+   "gate": [
+    "[GATE] tris=7084 开边=0 非流形=0 零面积=0 clean=True",
+    "[SPEC] count=12 rise=0.1667 run=0.28 width=3.0 bbox=3.36 x 3.00 x 2.00 pivot=foot_front_center"
+   ]
+  },
+  {
+   "key": "Stair_Flight_C",
+   "group": "Stairs",
+   "fbx": "Models/Stairs/SM_Stair_Flight_C.fbx",
+   "objects": [
+    {
+     "name": "SM_Stair_Flight_C",
+     "tri": 5952,
+     "size": [
+      3.6647,
+      3.0875,
+      2.0768
+     ],
+     "materials": [
+      "HS_Struct_Dark",
+      "HS_Tread_A",
+      "HS_Tread_B",
+      "HS_Panel_Light",
+      "HS_Nosing_Amber",
+      "HS_Glow_Cyan",
+      "HS_Glow_Amber",
+      "HS_Bolt_Dark"
+     ]
+    }
+   ],
+   "total_tri": 5952,
+   "source_script": "scripts\\props_race\\stair_c\\stair.py",
+   "gate": [
+    "[GATE] tris=5952 开边=0 非流形=0 零面积=0 clean=True",
+    "[SPEC] count=12 rise=0.1667 run=0.28 width=3.0 bbox=3.665 x 3.088 x 2.077 m pivot=foot_front_center"
+   ]
+  }
+ ],
+ "materials": {
+  "AccentOrange": {
+   "name": "AccentOrange",
+   "procedural": false,
+   "base": [
+    0.41999998688697815,
+    0.12999999523162842,
+    0.019999999552965164
+   ],
+   "metallic": 0.0,
+   "rough": 0.5
+  },
+  "AccentOrangeGlow": {
+   "name": "AccentOrangeGlow",
+   "procedural": false,
+   "base": [
+    0.05000000074505806,
+    0.019999999552965164,
+    0.009999999776482582
+   ],
+   "metallic": 0.0,
+   "rough": 0.4000000059604645,
+   "emission": [
+    2.5999999046325684,
+    0.550000011920929,
+    0.05000000074505806
+   ],
+   "emit_strength": 7.0
+  },
+  "DarkAnodized": {
+   "name": "DarkAnodized",
+   "procedural": false,
+   "base": [
+    0.07500000298023224,
+    0.07800000160932541,
+    0.0820000022649765
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.41999998688697815
+  },
+  "DarkGlass": {
+   "name": "DarkGlass",
+   "procedural": false,
+   "base": [
+    0.00800000037997961,
+    0.009999999776482582,
+    0.012000000104308128
+   ],
+   "metallic": 0.0,
+   "rough": 0.14000000059604645
+  },
+  "GlowCyan": {
+   "name": "GlowCyan",
+   "procedural": false,
+   "base": [
+    0.009999999776482582,
+    0.029999999329447746,
+    0.029999999329447746
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    0.11999999731779099,
+    2.4000000953674316,
+    2.700000047683716
+   ],
+   "emit_strength": 9.0
+  },
+  "GlowRed": {
+   "name": "GlowRed",
+   "procedural": false,
+   "base": [
+    0.03999999910593033,
+    0.009999999776482582,
+    0.009999999776482582
+   ],
+   "metallic": 0.0,
+   "rough": 0.3499999940395355,
+   "emission": [
+    3.0,
+    0.10000000149011612,
+    0.05999999865889549
+   ],
+   "emit_strength": 6.0
+  },
+  "RubberDark": {
+   "name": "RubberDark",
+   "procedural": false,
+   "base": [
+    0.01600000075995922,
+    0.01600000075995922,
+    0.017000000923871994
+   ],
+   "metallic": 0.0,
+   "rough": 0.8799999952316284
+  },
+  "ShellPolymer": {
+   "name": "ShellPolymer",
+   "procedural": true,
+   "base": [
+    0.04399999976158142,
+    0.05400000140070915,
+    0.04600000008940697
+   ],
+   "metallic": 0.0,
+   "rough": 0.5
+  },
+  "SteelPin": {
+   "name": "SteelPin",
+   "procedural": false,
+   "base": [
+    0.5199999809265137,
+    0.5299999713897705,
+    0.550000011920929
+   ],
+   "metallic": 1.0,
+   "rough": 0.3199999928474426
+  },
+  "M_Armor": {
+   "name": "M_Armor",
+   "procedural": true,
+   "base": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "metallic": 1.0,
+   "rough": 0.5
+  },
+  "M_BoltSteel": {
+   "name": "M_BoltSteel",
+   "procedural": true,
+   "base": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "metallic": 1.0,
+   "rough": 0.5
+  },
+  "M_DarkRubber": {
+   "name": "M_DarkRubber",
+   "procedural": true,
+   "base": [
+    0.006000000052154064,
+    0.006000000052154064,
+    0.00800000037997961
+   ],
+   "metallic": 0.10000000149011612,
+   "rough": 0.5
+  },
+  "M_EmiCyan": {
+   "name": "M_EmiCyan",
+   "procedural": false,
+   "base": [
+    0.05000000074505806,
+    0.800000011920929,
+    1.0499999523162842
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0.05000000074505806,
+    0.800000011920929,
+    1.0499999523162842
+   ],
+   "emit_strength": 10.0
+  },
+  "M_EmiHot": {
+   "name": "M_EmiHot",
+   "procedural": false,
+   "base": [
+    0.05000000074505806,
+    0.8500000238418579,
+    1.100000023841858
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0.05000000074505806,
+    0.8500000238418579,
+    1.100000023841858
+   ],
+   "emit_strength": 22.0
+  },
+  "M_EmiSoft": {
+   "name": "M_EmiSoft",
+   "procedural": false,
+   "base": [
+    0.30000001192092896,
+    0.8999999761581421,
+    1.0
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0.30000001192092896,
+    0.8999999761581421,
+    1.0
+   ],
+   "emit_strength": 3.5
+  },
+  "M_Glass": {
+   "name": "M_Glass",
+   "procedural": false,
+   "base": [
+    0.019999999552965164,
+    0.029999999329447746,
+    0.03500000014901161
+   ],
+   "metallic": 0.0,
+   "rough": 0.07000000029802322,
+   "glass": true
+  },
+  "M_Hazard": {
+   "name": "M_Hazard",
+   "procedural": true,
+   "base": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "metallic": 0.0,
+   "rough": 0.5
+  },
+  "M_Orange": {
+   "name": "M_Orange",
+   "procedural": true,
+   "base": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "metallic": 0.0,
+   "rough": 0.5
+  },
+  "M_Paint": {
+   "name": "M_Paint",
+   "procedural": true,
+   "base": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "metallic": 0.0,
+   "rough": 0.5
+  },
+  "M_Prop_Accent": {
+   "name": "M_Prop_Accent",
+   "procedural": false,
+   "base": [
+    0.5199999809265137,
+    0.057999998331069946,
+    0.012000000104308128
+   ],
+   "metallic": 0.10000000149011612,
+   "rough": 0.4000000059604645
+  },
+  "M_Prop_Cavity": {
+   "name": "M_Prop_Cavity",
+   "procedural": false,
+   "base": [
+    0.01600000075995922,
+    0.017999999225139618,
+    0.020999999716877937
+   ],
+   "metallic": 0.10000000149011612,
+   "rough": 0.7799999713897705
+  },
+  "M_Prop_EmitCyan": {
+   "name": "M_Prop_EmitCyan",
+   "procedural": false,
+   "base": [
+    0.18000000715255737,
+    0.8999999761581421,
+    1.0
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    0.18000000715255737,
+    0.8999999761581421,
+    1.0
+   ],
+   "emit_strength": 3.5
+  },
+  "M_Prop_Glass": {
+   "name": "M_Prop_Glass",
+   "procedural": false,
+   "base": [
+    0.029999999329447746,
+    0.07000000029802322,
+    0.09000000357627869
+   ],
+   "metallic": 0.20000000298023224,
+   "rough": 0.1599999964237213
+  },
+  "M_Prop_Hazard": {
+   "name": "M_Prop_Hazard",
+   "procedural": false,
+   "base": [
+    0.7799999713897705,
+    0.33000001311302185,
+    0.029999999329447746
+   ],
+   "metallic": 0.20000000298023224,
+   "rough": 0.550000011920929
+  },
+  "M_Prop_MetalDark": {
+   "name": "M_Prop_MetalDark",
+   "procedural": false,
+   "base": [
+    0.08500000089406967,
+    0.09799999743700027,
+    0.11500000208616257
+   ],
+   "metallic": 0.7799999713897705,
+   "rough": 0.5
+  },
+  "M_Prop_MetalMid": {
+   "name": "M_Prop_MetalMid",
+   "procedural": false,
+   "base": [
+    0.1899999976158142,
+    0.20499999821186066,
+    0.22499999403953552
+   ],
+   "metallic": 0.7200000286102295,
+   "rough": 0.5199999809265137
+  },
+  "M_Prop_PolymerDark": {
+   "name": "M_Prop_PolymerDark",
+   "procedural": false,
+   "base": [
+    0.10499999672174454,
+    0.1120000034570694,
+    0.12200000137090683
+   ],
+   "metallic": 0.07999999821186066,
+   "rough": 0.5199999809265137
+  },
+  "M_Prop_PolymerGrey": {
+   "name": "M_Prop_PolymerGrey",
+   "procedural": false,
+   "base": [
+    0.33000001311302185,
+    0.3449999988079071,
+    0.36500000953674316
+   ],
+   "metallic": 0.05999999865889549,
+   "rough": 0.47999998927116394
+  },
+  "M_Prop_PolymerWhite": {
+   "name": "M_Prop_PolymerWhite",
+   "procedural": false,
+   "base": [
+    0.5849999785423279,
+    0.6000000238418579,
+    0.6179999709129333
+   ],
+   "metallic": 0.03999999910593033,
+   "rough": 0.5
+  },
+  "M_Prop_Steel": {
+   "name": "M_Prop_Steel",
+   "procedural": false,
+   "base": [
+    0.4699999988079071,
+    0.492000013589859,
+    0.5199999809265137
+   ],
+   "metallic": 0.8600000143051147,
+   "rough": 0.5400000214576721
+  },
+  "STAIR_accent": {
+   "name": "STAIR_accent",
+   "procedural": true,
+   "base": [
+    0.75,
+    0.3799999952316284,
+    0.029999999329447746
+   ],
+   "metallic": 0.20000000298023224,
+   "rough": 0.5
+  },
+  "STAIR_bolt": {
+   "name": "STAIR_bolt",
+   "procedural": true,
+   "base": [
+    0.14000000059604645,
+    0.14000000059604645,
+    0.15000000596046448
+   ],
+   "metallic": 0.949999988079071,
+   "rough": 0.5
+  },
+  "STAIR_glow": {
+   "name": "STAIR_glow",
+   "procedural": true,
+   "base": [
+    0.20000000298023224,
+    0.20000000298023224,
+    0.20000000298023224
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    0.1599999964237213,
+    0.7200000286102295,
+    1.0
+   ],
+   "emit_strength": 30.0
+  },
+  "STAIR_grating": {
+   "name": "STAIR_grating",
+   "procedural": true,
+   "base": [
+    0.026000000536441803,
+    0.027000000700354576,
+    0.029999999329447746
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.5
+  },
+  "STAIR_hull": {
+   "name": "STAIR_hull",
+   "procedural": true,
+   "base": [
+    0.02800000086426735,
+    0.029999999329447746,
+    0.03500000014901161
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.5
+  },
+  "STAIR_inset": {
+   "name": "STAIR_inset",
+   "procedural": true,
+   "base": [
+    0.009999999776482582,
+    0.009999999776482582,
+    0.012000000104308128
+   ],
+   "metallic": 0.6000000238418579,
+   "rough": 0.5
+  },
+  "STAIR_panel": {
+   "name": "STAIR_panel",
+   "procedural": true,
+   "base": [
+    0.03999999910593033,
+    0.05000000074505806,
+    0.06499999761581421
+   ],
+   "metallic": 0.550000011920929,
+   "rough": 0.5
+  },
+  "B_Accent": {
+   "name": "B_Accent",
+   "procedural": true,
+   "base": [
+    0.949999988079071,
+    0.30000001192092896,
+    0.05000000074505806
+   ],
+   "metallic": 0.25,
+   "rough": 0.5
+  },
+  "B_Bolt": {
+   "name": "B_Bolt",
+   "procedural": true,
+   "base": [
+    0.10000000149011612,
+    0.10000000149011612,
+    0.10999999940395355
+   ],
+   "metallic": 1.0,
+   "rough": 0.5
+  },
+  "B_Cheek": {
+   "name": "B_Cheek",
+   "procedural": true,
+   "base": [
+    0.1599999964237213,
+    0.17000000178813934,
+    0.1850000023841858
+   ],
+   "metallic": 0.699999988079071,
+   "rough": 0.5
+  },
+  "B_Dark": {
+   "name": "B_Dark",
+   "procedural": true,
+   "base": [
+    0.02500000037252903,
+    0.026000000536441803,
+    0.029999999329447746
+   ],
+   "metallic": 0.3499999940395355,
+   "rough": 0.5
+  },
+  "B_Floor": {
+   "name": "B_Floor",
+   "procedural": true,
+   "base": [
+    0.04500000178813934,
+    0.04699999839067459,
+    0.052000001072883606
+   ],
+   "metallic": 0.25,
+   "rough": 0.5
+  },
+  "B_Glow": {
+   "name": "B_Glow",
+   "procedural": false,
+   "base": [
+    0.05000000074505806,
+    0.550000011920929,
+    0.949999988079071
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0.05000000074505806,
+    0.550000011920929,
+    0.949999988079071
+   ],
+   "emit_strength": 4.5
+  },
+  "B_Hull": {
+   "name": "B_Hull",
+   "procedural": true,
+   "base": [
+    0.30000001192092896,
+    0.3199999928474426,
+    0.3499999940395355
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.5
+  },
+  "B_Red": {
+   "name": "B_Red",
+   "procedural": false,
+   "base": [
+    1.100000023841858,
+    0.05000000074505806,
+    0.029999999329447746
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    1.100000023841858,
+    0.05000000074505806,
+    0.029999999329447746
+   ],
+   "emit_strength": 4.0
+  },
+  "B_Tread": {
+   "name": "B_Tread",
+   "procedural": true,
+   "base": [
+    0.07500000298023224,
+    0.07800000160932541,
+    0.08500000089406967
+   ],
+   "metallic": 0.550000011920929,
+   "rough": 0.5
+  },
+  "HS_Bolt_Dark": {
+   "name": "HS_Bolt_Dark",
+   "procedural": false,
+   "base": [
+    0.012000000104308128,
+    0.013000000268220901,
+    0.014999999664723873
+   ],
+   "metallic": 0.949999988079071,
+   "rough": 0.3400000035762787
+  },
+  "HS_Glow_Amber": {
+   "name": "HS_Glow_Amber",
+   "procedural": false,
+   "base": [
+    0.019999999552965164,
+    0.019999999552965164,
+    0.019999999552965164
+   ],
+   "metallic": 0.0,
+   "rough": 0.4000000059604645,
+   "emission": [
+    1.0,
+    0.5199999809265137,
+    0.14000000059604645
+   ],
+   "emit_strength": 7.0
+  },
+  "HS_Glow_Cyan": {
+   "name": "HS_Glow_Cyan",
+   "procedural": false,
+   "base": [
+    0.019999999552965164,
+    0.019999999552965164,
+    0.019999999552965164
+   ],
+   "metallic": 0.0,
+   "rough": 0.4000000059604645,
+   "emission": [
+    0.07999999821186066,
+    0.47999998927116394,
+    1.0
+   ],
+   "emit_strength": 3.5
+  },
+  "HS_Nosing_Amber": {
+   "name": "HS_Nosing_Amber",
+   "procedural": false,
+   "base": [
+    0.5199999809265137,
+    0.18000000715255737,
+    0.019999999552965164
+   ],
+   "metallic": 0.5,
+   "rough": 0.41999998688697815
+  },
+  "HS_Panel_Light": {
+   "name": "HS_Panel_Light",
+   "procedural": false,
+   "base": [
+    0.36000001430511475,
+    0.36500000953674316,
+    0.3499999940395355
+   ],
+   "metallic": 0.25,
+   "rough": 0.41999998688697815
+  },
+  "HS_Struct_Dark": {
+   "name": "HS_Struct_Dark",
+   "procedural": false,
+   "base": [
+    0.029999999329447746,
+    0.032999999821186066,
+    0.03799999877810478
+   ],
+   "metallic": 0.8500000238418579,
+   "rough": 0.46000000834465027
+  },
+  "HS_Tread_A": {
+   "name": "HS_Tread_A",
+   "procedural": false,
+   "base": [
+    0.14499999582767487,
+    0.15199999511241913,
+    0.1599999964237213
+   ],
+   "metallic": 0.550000011920929,
+   "rough": 0.5199999809265137
+  },
+  "HS_Tread_B": {
+   "name": "HS_Tread_B",
+   "procedural": false,
+   "base": [
+    0.054999999701976776,
+    0.06599999964237213,
+    0.06199999898672104
+   ],
+   "metallic": 0.6000000238418579,
+   "rough": 0.47999998927116394
+  }
+ }
+}

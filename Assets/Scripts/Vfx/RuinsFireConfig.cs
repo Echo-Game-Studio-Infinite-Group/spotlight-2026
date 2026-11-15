@@ -313,7 +313,7 @@ namespace Spotlight.VFX
 
     // ==================================================================
     // 战斗火花（命中 / 近战 parry / 弹道 parry / 脚底滑铲摩擦）
-    // 与火焰同一份配方（RuinsFireConfig.asset 的 combatSparks 段）：运行时由 SlideSparks
+    // 与火焰同一份配方（RuinsFireConfig.asset 的 combatSparks 段）：运行时由 FrictionSparks
     // 接线注入 CombatSparks；不接（配置为空）时用字段默认值 = 2026-10-15 v2 字面量，
     // 行为与并入前一致。类型放命名空间层（不嵌进 RuinsFireConfig），火花侧裸名引用。
     // ==================================================================
@@ -426,6 +426,16 @@ namespace Spotlight.VFX
         public SparkPopTune parryPop = new SparkPopTune();
         public SparkRingTune parryRing = new SparkRingTune();
         public SparkSprayTune parrySpray = new SparkSprayTune();
+        [Tooltip("第三人称招架火花：四散越过角色轮廓，不与近身角色碰撞")]
+        public SparkSprayTune parryMetalSparks = new SparkSprayTune
+        {
+            count = 48, speedMin = 4.5f, speedMax = 8f,
+            sizeMin = 0.14f, sizeMax = 0.24f, lifeMin = 0.24f, lifeMax = 0.42f,
+            gravity = 0.8f, stretch = 0.065f, bounce = 0f,
+            color = new SparkGradient { hot = new Color(1f, 0.98f, 0.92f), mid = new Color(1f, 0.66f, 0.26f), extinct = new Color(0.85f, 0.28f, 0.05f) },
+        };
+        [Tooltip("招架金属火花占屏幕高度的最小比例，避免第三人称远景变成亚像素")]
+        [Range(0f, 0.05f)] public float parryMetalMinScreenSize = 0.016f;
         public SparkFlashTune parryLight = new SparkFlashTune();
 
         public SparkPopTune parryProjectilePop = new SparkPopTune

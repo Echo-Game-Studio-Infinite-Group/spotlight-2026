@@ -1,0 +1,3278 @@
+[
+{"path":"PauseMenu/","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.3055555522441864,
+            "y": 0.3055555522441864,
+            "z": 0.3055555522441864
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_AnchorMax": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/","activeSelf":true,"type":"UnityEngine.Canvas","settings":{
+    "Canvas": {
+        "m_Enabled": true,
+        "serializedVersion": "3",
+        "m_RenderMode": 0,
+        "m_Camera": {
+            "instanceID": 0
+        },
+        "m_PlaneDistance": 100.0,
+        "m_PixelPerfect": false,
+        "m_ReceivesEvents": true,
+        "m_OverrideSorting": false,
+        "m_OverridePixelPerfect": false,
+        "m_SortingBucketNormalizedSize": 0.0,
+        "m_VertexColorAlwaysGammaSpace": false,
+        "m_AdditionalShaderChannelsFlag": 0,
+        "m_UpdateRectTransformForStandalone": 0,
+        "m_SortingLayerID": 0,
+        "m_SortingOrder": 100,
+        "m_TargetDisplay": 0
+    }
+}},
+{"path":"PauseMenu/","activeSelf":true,"type":"UnityEngine.UI.CanvasScaler","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_UiScaleMode": 1,
+        "m_ReferencePixelsPerUnit": 100.0,
+        "m_ScaleFactor": 1.0,
+        "m_ReferenceResolution": {
+            "x": 1920.0,
+            "y": 1080.0
+        },
+        "m_ScreenMatchMode": 1,
+        "m_MatchWidthOrHeight": 0.0,
+        "m_PhysicalUnit": 3,
+        "m_FallbackScreenDPI": 96.0,
+        "m_DefaultSpriteDPI": 96.0,
+        "m_DynamicPixelsPerUnit": 1.0,
+        "m_PresetInfoIsWorld": false
+    }
+}},
+{"path":"PauseMenu/","activeSelf":true,"type":"UnityEngine.UI.GraphicRaycaster","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_IgnoreReversedGraphics": true,
+        "m_BlockingObjects": 0,
+        "m_BlockingMask": {
+            "serializedVersion": "2",
+            "m_Bits": 4294967295
+        }
+    }
+}},
+{"path":"PauseMenu/","activeSelf":true,"type":"PauseUIManager","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_pauseMenuPanel": {
+            "instanceID": 0
+        },
+        "_resumeButton": {
+            "instanceID": 0
+        },
+        "_retryButton": {
+            "instanceID": 0
+        },
+        "_returnButton": {
+            "instanceID": 0
+        },
+        "_settingsButton": {
+            "instanceID": 0
+        },
+        "_settingsPanel": {
+            "instanceID": 0
+        },
+        "_pauseContent": {
+            "instanceID": 0
+        },
+        "_closeSettingsButton": {
+            "instanceID": 0
+        },
+        "_fullscreenButton": {
+            "instanceID": 0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_AnchorMax": {
+            "x": 1.0,
+            "y": 1.0
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.10000000149011612
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel","activeSelf":true,"type":"CRTPausePresentation","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_title": {
+            "instanceID": 0
+        },
+        "_titleOpacity": {
+            "instanceID": 0
+        },
+        "_divider": {
+            "instanceID": 0
+        },
+        "_buttons": {
+            "instanceID": 0
+        },
+        "_flickerDuration": 0.4000000059604645,
+        "_revealDuration": 0.30000001192092898,
+        "_flickerFrameRate": 24.0,
+        "_flickerOpacity": 0.11999999731779099,
+        "_entryGlitch": 0.8999999761581421,
+        "_idleGlitch": 0.11999999731779099
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 540.0,
+            "y": 550.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/PauseTitle","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchorMax": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 540.0,
+            "y": 110.0
+        },
+        "m_Pivot": {
+            "x": 0.0,
+            "y": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/PauseTitle","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/PauseTitle","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "9c032ff9d9c56d24aad4477e397c59cb",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "98a2d447857d04d41a0d14f2ea5b13ef",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/PauseTitle","activeSelf":true,"type":"UnityEngine.CanvasGroup","settings":{
+    "CanvasGroup": {
+        "m_Enabled": true,
+        "m_Alpha": 1.0,
+        "m_Interactable": true,
+        "m_BlocksRaycasts": true,
+        "m_IgnoreParentGroups": false
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Divider","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchorMax": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchoredPosition": {
+            "x": 20.0,
+            "y": -126.0
+        },
+        "m_SizeDelta": {
+            "x": 500.0,
+            "y": 2.0
+        },
+        "m_Pivot": {
+            "x": 0.0,
+            "y": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Divider","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Divider","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.6499999761581421
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchorMax": {
+            "x": 0.0,
+            "y": 1.0
+        },
+        "m_AnchoredPosition": {
+            "x": 20.0,
+            "y": -150.0
+        },
+        "m_SizeDelta": {
+            "x": 500.0,
+            "y": 400.0
+        },
+        "m_Pivot": {
+            "x": 0.0,
+            "y": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons","activeSelf":true,"type":"UnityEngine.CanvasGroup","settings":{
+    "CanvasGroup": {
+        "m_Enabled": true,
+        "m_Alpha": 1.0,
+        "m_Interactable": true,
+        "m_BlocksRaycasts": true,
+        "m_IgnoreParentGroups": false
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 150.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Continue","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Continue","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Continue Button/Continue","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "4532a7e604049e341b342d5349abee41",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 50.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Retry","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Retry","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Retry Button/Retry","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "9981ec4502dc3cc4c8dd2fce7d79513c",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": -50.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Settings","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Settings","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/Settings Button/Settings","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "3613098223b157547bd75daac5d3aedc",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": -150.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/PauseExit","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/PauseExit","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Pause content/Buttons/PauseExit Button/PauseExit","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "486dce40ea4c94c45862626aefeab363",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel","activeSelf":false,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_AnchorMax": {
+            "x": 1.0,
+            "y": 1.0
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 60.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Fullscreen","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Fullscreen","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Fullscreen Button/Fullscreen","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "7ca257bc92327014c94b2bd2101d9654",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": -60.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button","activeSelf":true,"type":"UnityEngine.UI.Image","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "instanceID": 0
+        },
+        "m_Color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0,
+            "a": 0.0
+        },
+        "m_RaycastTarget": true,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Sprite": {
+            "instanceID": 0
+        },
+        "m_Type": 0,
+        "m_PreserveAspect": false,
+        "m_FillCenter": true,
+        "m_FillMethod": 4,
+        "m_FillAmount": 1.0,
+        "m_FillClockwise": true,
+        "m_FillOrigin": 0,
+        "m_UseSpriteMesh": false,
+        "m_PixelsPerUnitMultiplier": 1.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button","activeSelf":true,"type":"UnityEngine.UI.Button","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Navigation": {
+            "m_Mode": 4,
+            "m_WrapAround": false,
+            "m_SelectOnUp": {
+                "instanceID": 0
+            },
+            "m_SelectOnDown": {
+                "instanceID": 0
+            },
+            "m_SelectOnLeft": {
+                "instanceID": 0
+            },
+            "m_SelectOnRight": {
+                "instanceID": 0
+            }
+        },
+        "m_Transition": 0,
+        "m_Colors": {
+            "m_NormalColor": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0,
+                "a": 1.0
+            },
+            "m_HighlightedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_PressedColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 1.0
+            },
+            "m_SelectedColor": {
+                "r": 0.9607843160629273,
+                "g": 0.9607843160629273,
+                "b": 0.9607843160629273,
+                "a": 1.0
+            },
+            "m_DisabledColor": {
+                "r": 0.7843137383460999,
+                "g": 0.7843137383460999,
+                "b": 0.7843137383460999,
+                "a": 0.501960813999176
+            },
+            "m_ColorMultiplier": 1.0,
+            "m_FadeDuration": 0.10000000149011612
+        },
+        "m_SpriteState": {
+            "m_HighlightedSprite": {
+                "instanceID": 0
+            },
+            "m_PressedSprite": {
+                "instanceID": 0
+            },
+            "m_SelectedSprite": {
+                "instanceID": 0
+            },
+            "m_DisabledSprite": {
+                "instanceID": 0
+            }
+        },
+        "m_AnimationTriggers": {
+            "m_NormalTrigger": "Normal",
+            "m_HighlightedTrigger": "Highlighted",
+            "m_PressedTrigger": "Pressed",
+            "m_SelectedTrigger": "Selected",
+            "m_DisabledTrigger": "Disabled"
+        },
+        "m_Interactable": true,
+        "m_TargetGraphic": {
+            "instanceID": 0
+        },
+        "m_OnClick": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button","activeSelf":true,"type":"CRTMenuButton","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "_shutter": {
+            "instanceID": 0
+        },
+        "_tiltDegrees": 0.0,
+        "_period": 6.0,
+        "_shutterDuration": 0.30000001192092898,
+        "_phase": 0.0
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Shutter","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 0.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 460.0,
+            "y": 80.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Shutter","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Shutter","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "4d752671c3c9e614b950612a91d6d1bf",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 0.3921568691730499,
+            "g": 0.08627451211214066,
+            "b": 0.11764705926179886,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "instanceID": 0
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Close","activeSelf":true,"type":"UnityEngine.RectTransform","settings":{
+    "RectTransform": {
+        "m_LocalRotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "m_LocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_LocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
+        "m_ConstrainProportionsScale": false,
+        "m_LocalEulerAnglesHint": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "m_AnchorMin": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchorMax": {
+            "x": 0.5,
+            "y": 0.5
+        },
+        "m_AnchoredPosition": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "m_SizeDelta": {
+            "x": 440.0,
+            "y": 74.0
+        },
+        "m_Pivot": {
+            "x": 0.5,
+            "y": 0.5
+        }
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Close","activeSelf":true,"type":"UnityEngine.CanvasRenderer","settings":{
+    "CanvasRenderer": {
+        "m_CullTransparentMesh": true
+    }
+}},
+{"path":"PauseMenu/PauseMenuPanel/Settings panel/Close Button/Close","activeSelf":true,"type":"UnityEngine.UI.RawImage","settings":{
+    "MonoBehaviour": {
+        "m_Enabled": true,
+        "m_EditorHideFlags": 0,
+        "m_Name": "",
+        "m_EditorClassIdentifier": "",
+        "m_Material": {
+            "fileID": 2100000,
+            "guid": "2175b38acf3646247981b5e66c632605",
+            "type": 2
+        },
+        "m_Color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+        },
+        "m_RaycastTarget": false,
+        "m_RaycastPadding": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+        },
+        "m_Maskable": true,
+        "m_OnCullStateChanged": {
+            "m_PersistentCalls": {
+                "m_Calls": []
+            }
+        },
+        "m_Texture": {
+            "fileID": 2800000,
+            "guid": "7a95a75d7e02f3140b9b2f51c33d978a",
+            "type": 3
+        },
+        "m_UVRect": {
+            "serializedVersion": "2",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 1.0,
+            "height": 1.0
+        }
+    }
+}},
+{"material":"","shader":"UI/Default","settings":{
+    "Material": {
+        "serializedVersion": "8",
+        "m_Name": "Default UI Material",
+        "m_Shader": {
+            "fileID": 10770,
+            "guid": "0000000000000000f000000000000000",
+            "type": 0
+        },
+        "m_Parent": {
+            "instanceID": 0
+        },
+        "m_ModifiedSerializedProperties": 0,
+        "m_ValidKeywords": [],
+        "m_InvalidKeywords": [],
+        "m_LightmapFlags": 4,
+        "m_EnableInstancingVariants": false,
+        "m_DoubleSidedGI": false,
+        "m_CustomRenderQueue": -1,
+        "stringTagMap": {},
+        "disabledShaderPasses": [],
+        "m_LockedProperties": "",
+        "m_SavedProperties": {
+            "serializedVersion": "3",
+            "m_TexEnvs": [
+                {
+                    "first": "_MainTex",
+                    "second": {
+                        "m_Texture": {
+                            "instanceID": 0
+                        },
+                        "m_Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "m_Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        }
+                    }
+                }
+            ],
+            "m_Ints": [],
+            "m_Floats": [
+                {
+                    "first": "_ColorMask",
+                    "second": 15.0
+                },
+                {
+                    "first": "_Stencil",
+                    "second": 0.0
+                },
+                {
+                    "first": "_StencilComp",
+                    "second": 8.0
+                },
+                {
+                    "first": "_StencilOp",
+                    "second": 0.0
+                },
+                {
+                    "first": "_StencilReadMask",
+                    "second": 255.0
+                },
+                {
+                    "first": "_StencilWriteMask",
+                    "second": 255.0
+                },
+                {
+                    "first": "_UseUIAlphaClip",
+                    "second": 0.0
+                }
+            ],
+            "m_Colors": [
+                {
+                    "first": "_Color",
+                    "second": {
+                        "r": 1.0,
+                        "g": 1.0,
+                        "b": 1.0,
+                        "a": 1.0
+                    }
+                }
+            ]
+        },
+        "m_BuildTextureStacks": []
+    }
+}},
+{"material":"Assets/Art/UI/CRT/TitleCRT.mat","shader":"UI/CRT/Text","settings":{
+    "Material": {
+        "serializedVersion": "8",
+        "m_Name": "TitleCRT",
+        "m_Shader": {
+            "fileID": 4800000,
+            "guid": "bc5c97d0f3454ad498d51ada833b7655",
+            "type": 3
+        },
+        "m_Parent": {
+            "instanceID": 0
+        },
+        "m_ModifiedSerializedProperties": 0,
+        "m_ValidKeywords": [],
+        "m_InvalidKeywords": [],
+        "m_LightmapFlags": 4,
+        "m_EnableInstancingVariants": false,
+        "m_DoubleSidedGI": false,
+        "m_CustomRenderQueue": -1,
+        "stringTagMap": {},
+        "disabledShaderPasses": [],
+        "m_LockedProperties": "",
+        "m_SavedProperties": {
+            "serializedVersion": "3",
+            "m_TexEnvs": [
+                {
+                    "first": "_MainTex",
+                    "second": {
+                        "m_Texture": {
+                            "instanceID": 0
+                        },
+                        "m_Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "m_Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        }
+                    }
+                }
+            ],
+            "m_Ints": [],
+            "m_Floats": [
+                {
+                    "first": "_Clock",
+                    "second": 0.0
+                },
+                {
+                    "first": "_Glitch",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowBreathDepth",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowBreathPeriod",
+                    "second": 3.0
+                },
+                {
+                    "first": "_GlowRadius",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowStrength",
+                    "second": 0.6499999761581421
+                },
+                {
+                    "first": "_ScanCount",
+                    "second": 38.0
+                },
+                {
+                    "first": "_ScanStrength",
+                    "second": 0.2199999988079071
+                }
+            ],
+            "m_Colors": [
+                {
+                    "first": "_GlowColor",
+                    "second": {
+                        "r": 0.44999998807907107,
+                        "g": 0.07000000029802323,
+                        "b": 0.10000000149011612,
+                        "a": 1.0
+                    }
+                }
+            ]
+        },
+        "m_BuildTextureStacks": []
+    }
+}},
+{"material":"Assets/Art/UI/CRT/ShutterCRT.mat","shader":"UI/CRT/Text","settings":{
+    "Material": {
+        "serializedVersion": "8",
+        "m_Name": "ShutterCRT",
+        "m_Shader": {
+            "fileID": 4800000,
+            "guid": "bc5c97d0f3454ad498d51ada833b7655",
+            "type": 3
+        },
+        "m_Parent": {
+            "instanceID": 0
+        },
+        "m_ModifiedSerializedProperties": 0,
+        "m_ValidKeywords": [],
+        "m_InvalidKeywords": [],
+        "m_LightmapFlags": 4,
+        "m_EnableInstancingVariants": false,
+        "m_DoubleSidedGI": false,
+        "m_CustomRenderQueue": -1,
+        "stringTagMap": {},
+        "disabledShaderPasses": [],
+        "m_LockedProperties": "",
+        "m_SavedProperties": {
+            "serializedVersion": "3",
+            "m_TexEnvs": [
+                {
+                    "first": "_MainTex",
+                    "second": {
+                        "m_Texture": {
+                            "instanceID": 0
+                        },
+                        "m_Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "m_Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        }
+                    }
+                }
+            ],
+            "m_Ints": [],
+            "m_Floats": [
+                {
+                    "first": "_Clock",
+                    "second": 0.0
+                },
+                {
+                    "first": "_Glitch",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowBreathDepth",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowBreathPeriod",
+                    "second": 3.0
+                },
+                {
+                    "first": "_GlowRadius",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowStrength",
+                    "second": 0.6499999761581421
+                },
+                {
+                    "first": "_ScanCount",
+                    "second": 16.0
+                },
+                {
+                    "first": "_ScanStrength",
+                    "second": 0.2199999988079071
+                }
+            ],
+            "m_Colors": [
+                {
+                    "first": "_GlowColor",
+                    "second": {
+                        "r": 0.44999998807907107,
+                        "g": 0.07000000029802323,
+                        "b": 0.10000000149011612,
+                        "a": 1.0
+                    }
+                }
+            ]
+        },
+        "m_BuildTextureStacks": []
+    }
+}},
+{"material":"Assets/Art/UI/CRT/ButtonCRT.mat","shader":"UI/CRT/Text","settings":{
+    "Material": {
+        "serializedVersion": "8",
+        "m_Name": "ButtonCRT",
+        "m_Shader": {
+            "fileID": 4800000,
+            "guid": "bc5c97d0f3454ad498d51ada833b7655",
+            "type": 3
+        },
+        "m_Parent": {
+            "instanceID": 0
+        },
+        "m_ModifiedSerializedProperties": 0,
+        "m_ValidKeywords": [],
+        "m_InvalidKeywords": [],
+        "m_LightmapFlags": 4,
+        "m_EnableInstancingVariants": false,
+        "m_DoubleSidedGI": false,
+        "m_CustomRenderQueue": -1,
+        "stringTagMap": {},
+        "disabledShaderPasses": [],
+        "m_LockedProperties": "",
+        "m_SavedProperties": {
+            "serializedVersion": "3",
+            "m_TexEnvs": [
+                {
+                    "first": "_MainTex",
+                    "second": {
+                        "m_Texture": {
+                            "instanceID": 0
+                        },
+                        "m_Scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "m_Offset": {
+                            "x": 0.0,
+                            "y": 0.0
+                        }
+                    }
+                }
+            ],
+            "m_Ints": [],
+            "m_Floats": [
+                {
+                    "first": "_Clock",
+                    "second": 0.0
+                },
+                {
+                    "first": "_Glitch",
+                    "second": 0.0
+                },
+                {
+                    "first": "_GlowBreathDepth",
+                    "second": 0.75
+                },
+                {
+                    "first": "_GlowBreathPeriod",
+                    "second": 3.0
+                },
+                {
+                    "first": "_GlowRadius",
+                    "second": 18.0
+                },
+                {
+                    "first": "_GlowStrength",
+                    "second": 1.2000000476837159
+                },
+                {
+                    "first": "_ScanCount",
+                    "second": 14.0
+                },
+                {
+                    "first": "_ScanStrength",
+                    "second": 0.2199999988079071
+                }
+            ],
+            "m_Colors": [
+                {
+                    "first": "_GlowColor",
+                    "second": {
+                        "r": 1.0,
+                        "g": 0.0,
+                        "b": 0.0,
+                        "a": 1.0
+                    }
+                }
+            ]
+        },
+        "m_BuildTextureStacks": []
+    }
+}}
+]

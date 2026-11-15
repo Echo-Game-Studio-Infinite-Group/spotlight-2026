@@ -19,6 +19,7 @@ namespace GameJam.FlowEditor
                 if (item is RunFlowConfig flow)
                 {
                     pending.Enqueue(flow.InitialRoom); pending.Enqueue(flow.FinalRoom);
+                    foreach (RoomVariantDefinition variant in flow.ContinueOnlyRooms) pending.Enqueue(variant);
                     foreach (RoomPoolDefinition pool in flow.NormalPools) pending.Enqueue(pool);
                     foreach (LoopRuleDefinition loop in flow.Loops) pending.Enqueue(loop);
                     if (flow.EnableSpecialRoutes) { pending.Enqueue(flow.NegativePool); pending.Enqueue(flow.ExceptionalPool); }

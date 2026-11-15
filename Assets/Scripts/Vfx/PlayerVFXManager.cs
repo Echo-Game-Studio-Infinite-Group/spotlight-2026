@@ -1,49 +1,214 @@
-using UnityEngine;
+using System.Collections.Generic;
 using Cinemachine;
+using Spotlight.VFX;
+using UnityEngine;
 
-// 与 Animator 挂在同一节点，直接接收 UpdateAttack 动画事件，不经过战斗组件。
-// 使用配置好的粒子，不用程序生成替代特效。
+// 玩家身上的特效总控：挂在玩家根节点，所有"给玩家看的粒子"都从这里出声。
+//   · 攻击刀光：由动作表固定选取 AttackTrail1~4，激活即播
+//   · 摩擦火花（地面 / 滑铲 / 贴墙）：由 FrictionSparks 组件驱动；这里只负责缺了就地补
+//   · 受击 / 撞墙：直接播挂在 Player/Vfx 下的粒子，拖进列表即生效，不需要再写代码
+// 与 Animator 同一节点也能工作，但不要依赖它：攻击刀光既可能由动画事件（非序列）触发，
+// 也可能由动作序列的 vfx.attack 帧事件触发，两条都汇到 PlayAttack。
 [DisallowMultipleComponent]
 public sealed class PlayerVFXManager : MonoBehaviour
 {
-    [SerializeField] private Transform _origin;
-    public ParticleSystem attack1;
-    public ParticleSystem attack2;
-    public ParticleSystem attack3;
+    public const int BasicSlashIndex = 1;
+    public const int HighspeedASlashIndex = 2;
+    public const int HighspeedBSlashIndex = 3;
+    [Header("攻击刀光")]
+    [Tooltip("刀光根节点（Vfx/AttackSlashes）；留空则运行时在 Vfx 下找")]
+    [SerializeField] private GameObject _attackVfx;
+
+    [Tooltip("刀光根节点下的四组刀光 AttackTrail1~4，动作表的 vfx.attack 数值决定编号；留空则自动收集")]
+    [SerializeField] private ParticleSystem[] _attackSlashes = new ParticleSystem[0];
+
+    [Tooltip("刀光整体尺寸，包含组内烟、火花和扭曲；不改变攻击判定范围。")]
+    [SerializeField, Min(.01f)] private float _attackVfxScale = 1.2f;
+    public float AttackVfxScale => _attackVfxScale;
+
+    [Header("挂载在 Player/Vfx 下的其它特效（拖进来即生效）")]
+    [Tooltip("玩家受击时播放的粒子（小兵砍中 / 中弹）")]
+    [SerializeField] private ParticleSystem[] _hurtEffects = new ParticleSystem[0];
+
+    [Tooltip("撞墙时播放的粒子（碎屑 / 火花）")]
+    [SerializeField] private ParticleSystem[] _wallImpactEffects = new ParticleSystem[0];
+
+    [Header("火花调参")]
+    [Tooltip("火花配方（RuinsFireConfig 的 combatSparks 段）。留空 = 用代码内置基线")]
+    [SerializeField] private RuinsFireConfig _sparkTune;
+
     public bool IsSequenceDriven { get; private set; }
     public void SetSequenceDriven(bool driven) => IsSequenceDriven = driven;
 
     private CinemachineImpulseSource _impulseSource;
+    private PlayerMotor _motor;
     private PlayerCombat _player => GetComponentInParent<PlayerCombat>();
-
-    public void Configure(Transform origin) => _origin = origin;
 
     private void Awake()
     {
         _impulseSource = GetComponent<CinemachineImpulseSource>();
+        // 撞墙特效自己订阅：玩家身上的特效都归这里管，不需要别处再接线。
+        _motor = GetComponentInParent<PlayerMotor>();
+        if (_motor != null) _motor.WallImpact += OnWallImpact;
+        EnsureFrictionSparks();
+        ResolveAttackVfx();
     }
 
     private void OnDestroy()
     {
-        // 播放后粒子已脱离玩家层级，销毁玩家时也要回收。
-        if (attack1 != null && attack1.transform.parent == null) Destroy(attack1.gameObject);
-        if (attack2 != null && attack2.transform.parent == null) Destroy(attack2.gameObject);
-        if (attack3 != null && attack3.transform.parent == null) Destroy(attack3.gameObject);
+        if (_motor != null) _motor.WallImpact -= OnWallImpact;
+        // 刀光挂在 Player/Vfx 下，跟玩家一起销毁；粒子归各自的发射器所有，不用另外回收。
     }
 
-    public void UpdateAttack(int cnt = 1)
+    // ===== 攻击 =====
+    public void UpdateAttack(int index = BasicSlashIndex)
     {
-        if (!IsSequenceDriven) PlayAttack(cnt);
+        if (!IsSequenceDriven) PlayAttack(index);
     }
-    public void PlayAttack(int cnt = 1)
+
+    /// <summary>按动作表指定的 1～4 编号播放，一次只放一组。</summary>
+    public void PlayAttack(int index = BasicSlashIndex)
     {
-        ParticleSystem effect = cnt == 1 ? attack1 : cnt == 2 ? attack2 : cnt == 3 ? attack3 : null;
-        if (effect == null) return;
+        ResolveAttackVfx();
         PlayShake();
-        Transform origin = _origin != null ? _origin : transform;
-        effect.transform.SetPositionAndRotation(origin.position, origin.rotation * Quaternion.Euler(0f, 180f, 0f));
-        //effect.transform.SetParent(null, true);
-        effect.Play();
+        if (_attackSlashes == null || _attackSlashes.Length == 0) return;
+
+        int selected = Mathf.Clamp(index, 1, _attackSlashes.Length) - 1;
+        if (_attackVfx != null) _attackVfx.transform.localScale = Vector3.one * _attackVfxScale;
+
+        // 四组都是 playOnAwake：先把没选中的组关掉，再点亮根节点，
+        // 否则根节点激活的瞬间会把四段一起放出来。
+        for (int i = 0; i < _attackSlashes.Length; i++)
+        {
+            ParticleSystem slash = _attackSlashes[i];
+            if (slash == null) continue;
+            bool active = i == selected;
+            if (slash.gameObject.activeSelf != active) slash.gameObject.SetActive(active);
+        }
+        if (_attackVfx != null && !_attackVfx.activeSelf) _attackVfx.SetActive(true);
+
+        ParticleSystem chosen = _attackSlashes[selected];
+        if (chosen == null) return;
+        // 同一组连续出刀时 SetActive 不会再次触发 playOnAwake，显式清掉重播；
+        // 组内粒子已整体平移到 0 秒，Play 当帧就出刀，不再等 Hovl 原始时间轴。
+        chosen.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        chosen.Play(true);
+    }
+
+    // 装配工具会把引用接上；没接上（例如直接拖预制体进场景做试验）就在 Vfx 下找一次。
+    private void ResolveAttackVfx()
+    {
+        if (_attackVfx == null)
+        {
+            Transform host = transform.Find("Vfx/AttackSlashes");
+            if (host != null) _attackVfx = host.gameObject;
+        }
+        if (_attackSlashes != null && _attackSlashes.Length > 0) return;
+        if (_attackVfx == null) return;
+        var slashes = new List<ParticleSystem>(4);
+        foreach (Transform child in _attackVfx.transform)
+        {
+            // 只要每组刀光根上的主粒子；冒烟 / 火花 / 扭曲这些子发射器由主粒子自己带。
+            ParticleSystem slash = child.GetComponent<ParticleSystem>();
+            if (slash != null) slashes.Add(slash);
+        }
+        _attackSlashes = slashes.ToArray();
+    }
+
+    // ===== 受击 / 撞墙 =====
+    // 两个通道都有「已接线优先、没接线兜底」两层：
+    // 作者把粒子摆在 Player/Vfx 下并拖进列表 → 就播它（位置/朝向按命中点现摆）；
+    // 列表空着 → 退回 CombatSparks 的程序化火花（与命中 / parry 同一套配方）。
+    // 两层不会同时播，避免同一击叠出两簇火花。
+    /// <summary>玩家受击：由 Player.OnDamaged 调。direction 是攻击方的来向。</summary>
+    public void PlayHurt(Vector3 point, Vector3 direction, float amount)
+    {
+        if (PlayGroupAt(_hurtEffects, point, direction)) return;
+        CombatSparks.PlayHit(point, direction, amount);
+    }
+
+    /// <summary>撞墙：接触点按墙面法线朝外喷，强度按撞入速度走，并带一记震屏。</summary>
+    public void PlayWallImpact(WallContact contact)
+    {
+        float amount = WallSparkAmount(contact);
+        // -Normal 是「从墙里出来」的方向，锥体朝墙外喷
+        Vector3 outward = -contact.Normal;
+        if (!PlayGroupAt(_wallImpactEffects, contact.Point, outward))
+            CombatSparks.PlayHit(contact.Point, outward, amount);
+        VCameraEffects.Emit(_impulseSource, outward, amount * 0.6f);
+    }
+
+    // 只管表现强度，不参与任何结算：撞入速度越快火花越猛，下限防止轻碰没反馈。
+    private static float WallSparkAmount(WallContact contact)
+        => Mathf.Clamp(contact.IncomingVelocity.magnitude * 4f, 8f, 80f);
+
+    /// <summary>把一组粒子摆到世界坐标的命中点再播。返回是否真的播了（空列表 = false，调用方兜底）。</summary>
+    private static bool PlayGroupAt(ParticleSystem[] group, Vector3 point, Vector3 forward)
+    {
+        if (group == null || group.Length == 0) return false;
+        bool played = false;
+        for (int i = 0; i < group.Length; i++)
+        {
+            ParticleSystem system = group[i];
+            if (system == null) continue;
+            // 特效常常被摆成未激活的子物体；播放前显式激活，免得"配了却看不到"。
+            if (!system.gameObject.activeSelf) system.gameObject.SetActive(true);
+            Vector3 direction = forward.sqrMagnitude > 0.0001f ? forward.normalized : system.transform.forward;
+            // 粒子走世界坐标系，所以发射器挪到命中点后已喷出的粒子会留在原地，不跟着玩家跑。
+            system.transform.SetPositionAndRotation(point, Quaternion.LookRotation(direction, Vector3.up));
+            system.Play();
+            played = true;
+        }
+        return played;
+    }
+
+    /// <summary>停掉所有玩家特效（死亡 / 传送 / 回收时收尾）。</summary>
+    public void StopAll()
+    {
+        StopAttacks();
+        StopGroup(_hurtEffects);
+        StopGroup(_wallImpactEffects);
+    }
+
+    public void StopAttacks()
+    {
+        // 死亡 / 传送 / 被打断时立刻收干净，别让处决动画结束后还挂着上一刀的弧。
+        ResolveAttackVfx();
+        if (_attackSlashes != null)
+            for (int i = 0; i < _attackSlashes.Length; i++) StopOne(_attackSlashes[i]);
+        if (_attackVfx != null) _attackVfx.SetActive(false);
+    }
+
+    private static void StopGroup(ParticleSystem[] group)
+    {
+        if (group == null) return;
+        for (int i = 0; i < group.Length; i++) StopOne(group[i]);
+    }
+
+    private static void StopOne(ParticleSystem system)
+    {
+        if (system != null) system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    // WallImpact 是移动层的通用正撞上报：轻碰墙面、撞敌人（挡住位移的 Collider）都会触发，
+    // 且不区分速度；直接接成特效会在非 WallSlide 状态冒火花。滑墙的持续火花归 FrictionSparks。
+    private void OnWallImpact(WallContact contact)
+    {
+        if (_motor == null || !_motor.IsWallSliding) return;
+        PlayWallImpact(contact);
+    }
+
+    // 摩擦火花（地面 / 滑铲 / 贴墙）是独立组件（要读 PlayerMotor 的移动与墙面状态）。
+    // 正常情况它已经落盘在 Player.prefab 上（编辑器装配工具接好发射器）；这里是兜底：
+    // 缺就补一个——与 EnemyBase 补 HealthComponent、PlayerCombat 补 CombatComponent 同一个约定。
+    private void EnsureFrictionSparks()
+    {
+        PlayerMotor motor = _motor;
+        if (motor == null) return;
+        FrictionSparks sparks = motor.GetComponent<FrictionSparks>();
+        if (sparks == null) sparks = motor.gameObject.AddComponent<FrictionSparks>();
+        // 只在给了配方时才注入：空手调用会把已经落盘的配方清掉。
+        if (_sparkTune != null) sparks.ApplyTune(_sparkTune);
     }
 
     // 震屏必须挂在这里：两个入口都汇到 PlayAttack——
@@ -54,12 +219,6 @@ public sealed class PlayerVFXManager : MonoBehaviour
     {
         PlayerCombat combat = _player;
         if (combat == null) return;
-        CameraShaker.Emit(_impulseSource, new Vector3(0.5f, 0.0f, 0.0f), combat.AttackDamage);
-    }
-    public void StopAttacks()
-    {
-        if (attack1 != null) attack1.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        if (attack2 != null) attack2.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        if (attack3 != null) attack3.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        VCameraEffects.Emit(_impulseSource, new Vector3(0.5f, 0.0f, 0.0f), combat.AttackDamage);
     }
 }

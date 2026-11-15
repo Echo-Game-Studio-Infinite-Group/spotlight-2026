@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a39a605f24bd4f4fad30c1d45aef3d3, type: 3}
+  m_Name: CDWY_BOX_S04_2.high
+  m_EditorClassIdentifier: 
+  Id: cdwy_box_s04_2.high
+  Room: {fileID: 11400000, guid: dae1392a5811c8241a7794413d87f499, type: 2}
+  MinimumChaos: 80
+  MaximumChaos: 100
+  ContentGroups:
+  - narrative
+  Narrative: "\u522B\u505C\u5728\u4E2D\u592E\uFF0C\u7EE7\u7EED\u524D\u8FDB\u3002"
+  OverrideLightColor: 1
+  LightColor: {r: 1, g: 0.25, b: 0.18, a: 1}
+  LightIntensityMultiplier: 1
+  StabilizerGain: 0
+  EnemySpawns:
+  - PointId: SP_83706220
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+  - PointId: SP_7ccee936
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+  - PointId: SP_833e5790
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+  - PointId: SP_8a5d74ae
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_2cb254a8
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_25406ec7
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_35ee2769
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+  - PointId: SP_ed2ea8ad
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: da096d0b08ac6df40a48021a55f5ad75, type: 3}
+  - PointId: SP_e88cdb4a
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_1c3575f8
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_81f75e6f
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  Texts: []

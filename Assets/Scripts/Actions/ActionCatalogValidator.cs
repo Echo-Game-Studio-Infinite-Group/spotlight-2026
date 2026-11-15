@@ -104,8 +104,8 @@ namespace GameJam.Actions
                 if (action.Combat.SpeedDamage != null)
                     foreach (UnityEngine.Keyframe key in action.Combat.SpeedDamage.keys)
                         if (!Finite(key.time) || !Finite(key.value) || key.value < 0f) Error(issues, action, "伤害曲线的速度和倍率必须有限，倍率非负");
-                if (action.Combat.HitVolumes != null)
-                    foreach (ActionHitVolume volume in action.Combat.HitVolumes)
+                foreach (var volumes in new[] { action.Combat.HitVolumes, action.Combat.ParryVolumes })
+                    if (volumes != null) foreach (ActionHitVolume volume in volumes)
                         if (volume == null || !ValidRange(action, volume.Start, volume.End) || volume.HitGroup < 0 || !Finite(volume.SweepSpacing) || volume.SweepSpacing < 0.01f ||
                             !FiniteVector(volume.Size) || volume.Size.x <= 0f || volume.Size.y <= 0f || volume.Size.z <= 0f || !FiniteVector(volume.Center) || !FiniteVector(volume.Rotation))
                             Error(issues, action, "判定框需有效窗口、正尺寸和非负命中段编号");

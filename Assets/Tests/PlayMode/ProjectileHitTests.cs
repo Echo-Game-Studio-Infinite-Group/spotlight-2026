@@ -8,10 +8,10 @@ using UnityEngine.TestTools;
 // 子弹命中链路的回归测试。
 //
 // 断言的是「子弹撞到玩家 → 真的扣血 → 并且震屏」这三步都发生了。
-// 为什么这样验：CameraShaker.Emit 在生成 impulse 之前会把命中方向写进
+// 为什么这样验：VCameraEffects.Emit 在生成 impulse 之前会把命中方向写进
 // source.m_DefaultVelocity，所以该字段被改写就等于证明整整一条链都跑到了：
 //   OnTriggerEnter → Hitbox.Report → CombatComponent.TryHit（阵营过滤/扣血）
-//   → Landed → Projectile.OnLanded → CameraShaker.Emit
+//   → Landed → Projectile.OnLanded → VCameraEffects.Emit
 public sealed class ProjectileHitTests
 {
     private GameObject _vcamGo;
@@ -29,10 +29,10 @@ public sealed class ProjectileHitTests
     [UnityTest]
     public IEnumerator BulletHit_DamagesTarget_AndDrivesShake()
     {
-        // 接收端：vcam 上挂 CameraShaker（Awake 会设静态实例并补 ImpulseListener）
+        // 接收端：vcam 上挂 VCameraEffects（Awake 会设静态实例并补 ImpulseListener）
         _vcamGo = new GameObject("HitTestVcam");
         _vcamGo.AddComponent<CinemachineVirtualCamera>();
-        _vcamGo.AddComponent<CameraShaker>();
+        _vcamGo.AddComponent<VCameraEffects>();
         yield return null;
 
         // 目标：玩家阵营，带非触发碰撞体（与 Player.prefab 的 CapsuleCollider 一致）

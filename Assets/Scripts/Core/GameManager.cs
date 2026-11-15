@@ -75,6 +75,12 @@ public class GameManager : MonoBehaviour
         PlayerInputReader input = FindInScene<PlayerInputReader>(roots);
         if (player == null || input == null || !player.gameObject.activeInHierarchy) return;
 
+        if (TimeManager.Resolve() == null)
+        {
+            GameObject timer = new GameObject("TimeManager", typeof(TimeManager));
+            SceneManager.MoveGameObjectToScene(timer, scene);
+        }
+
         Transform layer = null;
         foreach (GameObject root in roots)
         {
@@ -94,12 +100,14 @@ public class GameManager : MonoBehaviour
         Canvas hud = healthBar != null ? healthBar.GetComponentInParent<Canvas>(true) : null;
         PauseUIManager pause = FindInScene<PauseUIManager>(roots);
 
-        if (hud == null || pause == null)
+        DeathRespawnUI death = FindInScene<DeathRespawnUI>(roots);
+
+        if (hud == null || pause == null || death == null)
         {
             if (_uiSettings == null) _uiSettings = Resources.Load<SceneUISettings>("SceneUISettings");
-            if (_uiSettings == null || _uiSettings.HUD == null || _uiSettings.PauseMenu == null)
+            if (_uiSettings == null || _uiSettings.HUD == null || _uiSettings.PauseMenu == null || _uiSettings.DeathScreen == null)
             {
-                Debug.LogError("[GameManager] 缺少 SceneUISettings 或 HUD / PauseMenu 预制体引用", this);
+                Debug.LogError("[GameManager] 缺少 SceneUISettings 或 HUD / PauseMenu / DeathScreen 预制体引用", this);
                 return;
             }
         }
@@ -111,11 +119,18 @@ public class GameManager : MonoBehaviour
             : Instantiate(_uiSettings.PauseMenu, layer, false);
         hudObject.transform.SetParent(layer, false);
         pauseObject.transform.SetParent(layer, false);
+        EnsureChaosDisplay(hudObject);
 
         // 暂停菜单必须盖住 HUD，避免 HUD 的射线检测挡住菜单按钮。
         Canvas pauseCanvas = pauseObject.GetComponent<Canvas>();
         pauseCanvas.sortingOrder = Mathf.Max(pauseCanvas.sortingOrder,
             hudObject.GetComponent<Canvas>().sortingOrder + 1);
+
+        GameObject deathObject = death != null
+            ? death.GetComponentInParent<Canvas>(true).gameObject
+            : Instantiate(_uiSettings.DeathScreen, layer, false);
+        deathObject.transform.SetParent(layer, false);
+        deathObject.GetComponent<Canvas>().sortingOrder = pauseCanvas.sortingOrder + 1;
 
         if (FindObjectOfType<EventSystem>() == null)
         {
@@ -124,6 +139,20 @@ public class GameManager : MonoBehaviour
             SceneManager.MoveGameObjectToScene(eventSystem, scene);
             eventSystem.transform.SetParent(layer, false);
         }
+    }
+
+    // 场景自带 HUD 可能缺少混乱度显示，装配时兜底补齐，避免流程 UI 静默缺失。
+    private void EnsureChaosDisplay(GameObject hudObject)
+    {
+        if (hudObject.GetComponentInChildren<ChaosHUD>(true) != null) return;
+        if (_uiSettings == null) _uiSettings = Resources.Load<SceneUISettings>("SceneUISettings");
+        if (_uiSettings == null || _uiSettings.ChaosDisplay == null)
+        {
+            Debug.LogError("[GameManager] HUD 缺少混乱度显示，且 SceneUISettings 未配置 ChaosDisplay 预制体", this);
+            return;
+        }
+
+        Instantiate(_uiSettings.ChaosDisplay, hudObject.transform, false);
     }
 
     private static T FindInScene<T>(GameObject[] roots) where T : Component

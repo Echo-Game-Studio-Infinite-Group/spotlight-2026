@@ -25,16 +25,44 @@ WwiseEventName
 Bank
 ```
 
-示例：
+当前分支已经实际配置的绑定：
+
+```text
+player_jump -> Jump_Normal (Bank: OneTimeAction)
+player_land -> Land_Normal (Bank: OneTimeAction)
+sword_swing -> Sword_Swing (Bank: OneTimeAction)
+metal_hit   -> Metal_Hit (Bank: OneTimeAction)
+parry_melee -> Parry_Melee (Bank: OneTimeAction)
+parry_ranged -> Parry_Ranged (Bank: OneTimeAction)
+music_stand -> Play_Music_Stand (Bank: Music)
+music_walk  -> Play_Music_Walk (Bank: Music)
+music_run   -> Play_Music_Run (Bank: Music)
+enemy_footstep_tech_left   -> Enemy_Footstep_Tech_Left (Bank: OneTimeAction)
+enemy_footstep_tech_right  -> Enemy_Footstep_Tech_Right (Bank: OneTimeAction)
+enemy_footstep_normal_left -> Enemy_Footstep_Normal_Left (Bank: OneTimeAction)
+enemy_footstep_normal_right -> Enemy_Footstep_Normal_Right (Bank: OneTimeAction)
+```
+
+`PlayerGameplayAudioSource` 通过 `PlayerCombat.ParrySucceeded` 获取拼刀结果：
+近战攻击播放 `parry_melee`，子弹或激光播放 `parry_ranged`；同一帧已经
+成功的 parry 会抑制普通命中声，但起手帧事件里的 `sword_swing` 不受影响。
+
+`FlowGame` 的 `WwiseMusicSource` 订阅 `RunFlowController.Chaos`，按
+`0..30 / 31..79 / 80..100` 三档切换 `Stand / Walk / Run`。阈值在
+MusicController 的 Inspector 上可调，MainMenu 仍使用固定的 SnowPeak。
+
+后续一次性事件的接入示例：
 
 ```text
 player_land  -> Play_PlayerLand
-player_jump  -> Play_PlayerJump
 footstep     -> Play_Footstep
 hit_metal    -> Play_MetalHit
 draw_sword   -> Play_DrawSword
 sword_swing  -> Play_SwordSwing
 ```
+
+这些名称不是当前 Wwise 工程中已经全部存在的 Event。需要先在 Wwise Authoring
+中创建 Event，再写入 `WwiseEventBindings.asset`。
 
 `EventId` 是 gameplay 使用的逻辑 ID。`WwiseEventName` 是 Wwise Event 名称。
 `Bank` 可选，填写后会先加载对应 Bank 再 Post Event。
@@ -44,10 +72,20 @@ sword_swing  -> Play_SwordSwing
 动作、战斗、移动代码只调用：
 
 ```csharp
+WwiseEventBridge.Play("player_jump", gameObject);
 WwiseEventBridge.Play("player_land", gameObject);
 WwiseEventBridge.Play("hit_metal", gameObject);
 WwiseEventBridge.Play("draw_sword", gameObject);
 ```
+
+动作序列帧事件的 `EventKey` 使用 `audio.` 前缀，例如：
+
+```text
+audio.player_jump
+```
+
+`PlayerActionRunner` 会去掉 `audio.`，再以 `player_jump` 调用
+`WwiseEventBridge.Play(...)`。
 
 需要停止时：
 
@@ -76,6 +114,18 @@ WwiseEventBridge.Play("footstep", gameObject);
 WwiseEventBridge.SetRTPC("ActionSpeed", speed01, gameObject);
 WwiseEventBridge.SetRTPC("Contact", contact01, gameObject);
 ```
+
+跨对象或音乐共享的全局参数使用：
+
+```csharp
+WwiseEventBridge.SetGlobalRTPC("PlayerHealth01", health01);
+```
+
+`PlayerHealth01` 由 `PlayerGameplayAudioSource` 在初始化、受伤和复活事件中更新，
+不进行逐帧轮询。
+
+这里的 RTPC 和 Switch 名称只是调用示例。对应参数必须先在 Wwise Authoring
+中创建；`WwiseEventBridge` 只负责发送值，不会自动创建 Wwise 工程对象。
 
 参数映射建议：
 

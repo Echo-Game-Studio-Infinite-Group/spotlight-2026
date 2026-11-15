@@ -30,9 +30,8 @@ namespace GameJam.Actions.Editor
                 PlayerCombat combat = player.GetComponent<PlayerCombat>();
                 PlayerMotor motor = player.GetComponent<PlayerMotor>();
                 if (combat == null || motor == null || motor.Params == null) throw new InvalidOperationException("Player 缺少战斗或移动参数");
-                AnimationClip clip = AssetDatabase.LoadAllAssetsAtPath("Assets/Animations/fbx/Attack.fbx").OfType<AnimationClip>()
-                    .FirstOrDefault(value => !value.name.StartsWith("__preview__", StringComparison.Ordinal));
-                if (clip == null) throw new InvalidOperationException("缺少导入后的 Attack 动画片段");
+                AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animations/Player/Attack.anim");
+                if (clip == null) throw new InvalidOperationException("缺少 Assets/Animations/Player/Attack.anim 动画片段");
                 ActionCatalog catalog = CreateCatalog(clip, combat, motor.Params);
                 AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
                 if (controller == null) throw new InvalidOperationException("缺少 player.controller");
@@ -113,10 +112,13 @@ namespace GameJam.Actions.Editor
                 if (split < openFrame) AddSegment(attack, clip, "startup_b", "引刀", ActionPhase.Startup, split, openFrame, total);
                 AddSegment(attack, clip, "active", "挥砍命中", ActionPhase.Active, openFrame, closeFrame, total);
                 AddSegment(attack, clip, "recovery", "收招", ActionPhase.Recovery, closeFrame, total, total);
+                attack.Combat.ParryVolumes.Add(new ActionHitVolume { DisplayName = "挥刀 Parry",
+                    Start = new ActionFrameAnchor { SegmentId = "active" },
+                    End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd } });
                 attack.Timeline.Find(segment => segment.SegmentId == "active").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.open", HitGroup = 1 });
                 attack.Timeline.Find(segment => segment.SegmentId == "recovery").Events.Add(new ActionFrameEvent { EventKey = "combat.hitbox.close" });
                 if (vfx != null) AddEvent(attack, Mathf.Clamp(Mathf.RoundToInt(vfx.time / clip.length * total), 0, total - 1),
-                    new ActionFrameEvent { EventKey = "vfx.attack", Value = vfx.intParameter });
+                    new ActionFrameEvent { EventKey = "vfx.attack", Value = PlayerVFXManager.BasicSlashIndex });
                 attack.CancelWindows.Add(new ActionCancelWindow { DisplayName = "收招接移动跳跃", Start = new ActionFrameAnchor { SegmentId = "recovery" },
                     Targets = new List<ActionDefinition> { jump }, RequireAll = new List<string> { "non_stationary_jump", "speed_low" } });
                 AssetDatabase.CreateAsset(attack, folder + "/PlayerAttack.asset");
@@ -152,6 +154,7 @@ namespace GameJam.Actions.Editor
             EnsureParameter(controller, ActionAnimatorBridge.TimeParameter, AnimatorControllerParameterType.Float);
             EnsureParameter(controller, ActionAnimatorBridge.PlayingParameter, AnimatorControllerParameterType.Bool);
             PlayerLocomotionAnimatorSetup.EnsureWallDash(controller, recordUndo);
+            PlayerWalkAnimatorSetup.Ensure(controller);
             AnimatorStateMachine root = controller.layers[0].stateMachine;
             if (recordUndo) Undo.RecordObject(root, "装配动作动画状态机");
             AnimatorStateMachine actions = root.stateMachines.FirstOrDefault(value => value.stateMachine.name == "Actions").stateMachine;

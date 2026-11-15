@@ -162,7 +162,7 @@ public static class CombatVfxSnapshot
         }, new Vector3(-1.2f, 1.0f, -2.7f), new Vector3(0.15f, 0.3f, 0f));
 
         // 诊断：滑铲近景历史上出过空图，补拍两个机位 + 渲染器状态，定位断在哪一层
-        ParticleSystem slidePs = Object.FindObjectOfType<SlideSparks>()?.GetComponentInChildren<ParticleSystem>();
+        ParticleSystem slidePs = Object.FindObjectOfType<FrictionSparks>()?.GetComponentInChildren<ParticleSystem>();
         if (slidePs != null)
         {
             ParticleSystemRenderer r = (ParticleSystemRenderer)slidePs.GetComponent<Renderer>();
@@ -178,14 +178,14 @@ public static class CombatVfxSnapshot
         }
     }
 
-    // 摆一个滑铲火花：直接复用 SlideSparks 的发射器装配，手动 Emit + 转向，
+    // 摆一个滑铲火花：直接复用 FrictionSparks 的发射器装配，手动 Emit + 转向，
     // 贴地朝行进反方向喷（真实游戏里由移动状态按每米路程驱动，这里摆拍等价取样）。
     private static void SlideBurst(Vector3 position, Vector3 travelDirection)
     {
         GameObject player = new GameObject("SnapshotSlidePlayer");
         player.transform.position = position;
-        player.AddComponent<SlideSparks>();
-        player.GetComponent<SlideSparks>().EnsureEmitter();
+        player.AddComponent<FrictionSparks>();
+        player.GetComponent<FrictionSparks>().EnsureEmitters();
         ParticleSystem emitter = player.GetComponentInChildren<ParticleSystem>();
         emitter.transform.rotation = Quaternion.LookRotation(-travelDirection, Vector3.up);
         emitter.Emit(90);

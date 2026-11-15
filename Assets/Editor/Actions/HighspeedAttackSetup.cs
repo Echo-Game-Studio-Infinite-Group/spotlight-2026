@@ -59,14 +59,18 @@ namespace GameJam.Actions.Editor
                 AddSegment(action, clip, state, "startup", "引刀", ActionPhase.Startup, 0, startup, total);
                 AddSegment(action, clip, state, "active", "高速挥砍", ActionPhase.Active, startup, startup + active, total);
                 AddSegment(action, clip, state, "recovery", "收招", ActionPhase.Recovery, startup + active, total, total);
-                action.Timeline[1].Events.Add(new ActionFrameEvent { EventKey = "vfx.attack", Value = state.EndsWith("A") ? 1 : 2 });
+                action.Timeline[1].Events.Add(new ActionFrameEvent { EventKey = "vfx.attack", Value = state.EndsWith("A")
+                    ? PlayerVFXManager.HighspeedASlashIndex : PlayerVFXManager.HighspeedBSlashIndex });
                 action.StartConditions = new List<string> { "speed_high" };
                 action.CooldownFrames = 21; action.CooldownGroup = "player_basic_attack";
                 action.Input.PreInputFrames = 8; action.Input.BufferGroup = "main";
                 action.Combat.Enabled = true; action.Combat.Damage = 25f; action.Combat.ScaleDamageWithSpeed = true;
                 action.Combat.SpeedDamage = AnimationCurve.Linear(0.8f, 1f, 12f, 6.6f);
                 action.Combat.HitVolumes.Add(new ActionHitVolume { DisplayName = "高速刀光", Center = new Vector3(0f, .9f, 1.5f),
-                    Size = new Vector3(2.2f, 1.8f, 2.4f), Start = new ActionFrameAnchor { SegmentId = "active" },
+                    Size = new Vector3(3.6f, 1.8f, 2.4f), Start = new ActionFrameAnchor { SegmentId = "active" },
+                    End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd } });
+                action.Combat.ParryVolumes.Add(new ActionHitVolume { DisplayName = "高速 Parry", Center = new Vector3(0f, .9f, 1.5f),
+                    Size = new Vector3(3.6f, 1.8f, 2.4f), Start = new ActionFrameAnchor { SegmentId = "active" },
                     End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd } });
                 action.Motion = new ActionMotionSettings { Enabled = true, Start = new ActionFrameAnchor { SegmentId = "active" },
                     End = new ActionFrameAnchor { SegmentId = "active", RelativeTo = ActionFrameAnchor.Boundary.SegmentEnd }, ClearMomentumOnCompletion = true };

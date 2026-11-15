@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 public sealed class PlayerRagdollRigTests
 {
-    private GameObject _root;
+    private GameObject _root, _ground;
     private PlayerRagdollHitStun _stun;
     private Animator _animator;
     private Transform _hips;
@@ -26,7 +26,7 @@ public sealed class PlayerRagdollRigTests
         _root.GetComponent<PlayerInputReader>().SetGameplayEnabled(false);
         _animator = _root.GetComponent<Animator>();
         _stun = _root.GetComponent<PlayerRagdollHitStun>();
-        _hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        _hips = Read<Transform>("_hips");
         _bodies = _hips.GetComponentsInChildren<Rigidbody>(true);
         TimeManager.ClearSlowMotion();
         TimeManager.SetPaused(true);
@@ -38,6 +38,7 @@ public sealed class PlayerRagdollRigTests
     {
         if (_stun != null) _stun.ExitHitStun();
         if (_root != null) Object.DestroyImmediate(_root);
+        if (_ground != null) Object.DestroyImmediate(_ground);
         TimeManager.SetPaused(false);
         TimeManager.ClearSlowMotion();
     }
@@ -48,7 +49,9 @@ public sealed class PlayerRagdollRigTests
     [Test]
     public void PhysicsBelongsToVisibleAvatarInsteadOfLegacySkeleton()
     {
-        Assert.AreSame(_hips, Read<Transform>("_hips"));
+        Transform avatarHips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+        Assert.IsTrue(_hips == avatarHips || _hips.IsChildOf(avatarHips));
+        Assert.IsNotNull(_hips.GetComponent<Rigidbody>());
         Assert.That(_hips.name, Is.EqualTo("CC_Base_Hip"));
         Assert.That(_bodies.Length, Is.EqualTo(11));
         var visibleSkins = _root.GetComponentsInChildren<SkinnedMeshRenderer>(true)
@@ -109,6 +112,10 @@ public sealed class PlayerRagdollRigTests
     [UnityTest]
     public IEnumerator RagdollLastsOneSecondThenRestoresAnimatedRecovery()
     {
+        _ground = new GameObject("RagdollRigFloor");
+        _ground.transform.position = _root.transform.position + Vector3.down * .5f;
+        _ground.AddComponent<BoxCollider>().size = new Vector3(100f, 1f, 100f);
+        Physics.SyncTransforms();
         var data = new SerializedObject(_stun);
         Assert.That(data.FindProperty("_ragdollSeconds").floatValue, Is.EqualTo(1f));
         TimeManager.SetPaused(false);

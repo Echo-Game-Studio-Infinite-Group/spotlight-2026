@@ -7,12 +7,14 @@ public sealed class EnemyAnimation : MonoBehaviour
     private EnemyBase _enemy;
     private Animator _animator;
     private bool _enteredAttack;
+    private bool _parryStaggerPending;
     // 直接读状态，不另存等待标记，避免标签漏配或过渡被打断后永久锁住 AI。
     public bool IsHurting => _animator != null && _animator.isActiveAndEnabled
         && _animator.runtimeAnimatorController != null
         && (_animator.GetCurrentAnimatorStateInfo(0).IsName("Hurt")
             || (_animator.IsInTransition(0) && _animator.GetNextAnimatorStateInfo(0).IsName("Hurt")));
     [SerializeField, Min(0f)] private float _speedDampTime = 0.1f;
+    [SerializeField, Min(0.01f)] private float _playbackSpeed = 1f;
     private Vector3 _modelOffset;
     private Quaternion _modelRotation;
     public bool CanAttack => _animator != null && _animator.isActiveAndEnabled
@@ -66,6 +68,15 @@ public sealed class EnemyAnimation : MonoBehaviour
     private void Update()
     {
         if (_enemy == null) return;
+        if (_parryStaggerPending && !TimeManager.InHitStop)
+        {
+            _parryStaggerPending = false;
+            if (_animator.runtimeAnimatorController != null)
+            {
+                _animator.ResetTrigger("Attack");
+                _animator.SetTrigger("Hurt");
+            }
+        }
         // updateMode 是 UnscaledTime，动画器不会理 Time.timeScale，所以顿帧必须显式把速度压到 0 停住；
         // 不这么做的话世界在慢动作、敌人却照常播完受击/死亡动画，顿帧的「卡住」读感会整个漏掉。
         //
@@ -97,7 +108,9 @@ public sealed class EnemyAnimation : MonoBehaviour
         if (state.IsTag("Attack")) _enteredAttack = true;
         // 状态被打断或末帧事件未送达时也要关闭判定，不能把敌人锁在攻击里。
         if (_enteredAttack && ((!state.IsTag("Attack") && !_animator.IsInTransition(0))
-            || (state.IsTag("Attack") && state.normalizedTime >= 1f))) FinishAttack();
+            || (state.IsTag("Attack") && state.normalizedTime >= 1f
+                && (!state.IsName("Attack") || !_animator.HasState(0, Animator.StringToHash("Base Layer.AttackBack")))
+                && !_animator.IsInTransition(0)))) FinishAttack();
     }
 
     public void PlayAttack()
@@ -111,6 +124,16 @@ public sealed class EnemyAnimation : MonoBehaviour
         _animator.ResetTrigger("Attack");
         _animator.SetBool("Dead", true);
         BeginHold(_deathHitStopSeconds, _deathHitStopRate);
+    }
+
+    public void InterruptForParry()
+    {
+        _enteredAttack = false;
+        _holdActive = _holdFrozen = false;
+        _animator.ResetTrigger("Attack");
+        _parryStaggerPending = true;
+        // 先保留接触姿态，时停结束再进硬直；不叠加普通受击的 FreezeFrame 顿帧。
+        _animator.speed = 0f;
     }
 
     public void PlayHurt()
@@ -158,7 +181,7 @@ public sealed class EnemyAnimation : MonoBehaviour
         return _holdFrozen ? 0f : NormalSpeed();
     }
 
-    private float NormalSpeed() => TimeManager.WorldRate * TimeManager.GameRate;
+    private float NormalSpeed() => _playbackSpeed * TimeManager.WorldRate * TimeManager.GameRate;
 
     public void ResetAfterDeath()
     {
@@ -175,6 +198,7 @@ public sealed class EnemyAnimation : MonoBehaviour
     private void OnDisable()
     {
         // 回收进池时别把定格牌子留着：对象下次复用会在受击姿势上冻一帧。
+        _parryStaggerPending = false;
         _holdActive = false;
         _holdFrozen = false;
         _holdRemaining = 0f;

@@ -25,6 +25,8 @@ public sealed class Player : MonoBehaviour
 
     private PlayerActionRunner _runner;
     private PlayerAnimation _animation;
+    // 受击特效归 PlayerVFXManager 管（特效对象挂在 Player/Vfx 下），这里只负责喊一声。
+    private PlayerVFXManager _vfx;
     [SerializeField, Min(0f)] private float _bigHurtDamageThreshold = 30f;
 
     public PlayerMotor Motor { get { EnsureReferences(); return _motor; } }
@@ -67,7 +69,10 @@ public sealed class Player : MonoBehaviour
 
     private void OnDamaged(HealthComponent source, float applied, Vector3 point, Vector3 direction)
     {
-        if (applied > 0f) _animation?.PlayHurt(applied > _bigHurtDamageThreshold);
+        if (applied <= 0f) return;
+        _animation?.PlayHurt(applied > _bigHurtDamageThreshold);
+        // 受击特效：作者放的粒子（如果有）+ 程序化受击火花，都在 PlayerVFXManager 里
+        _vfx?.PlayHurt(point, direction, applied);
     }
 
     private void OnDied(HealthComponent source)
@@ -91,5 +96,6 @@ public sealed class Player : MonoBehaviour
         if (_health == null) _health = GetComponent<HealthComponent>();
         if (_runner == null) _runner = GetComponent<PlayerActionRunner>();
         if (_animation == null) _animation = GetComponentInChildren<PlayerAnimation>();
+        if (_vfx == null) _vfx = GetComponentInChildren<PlayerVFXManager>();
     }
 }

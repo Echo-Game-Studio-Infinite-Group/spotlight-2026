@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a39a605f24bd4f4fad30c1d45aef3d3, type: 3}
+  m_Name: BOX_S_001.high
+  m_EditorClassIdentifier: 
+  Id: box_s_001.high
+  Room: {fileID: 11400000, guid: b7e6b7d2d290d6041beff160e1a599c7, type: 2}
+  MinimumChaos: 80
+  MaximumChaos: 100
+  ContentGroups:
+  - narrative
+  Narrative: "\u706F\u5149\u5931\u5E8F\uFF0C\u51FA\u53E3\u4ECD\u5728\u5BF9\u9762\u3002"
+  OverrideLightColor: 1
+  LightColor: {r: 1, g: 0.25, b: 0.18, a: 1}
+  LightIntensityMultiplier: 1
+  StabilizerGain: 0
+  EnemySpawns:
+  - PointId: SP_cf47b304
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+  - PointId: SP_f4f596c5
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_e1d030ae
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_e6f9f837
+    Enabled: 1
+    EnemyPrefab: {fileID: 1391353707647759481, guid: 3e3b18e9241fc3c4f959f6189d8e3c43, type: 3}
+  - PointId: SP_62ca8157
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  - PointId: SP_c7490e23
+    Enabled: 1
+    EnemyPrefab: {fileID: 2438456557468304048, guid: fe59dadfcc4c82a47a23e293a94bb9ad, type: 3}
+  Texts: []

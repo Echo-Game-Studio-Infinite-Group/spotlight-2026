@@ -19,7 +19,7 @@ MonoBehaviour:
   - SegmentId: startup_a
     DisplayName: "\u8D77\u52BF"
     Phase: 0
-    DurationFrames: 33
+    DurationFrames: 18
     Events: []
     Control:
       AllowMove: 0
@@ -33,20 +33,25 @@ MonoBehaviour:
     Animation:
       AnimatorState: Base Layer.Actions.PlayerAttack
       Layer: 0
-      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      Clip: {fileID: -203655887218126122, guid: e79764cd1f931204a9fd2e495d46b1b3, type: 3}
       NormalizedStart: 0
       NormalizedEnd: 0.33333334
       BlendFrames: 5
   - SegmentId: startup_b
     DisplayName: "\u5F15\u5200"
     Phase: 0
-    DurationFrames: 6
+    DurationFrames: 4
     Events:
     - MotorCommand: 0
       Frame: 0
       EventKey: vfx.attack
       HitGroup: 0
       Value: 1
+    - MotorCommand: 0
+      Frame: 0
+      EventKey: audio.sword_swing
+      HitGroup: 0
+      Value: 0
     Control:
       AllowMove: 1
       AllowTurn: 1
@@ -59,14 +64,14 @@ MonoBehaviour:
     Animation:
       AnimatorState: Base Layer.Actions.PlayerAttack
       Layer: 0
-      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      Clip: {fileID: -203655887218126122, guid: e79764cd1f931204a9fd2e495d46b1b3, type: 3}
       NormalizedStart: 0.33333334
       NormalizedEnd: 0.3939394
       BlendFrames: 5
   - SegmentId: active
     DisplayName: "\u6325\u780D\u547D\u4E2D"
     Phase: 1
-    DurationFrames: 30
+    DurationFrames: 16
     Events:
     - MotorCommand: 0
       Frame: 0
@@ -85,14 +90,14 @@ MonoBehaviour:
     Animation:
       AnimatorState: Base Layer.Actions.PlayerAttack
       Layer: 0
-      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      Clip: {fileID: -203655887218126122, guid: e79764cd1f931204a9fd2e495d46b1b3, type: 3}
       NormalizedStart: 0.3939394
       NormalizedEnd: 0.6969697
       BlendFrames: 5
   - SegmentId: recovery
     DisplayName: "\u6536\u62DB"
     Phase: 2
-    DurationFrames: 30
+    DurationFrames: 16
     Events:
     - MotorCommand: 0
       Frame: 0
@@ -111,7 +116,7 @@ MonoBehaviour:
     Animation:
       AnimatorState: Base Layer.Actions.PlayerAttack
       Layer: 0
-      Clip: {fileID: -203655887218126122, guid: 811cb2415602b6b42b32c44fe054e424, type: 3}
+      Clip: {fileID: -203655887218126122, guid: e79764cd1f931204a9fd2e495d46b1b3, type: 3}
       NormalizedStart: 0.6969697
       NormalizedEnd: 1
       BlendFrames: 5
@@ -191,7 +196,7 @@ MonoBehaviour:
     SegmentId: 
     RelativeTo: 0
     OffsetFrames: 0
-  CooldownFrames: 21
+  CooldownFrames: 10
   CooldownGroup: player_basic_attack
   RequestVariants:
   - {fileID: 11400000, guid: 044d0c829662f594490b299bde1fc2db, type: 2}
@@ -246,3 +251,19 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     HitVolumes: []
+    ParryVolumes:
+    - DisplayName: "Parry"
+      AnchorPath:
+      Center: {x: 0, y: 0.6, z: 1}
+      Rotation: {x: 0, y: 0, z: 0}
+      Size: {x: 1.3, y: 1.2, z: 0.8}
+      Start:
+        SegmentId: active
+        RelativeTo: 0
+        OffsetFrames: 0
+      End:
+        SegmentId: active
+        RelativeTo: 1
+        OffsetFrames: 0
+      HitGroup: 0
+      SweepSpacing: 0.1

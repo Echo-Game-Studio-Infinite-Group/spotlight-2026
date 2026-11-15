@@ -1,8 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 // 上半身定格击飞，下半身跟随原骨骼；在模型插值之后同步网格，不复制 AI 或攻击事件。
-[DefaultExecutionOrder(100), DisallowMultipleComponent, RequireComponent(typeof(EnemyBase))]
+[DefaultExecutionOrder(100), DisallowMultipleComponent]
 public sealed class GibComponent : MonoBehaviour
 {
     [SerializeField] private Shader _cutoutShader;
@@ -64,9 +64,17 @@ public sealed class GibComponent : MonoBehaviour
 
     public bool TrySlice(Vector3 hitDirection)
     {
-        if (!isActiveAndEnabled || GetComponent<EnemyBase>().IsAlive || _rolled) return false;
+        if (!isActiveAndEnabled || !TryGetComponent(out EnemyBase enemy) || enemy.IsAlive || _rolled) return false;
         _rolled = true;
         return Random.value < _deathChance && CreatePieces(hitDirection);
+    }
+
+    // 道具由自己的交互逻辑确认击碎，不需要敌人组件，也不参与敌人死亡概率抽取。
+    public bool TrySliceDestructible(Vector3 hitDirection)
+    {
+        if (!isActiveAndEnabled || _rolled) return false;
+        _rolled = true;
+        return CreatePieces(hitDirection);
     }
 
     public Renderer[] GetModelRenderers() => System.Array.FindAll(GetComponentsInChildren<Renderer>(),
@@ -131,7 +139,8 @@ public sealed class GibComponent : MonoBehaviour
         {
             Mesh sourceMesh = GetSourceMesh(source);
             var mesh = source is SkinnedMeshRenderer ? new Mesh() : Instantiate(sourceMesh);
-            if (source is SkinnedMeshRenderer skin) skin.BakeMesh(mesh);
+            // 导入骨架带缩放时，默认烘焙会丢失比例；上下半身都需与原渲染网格一致。
+            if (source is SkinnedMeshRenderer skin) skin.BakeMesh(mesh, true);
             Vector3[] vertices = mesh.vertices;
             Vector3[] normals = mesh.normals;
             Vector4[] tangents = mesh.tangents;
@@ -436,11 +445,11 @@ public sealed class GibComponent : MonoBehaviour
     {
         foreach (AnimatedLower lower in _animatedLowers)
         {
-            if (lower.Source == null) continue;
+            if (lower.Source == null || lower.Root == null) continue;
             Matrix4x4 matrix = lower.Root.worldToLocalMatrix * lower.Source.transform.localToWorldMatrix;
             if (lower.Source is SkinnedMeshRenderer skin)
             {
-                skin.BakeMesh(lower.BakedMesh);
+                skin.BakeMesh(lower.BakedMesh, true);
                 lower.BakedMesh.GetVertices(lower.Vertices);
                 lower.BakedMesh.GetNormals(lower.Normals);
                 lower.BakedMesh.GetTangents(lower.Tangents);
@@ -461,7 +470,7 @@ public sealed class GibComponent : MonoBehaviour
             lower.Batch.Dirty = true;
         }
         foreach (Piece piece in _pieces)
-            if (piece.Settled)
+            if (piece.Root != null && piece.Settled)
                 foreach (GibMeshBatch batch in piece.Batches) batch.UpdateMesh();
     }
 
@@ -472,7 +481,7 @@ public sealed class GibComponent : MonoBehaviour
         // 两处同时倒计时会互相打架（敌人还活着时碎块就被这里提前销毁）。
         foreach (Piece piece in _pieces)
         {
-            if (piece.Settled || piece.Body != null) continue;
+            if (piece.Root == null || piece.Settled || piece.Body != null) continue;
             piece.Velocity += Vector3.down * (_gravity * dt);
             piece.Root.position += piece.Velocity * dt;
             piece.Root.Rotate(piece.Spin * dt, Space.World);

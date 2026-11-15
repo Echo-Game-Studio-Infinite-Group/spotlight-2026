@@ -1,18 +1,10 @@
 using UnityEngine;
 using GameJam.Actions;
 
-// 玩家的战斗决策层：只负责「什么时候攻击」与「打中之后怎么表现」。
-//   · 输入消费 → 调 CombatComponent.TryBeginAttack
-//   · 动作序列 → 翻译成原语转发给 CombatComponent
-//   · 命中表现 → 订阅 Landed 做顿帧
-// 数值（伤害/冷却/窗口）、状态机、判定盒开关、命中结算都在 CombatComponent 上，与敌人共用同一份。
-//
-// 时钟走 UnscaledTime：
-//   · InputBuffer 内部按 TimeManager.UnscaledTime 记录按下时刻，消费时用同一时钟才不会「刚按下就过期」；
-//   · TimeManager 的减速窗口也是按 UnscaledTime 记的，这样「窗口开着」的判定与写入必然一致。
+// 玩家动作表拥有伤害与拼刀的独立帧区间；成功反馈只在批次结算后执行一次。
 [RequireComponent(typeof(CharacterController))]
 [DisallowMultipleComponent]
-public sealed class PlayerCombat : MonoBehaviour
+public sealed class PlayerCombat : MonoBehaviour, IParryReceiver
 {
     [Header("打击感")]
     [SerializeField, Min(0f)] private float _hitStopSeconds = 0.2f;
@@ -22,6 +14,14 @@ public sealed class PlayerCombat : MonoBehaviour
     [SerializeField, Min(0f)] private float _impactSeconds = 0.09f;
     [SerializeField, Range(0.05f, 1f)] private float _impactTimeScale = 0.35f;
 
+    [Header("Parry")]
+    [Tooltip("劣势 parry 把玩家向后弹开的小速度。策划案：速度清零 + 一个较小的向后速度")]
+    [SerializeField, Min(0f)] private float _disadvantageKnockback = 3f;
+    [Tooltip("成功招架敌人本体或激光时，对该敌人造成当前招式实际伤害的倍率；不包含子弹。")]
+    [SerializeField, Min(0f)] private float _parryDamageMultiplier = 1f;
+    [Tooltip("parry 成功时打一行日志：走的是哪条分支、压到多少倍率")]
+    [SerializeField] private bool _logParry = true;
+
     [SerializeField] private bool _logHits;
 
     // 引用不进序列化：战斗层在自己身上，判定盒在自己的子节点上，GetComponent 就能查到。
@@ -30,11 +30,30 @@ public sealed class PlayerCombat : MonoBehaviour
     private PlayerMotor _motor;
     private Hitbox _hitbox;
     private HealthComponent _self;
+    // 序列驱动的普攻归动作执行器管，parry 取消它时要用到；没有执行器的宿主（测试）保持 null。
+    private PlayerActionRunner _runner;
     private long _sequenceInstance;
     private ActionCombatSettings _sequenceCombat;
     private readonly ActionHitboxSampler _sampler = new ActionHitboxSampler();
+    private readonly ActionHitboxSampler _parrySampler = new ActionHitboxSampler();
+    private readonly System.Collections.Generic.Dictionary<CombatComponent, ParryContact> _parryContacts
+        = new System.Collections.Generic.Dictionary<CombatComponent, ParryContact>();
+    private readonly System.Collections.Generic.HashSet<HealthComponent> _parryDamageTargets
+        = new System.Collections.Generic.HashSet<HealthComponent>();
+    private ActionExecutionState _parryState;
+    private readonly System.Collections.Generic.List<ParryVolumeSweep> _parryMotion = new System.Collections.Generic.List<ParryVolumeSweep>();
+    private float _parryMotionTick = float.NaN;
+    private bool _parryMotionAdvanced;
+    public event System.Action<System.Collections.Generic.IReadOnlyList<ParryContact>> ParrySucceeded;
+
     public event System.Action<IAttackDamageReceiver, AttackDamageRequest, AttackDamageResult> SequenceHitLanded;
     public bool IsSequenceDriven { get; private set; }
+
+    /// <summary>
+    /// 动作集里的「攻击招式」正在播放（有战斗载荷的序列动作）。
+    /// 动画侧用它决定腿部层要不要让位给移动：普攻片段只该管上半身。
+    /// </summary>
+    public bool IsAttackSequenceActive => _sequenceInstance != 0 && _sequenceCombat != null;
 
     /// <summary>判定盒从这里取伤害值，因此攻击力只有一处真值（序列招式会临时覆盖组件上的值）。</summary>
     public float AttackDamage { get { return Combat != null ? Combat.Damage : 0f; } }
@@ -48,6 +67,8 @@ public sealed class PlayerCombat : MonoBehaviour
 
     private CombatComponent Combat { get { EnsureReferences(); return _combat; } }
 
+    public bool IsParryVolumeActive => _sequenceInstance != 0 && _sequenceCombat != null
+        && _sequenceCombat.ParryVolumes.Exists(volume => volume.IsActive(_parryState.Action, _parryState.FrameProgress));
     public bool IsAttacking => Combat != null && Combat.IsAttacking(TimeManager.UnscaledTime);
 
     // 判定射程由 Hitbox 的 Trigger Collider 决定，这里从它反推出来供诊断显示。
@@ -96,11 +117,13 @@ public sealed class PlayerCombat : MonoBehaviour
     private void OnEnable()
     {
         EnsureReferences();
+        ParryResolver.Register(this);
         if (_combat != null) { _combat.Landed += OnLandedHit; _combat.SequenceLanded += OnSequenceLanded; }
     }
 
     private void OnDisable()
     {
+        ParryResolver.Unregister(this);
         if (_combat != null) { _combat.Landed -= OnLandedHit; _combat.SequenceLanded -= OnSequenceLanded; }
         ResetAttackState();
     }
@@ -114,8 +137,9 @@ public sealed class PlayerCombat : MonoBehaviour
         if (_self == null) _self = GetComponent<HealthComponent>();
         if (_hitbox == null) _hitbox = GetComponentInChildren<Hitbox>(true);
         if (_combat == null) _combat = GetComponent<CombatComponent>();
+        if (_runner == null) _runner = GetComponent<PlayerActionRunner>();
         // 没有落盘战斗层的宿主（测试、自检用 AddComponent 搭的临时玩家）补一个。
-        // 补出来的组件用 CombatComponent 自己的默认值（25 / 0.35 / 1.6s），
+        // 补出来的组件使用 CombatComponent 默认值，
         // 与玩家预制体上落盘的配置一致，所以这里不需要再灌一次数值。
         if (_combat == null) _combat = gameObject.AddComponent<CombatComponent>();
         _combat.SetOwner(CampType.Player, _hitbox, _self);
@@ -129,11 +153,11 @@ public sealed class PlayerCombat : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (IsSequenceDriven || _input == null || !_input.GameplayEnabled) return;
+        if (_input == null || !_input.GameplayEnabled) return;
         TickAttack(TimeManager.UnscaledTime);
     }
 
-    // 一帧战斗逻辑：消费输入 + 开窗口。判定交给动画事件驱动的 Hitbox，这里不再做物理扫描。
+    // 序列拥有攻击输入与拼刀帧；此入口只支持未接入序列的旧攻击宿主。
     public void TickAttack(float now)
     {
         if (IsSequenceDriven) return;
@@ -147,6 +171,129 @@ public sealed class PlayerCombat : MonoBehaviour
     {
         if (IsSequenceDriven || !enabled) return false;
         return Combat != null && Combat.TryBeginAttack(now);
+    }
+
+    // 几何判定已消费所有来源，这里结算招架伤害并提交一次玩家反馈。
+    public void ReceiveParry(System.Collections.Generic.IReadOnlyList<ParryContact> contacts)
+    {
+        if (contacts.Count == 0) return;
+        EnsureReferences();
+        // 取消动作会清空招式伤害，劣势招架也会改变速度，必须先保留这一击的实际数值。
+        float parryDamage = SnapshotParryDamage();
+        if (_self != null) _self.GrantInvulnerability(Combat.ParryInvulnerableSeconds);
+        // 混合招架保留近战的时停，纯子弹招架也不能清掉此前已生效的时间效果。
+        bool stopTime = false;
+        foreach (ParryContact contact in contacts)
+            stopTime |= contact.SourceType != AttackSourceType.Projectile;
+        if (stopTime) TimeManager.ParryStop(Combat.ParryStopSeconds, Combat.ParryStopRate);
+        _runner?.CancelForParry();
+        if (_runner == null) { ResetAttackState(); Combat.FinishAttack(); }
+        VCameraEffects.PlayParryZoom();
+        bool disadvantage = false;
+        foreach (ParryContact contact in contacts)
+        {
+            disadvantage |= contact.Kind == AttackParryKind.Disadvantage;
+            if (contact.SourceType == AttackSourceType.Projectile || contact.SourceType == AttackSourceType.Beam)
+                CombatSparks.PlayParryProjectile(contact.Point, contact.Direction);
+            else CombatSparks.PlayParry(contact.Point, contact.Direction);
+        }
+        ApplyParryDamage(contacts, parryDamage);
+        if (disadvantage) ApplyDisadvantageKnockback();
+        if (_logParry) Debug.Log($"[PlayerCombat] 拼刀成功：{contacts.Count} 个攻击，时停 {(stopTime ? Combat.ParryStopSeconds : 0f):0.##} 秒", this);
+        ParrySucceeded?.Invoke(contacts);
+    }
+
+    private float SnapshotParryDamage()
+    {
+        if (_sequenceCombat != null)
+        {
+            foreach (ActionHitVolume volume in _sequenceCombat.HitVolumes)
+                if (volume.IsActive(_parryState.Action, _parryState.FrameProgress))
+                    return SequenceDamage(volume.HitGroup) * _parryDamageMultiplier;
+            foreach (ActionHitVolume volume in _sequenceCombat.ParryVolumes)
+                if (volume.IsActive(_parryState.Action, _parryState.FrameProgress))
+                    return SequenceDamage(volume.HitGroup) * _parryDamageMultiplier;
+        }
+        return AttackDamage * _parryDamageMultiplier;
+    }
+
+    private void ApplyParryDamage(System.Collections.Generic.IReadOnlyList<ParryContact> contacts, float damage)
+    {
+        _parryDamageTargets.Clear();
+        if (damage <= 0f) return;
+        foreach (ParryContact contact in contacts)
+        {
+            if (contact.SourceType == AttackSourceType.Projectile || contact.Source == null
+                || contact.Source.Camp != CampType.Enemy) continue;
+            HealthComponent target = contact.Source.Self;
+            if (target == null || target == _self || !_parryDamageTargets.Add(target)) continue;
+            // 沿用受伤、无敌和死亡结算；Parry 已有反馈，不重复触发普攻命中的额外时缓。
+            target.ReceiveAttack(new AttackDamageRequest(damage, contact.Point, contact.Direction, 0, 0));
+        }
+    }
+
+    private int EnvironmentMask => _motor != null && _motor.Params != null ? _motor.Params.CollisionMask.value : ~0;
+    private Vector3 ObstacleOffset => Vector3.up * GetComponent<CharacterController>().height * .5f;
+
+    private void SampleParry(ActionExecutionState from, ActionExecutionState to, System.Collections.Generic.IReadOnlyList<Vector3> path)
+    {
+        _parryState = to;
+        bool advancing = from.FrameProgress != to.FrameProgress;
+        if (_parryMotionTick != TimeManager.FixedTickTime || advancing)
+        {
+            _parryMotion.Clear(); _parryMotionAdvanced = advancing; _parryMotionTick = TimeManager.FixedTickTime;
+        }
+        _parryContacts.Clear();
+        _parrySampler.SampleVolumes(from, to, path, transform, _sequenceCombat.ParryVolumes,
+            (group, pose, previous, spacing, start, end) =>
+            {
+                float spanStart = !advancing && !_parryMotionAdvanced ? 0f : start;
+                _parryMotion.Add(new ParryVolumeSweep(previous, pose, spacing, spanStart, end));
+                ParryResolver.Collect(this, previous, pose, spacing,
+                    _sequenceCombat.HitMask, EnvironmentMask, ObstacleOffset, _parryContacts, start, end);
+            });
+        ParryResolver.Commit(this, _parryContacts);
+    }
+
+    public bool ResolveIncomingParry(CombatComponent source, AttackVolumePose? from = null, AttackVolumePose? to = null)
+    {
+        if (!isActiveAndEnabled || !IsSequenceDriven || _sequenceInstance == 0 || _sequenceCombat == null || !IsParryVolumeActive
+            || _self != null && !_self.IsAlive || source.Camp == CampType.Player
+            || (_sequenceCombat.HitMask.value & (1 << source.gameObject.layer)) == 0
+            || !source.TryGetParryTarget(out AttackVolumePose target)) return false;
+        _parryContacts.Clear();
+        AttackVolumePose targetFrom = from ?? source.PreviousParryTarget, targetTo = to ?? target;
+        if (_parryMotionTick != TimeManager.FixedTickTime || _parryMotion.Count == 0)
+        {
+            _parryMotion.Clear();
+            foreach (ActionHitVolume volume in _sequenceCombat.ParryVolumes)
+                if (volume.IsActive(_parryState.Action, _parryState.FrameProgress)
+                    && volume.TryGetPose(transform, out Vector3 center, out Vector3 extents, out Quaternion rotation))
+                {
+                    var pose = new AttackVolumePose(center, extents, rotation, transform.position);
+                    _parryMotion.Add(new ParryVolumeSweep(pose, pose, volume.SweepSpacing, 0f, 1f));
+                }
+        }
+        foreach (ParryVolumeSweep sweep in _parryMotion)
+        {
+            ParryResolver.Collect(this, sweep.From, sweep.To, sweep.Spacing, _sequenceCombat.HitMask, EnvironmentMask,
+                ObstacleOffset, _parryContacts, sweep.Start, sweep.End);
+            if (ParryGeometry.Swept(sweep.From, sweep.To, ParryGeometry.Lerp(targetFrom, targetTo, sweep.Start),
+                ParryGeometry.Lerp(targetFrom, targetTo, sweep.End), sweep.Spacing, out Vector3 point)
+                && !ParryResolver.Blocked(transform, source.transform, sweep.To.Root + ObstacleOffset, point, EnvironmentMask))
+                _parryContacts[source] = new ParryContact(source, point, targetTo.Center - sweep.To.Center);
+        }
+        bool hit = _parryContacts.ContainsKey(source);
+        ParryResolver.Commit(this, _parryContacts);
+        return hit;
+    }
+
+    // 速度清零 + 沿朝向反方向给一个小速度。走 Motor 的公开入口，不直接写速度字段。
+    private void ApplyDisadvantageKnockback()
+    {
+        if (_motor == null || _motor.Params == null || !_motor.isActiveAndEnabled) return;
+        _motor.SetHorizontalSpeed(0f);
+        if (_disadvantageKnockback > 0f) _motor.TryExecute(MotorCommandKind.AddForwardImpulse, -_disadvantageKnockback);
     }
 
     // ===== 动画事件入口（与参考实现同名，动画事件可直接对接）=====
@@ -180,7 +327,7 @@ public sealed class PlayerCombat : MonoBehaviour
     // 连续两次自检/测试之间必须调用，否则上一轮的冷却会让 BeginAttack 失败。
     public void ResetAttackState()
     {
-        _sampler.End(_sequenceInstance);
+        _sampler.End(_sequenceInstance); _parrySampler.End(_sequenceInstance); _parryState = default; _parryMotion.Clear(); _parryMotionTick = float.NaN; _parryMotionAdvanced = false;
         _sequenceInstance = 0; _sequenceCombat = null;
         if (Combat != null) Combat.ResetAttackState();
     }
@@ -195,12 +342,13 @@ public sealed class PlayerCombat : MonoBehaviour
         if (!IsSequenceDriven || state.Action?.Combat == null || !state.Action.Combat.Enabled) return;
         EnsureReferences();
         _sequenceInstance = state.InstanceId; _sequenceCombat = state.Action.Combat;
-        _sampler.Begin(state.InstanceId);
+        _sampler.Begin(state.InstanceId); _parrySampler.Begin(state.InstanceId); _parryState = state; _parryMotion.Clear(); _parryMotionTick = float.NaN; _parryMotionAdvanced = false;
         Combat.BeginSequence(state.InstanceId, _sequenceCombat.HitMask, _sequenceCombat.Damage);
     }
     public void HandleSequenceEvent(ActionExecutionState state, ActionFrameEvent frameEvent)
     {
         if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _sequenceCombat == null || Combat == null) return;
+        _parryState = state;
         if (_sequenceCombat.HitVolumes.Count > 0) return;
         if (frameEvent.EventKey == "combat.hitbox.open")
         { SequenceDamage(frameEvent.HitGroup); Combat.OpenSequenceWindow(frameEvent.HitGroup); }
@@ -208,8 +356,9 @@ public sealed class PlayerCombat : MonoBehaviour
     }
     public void SampleSequenceHitbox(long instanceId)
     {
-        if (IsSequenceDriven && _sequenceInstance == instanceId && _sequenceCombat != null && _sequenceCombat.HitVolumes.Count == 0)
-            Combat.SampleSequenceWindow();
+        if (!IsSequenceDriven || _sequenceInstance != instanceId || _sequenceCombat == null) return;
+        SampleParry(_parryState, _parryState, null);
+        if (_sequenceInstance == instanceId && _sequenceCombat.HitVolumes.Count == 0) Combat.SampleSequenceWindow();
     }
     public float SequenceDamage(int group)
     {
@@ -224,13 +373,17 @@ public sealed class PlayerCombat : MonoBehaviour
     }
     public void SampleSequenceHitbox(ActionExecutionState from, ActionExecutionState to, System.Collections.Generic.IReadOnlyList<Vector3> path)
     {
-        if (!IsSequenceDriven || _sequenceInstance != to.InstanceId || _sequenceCombat == null || _hitbox == null) return;
+        if (!IsSequenceDriven || _sequenceInstance != to.InstanceId || _sequenceCombat == null) return;
+        SampleParry(from, to, path);
+        if (_sequenceInstance != to.InstanceId) return;
         if (_sequenceCombat.HitVolumes.Count > 0) SampleConfigured(from, to, path);
         else if (System.Math.Abs(to.FrameProgress - System.Math.Round(to.FrameProgress)) > .000001) Combat.SampleSequenceWindow();
     }
     public void SampleSequenceBoundary(ActionExecutionState state)
     {
-        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _sequenceCombat == null || _hitbox == null) return;
+        if (!IsSequenceDriven || _sequenceInstance != state.InstanceId || _sequenceCombat == null) return;
+        SampleParry(state, state, null);
+        if (_sequenceInstance != state.InstanceId) return;
         if (_sequenceCombat.HitVolumes.Count > 0) SampleConfigured(state, state, null);
         else Combat.SampleSequenceWindow();
     }
@@ -244,7 +397,7 @@ public sealed class PlayerCombat : MonoBehaviour
     public void EndSequenceAction(long instanceId)
     {
         if (_sequenceInstance != instanceId) return;
-        _sampler.End(instanceId); _sequenceInstance = 0; _sequenceCombat = null;
+        _sampler.End(instanceId); _parrySampler.End(instanceId); _parryState = default; _parryMotion.Clear(); _parryMotionTick = float.NaN; _parryMotionAdvanced = false; _sequenceInstance = 0; _sequenceCombat = null;
         if (Combat != null) Combat.EndSequence(instanceId);
     }
     private void OnSequenceLanded(IAttackDamageReceiver target, AttackDamageRequest request, AttackDamageResult result)

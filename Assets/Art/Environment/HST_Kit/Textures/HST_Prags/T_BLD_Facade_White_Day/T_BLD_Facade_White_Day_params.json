@@ -1,0 +1,71 @@
+{
+  "name": "T_BLD_Facade_White_Day",
+  "variant": "day",
+  "tile_m": [
+    12.0,
+    16.0
+  ],
+  "meters_per_px": 0.0078125,
+  "height_range_m": 0.08625570958852768,
+  "tune": {
+    "seed": 20261010,
+    "res": 2048,
+    "tile_w": 12.0,
+    "tile_h": 16.0,
+    "floor_h": 4.0,
+    "module_w": 1.5,
+    "spandrel_h": 1.2,
+    "mullion_w": 0.08,
+    "h_spandrel": 0.025,
+    "h_glass": -0.02,
+    "h_mullion": 0.06,
+    "seam_w": 0.024,
+    "seam_d": 0.006,
+    "accent_h": 0.035,
+    "accent_y0": 1.22,
+    "col_spandrel": [
+      0.8,
+      0.815,
+      0.845
+    ],
+    "col_mullion": [
+      0.74,
+      0.765,
+      0.795
+    ],
+    "col_glass": [
+      0.5,
+      0.58,
+      0.66
+    ],
+    "col_accent": [
+      0.039,
+      0.557,
+      0.89
+    ],
+    "rough_glass": 0.1,
+    "rough_spandrel": 0.38,
+    "rough_mullion": 0.32,
+    "rough_accent": 0.4,
+    "rough_blinds": 0.26,
+    "metal_glass": 0.0,
+    "metal_spandrel": 0.0,
+    "metal_mullion": 0.85,
+    "metal_accent": 0.55,
+    "day": {
+      "lit_frac": 0.05,
+      "accent_i": 0.55
+    },
+    "dusk": {
+      "lit_frac": 0.38,
+      "accent_i": 0.85
+    },
+    "blinds_frac": 0.22,
+    "lum_band_day": [
+      0.33,
+      0.55
+    ]
+  },
+  "unity_wiring": "URP Lit: _BaseMap=BC(A=smoothness 兼容 channel=1) | _BumpMap=N | _MetallicGlossMap=MS(R=metallic, A=smoothness) | _EmissionMap=E + _EmissionColor HDR(日×1.0 / 暮×1.8) + 磁盘级 _EMISSION 关键字",
+  "channels": "BC=sRGB RGBA(A=smoothness) | N=linear(OpenGL+Y) | E=sRGB | R/M/AO/H=linear | MS=URP | ORM=Unreal"
+}

@@ -1,0 +1,99 @@
+{
+  "name": "T_ME_Facade_Night",
+  "variant": "暮色/夜景: 大面积亮窗 + 室内灯带透出",
+  "tile_m": [
+    12.0,
+    16.0
+  ],
+  "meters_per_px": 0.0078125,
+  "tile_px": [
+    1536,
+    2048
+  ],
+  "periods_px": {
+    "floor": 512,
+    "window": 192
+  },
+  "height_range_m": 0.09816446988284588,
+  "measured": {
+    "seam_pass": true,
+    "lit_render_completeness": 1.0,
+    "lit_cells": 20,
+    "mullion_count": 8,
+    "mullion_pitch_m": 1.5,
+    "albedo_linear_mean": 0.1484886788478699,
+    "albedo_linear_p05_p95": [
+      0.05693710833375668,
+      0.27318535441960107
+    ],
+    "accent_area_fraction": 0.030155297617739666
+  },
+  "tune": {
+    "seed": 20261010,
+    "res": 2048,
+    "tile_w": 12.0,
+    "tile_h": 16.0,
+    "floor_h": 4.0,
+    "module_w": 1.5,
+    "spandrel_h": 1.2,
+    "mullion_w": 0.08,
+    "h_spandrel": 0.028,
+    "h_glass": -0.022,
+    "h_mullion": 0.07,
+    "seam_w": 0.024,
+    "seam_d": 0.006,
+    "accent_lip_h": 0.035,
+    "accent_lip_y0": 1.22,
+    "accent_band_h": 0.06,
+    "accent_band_gap": 0.115,
+    "blinds_frac": 0.12,
+    "rough_blinds": 0.3
+  },
+  "variant_cfg": {
+    "label": "暮色/夜景: 大面积亮窗 + 室内灯带透出",
+    "spandrel": [
+      0.52,
+      0.548,
+      0.6
+    ],
+    "mullion": [
+      0.4,
+      0.43,
+      0.5
+    ],
+    "glass": [
+      0.22,
+      0.3,
+      0.42
+    ],
+    "accent": [
+      0.9,
+      0.31,
+      0.15
+    ],
+    "rough_glass": 0.07,
+    "rough_spandrel": 0.46,
+    "rough_mullion": 0.36,
+    "rough_accent": 0.32,
+    "metal_glass": 0.0,
+    "metal_spandrel": 0.0,
+    "metal_mullion": 0.88,
+    "metal_accent": 0.0,
+    "interior_amp": 0.24,
+    "lit_frac": 0.66,
+    "lit_i": 1.0,
+    "accent_i": 0.8,
+    "accent_mulls": [
+      7
+    ],
+    "lum_band": [
+      0.09,
+      0.26
+    ],
+    "dusk": true
+  },
+  "color_semantics": "BC 为 sRGB 反照率(写盘值即 sRGB, Unity BaseMap 按 sRGB 导入); A=光滑度(1-roughness)。Night 变体 BC 有意做成暮色调(美术变体, 非物理同色)。",
+  "unity_wiring": "URP Lit: _BaseMap=BC(A=smoothness, 兼容 _SmoothnessTextureChannel=1) | _BumpMap=N(OpenGL +Y) | _MetallicGlossMap=MS(R=metallic, A=smoothness) | _EmissionMap=E + _EmissionColor HDR(日×1.0 / 夜×1.8) + 磁盘级 _EMISSION 关键字; 本仓实测口径: 亮窗亦可走 URP Unlit HDR _BaseColor 而不用 _EMISSION",
+  "uv_rule": "立面槽 UV 用 v = 1 - z/tile_h(z 为世界高度): 直接 v=z/tile_h 会让层带上下镜像(既有配方已踩坑)。tile 逐 12m×16m 平铺, 窗/层周期整像素。",
+  "channels": "BC=sRGB RGBA(A=smoothness) | N=linear(OpenGL+Y) | E=sRGB | R/M/AO/H=linear | MS=URP | ORM=Unreal"
+}

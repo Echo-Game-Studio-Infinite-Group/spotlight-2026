@@ -18,6 +18,7 @@ using UnityEngine.TestTools;
 // 这样别的组改场景时这些测试不会连带失败。
 public sealed class EnemySpawnerTests
 {
+    private const int GroundLayer = 8;
     private Scene _scene;
     private GameObject _ground;
     private EnemySpawner _spawner;
@@ -28,6 +29,7 @@ public sealed class EnemySpawnerTests
     {
         var prefab = new GameObject("SpawnTestPrefab");
         prefab.AddComponent<BoxCollider>();
+        prefab.AddComponent<HealthComponent>();
         prefab.SetActive(false);
         return prefab;
     }
@@ -41,6 +43,7 @@ public sealed class EnemySpawnerTests
         // 一块 40x40 的地板，顶面在 y = 0。全部生成点都应落在这个平面上。
         _ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
         _ground.name = "Ground";
+        _ground.layer = GroundLayer;
         _ground.transform.SetPositionAndRotation(new Vector3(0f, -0.5f, 0f), Quaternion.identity);
         _ground.transform.localScale = new Vector3(40f, 1f, 40f);
         SceneManager.MoveGameObjectToScene(_ground, _scene);
@@ -55,11 +58,16 @@ public sealed class EnemySpawnerTests
         _spawner = spawnerObject.AddComponent<EnemySpawner>();
     }
 
-    [TearDown]
-    public void TearDown()
+    [UnityTearDown]
+    public IEnumerator TearDown()
     {
         if (_prefab != null) Object.DestroyImmediate(_prefab);
-        if (_scene.IsValid()) SceneManager.UnloadSceneAsync(_scene);
+        if (_scene.IsValid() && _scene.isLoaded)
+        {
+            // 同步用例可能立即开始下一项，必须等场景真正卸载后才能再次使用同名场景。
+            AsyncOperation unloading = SceneManager.UnloadSceneAsync(_scene);
+            if (unloading != null) yield return unloading;
+        }
     }
 
     // 私有序列化字段走 SerializedObject 写入，与项目里其他 PlayMode 测试保持一致。
@@ -74,8 +82,25 @@ public sealed class EnemySpawnerTests
         so.FindProperty("_prewarm").intValue = prewarm;
         // 测试场景不烘焙 NavMesh：走射线兜底，保证确定性。
         so.FindProperty("_groundMode").enumValueIndex = (int)SpawnGroundMode.PhysicsRaycastOnly;
+        so.FindProperty("_groundMask").intValue = 1 << GroundLayer;
         so.FindProperty("_spawnHeightOffset").floatValue = 0f;
         so.ApplyModifiedPropertiesWithoutUndo();
+        // 无图形批测的一帧不保证推进物理，不能让落地断言依赖首个物理步何时发生。
+        Physics.SyncTransforms();
+    }
+
+    private static void SetRecycleDelay(GameObject victim)
+    {
+        var data = new SerializedObject(victim.GetComponent<EnemyPooledLifecycle>());
+        data.FindProperty("_destroyTime").floatValue = .05f;
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private IEnumerator WaitForAliveCount(int count)
+    {
+        float deadline = Time.realtimeSinceStartup + 3f;
+        while (_spawner.AliveCount != count && Time.realtimeSinceStartup < deadline) yield return null;
+        Assert.AreEqual(count, _spawner.AliveCount, "生成器应在期限内达到目标存活数");
     }
 
     // ---- 1. 同时存活上限 ----
@@ -103,6 +128,7 @@ public sealed class EnemySpawnerTests
         // 间隔设得极小并跑很多帧，模拟"长时间自动刷怪"，确认上限是硬约束。
         Configure(maxAlive: 4, range: 8f, interval: 0.01f, autoSpawn: true);
         yield return null;
+        yield return WaitForAliveCount(4);
 
         for (int i = 0; i < 120; i++) yield return null;
 
@@ -122,7 +148,7 @@ public sealed class EnemySpawnerTests
         yield return null;
 
         // 跑到刷满上限。
-        for (int i = 0; i < 60; i++) yield return null;
+        yield return WaitForAliveCount(2);
         Assert.AreEqual(2, _spawner.AliveCount, "应当先刷到上限");
 
         // 取一个敌人并真的把它打死——走 HealthComponent 的真实死亡链路。
@@ -136,6 +162,10 @@ public sealed class EnemySpawnerTests
             }
         }
         Assert.IsNotNull(victim, "生成的敌人身上应当自动带上了 EnemyPooledLifecycle");
+
+        // 先观察回收，再单独启用补怪，避免同一帧回收并补满让中间计数不可观察。
+        Configure(maxAlive: 2, range: 8f, interval: 0.01f, autoSpawn: false);
+        SetRecycleDelay(victim);
 
         var health = victim.GetComponent<HealthComponent>();
         health.TakeDamage(health.MaxHealth * 10f, Vector3.zero, Vector3.forward);
@@ -153,7 +183,8 @@ public sealed class EnemySpawnerTests
         Assert.IsTrue(_spawner.CanSpawnNow(), "腾出名额后 Spawner 必须能继续生成");
 
         // 再跑一阵，确认它真的恢复了自动刷怪。
-        for (int i = 0; i < 60; i++) yield return null;
+        Configure(maxAlive: 2, range: 8f, interval: 0.01f, autoSpawn: true);
+        yield return WaitForAliveCount(2);
         Assert.AreEqual(2, _spawner.AliveCount, "Spawner 应当自动补满名额，证明刷怪已恢复");
     }
 
@@ -163,7 +194,7 @@ public sealed class EnemySpawnerTests
         // 对应主人观察到的"对象都留在游戏场里了"：死后对象应当失活并回到池的待命节点下。
         Configure(maxAlive: 1, range: 8f, interval: 0.01f, autoSpawn: true);
         yield return null;
-        for (int i = 0; i < 30; i++) yield return null;
+        yield return WaitForAliveCount(1);
 
         GameObject victim = null;
         foreach (GameObject candidate in Object.FindObjectsOfType<GameObject>())
@@ -171,6 +202,9 @@ public sealed class EnemySpawnerTests
             if (candidate.GetComponent<EnemyPooledLifecycle>() != null) { victim = candidate; break; }
         }
         Assert.IsNotNull(victim);
+
+        Configure(maxAlive: 1, range: 8f, interval: 0.01f, autoSpawn: false);
+        SetRecycleDelay(victim);
 
         var health = victim.GetComponent<HealthComponent>();
         health.TakeDamage(health.MaxHealth * 10f, Vector3.zero, Vector3.forward);
@@ -306,6 +340,7 @@ public sealed class EnemySpawnerTests
         // 且范围收得很小使其只覆盖平台与下方地面。
         var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
         platform.name = "UpperPlatform";
+        platform.layer = GroundLayer;
         platform.transform.SetPositionAndRotation(new Vector3(0f, 7.5f, 0f), Quaternion.identity);
         platform.transform.localScale = new Vector3(6f, 1f, 6f); // 顶面 y = 8
         SceneManager.MoveGameObjectToScene(platform, _scene);

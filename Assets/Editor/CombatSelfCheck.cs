@@ -100,7 +100,7 @@ public static class CombatSelfCheck
             Debug.Log($"[CombatSelfCheck] 敌人血量 {healthBefore} → {healthAfter}（单次命中预期 {expected}）");
             Debug.Log($"[CombatSelfCheck] 受伤={damaged} 减速={slowed} 倍率={slowRate:0.##}"
                 + $"（冲击 {combat.ImpactTimeScale:0.##} / 尾巴 {combat.HitTimeScale:0.##}）"
-                + $" 震屏通道已接={Object.FindObjectOfType<CameraShaker>() != null}");
+                + $" 震屏通道已接={Object.FindObjectOfType<VCameraEffects>() != null}");
 
             bool passed = started && damaged && slowed;
 

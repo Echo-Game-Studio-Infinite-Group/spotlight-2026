@@ -1,4 +1,4 @@
-using GameJam.Actions;   // PlayerActionRunner 在这个命名空间里
+﻿using GameJam.Actions;   // PlayerActionRunner 在这个命名空间里
 using UnityEngine;
 
 // 布娃娃阶段由骨骼物理接管；起身阶段由 PlayerMotor 恢复重力和胶囊碰撞。
@@ -7,7 +7,7 @@ using UnityEngine;
 public sealed class PlayerRagdollHitStun : MonoBehaviour
 {
     [Header("硬直（两段：布娃娃 → 起身）")]
-    [Tooltip("布娃娃段时长（秒）：从触发到开始播起身动画。")]
+    [Tooltip("布娃娃最短时长（秒）。时间到后仍未落地则继续布娃娃下落，落地后才起身。")]
     [SerializeField, Min(0f)] private float _ragdollSeconds = 1f;
 
     [Tooltip("起身动画在 Animator 里的状态名（Base Layer）。留空或找不到该状态 → 退回占位（直接 Rebind 回 Idle）。")]
@@ -19,7 +19,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
     [Header("撞击触发（判定条件在移动层里，这里只管数值）")]
     [Tooltip("最低触发速度，单位是「地速阈值的倍数」。低于它撞墙不算撞击。")]
-    [SerializeField, Min(0f)] private float _minSpeedFactor = 1.2f;
+    [SerializeField, Min(0f)] private float _minSpeedFactor = 2.5f;
 
     [Tooltip("伤害 = 速度（地速阈值倍数）× 这个系数。策划案原文是「伤害等于其速度」，所以默认 1。")]
     [SerializeField, Min(0f)] private float _damagePerSpeed = 1f;
@@ -33,8 +33,8 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     [Tooltip("触发瞬间先沿墙面法线把人挪出去的距离。贴墙激活布娃娃会挂在墙上，靠这个挪开。")]
     [SerializeField, Min(0f)] private float _impactPushOut = 0.6f;
 
-    [Tooltip("起身前向下探地面的距离。找到就把根节点落到地面上；找不到就从布娃娃当前位置继续下落。")]
-    [SerializeField, Min(0f)] private float _groundProbeDistance = 3f;
+    [Tooltip("骨骼碰撞体向下确认落地的距离（米），只覆盖接触余量，不能用长距离探地代替实际落地。")]
+    [SerializeField, Min(0f)] private float _groundContactDistance = 0.05f;
 
     [Header("引用")]
     [Tooltip("Humanoid 优先使用当前 Avatar 的 Hips，避免换模型后选中残留的旧骨架。非 Humanoid 可显式指定根骨骼。")]
@@ -58,6 +58,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     // 输入层单独处理：它 OnDisable 里会动光标状态，不该整个组件关掉。
     private PlayerInputReader _input;
     private PlayerMotor _motor;
+    private PlayerRootSkinFollow _rootSkin;
     private float _nextImpactAt;
     // 触发瞬间要先把人从墙里挪出来的位移（世界坐标），由 OnWallImpact 填、EnterHitStun 消费
     private Vector3 _pendingPushOut;
@@ -67,7 +68,6 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private float _getUpEndAt;
     private bool _inGetUp;
     private int _getUpUsedLayer = -1;   // 这次起身实际用的是哪一层（结束时把权重还原）
-    private float _hipsRootHeight;
     private readonly ActionControlPolicy _getUpControl = new ActionControlPolicy
     {
         AllowMove = false,
@@ -80,6 +80,8 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private bool _active;
 
     public bool IsActive => _active;
+    // 空中布娃娃只移动骨骼；根节点要等落地起身才对齐，掉落检测不能继续读取旧位置。
+    public Vector3 FallCheckPosition => _active && !_inGetUp && _hips != null ? _hips.position : transform.position;
 
     private void Awake()
     {
@@ -95,6 +97,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         _input = GetComponent<PlayerInputReader>();
         _motor = GetComponent<PlayerMotor>();
         _hips = FindHips();
+        _rootSkin = new PlayerRootSkinFollow(_animator);
 
         // 只收 Hips 底下的刚体：玩家 Hitbox 子物体上也有个 Rigidbody，不能一起当布娃娃。
         _ragdollBodies = _hips != null
@@ -132,7 +135,17 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     {
         // 可见模型由当前 Avatar 驱动，不能让旧骨架的名字抢先匹配。
         if (_animator != null && _animator.isHuman)
-            return _animator.GetBoneTransform(HumanBodyBones.Hips);
+        {
+            Transform avatarHips = _animator.GetBoneTransform(HumanBodyBones.Hips);
+            if (avatarHips != null)
+            {
+                if (avatarHips.GetComponent<Rigidbody>() != null) return avatarHips;
+                // 新模型可能把 Humanoid 髋部映射到静态骨架根；物理位置必须取该骨架内的真实骨盆。
+                if (_hips != null && _hips.IsChildOf(avatarHips) && _hips.GetComponent<Rigidbody>() != null) return _hips;
+                Rigidbody body = avatarHips.GetComponentInChildren<Rigidbody>(true);
+                return body != null ? body.transform : avatarHips;
+            }
+        }
         if (_hips != null) return _hips;
         foreach (Transform t in GetComponentsInChildren<Transform>(true))
         {
@@ -143,6 +156,13 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
 
     public void EnterHitStun()
     {
+        // 致死撞击已经交给死亡表现，不能再进入布娃娃与起身流程。
+        HealthComponent health = GetComponent<HealthComponent>();
+        if (health != null && !health.IsAlive)
+        {
+            _pendingPushOut = Vector3.zero;
+            return;
+        }
         if (_active) return;
 
         if (_ragdollBodies.Length == 0)
@@ -151,9 +171,9 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
             return;
         }
 
+        _rootSkin.Begin();
         _active = true;
         _inGetUp = false;
-        _hipsRootHeight = _hips != null ? _hips.position.y - transform.position.y : 0f;
         _ragdollEndAt = Time.time + _ragdollSeconds;
 
         // 顺序很要紧：先把所有会「碰 Animator」的东西关掉，最后才关 Animator。
@@ -185,22 +205,22 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         FinishHitStun();
     }
 
-    // 第二段：布娃娃时间到 → 冻住布娃娃、对齐根节点、播起身动画
+    // 时间到只允许申请起身；未落地时必须继续由骨骼物理接管。
     private void BeginGetUp()
     {
+        if (!TryRagdollGround(out RaycastHit ground)) return;
         _inGetUp = true;
 
         SetRagdollActive(false);   // 刚体回 kinematic：姿势就冻在最后一帧
 
-        // 对齐起点：x/z 用 Hips 的落点（不搬的话人会瞬移回撞击点站起来），
-        // y 向下探地面 —— 高速撞墙基本都发生在空中，不贴地就会在半空起身。
+        // 根节点跟随真实骨骼落点，并对齐支撑面，不能用撞击前的根节点位置判断落地。
         if (_hips != null)
         {
             Vector3 p = _hips.position;
-            float y = p.y - _hipsRootHeight;
-            if (Physics.Raycast(p + Vector3.up * 0.5f, Vector3.down, out RaycastHit ground,
-                    _groundProbeDistance, ~0, QueryTriggerInteraction.Ignore))
-                y = ground.point.y;
+            float y = ground.point.y - (ground.normal.x * (p.x - ground.point.x)
+                + ground.normal.z * (p.z - ground.point.z)) / ground.normal.y;
+            if (_controller != null)
+                y += _controller.radius * (1f / ground.normal.y - 1f);
             transform.position = new Vector3(p.x, y, p.z);
         }
 
@@ -241,6 +261,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
             _animator.SetLayerWeight(layer, 1f);
             _animator.Play(hash, layer, 0f);
             _animator.Update(0f);
+            _rootSkin.UpdatePose();
             float length = _animator.GetCurrentAnimatorStateInfo(layer).length;
             float seconds = _getUpTargetSeconds > 0f ? _getUpTargetSeconds : length;
             // 这一段里移动/动作都是停的，所以直接改 Animator 整体倍率来缩放到目标时长
@@ -254,19 +275,43 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         FinishHitStun();
     }
 
+    private bool TryRagdollGround(out RaycastHit ground)
+    {
+        ground = default;
+        MovementParams parameters = _motor.Params;
+        float minNormalY = Mathf.Cos(parameters.MaxGroundAngle * Mathf.Deg2Rad);
+        float nearest = float.PositiveInfinity;
+        foreach (Rigidbody body in _ragdollBodies)
+        {
+            // Motor 在布娃娃期间关闭，其接地状态不能代表当前骨骼；按实际物理形状短扫。
+            if (body == null || body.isKinematic) continue;
+            RaycastHit[] hits = body.SweepTestAll(Vector3.down, _groundContactDistance, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null || hit.transform.IsChildOf(transform)
+                    || (parameters.CollisionMask.value & (1 << hit.collider.gameObject.layer)) == 0
+                    || hit.normal.y < minNormalY || hit.distance >= nearest) continue;
+                ground = hit;
+                nearest = hit.distance;
+            }
+        }
+        return ground.collider != null;
+    }
+
     // 第三段：起身播完（或占位）→ 恢复全部控制
     private void FinishHitStun()
     {
         if (!_active) return;
         _active = false;
         _inGetUp = false;
+        _rootSkin.Restore();
 
         SetRagdollActive(false);
         if (_controller != null) _controller.enabled = true;
         SetOtherColliders(true);
         if (_motor != null) _motor.SetActionControl(null);
         SetControlsEnabled(true);
-        if (_input != null) _input.SetGameplayEnabled(true);
+        if (_input != null && !TimeManager.IsPaused) _input.SetGameplayEnabled(true);
 
         // 最后再交回动画器：把起身层权重还原，并还原播放倍率
         if (_animator != null)
@@ -294,6 +339,12 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
         if (Time.time >= _getUpEndAt) FinishHitStun();
     }
 
+
+    // 自动 Animator 求值发生在 Update 之后；在渲染前同步，避免起身时披风落后一帧。
+    private void LateUpdate()
+    {
+        if (_active) _rootSkin.UpdatePose();
+    }
 
     private bool IsRagdollCollider(Collider col)
     {
@@ -328,6 +379,7 @@ public sealed class PlayerRagdollHitStun : MonoBehaviour
     private void OnDisable()
     {
         if (_motor != null) _motor.WallImpact -= OnWallImpact;
+        _rootSkin?.Restore();
     }
 
     private void OnWallImpact(WallContact contact)

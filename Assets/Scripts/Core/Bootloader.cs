@@ -18,7 +18,7 @@ public class Bootloader : MonoBehaviour
 
     [Header("场景加载")]
     [Tooltip("异步加载的目标场景名，须已加入 Build Settings")]
-    [SerializeField] private string _nextSceneName = "TestScene";
+    [SerializeField] private string _nextSceneName = "MainMenu";
     [Tooltip("启动表演的最短总时长（秒）：即使场景早就加载完也要等满，避免 Logo 一闪而过")]
     [SerializeField] private float _minSplashDuration = 2f;
 
