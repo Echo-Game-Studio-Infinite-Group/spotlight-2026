@@ -19,6 +19,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
     private Mode _mode;
     private Button[] _rows;
     private TMP_Text[] _rowTexts;
+    private GlitchSlotEffect[] _glitches;
+    private SaveSlotRowHighlight[] _rowHighlights;
     private GameObject _actions;
     private Button _saveButton;
     private Button _loadButton;
@@ -30,6 +32,7 @@ public sealed class SaveSlotPanel : MonoBehaviour
     private int _selectedSlot = 1;
     private TMP_FontAsset _font;
     private Material _fontMaterial;
+    private Button _styleButton;
     private Color _textColor = Color.white;
     private float _fontSize = 26f;
 
@@ -51,6 +54,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
             _fontMaterial = styleSource.fontSharedMaterial;
             _textColor = styleSource.color;
             _fontSize = Mathf.Max(20f, styleSource.fontSize * .8f);
+            // 底部操作按钮直接复用现有菜单按钮（红色 CRT 选中特效），保持与其他界面一致。
+            _styleButton = styleSource.GetComponentInParent<Button>();
         }
 
         RectTransform rect = (RectTransform)transform;
@@ -70,6 +75,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
 
         _rows = new Button[SaveManager.SlotCount];
         _rowTexts = new TMP_Text[SaveManager.SlotCount];
+        _glitches = new GlitchSlotEffect[SaveManager.SlotCount];
+        _rowHighlights = new SaveSlotRowHighlight[SaveManager.SlotCount];
         for (int i = 0; i < SaveManager.SlotCount; i++)
         {
             int slot = i + 1;
@@ -79,6 +86,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
             label.margin = new Vector4(36f, 8f, 36f, 8f);
             _rows[i] = row;
             _rowTexts[i] = label;
+            _glitches[i] = GlitchSlotEffect.Attach(row.GetComponent<Image>(), label, i);
+            _rowHighlights[i] = SaveSlotRowHighlight.Attach(row, label, slot);
             row.onClick.AddListener(() => OnRowClicked(slot));
         }
 
@@ -90,20 +99,18 @@ public sealed class SaveSlotPanel : MonoBehaviour
         actionsRect.sizeDelta = new Vector2(920f, 80f);
         actionsRect.anchoredPosition = new Vector2(0f, -320f);
 
-        _saveButton = CreateButton(actionsRect, "Save", new Vector2(-210f, 0f), new Vector2(360f, 70f));
+        _saveButton = CreateActionButton(actionsRect, "Save", new Vector2(-210f, 0f), "保存到此槽");
         _saveLabel = _saveButton.GetComponentInChildren<TMP_Text>(true);
         _saveButton.onClick.AddListener(() => SaveRequested?.Invoke(_selectedSlot));
 
-        _loadButton = CreateButton(actionsRect, "Load", new Vector2(210f, 0f), new Vector2(360f, 70f));
+        _loadButton = CreateActionButton(actionsRect, "Load", new Vector2(210f, 0f), "读取此槽");
         _loadLabel = _loadButton.GetComponentInChildren<TMP_Text>(true);
         _loadButton.onClick.AddListener(() =>
         {
             if (SaveManager.HasSaveInSlot(_selectedSlot)) LoadRequested?.Invoke(_selectedSlot);
         });
 
-        _closeButton = CreateButton(rect, "Close", new Vector2(0f, -410f), new Vector2(260f, 60f));
-        TMP_Text closeLabel = _closeButton.GetComponentInChildren<TMP_Text>(true);
-        closeLabel.text = "返回";
+        _closeButton = CreateActionButton(rect, "Close", new Vector2(0f, -410f), "返回");
         _closeButton.onClick.AddListener(Close);
 
         gameObject.SetActive(false);
@@ -135,7 +142,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
         for (int i = 0; i < SaveManager.SlotCount; i++)
         {
             int slot = i + 1;
-            if (SaveManager.TryGetSummary(slot, out SaveManager.Summary summary))
+            bool hasSave = SaveManager.TryGetSummary(slot, out SaveManager.Summary summary);
+            if (hasSave)
             {
                 _rowTexts[i].text =
                     $"存档 {slot}\n{summary.roomDisplayName}\n混乱度 {summary.chaos} · {summary.SavedAtText}";
@@ -146,6 +154,8 @@ public sealed class SaveSlotPanel : MonoBehaviour
                     ? $"存档 {slot}\n空档位 · 点击开始新游戏"
                     : $"存档 {slot}\n空档位";
             }
+            // 空槽位不做特效；有档槽位带待机基线，混乱度越高故障越强。
+            if (_glitches[i] != null) _glitches[i].SetSlotState(hasSave, hasSave ? summary.chaos : 0);
         }
         RefreshActions();
     }
@@ -168,9 +178,53 @@ public sealed class SaveSlotPanel : MonoBehaviour
             SlotActivated?.Invoke(slot);
             return;
         }
+        UpdateRowSelection();
         RefreshActions();
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(_saveButton.gameObject);
+    }
+
+    private Button CreateActionButton(RectTransform parent, string name, Vector2 position, string text)
+    {
+        Button button;
+        if (_styleButton != null)
+        {
+            button = Instantiate(_styleButton, parent);
+            button.name = name;
+            button.gameObject.SetActive(true);
+            RectTransform rect = (RectTransform)button.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+            rect.anchoredPosition = position;
+            Navigation navigation = button.navigation;
+            navigation.mode = Navigation.Mode.Automatic;
+            button.navigation = navigation;
+        }
+        else
+        {
+            button = CreateButton(parent, name, position, new Vector2(360f, 70f));
+        }
+        button.onClick.RemoveAllListeners();
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+        {
+            label.text = text;
+            label.enableWordWrapping = false;
+        }
+        return button;
+    }
+
+    private void UpdateRowSelection()
+    {
+        if (_rowHighlights == null) return;
+        // 标题页用 EventSystem 选中作为主要高亮；暂停页的选中只由点击决定，用金色持久高亮。
+        bool persistent = _mode == Mode.Pause;
+        bool eventSelection = _mode == Mode.Title;
+        for (int i = 0; i < _rowHighlights.Length; i++)
+            if (_rowHighlights[i] != null)
+            {
+                _rowHighlights[i].SetPersistentSelected(persistent && i + 1 == _selectedSlot);
+                _rowHighlights[i].SetEventSelectionMode(eventSelection);
+            }
     }
 
     private void SelectRow(int slot)
@@ -178,26 +232,16 @@ public sealed class SaveSlotPanel : MonoBehaviour
         _selectedSlot = slot;
         if (EventSystem.current != null && _rows[slot - 1] != null)
             EventSystem.current.SetSelectedGameObject(_rows[slot - 1].gameObject);
+        UpdateRowSelection();
         RefreshActions();
     }
 
     private void Update()
     {
         if (!IsOpen) return;
-        if (_mode == Mode.Title)
-        {
-            // 暂停页的关闭键由 PauseUIManager 统一处理，这里只管标题页。
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Close();
-            return;
-        }
-        var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-        for (int i = 0; i < _rows.Length; i++)
-        {
-            if (selected != _rows[i].gameObject || _selectedSlot == i + 1) continue;
-            _selectedSlot = i + 1;
-            RefreshActions();
-            break;
-        }
+        // 暂停页的关闭键由 PauseUIManager 统一处理，这里只管标题页。
+        if (_mode == Mode.Title && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            Close();
     }
 
     private Button CreateButton(RectTransform parent, string name, Vector2 position, Vector2 size)
